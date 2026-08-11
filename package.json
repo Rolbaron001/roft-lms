@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:policies": "tsx scripts/apply-policies.ts",
+    "db:seed": "tsx scripts/seed.mts",
     "db:push": "drizzle-kit push && npm run db:policies",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
@@ -21,10 +22,10 @@
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "next": "16.3.0",
-    "next-auth": "^5.0.0-beta.32",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

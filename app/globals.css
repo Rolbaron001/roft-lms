@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
+/**
+ * Tenant branding.
+ *
+ * The two brand colours are custom properties, set per request from the
+ * tenant's own record. A client business sees its own identity without a
+ * separate build or deployment — white-labelling is a database row, not a
+ * fork of the codebase.
+ *
+ * The values here are ROFT's own, used on the platform console and as the
+ * fallback for a tenant that has not set its colours: Deep Navy and Saffron
+ * Gold, per the ROFT brand standard.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand-primary: #0d1e32;
+  --brand-accent: #b9975b;
+
+  --background: #f6f7f9;
+  --surface: #ffffff;
+  --foreground: #16202c;
+  --muted: #5c6773;
+  --border: #dfe3e8;
+  --danger: #a3271f;
+  --success: #1f6b45;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand-primary);
+  --color-accent: var(--brand-accent);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }

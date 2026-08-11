@@ -213,6 +213,86 @@ export const userRoles = pgTable(
 );
 
 /**
+ * Login sessions.
+ *
+ * Held in the database rather than in a self-contained signed token, because a
+ * token cannot be withdrawn. Suspending an assessor has to end their access
+ * immediately, not whenever their token happens to lapse, and an accreditation
+ * reviewer is entitled to ask which sessions were live at a given moment.
+ *
+ * The cookie carries a random token; only its SHA-256 hash is stored here, so
+ * a copy of this table does not hand anyone a working session.
+ */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    tokenHash: text("token_hash").notNull(),
+
+    /** Hard ceiling. The session ends here however active the user has been. */
+    absoluteExpiresAt: timestamp("absolute_expires_at", {
+      withTimezone: true,
+    }).notNull(),
+    /** Rolling window, extended on use. Ends an abandoned session sooner. */
+    idleExpiresAt: timestamp("idle_expires_at", {
+      withTimezone: true,
+    }).notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdIp: text("created_ip"),
+    userAgent: text("user_agent"),
+
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedReason: text("revoked_reason"),
+  },
+  (t) => [
+    uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
+    index("sessions_user_idx").on(t.userId),
+    index("sessions_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Failed sign-in attempts, used to slow down password guessing. Recorded per
+ * tenant and per email address, including addresses that do not exist, so a
+ * response time cannot be used to discover who holds an account.
+ */
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    succeeded: boolean("succeeded").notNull(),
+    ipAddress: text("ip_address"),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("login_attempts_lookup_idx").on(
+      t.organisationId,
+      t.email,
+      t.attemptedAt,
+    ),
+  ],
+);
+
+/**
  * Append-only. Nothing in the application updates or deletes from this table,
  * and a database trigger enforces that, because an audit trail an administrator
  * can quietly edit is not an audit trail.

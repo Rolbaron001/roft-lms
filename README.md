@@ -78,6 +78,48 @@ accreditation reviewer is entitled to ask what enforces them:
 - **The audit log cannot be amended.** Update and delete are revoked from the
   application role and blocked by a trigger for every role, including the owner.
 
+## Signing in, roles and permissions
+
+**Which client a request belongs to is decided by the hostname**, before anyone
+signs in — the login page has to carry the right client's branding. A tenant is
+reached at its subdomain (`acme.roftbusiness.org`) or its own domain
+(`learning.acme.com`); the bare platform host is ROFT's own console.
+
+**Sessions live in the database, not in a signed token.** Auth.js was the
+obvious choice and does not support this: it cannot combine database sessions
+with email-and-password login. That combination matters here, because a token
+cannot be withdrawn. Suspending an assessor has to end their access on their
+next request, not whenever a token happens to lapse, and an accreditation
+reviewer is entitled to ask which sessions were live at a given moment. Auth.js
+can still be added in Phase 3 for single sign-on, which is what it is good at.
+
+What that buys, all covered by tests:
+
+- The cookie holds a random token; only its SHA-256 hash is stored, so a copy
+  of the sessions table contains no usable credential.
+- Sessions have both an absolute lifetime and an idle window.
+- Suspending a user, or changing a password, ends every session at once.
+- Sign-in and sign-out are written to the audit log.
+- Repeated failures lock one account without locking anyone else, and an
+  unknown email address takes the same time to reject as a known one, so
+  response timing cannot be used to discover who holds an account.
+
+**Permissions live in `lib/rbac.ts`.** Code asks `can(session,
+"course:publish")` rather than checking role names, so changing who may publish
+a course is a change to one file. Rules that must hold even if that file is
+wrong are enforced in the database instead — a moderator cannot moderate their
+own decision, and nobody can amend the audit log.
+
+Three properties the tests assert rather than assume:
+
+- No single role holds both `assessment:assess` and `assessment:moderate`.
+  Independent moderation is the point of the role.
+- The External Verifier holds no permission whose name implies a write. The
+  test derives that list from the permission names, so a future write
+  permission is caught automatically.
+- The Platform Owner can manage tenants but cannot read any tenant's learner
+  data. Hosting a client's system is not the same as being entitled to read it.
+
 ## Getting set up
 
 Requires Node.js 20 or later and PostgreSQL 16 or later.
@@ -110,11 +152,52 @@ be committed.
 npm run db:push
 ```
 
-**5. Run it:**
+**5. Load the demo data:**
+
+```bash
+npm run db:seed
+```
+
+**6. Run it:**
 
 ```bash
 npm run dev
 ```
+
+Then open **http://acme.localhost:3000** — not `localhost:3000`, which is the
+platform console and has no tenant. Any `*.localhost` address resolves to your
+own machine without configuring anything.
+
+### Demo accounts
+
+Two tenants, deliberately. A single-tenant demo cannot show you whether
+isolation works; with two you can try one client's login at the other and watch
+it fail.
+
+| Address | Organisation |
+|---|---|
+| http://acme.localhost:3000 | Acme Mining Services — navy and gold, QCTO modules on |
+| http://harbourtraining.localhost:3000 | Harbour Training Centre — green and orange, QCTO modules off |
+
+Every demo account uses the password `roft-demo-2026`.
+
+| Email | Role |
+|---|---|
+| admin@acme.test | Administrator |
+| instructor@acme.test | Instructor |
+| assessor@acme.test | Assessor |
+| moderator@acme.test | Moderator |
+| manager@acme.test | Line Manager |
+| sdf@acme.test | Skills Development Facilitator |
+| verifier@acme.test | External Verifier |
+| learner@acme.test | Learner |
+| both@acme.test | Instructor and Assessor at once |
+| admin@harbour.test | Administrator at the second tenant |
+| learner@harbour.test | Learner at the second tenant |
+
+Worth trying: sign in as `learner@acme.test` and then as `admin@acme.test` and
+compare what each may do; then take Acme's email and password to
+`harbourtraining.localhost:3000` and watch them be refused.
 
 ## Everyday commands
 
