@@ -253,7 +253,35 @@ validated; the exact file layout must be checked against the current SAQA
 specification first. Be straight about that — it is a formatting step, not a
 gap.
 
-## 10. Read-only oversight (1 min)
+## 10. Managing people (1 min)
+
+As `admin@acme.test`, open **People**.
+
+Everyone in the organisation, their roles, and a column showing whether their
+record is complete enough for a statutory return.
+
+> Notice this connects to the previous screen. If somebody is missing an
+> identity number or an equity code, it shows here, in the list — so it gets
+> fixed as people are added, not discovered the night before a SETA
+> submission. And an identity number is checked against its check digit as you
+> type it, while the person holding the document is still in front of you.
+
+Open your own record and point at the Roles section.
+
+> It will not let me change my own roles or suspend my own account. Nor will
+> it let anyone remove the last remaining administrator. Locking yourself out
+> of your own system is the one mistake that needs somebody with database
+> access to undo, so the system simply refuses.
+
+If POPIA comes up, scroll to **Erase personal information**:
+
+> A data subject can require their personal details be erased. SAQA requires
+> achievement records to be kept. Both are satisfied because the two are
+> separate: erasing removes the name, contact details and demographics, and
+> the certificates stay valid and publicly verifiable. The qualification stays
+> on the record; it is just no longer attached to a named individual.
+
+## 11. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.

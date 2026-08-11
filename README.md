@@ -191,6 +191,52 @@ Other things worth knowing:
   where a decision was overturned, otherwise the assessor's. Reading the
   decision directly would misreport an overridden result.
 
+## Managing people
+
+`/people` lists everyone in the tenant with their roles, and — usefully —
+**whether their record carries what a statutory return needs**. Someone missing
+an identity number, equity code or OFO code is marked in the list, so the gaps
+are fixed as people are added rather than discovered the night before a SETA
+submission.
+
+Identity numbers are validated on save, so a transcription error is caught
+while the person holding the document is still in front of you.
+
+Three rules stop an administrator doing damage nobody can undo:
+
+1. **Nobody can change their own roles, suspend their own account, or
+   anonymise themselves.** Each of those would end the session performing it,
+   and there may be nobody else able to reverse it.
+2. **The last administrator cannot lose the role**, by demotion or suspension.
+   A tenant with no administrator can only be repaired by ROFT with direct
+   database access — exactly the support call worth designing out.
+3. **Anonymisation clears who somebody was, never what they achieved.**
+
+Suspending someone ends their sessions immediately, and resetting a password
+signs them out everywhere — which is what database-backed sessions were for.
+Role changes take effect on the person's next page load without ending their
+session, because roles are read from the database on every request.
+
+Initial and reset passwords are shown **once**, on screen, for the
+administrator to pass on. There is no mail server connected yet, and showing
+the password is honest about that rather than pretending an invitation was
+sent. The password never reaches the audit log — there is a test for that.
+
+### POPIA erasure
+
+The Act grants a data subject erasure of personal information; SAQA and the
+QCTO require achievement records to be retained for national verification.
+Both hold at once only because the two are separable: demographic fields live
+on the person, and the competencies attested live frozen on the certificate.
+
+Anonymising clears the name, contact and demographic details permanently and
+sets the account beyond sign-in. **Certificates stay valid and publicly
+verifiable** — the qualification remains on the record, it is simply no longer
+attached to a named, contactable individual. There are tests for both halves.
+
+It cannot be undone, so it asks for a written reason (kept in the audit log)
+and for the person's surname to be typed. A dialog gets clicked through.
+
 ## Statutory reporting (SAQA NLRD, WSP/ATR)
 
 The point of doing this in software is not the file — anyone can write a CSV.
