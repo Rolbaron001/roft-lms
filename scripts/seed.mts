@@ -587,6 +587,52 @@ async function main() {
       dueDate: new Date(Date.now() - 9 * 86_400_000),
     });
 
+    /**
+     * Demographic data for the statutory return.
+     *
+     * Every identity number below is arithmetically valid — the check digit
+     * was computed, not invented — so the validation demonstrates a genuine
+     * pass rather than passing because nothing was checked.
+     *
+     * Pieter van Wyk keeps a valid identity number but no equity or
+     * disability code, so the return is submittable while the validation
+     * still has something real to report. A demonstration that is blocked
+     * with no way to unblock it is worse than one that shows both states.
+     */
+    for (const [email, nationalId, equity, gender, ofoCode] of [
+      ["admin@acme.test", "8001015009087", "AF", "male", "2026-134101"],
+      ["learner@acme.test", "9501285216089", "AF", "male", "2026-811201"],
+      ["manager@acme.test", "8711050367089", "IN", "female", "2026-132104"],
+      ["assessor@acme.test", "9107160482083", "AF", "female", "2026-235101"],
+      ["moderator@acme.test", "6903045122081", "WH", "male", "2026-235101"],
+      ["sdf@acme.test", "8305195744086", "AF", "male", "2026-242401"],
+      ["verifier@acme.test", "7608125431083", "AF", "male", "2026-242401"],
+      ["both@acme.test", "8802270913081", "CO", "female", "2026-235101"],
+    ] as const) {
+      await tx
+        .update(users)
+        .set({
+          nationalId,
+          equityCode: equity,
+          disabilityCode: "N",
+          gender,
+          nationality: "South African",
+          ofoCode,
+        })
+        .where(eq(users.id, usersByEmail.get(email)!));
+    }
+
+    // Valid identity number, but demographic fields left blank on purpose.
+    await tx
+      .update(users)
+      .set({
+        nationalId: "7411225088089",
+        gender: "male",
+        nationality: "South African",
+        ofoCode: "2026-235101",
+      })
+      .where(eq(users.id, usersByEmail.get("instructor@acme.test")!));
+
     // Team and site on a few people so the report filters do something, and
     // the line manager has direct reports to see.
     const managerId = usersByEmail.get("manager@acme.test")!;

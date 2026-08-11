@@ -217,7 +217,43 @@ Finally, sign in as `manager@acme.test` and open Reports again.
 > Same screen, one person. A line manager sees their own team and nobody else
 > — including in the export, which runs the same rules rather than its own.
 
-## 9. Read-only oversight (1 min)
+## 9. The SETA and SAQA return (2 min)
+
+Sign in as `sdf@acme.test` — the Skills Development Facilitator, the person who
+actually files these — and open **Statutory**.
+
+It says **Ready to submit**, with the four NLRD files available: Person Record
+27, Enrolment Record 28, Achievement Record 29, Provider Record 30.
+
+> The files are not the clever part. Anyone can write a spreadsheet. The clever
+> part is that it checked everything first.
+>
+> Identity numbers are verified against their check digit, so a transcription
+> error is caught here rather than by SAQA six weeks later. A qualification
+> without a SAQA ID, an assessor without a registration number, a learner
+> enrolled after the qualification's registration window closed — all blocked
+> before submission.
+>
+> A rejected return costs a full cycle for every learner in the file. This is
+> the difference between filing and re-filing.
+
+Point at **Worth fixing** underneath: Pieter van Wyk has no equity code, and
+the organisation has no ward code recorded. Those do not block the return, but
+the NLRD flags them and a SETA may query them.
+
+Then scroll to the **WSP/ATR** table — training activity grouped by OFO code,
+which is exactly how the annual SETA return is organised.
+
+> This is the return that decides mandatory grant recovery and B-BBEE skills
+> development points. It is being produced from the training records
+> themselves, not reassembled from spreadsheets at year end.
+
+If someone asks whether it can be submitted tomorrow: the data is complete and
+validated; the exact file layout must be checked against the current SAQA
+specification first. Be straight about that — it is a formatting step, not a
+gap.
+
+## 10. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.
@@ -240,9 +276,10 @@ decision to make — likely a South African data centre so learner data stays in
 the country for POPIA.
 
 **"What is still to build?"**
-Single sign-on, HRIS and payments, and the SAQA/NLRD statutory exports. The
-full chain — enrol, learn, assess, moderate, certify, verify — is built and
-working, with capability reporting on top of it.
+Single sign-on, HRIS integration, payments for learning centres selling course
+access, and the mobile app for offline use. The full chain — enrol, learn,
+assess, moderate, certify, verify — is built and working, with capability
+reporting and the statutory returns on top of it.
 
 **"How long?"**
 Better answered after the assessment block, when the shape of the remaining

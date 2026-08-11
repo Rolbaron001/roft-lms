@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
     label: "Reports",
     anyPermission: ["report:team", "report:tenant"],
   },
+  { href: "/statutory", label: "Statutory", permission: "report:statutory" },
 ];
 
 export function AppShell({

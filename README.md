@@ -191,6 +191,49 @@ Other things worth knowing:
   where a decision was overturned, otherwise the assessor's. Reading the
   decision directly would misreport an overridden result.
 
+## Statutory reporting (SAQA NLRD, WSP/ATR)
+
+The point of doing this in software is not the file — anyone can write a CSV.
+It is the **validation that runs before submission**. A return rejected by the
+NLRD for a mistyped identity number or a missing equity code costs a provider a
+full cycle, and those faults are invisible in a spreadsheet until the regulator
+finds them.
+
+So `/statutory` shows readiness first, and **the files stay locked while a
+blocking problem remains** — enforced in the download route, not just hidden in
+the interface, so requesting the file directly returns a 409 rather than a
+return destined for rejection.
+
+- **Blocking**: a missing or invalid identity number, a qualification with no
+  SAQA ID, a provider with no accreditation number, an assessor with no
+  registration number, an enrolment dated after the qualification's
+  registration window closed.
+- **Warnings**: missing equity or disability codes, a missing ward code, a
+  module with no credit value. These do not stop the return but the NLRD flags
+  them.
+
+Every problem is reported, not just the first: a provider needs the complete
+list of what to fix.
+
+**Identity numbers are validated properly** — Luhn check digit, real calendar
+date, valid citizenship digit, and century resolution so a two-digit year never
+produces someone born in the future. That catches transcription errors, which
+are the usual cause of a rejected return. `lib/south-african-id.ts` is pure and
+heavily tested.
+
+Four files are produced (Person 27, Enrolment 28, Achievement 29, Provider 30),
+plus the WSP/ATR return grouped by OFO code. An achievement is a live
+certificate — a completed, judged and where required moderated outcome — so
+nothing weaker reaches the regulator. Internal corporate training that belongs
+to no qualification is excluded: real training for the client, but not NLRD
+business.
+
+> **Before a live submission:** the field mapping follows the structure in the
+> accreditation framework document, and the data is complete and validated. The
+> exact Edu.Dex file layout — column order, fixed widths, code lists — must be
+> confirmed against the current SAQA specification. That is a formatting step
+> on validated data, not a gap in what is gathered.
+
 ## Reporting
 
 The design document is explicit that this platform reports on **capability
