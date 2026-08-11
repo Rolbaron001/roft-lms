@@ -163,7 +163,34 @@ is moderated"*.
 > database itself, not by hiding a button — we test it by trying to write the
 > record directly, and the database refuses.
 
-## 7. Read-only oversight (1 min)
+## 7. The certificate issues itself (2 min)
+
+Once the moderator has endorsed the decision, sign back in as
+`learner@acme.test`. A **My certificates** section has appeared. Open it.
+
+> Nobody issued this. The system did, the moment the last rule was satisfied.
+> And note what had to be true first: every lesson finished, the summative
+> assessment judged competent, and that judgement independently moderated. Sam
+> finished the lessons some time ago — the certificate did not appear then,
+> because the assessment had not been through the chain yet.
+
+Read out the reference at the bottom, then open a **private browsing window**
+— to prove no account is involved — and go to:
+
+`http://acme.localhost:3000/verify`
+
+Type the reference in. It confirms who holds it, what for, who issued it, and
+which competencies it attests to.
+
+> This is the part a client's HR department or a SETA verifier actually uses.
+> No login, no phone call. And the reference is random, not sequential, so
+> nobody can guess their way through your certificates.
+
+If asked what happens to a certificate issued in error: it is withdrawn, not
+deleted. Verification then reports it as withdrawn and gives the reason,
+because someone holding the printed copy deserves to be told.
+
+## 8. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.
@@ -186,9 +213,9 @@ decision to make — likely a South African data centre so learner data stays in
 the country for POPIA.
 
 **"What is still to build?"**
-Certificates, single sign-on, HRIS and payments, the SAQA/NLRD statutory
-exports, and the reporting dashboards. The assessment and moderation chain is
-built; what is not yet built is the certificate that issues at the end of it.
+Single sign-on, HRIS and payments, the SAQA/NLRD statutory exports, and the
+reporting dashboards. The full chain — enrol, learn, assess, moderate,
+certify, verify — is built and working.
 
 **"How long?"**
 Better answered after the assessment block, when the shape of the remaining
@@ -210,7 +237,7 @@ every change, not promises.
 
 Say so if it comes up, rather than being caught out:
 
-- Certificates at the end of the assessment chain.
+- Printable or PDF certificates (the certificate is a web page for now).
 - Single sign-on, HRIS, payments.
 - Reporting dashboards beyond per-course progress.
 - Mobile app and offline use.

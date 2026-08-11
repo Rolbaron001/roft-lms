@@ -18,6 +18,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
+import { issueCertificateAutomatically } from "./certificates";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -1035,6 +1036,35 @@ export async function recordModeration(
         revisedOutcome: parsed.revisedOutcome ?? null,
       },
     });
+
+    return { record, submissionId: decision.submissionId };
+  }).then(async ({ record, submissionId }) => {
+    // Moderation is the last step before a certificate is due. Attempted
+    // outside the transaction so a failure cannot roll back the moderator's
+    // signed record, which must stand on its own.
+    if (parsed.outcome !== "referred_back") {
+      try {
+        const enrolmentId = await withTenant(
+          session.organisationId,
+          async (tx) => {
+            const [row] = await tx
+              .select({ enrolmentId: assessmentSubmissions.enrolmentId })
+              .from(assessmentSubmissions)
+              .where(eq(assessmentSubmissions.id, submissionId));
+            return row?.enrolmentId ?? null;
+          },
+        );
+
+        if (enrolmentId) {
+          await issueCertificateAutomatically(
+            session.organisationId,
+            enrolmentId,
+          );
+        }
+      } catch (error) {
+        console.error("Automatic certificate issue failed", error);
+      }
+    }
 
     return record;
   });

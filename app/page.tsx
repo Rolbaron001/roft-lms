@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
 import { myEnrolments } from "@/lib/enrolment";
+import { listMyCertificates } from "@/lib/certificates";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,7 +34,10 @@ function dueLabel(dueDate: Date | null, status: string): string | null {
 export default async function HomePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
-  const enrolments = await myEnrolments(session);
+  const [enrolments, certificates] = await Promise.all([
+    myEnrolments(session),
+    listMyCertificates(session),
+  ]);
 
   const outstanding = enrolments.filter((row) => row.status !== "completed");
   const finished = enrolments.filter((row) => row.status === "completed");
@@ -130,6 +134,37 @@ export default async function HomePage() {
             </div>
           )}
         </Card>
+
+        {certificates.length > 0 ? (
+          <Card title="My certificates">
+            <ul className="space-y-2">
+              {certificates.map((certificate) => (
+                <li key={certificate.id}>
+                  <Link
+                    href={`/certificates/${certificate.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] px-4 py-3 transition hover:border-[var(--brand-accent)]"
+                  >
+                    <span className="text-sm">
+                      <span className="font-medium">{certificate.title}</span>
+                      <span className="block font-mono text-xs text-[var(--muted)]">
+                        {certificate.reference}
+                      </span>
+                    </span>
+                    <span className="text-xs text-[var(--muted)]">
+                      {certificate.revokedAt ? (
+                        <span className="font-medium text-[var(--danger)]">
+                          Withdrawn
+                        </span>
+                      ) : (
+                        `Issued ${certificate.issuedAt.toLocaleDateString("en-ZA")}`
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
       </div>
     </AppShell>
   );

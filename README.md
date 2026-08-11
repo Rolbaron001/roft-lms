@@ -191,6 +191,45 @@ Other things worth knowing:
   where a decision was overturned, otherwise the assessor's. Reading the
   decision directly would misreport an overridden result.
 
+## Certificates
+
+A certificate is the platform's only outward-facing claim: that a named person
+demonstrated named competencies. Issuing one therefore requires **all** of:
+
+- the learner completed every lesson;
+- every published summative assessment on the course was judged competent;
+- where a judgement went to moderation, that moderation has finished.
+
+A decision that was routed for moderation is *not* final, and neither is one a
+moderator overturned — the moderator's revision decides, not the assessor's
+original. Each of those is a separate test.
+
+**Certificates issue themselves.** The two moments that can make someone
+eligible — finishing the last lesson, and a moderation completing — attempt
+issuance automatically. That path is deliberately not permission-checked
+against the actor: a learner finishing a lesson holds no authority to issue
+certificates and should need none. The platform issues because the rules were
+met, which is the whole point. Issuance is also available manually to a tenant
+administrator, and refuses with reasons when the rules are not met.
+
+Issuance is idempotent: an enrolment that already holds a live certificate gets
+that one back rather than a second.
+
+**Verification is public**, at `/verify`, because the people who most need to
+check a certificate — an employer, a SETA, a compliance officer — will never
+have an account here. It asks for the printed reference and nothing else, and
+returns only what is printed on the certificate.
+
+The reference (`ROFT-XXXXX-XXXXX-XXXXX-XXXXX`) is ~100 bits of randomness, not
+a sequence, so certificates cannot be enumerated. It excludes I, L, O, U, 0 and
+1 so a handwritten reference cannot be misread, and is accepted however it is
+typed — lower case, unspaced, or with the hyphens left out.
+
+**Withdrawing** a certificate keeps the record and marks it revoked rather than
+deleting it. Someone holding the paper deserves to be told it was withdrawn and
+why; a certificate that simply vanishes from verification looks like a fault in
+the system.
+
 ## Enrolment and the learner experience
 
 People are assigned individually or in bulk — paste a column of email

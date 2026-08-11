@@ -12,6 +12,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { issueCertificateAutomatically } from "./certificates";
 
 /**
  * Enrolment, delivery and progress.
@@ -449,6 +450,19 @@ export async function markLessonComplete(
     }
 
     return refreshCompletion(tx, enrolmentId, session);
+  }).then(async (result) => {
+    // Finishing the last lesson can be the moment a certificate becomes due.
+    // Issued outside the transaction above so that a failure here cannot roll
+    // back the learner's progress — the certificate is retried on the next
+    // qualifying event, but their completed lesson must stick.
+    if (result.completed) {
+      try {
+        await issueCertificateAutomatically(session.organisationId, enrolmentId);
+      } catch (error) {
+        console.error("Automatic certificate issue failed", error);
+      }
+    }
+    return result;
   });
 }
 
