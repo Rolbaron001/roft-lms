@@ -30,19 +30,20 @@ async function main() {
   const statements = await readFile(sqlPath, "utf8");
   const sql = postgres(adminUrl!, { max: 1, onnotice: () => {} });
 
+  // Single-quoted SQL literal. The password never reaches version control, so
+  // it has to be injected at run time; doubling any quote it contains is what
+  // keeps that injection safe.
+  const passwordLiteral = `'${appPassword!.replace(/'/g, "''")}'`;
+
   try {
     // The policies file reads the application role's password from a session
     // setting rather than having it written into version-controlled SQL.
-    await sql.unsafe(
-      `set roft.app_password = ${sql.unsafe(`'${appPassword!.replace(/'/g, "''")}'`)}`,
-    );
+    await sql.unsafe(`set roft.app_password = ${passwordLiteral}`);
     await sql.unsafe(statements);
 
     // Creating the role and setting its password are separate concerns: the
     // role may already exist from an earlier run with a different password.
-    await sql.unsafe(
-      `alter role roft_app with password ${sql.unsafe(`'${appPassword!.replace(/'/g, "''")}'`)}`,
-    );
+    await sql.unsafe(`alter role roft_app with password ${passwordLiteral}`);
 
     const [{ count }] = await sql<{ count: string }[]>`
       select count(*)::text as count

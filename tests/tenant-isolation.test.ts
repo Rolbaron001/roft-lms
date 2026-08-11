@@ -184,3 +184,53 @@ describe("tenant isolation", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("isolation coverage", () => {
+  /**
+   * The guard against the most likely future mistake: someone adds a table,
+   * forgets to re-run the policies script, and it ships unprotected. The
+   * policies are applied by a loop over every table carrying organisation_id,
+   * so this asserts the loop actually reached all of them.
+   */
+  it("protects every table that carries a tenant column", async () => {
+    const unprotected = await withPlatformScope(
+      "verifying row-level security coverage across all tenant tables",
+      (tx) =>
+        tx.execute<{ table_name: string }>(sql`
+          select c.relname as table_name
+          from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+          join pg_attribute a on a.attrelid = c.oid
+          where n.nspname = 'public'
+            and c.relkind = 'r'
+            and a.attname = 'organisation_id'
+            and not a.attisdropped
+            and (
+              not c.relrowsecurity
+              or not exists (
+                select 1 from pg_policies p
+                where p.schemaname = 'public'
+                  and p.tablename = c.relname
+                  and p.policyname = 'tenant_isolation'
+              )
+            )
+        `),
+    );
+
+    expect(unprotected.map((row) => row.table_name)).toEqual([]);
+  });
+
+  it("keeps the application role free of privileges that would bypass isolation", async () => {
+    const roles = await withPlatformScope(
+      "verifying the application role holds no escalated privileges",
+      (tx) =>
+        tx.execute<{ rolsuper: boolean; rolbypassrls: boolean }>(sql`
+          select rolsuper, rolbypassrls from pg_roles where rolname = 'roft_app'
+        `),
+    );
+
+    expect(roles).toHaveLength(1);
+    expect(roles[0].rolsuper).toBe(false);
+    expect(roles[0].rolbypassrls).toBe(false);
+  });
+});
