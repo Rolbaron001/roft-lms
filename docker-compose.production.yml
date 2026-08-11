@@ -1,0 +1,92 @@
+# Production stack: reverse proxy, application, database.
+#
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Only Caddy is exposed to the internet. The application and the database are
+# on an internal network with no published ports — a Postgres reachable from
+# the internet is the single most common way a small deployment is lost.
+
+name: roft-lms
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Used by the Caddyfile to request the certificate.
+      LMS_DOMAIN: ${LMS_DOMAIN:?set LMS_DOMAIN, e.g. lms.roftbusiness.org}
+      LMS_TLS_EMAIL: ${LMS_TLS_EMAIL:?set LMS_TLS_EMAIL for certificate notices}
+    depends_on:
+      - app
+    networks:
+      - edge
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # The application role: bound by row-level security.
+      DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      # The owner role: migrations, tenant provisioning, backups.
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      AUTH_SECRET: ${AUTH_SECRET:?generate with: npx auth secret}
+      AUTH_URL: https://${LMS_DOMAIN:?}
+      PLATFORM_HOST: ${LMS_DOMAIN:?}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage
+    volumes:
+      # Evidence uploads must outlive the container. Losing these loses the
+      # Portfolio of Evidence behind every assessment decision.
+      - evidence:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-roft_lms}
+      # Sensible defaults for South African tenants; per-tenant display
+      # formatting is handled in the application, not here.
+      TZ: Africa/Johannesburg
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-roft_lms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - internal
+    # No published ports on purpose. Reach it with:
+    #   docker compose -f docker-compose.production.yml exec db psql -U postgres
+
+networks:
+  edge:
+  internal:
+    internal: true
+
+volumes:
+  pgdata:
+  evidence:
+  caddy_data:
+  caddy_config:

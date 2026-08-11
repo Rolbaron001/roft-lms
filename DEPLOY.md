@@ -1,0 +1,302 @@
+# Deploying the ROFT LMS
+
+For a single Linux server in South Africa running the whole stack: reverse
+proxy, application, and PostgreSQL. Suits Oracle Cloud Always Free
+(Johannesburg) or any small VPS.
+
+Roughly an hour the first time, most of it waiting for things to install.
+
+---
+
+## What you are building
+
+```
+        internet
+            |
+      [ Caddy ]         TLS certificates, obtained and renewed automatically
+            |
+       [ app ]          Next.js, unprivileged, no published port
+            |
+        [ db ]          PostgreSQL, internal network only, never exposed
+            |
+   nightly backup       encrypted, copied off the server, restore tested
+```
+
+The database is deliberately unreachable from the internet. A Postgres open to
+the world is the most common way a small deployment is lost.
+
+---
+
+## Before you start
+
+You need:
+
+- **A server.** 2 vCPU and 8–12 GB is ample. ARM (Ampere) is fine and usually
+  cheaper — the image builds for it.
+- **A domain.** `lms.roftbusiness.org` is the obvious one. Your existing
+  website at `roftbusiness.org` is untouched by any of this.
+- **Somewhere to put backups** that is not this server: an object storage
+  bucket. Oracle gives 10 GB free and it is S3-compatible.
+
+### Decide the hostname pattern now
+
+Tenants are identified by hostname, so this shapes everything after it:
+
+| Address | Who sees it |
+|---|---|
+| `lms.roftbusiness.org` | ROFT platform console |
+| `acme.lms.roftbusiness.org` | the Acme tenant |
+| `learning.acmemining.co.za` | a client using their own domain |
+
+In your DNS, point both `lms` and `*.lms` at the server's IP address. The
+wildcard is what lets a new client be added without touching DNS again.
+
+---
+
+## 1. Prepare the server
+
+SSH in, then:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io docker-compose-v2 git postgresql-client awscli
+sudo usermod -aG docker $USER
+```
+
+Log out and back in so the group membership applies.
+
+**Open only 80 and 443.** On Oracle Cloud this is two places, and forgetting
+the second is the usual reason a new instance appears dead:
+
+1. the Security List or Network Security Group in the OCI console, and
+2. the instance firewall itself:
+
+```bash
+sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+---
+
+## 2. Fetch the code
+
+```bash
+git clone https://github.com/Rolbaron001/roft-lms.git
+cd roft-lms
+```
+
+---
+
+## 3. Write the settings
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Generate each secret rather than inventing one:
+
+```bash
+openssl rand -base64 36   # for POSTGRES_PASSWORD
+openssl rand -base64 36   # for ROFT_APP_DB_PASSWORD
+npx auth secret           # for AUTH_SECRET
+openssl rand -base64 36   # for BACKUP_PASSPHRASE
+```
+
+`.env` should contain:
+
+```
+LMS_DOMAIN=lms.roftbusiness.org
+LMS_TLS_EMAIL=you@roftbusiness.org
+
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=...
+POSTGRES_DB=roft_lms
+ROFT_APP_DB_PASSWORD=...
+
+AUTH_SECRET=...
+```
+
+Then lock it down — it holds every credential the system has:
+
+```bash
+chmod 600 .env
+```
+
+**Keep `BACKUP_PASSPHRASE` somewhere other than this server.** A password
+manager, not a note on the machine. Without it the backups are unreadable, and
+that is the entire point of them.
+
+---
+
+## 4. Start it
+
+```bash
+docker compose -f docker-compose.production.yml up -d --build
+docker compose -f docker-compose.production.yml logs -f app
+```
+
+The first build takes a few minutes. Caddy will fetch a certificate as soon as
+DNS resolves to this machine; if it fails, DNS has not propagated yet — wait
+and check again rather than changing anything.
+
+---
+
+## 5. Create the schema
+
+```bash
+docker compose -f docker-compose.production.yml exec app sh -c '
+  npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts
+'
+```
+
+It should end with `28 tables are tenant-isolated`. **If it does not, stop.**
+That line is the tenant separation everything else depends on.
+
+---
+
+## 6. Create the first tenant and administrator
+
+There is no sign-up page by design — tenants are provisioned, not
+self-created. Do it once from the server:
+
+```bash
+docker compose -f docker-compose.production.yml exec app npx tsx scripts/seed.mts
+```
+
+That loads the demonstration organisations, which is what you want for
+showing the system. For a real client, create their organisation instead and
+add one administrator, then everyone else through **People** in the interface.
+
+Confirm it is up:
+
+```bash
+curl https://lms.roftbusiness.org/api/health
+```
+
+You want `{"status":"ok",...}`.
+
+---
+
+## 7. Set up backups — do not skip this
+
+This is the step that separates a system from a liability. Self-hosted
+Postgres without tested backups is the one arrangement not worth running.
+
+```bash
+sudo mkdir -p /var/backups/roft-lms
+sudo chown $USER /var/backups/roft-lms
+cp .env.backup.example ~/.env.backup
+nano ~/.env.backup
+chmod 600 ~/.env.backup
+```
+
+Configure the AWS CLI against your object storage (Oracle's is
+S3-compatible; the endpoint and keys come from the OCI console under
+Customer Secret Keys):
+
+```bash
+aws configure
+```
+
+Run one by hand and watch it:
+
+```bash
+set -a; source ~/.env.backup; set +a
+./scripts/backup-database.sh
+```
+
+Then schedule it. `crontab -e`:
+
+```cron
+# 02:15 SAST nightly
+15 2 * * * cd $HOME/roft-lms && set -a && . $HOME/.env.backup && set +a && ./scripts/backup-database.sh >> /var/log/roft-backup.log 2>&1
+
+# Prove a backup restores, on the first of each month
+30 3 1 * * cd $HOME/roft-lms && set -a && . $HOME/.env.backup && set +a && ./scripts/restore-database.sh --verify $(ls -t /var/backups/roft-lms/*.enc | head -1) >> /var/log/roft-restore-test.log 2>&1
+```
+
+**Read `/var/log/roft-restore-test.log` occasionally.** A backup nobody has
+restored is a hypothesis. The script exists so that checking is a two-minute
+job rather than a project.
+
+---
+
+## Everyday operations
+
+**Deploy a change:**
+
+```bash
+cd roft-lms && git pull
+docker compose -f docker-compose.production.yml up -d --build app
+```
+
+**Apply a schema change** (after the deploy above):
+
+```bash
+docker compose -f docker-compose.production.yml exec app sh -c '
+  npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts
+'
+```
+
+Re-running the policies script after any schema change is not optional. A new
+table without its policy is a table with no tenant separation.
+
+**Look at the database:**
+
+```bash
+docker compose -f docker-compose.production.yml exec db psql -U postgres -d roft_lms
+```
+
+**Read the logs:**
+
+```bash
+docker compose -f docker-compose.production.yml logs -f --tail=100 app
+```
+
+**Restore after a disaster:**
+
+```bash
+set -a; source ~/.env.backup; set +a
+aws s3 cp s3://your-bucket/roft-lms/roft-lms-<stamp>.dump.enc . --endpoint-url "$BACKUP_S3_ENDPOINT"
+./scripts/restore-database.sh --verify  roft-lms-<stamp>.dump.enc     # check it first
+./scripts/restore-database.sh --replace-production roft-lms-<stamp>.dump.enc
+docker compose -f docker-compose.production.yml exec app npx tsx scripts/apply-policies.ts
+```
+
+Always `--verify` before `--replace-production`. The replace takes a safety
+copy of the current database first, but checking costs a minute and removes
+the possibility of restoring the wrong file over a working system.
+
+---
+
+## If you are on Oracle Cloud Always Free
+
+Two things specific to it, both of which have cost people their servers:
+
+**Upgrade the account to Pay As You Go.** Idle Always Free instances are
+reclaimed after roughly seven days of low usage, and a demonstration system
+with a handful of users looks exactly like an idle one. Upgrading keeps the
+same free resources and stops the reclamation. You stay within Always Free
+limits and are not charged.
+
+**The free ARM allowance was halved in June 2026** to 2 cores and 12 GB.
+Still ample here — but if you read an older guide promising 4 cores and 24 GB,
+that is no longer available and instances exceeding the new limit are being
+terminated.
+
+If instance creation reports "out of host capacity", that is normal for free
+ARM. Try a different availability domain, or retry over a day or two.
+
+---
+
+## Before a real client's data goes on this
+
+- [ ] Restore tested from an off-server copy, not just a local one
+- [ ] `BACKUP_PASSPHRASE` stored somewhere other than this server
+- [ ] The demonstration tenants removed, or renamed so nobody mistakes them
+- [ ] `roft-demo-2026` no longer a working password anywhere
+- [ ] Uptime monitoring pointed at `/api/health`
+- [ ] Unattended security upgrades enabled (`apt install unattended-upgrades`)
+- [ ] Somebody other than Roland able to reach the server if he is unavailable

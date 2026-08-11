@@ -30,9 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files. Real credentials never get committed; the template does.
+# env files. Real credentials never get committed; the templates do.
 .env*
 !.env.example
+!.env.backup.example
 
 # locally uploaded evidence and course media (S3-compatible storage in deployment)
 /storage

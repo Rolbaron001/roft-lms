@@ -1,0 +1,16 @@
+# Line endings.
+#
+# The shell scripts and container files run on Linux. Checked out with Windows
+# line endings they fail with "bad interpreter: /usr/bin/env bash^M", which
+# reads like a missing program rather than an invisible carriage return — an
+# afternoon lost to something that should never have been possible.
+
+* text=auto
+
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+Caddyfile     text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+.env.example  text eol=lf
+.env.backup.example text eol=lf

@@ -1,0 +1,54 @@
+# Reverse proxy and TLS.
+#
+# Caddy obtains and renews the certificate from Let's Encrypt automatically,
+# which is why it is here rather than nginx: an expired certificate on a
+# learner-facing system is an avoidable outage, and manual renewal is the
+# thing everyone forgets.
+#
+# The wildcard covers per-tenant subdomains (acme.lms.roftbusiness.org) as well
+# as the platform host itself. A wildcard certificate needs a DNS challenge,
+# which needs credentials for the DNS provider — until that is set up, list
+# each tenant's hostname explicitly and Caddy will issue per-name certificates
+# over HTTP instead.
+
+{
+	email {$LMS_TLS_EMAIL}
+}
+
+{$LMS_DOMAIN}, *.{$LMS_DOMAIN} {
+	encode zstd gzip
+
+	# The application resolves the tenant from the hostname, so the original
+	# Host must survive the hop. Getting this wrong is what makes every page
+	# report "this address is not in use".
+	reverse_proxy app:3000 {
+		header_up Host {host}
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+	}
+
+	header {
+		# One year, and only meaningful once the domain is known good.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Evidence uploads and video can be large; the default would reject them.
+	request_body {
+		max_size 512MB
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 20MB
+			roll_keep 10
+		}
+		# Learner emails and tenant hostnames appear in URLs, so the access log
+		# is personal data under POPIA. Kept short and rotated.
+		format json
+	}
+}
