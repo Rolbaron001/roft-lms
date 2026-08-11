@@ -45,7 +45,15 @@ export default async function CoursePage({
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{detail.course.title}</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {session.permissions.includes("enrolment:read_all") ? (
+              <Link
+                href={`/courses/${id}/enrolments`}
+                className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
+              >
+                Who is on this course
+              </Link>
+            ) : null}
             {detail.course.version > 1 ? (
               <span className="text-xs text-[var(--muted)]">
                 version {detail.course.version}

@@ -153,6 +153,36 @@ were assessed against, so editing in place would rewrite history. Changes go
 into a new version; the published one is left exactly as it is, and competency
 tags carry forward.
 
+## Enrolment and the learner experience
+
+People are assigned individually or in bulk — paste a column of email
+addresses straight out of a spreadsheet. Bulk enrolment reports what happened
+to **every** address rather than stopping at the first problem: enrolled,
+already on the course, or not recognised. Someone pasting forty addresses needs
+to know which three were wrong.
+
+**Only a published course can be assigned.** A draft has not passed its publish
+gate, so nothing has confirmed its content covers what it claims to.
+
+The learner sees their courses with progress, opens one, works through the
+lessons and marks each complete. The player opens on the first unfinished
+lesson, so returning resumes rather than restarting. Completion is *derived*
+from progress rather than set by hand, so the two cannot drift apart.
+
+Separation between people inside one client is enforced in the data layer, not
+the pages:
+
+- A learner cannot open a colleague's enrolment, even with a direct link.
+- **Nobody can mark a lesson complete on a learner's behalf** — not even an
+  administrator. Progress is evidence; a completion record an administrator
+  could fabricate would prove only that somebody clicked a button.
+- A lesson must belong to the course the enrolment is for. Without that check a
+  crafted request could complete a course the learner never opened.
+
+Administrators and instructors see everyone on a course with their progress and
+due dates. Overdue is a stored status computed by one query, so a report and a
+reminder email cannot disagree about who is late.
+
 ## Getting set up
 
 Requires Node.js 20 or later and PostgreSQL 16 or later.

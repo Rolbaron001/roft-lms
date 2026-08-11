@@ -6,9 +6,9 @@ export default function NotPermittedPage() {
       <div className="max-w-md text-center">
         <h1 className="text-lg font-semibold">You do not have access to this</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Your account is signed in, but the role it holds does not include this
-          area. If you believe it should, ask your administrator to review your
-          roles.
+          You are signed in, but this is not yours to see — either it belongs to
+          someone else, or it needs a role your account does not hold. If you
+          think that is wrong, ask your administrator to check.
         </p>
         <Link
           href="/"

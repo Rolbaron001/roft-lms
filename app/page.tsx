@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
-import { logoutAction } from "./login/actions";
+import { myEnrolments } from "@/lib/enrolment";
+import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: "Platform Owner",
@@ -13,101 +15,122 @@ const ROLE_LABELS: Record<string, string> = {
   external_verifier: "External Verifier",
 };
 
-/**
- * Placeholder home page.
- *
- * Role-specific dashboards arrive with the course and reporting slices. For
- * now this proves the parts built so far work end to end: the tenant was
- * resolved from the hostname, the session was verified against the database,
- * and the roles and permissions shown are the ones this person actually holds.
- */
+function dueLabel(dueDate: Date | null, status: string): string | null {
+  if (!dueDate || status === "completed") return null;
+
+  const days = Math.ceil(
+    (dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (days < 0) {
+    return `Overdue by ${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"}`;
+  }
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  return `Due in ${days} days`;
+}
+
 export default async function HomePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  const enrolments = await myEnrolments(session);
 
-  const grouped = new Map<string, string[]>();
-  for (const permission of [...session.permissions].sort()) {
-    const [area, action] = permission.split(":");
-    grouped.set(area, [...(grouped.get(area) ?? []), action]);
-  }
+  const outstanding = enrolments.filter((row) => row.status !== "completed");
+  const finished = enrolments.filter((row) => row.status === "completed");
 
   return (
-    <div
-      className="min-h-screen"
-      style={
-        {
-          "--brand-primary": tenant.primaryColour,
-          "--brand-accent": tenant.accentColour,
-        } as React.CSSProperties
-      }
-    >
-      <header
-        className="border-b-4 px-6 py-4 text-white"
-        style={{
-          background: "var(--brand-primary)",
-          borderColor: "var(--brand-accent)",
-        }}
-      >
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
-          <div>
-            <p className="text-base font-semibold">{tenant.displayName}</p>
-            <p className="text-xs opacity-75">Learning Management System</p>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
+    <AppShell tenant={tenant} session={session}>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold">
+          {session.firstName} {session.lastName}
+        </h1>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {session.roles.map((role) => (
+            <span
+              key={role}
+              className="rounded-full px-3 py-1 text-xs font-medium text-white"
+              style={{ background: "var(--brand-primary)" }}
             >
-              Sign out
-            </button>
-          </form>
+              {ROLE_LABELS[role] ?? role}
+            </span>
+          ))}
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-          <h1 className="text-lg font-semibold">
-            {session.firstName} {session.lastName}
-          </h1>
-          <p className="text-sm text-[var(--muted)]">{session.email}</p>
+      <div className="space-y-6">
+        <Card title="My learning">
+          {enrolments.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              You have not been assigned any courses yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {[...outstanding, ...finished].map((enrolment) => {
+                const percentage =
+                  enrolment.totalLessons === 0
+                    ? 0
+                    : Math.round(
+                        (enrolment.completedLessons / enrolment.totalLessons) *
+                          100,
+                      );
+                const due = dueLabel(enrolment.dueDate, enrolment.status);
+                const overdue = enrolment.status === "overdue";
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {session.roles.length === 0 ? (
-              <span className="text-sm text-[var(--muted)]">
-                No roles assigned yet.
-              </span>
-            ) : (
-              session.roles.map((role) => (
-                <span
-                  key={role}
-                  className="rounded-full px-3 py-1 text-xs font-medium text-white"
-                  style={{ background: "var(--brand-primary)" }}
-                >
-                  {ROLE_LABELS[role] ?? role}
-                </span>
-              ))
-            )}
-          </div>
-        </section>
+                return (
+                  <Link
+                    key={enrolment.enrolmentId}
+                    href={`/learn/${enrolment.enrolmentId}`}
+                    className="block rounded-lg border border-[var(--border)] p-4 transition hover:border-[var(--brand-accent)]"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium">{enrolment.courseTitle}</p>
+                        {due ? (
+                          <p
+                            className={`mt-0.5 text-xs ${
+                              overdue
+                                ? "font-medium text-[var(--danger)]"
+                                : "text-[var(--muted)]"
+                            }`}
+                          >
+                            {due}
+                          </p>
+                        ) : null}
+                      </div>
+                      <StatusBadge status={enrolment.status} />
+                    </div>
 
-        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            What this account may do
-          </h2>
-          <dl className="mt-4 space-y-3">
-            {[...grouped.entries()].map(([area, actions]) => (
-              <div key={area} className="grid gap-1 sm:grid-cols-[10rem_1fr]">
-                <dt className="text-sm font-medium capitalize">
-                  {area.replace(/_/g, " ")}
-                </dt>
-                <dd className="text-sm text-[var(--muted)]">
-                  {actions.map((action) => action.replace(/_/g, " ")).join(", ")}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      </main>
-    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div
+                        className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--border)]"
+                        role="progressbar"
+                        aria-valuenow={percentage}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`${enrolment.courseTitle} progress`}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${percentage}%`,
+                            background:
+                              percentage === 100
+                                ? "var(--success)"
+                                : "var(--brand-accent)",
+                          }}
+                        />
+                      </div>
+                      <span className="shrink-0 text-xs text-[var(--muted)]">
+                        {enrolment.completedLessons} of {enrolment.totalLessons}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+    </AppShell>
   );
 }
