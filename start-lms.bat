@@ -87,7 +87,9 @@ echo   ---------------------------------------------------------------
 echo.
 
 rem Give the server a moment to bind the port before the browser opens.
-start "" /b cmd /c "timeout /t 4 /nobreak >nul & start http://acme.localhost:3000"
+rem `ping` is the delay rather than `timeout`, which aborts with "input
+rem redirection is not supported" whenever stdin is not a console.
+start "" /b cmd /c "ping -n 5 127.0.0.1 >nul & start "" http://acme.localhost:3000"
 
 call npm run dev
 

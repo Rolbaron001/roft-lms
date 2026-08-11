@@ -22,8 +22,23 @@ if (!/localhost|127\.0\.0\.1/.test(adminUrl)) {
 }
 
 const { withPlatformScope } = await import("../db/client");
-const { organisations, users, userRoles, competencyFrameworks, competencies } =
-  await import("../db/schema");
+const {
+  organisations,
+  users,
+  userRoles,
+  competencyFrameworks,
+  competencies,
+  qualifications,
+  curriculumModules,
+  assessmentCriteria,
+  courses,
+  courseSections,
+  courseCompetencies,
+  lessons,
+  lessonCriteria,
+  enrolments,
+  progressRecords,
+} = await import("../db/schema");
 const { hashPassword } = await import("../lib/password");
 
 const DEMO_SLUGS = ["acme", "harbourtraining"];
@@ -141,7 +156,8 @@ async function main() {
     );
 
     if (existing.length > 0) {
-      console.log("  Data already present — leaving it alone.");
+      // Plain ASCII: the Windows console renders an em dash as mojibake.
+      console.log("  Data already present - leaving it alone.");
       return;
     }
   }
@@ -196,6 +212,8 @@ async function main() {
       })
       .returning({ id: organisations.id });
 
+    const usersByEmail = new Map<string, string>();
+
     for (const [organisationId, seedUsers] of [
       [acme.id, ACME_USERS],
       [harbour.id, HARBOUR_USERS],
@@ -215,6 +233,8 @@ async function main() {
             consentVersion: "1.0",
           })
           .returning({ id: users.id });
+
+        usersByEmail.set(seedUser.email, created.id);
 
         for (const role of seedUser.roles) {
           await tx.insert(userRoles).values({
@@ -240,7 +260,9 @@ async function main() {
       })
       .returning({ id: competencyFrameworks.id });
 
-    await tx.insert(competencies).values([
+    const insertedCompetencies = await tx
+      .insert(competencies)
+      .values([
       {
         organisationId: acme.id,
         frameworkId: framework.id,
@@ -268,7 +290,233 @@ async function main() {
           "Identifies capability vulnerabilities in a team: skills gaps, single points of failure, and thin supervisory cover.",
         proficiencyLevels: ["Aware", "Competent", "Proficient", "Expert"],
       },
-    ]);
+      ])
+      .returning({ id: competencies.id, code: competencies.code });
+
+    const competencyByCode = new Map(
+      insertedCompetencies.map((row) => [row.code, row.id]),
+    );
+
+    // -----------------------------------------------------------------------
+    // A qualification, two courses and some learners already part-way through.
+    //
+    // Built here rather than clicked in by hand so the demonstration state is
+    // reproducible: reset-demo-data.bat restores exactly this, which matters
+    // if something is changed by accident five minutes before a meeting.
+    // -----------------------------------------------------------------------
+
+    const [qualification] = await tx
+      .insert(qualifications)
+      .values({
+        organisationId: acme.id,
+        title: "Occupational Certificate: Mine Plant Operator",
+        description:
+          "Occupational qualification for plant operators working on surface mining operations.",
+        qctoCode: "QCTO-2026-0451",
+        saqaId: "118742",
+        ofoCode: "2026-81121",
+        nqfLevel: 4,
+        totalCredits: 120,
+        assessmentQualityPartner: "MQA",
+        status: "published",
+      })
+      .returning({ id: qualifications.id });
+
+    const [knowledgeModule] = await tx
+      .insert(curriculumModules)
+      .values({
+        organisationId: acme.id,
+        qualificationId: qualification.id,
+        component: "knowledge",
+        code: "KM-01",
+        title: "Plant safety principles and legislation",
+        credits: 12,
+        notionalHours: 120,
+        sortOrder: 0,
+      })
+      .returning({ id: curriculumModules.id });
+
+    // A practical module as well, so the tripartite structure is visible
+    // rather than merely described.
+    await tx.insert(curriculumModules).values({
+      organisationId: acme.id,
+      qualificationId: qualification.id,
+      component: "practical",
+      code: "PM-01",
+      title: "Safe start-up and shut-down of plant",
+      credits: 18,
+      notionalHours: 180,
+      sortOrder: 1,
+    });
+
+    const criteria = await tx
+      .insert(assessmentCriteria)
+      .values([
+        {
+          organisationId: acme.id,
+          curriculumModuleId: knowledgeModule.id,
+          code: "IAC-01",
+          description:
+            "Explains the employer's legal duties under mine health and safety legislation.",
+          sortOrder: 0,
+        },
+        {
+          organisationId: acme.id,
+          curriculumModuleId: knowledgeModule.id,
+          code: "IAC-02",
+          description:
+            "Identifies hazards present in a described plant operating environment.",
+          sortOrder: 1,
+        },
+      ])
+      .returning({ id: assessmentCriteria.id, code: assessmentCriteria.code });
+
+    const criterionByCode = new Map(
+      criteria.map((row) => [row.code, row.id]),
+    );
+
+    /** Builds a course, its lessons, and the criteria each lesson covers. */
+    async function buildCourse(options: {
+      title: string;
+      description: string;
+      status: "draft" | "published";
+      competencyCode: string;
+      lessons: { title: string; body: string; covers: string[] }[];
+    }) {
+      const [course] = await tx
+        .insert(courses)
+        .values({
+          organisationId: acme.id,
+          curriculumModuleId: knowledgeModule.id,
+          title: options.title,
+          description: options.description,
+          status: options.status,
+          ownerId: usersByEmail.get("instructor@acme.test")!,
+          publishedAt: options.status === "published" ? new Date() : null,
+          estimatedMinutes: options.lessons.length * 20,
+        })
+        .returning({ id: courses.id });
+
+      await tx.insert(courseCompetencies).values({
+        organisationId: acme.id,
+        courseId: course.id,
+        competencyId: competencyByCode.get(options.competencyCode)!,
+        proficiencyLevel: "Competent",
+      });
+
+      const [section] = await tx
+        .insert(courseSections)
+        .values({
+          organisationId: acme.id,
+          courseId: course.id,
+          title: "Core content",
+          sortOrder: 0,
+        })
+        .returning({ id: courseSections.id });
+
+      const created: string[] = [];
+
+      for (const [index, lesson] of options.lessons.entries()) {
+        const [row] = await tx
+          .insert(lessons)
+          .values({
+            organisationId: acme.id,
+            sectionId: section.id,
+            title: lesson.title,
+            contentType: "text",
+            body: lesson.body,
+            durationMinutes: 20,
+            sortOrder: index,
+          })
+          .returning({ id: lessons.id });
+
+        created.push(row.id);
+
+        if (lesson.covers.length > 0) {
+          await tx.insert(lessonCriteria).values(
+            lesson.covers.map((code) => ({
+              organisationId: acme.id,
+              lessonId: row.id,
+              criterionId: criterionByCode.get(code)!,
+            })),
+          );
+        }
+      }
+
+      return { courseId: course.id, lessonIds: created };
+    }
+
+    // Fully covered and published: the one learners are working through.
+    const safety = await buildCourse({
+      title: "Plant Safety Fundamentals",
+      description:
+        "The legal framework for mine health and safety, and how to recognise hazards on the plant floor.",
+      status: "published",
+      competencyCode: "OPS-01",
+      lessons: [
+        {
+          title: "Employer duties under the Mine Health and Safety Act",
+          body: "The Act places a general duty on the employer to provide and maintain a working environment that is safe and without risk to health.\n\nIn practice this means identifying hazards before work begins, putting controls in place, and keeping a record that both were done. The duty cannot be delegated away to a contractor: an employer remains responsible for conditions on its own site.",
+          covers: ["IAC-01"],
+        },
+        {
+          title: "Identifying hazards on the plant floor",
+          body: "A hazard is anything with the potential to cause harm. A risk is the likelihood that it will.\n\nWalking a plant area, work through the same four questions each time: what could release energy unexpectedly, what could someone fall from or into, what is moving that a person could contact, and what would happen if the power failed right now.",
+          covers: ["IAC-02"],
+        },
+      ],
+    });
+
+    // Deliberately incomplete, so the publish refusal can be shown rather than
+    // described: it covers IAC-01 but nothing addresses IAC-02.
+    await buildCourse({
+      title: "Equipment Fault Diagnosis (in development)",
+      description:
+        "Draft course. One assessment criterion is not yet covered by any lesson, so the platform will refuse to publish it.",
+      status: "draft",
+      competencyCode: "OPS-02",
+      lessons: [
+        {
+          title: "Reading fault codes",
+          body: "Fault codes narrow the search; they rarely identify the cause on their own. Confirm the reading against the machine's behaviour before replacing anything.",
+          covers: ["IAC-01"],
+        },
+      ],
+    });
+
+    // Two learners on the published course, one part-way through, so the
+    // progress reporting has something real to show.
+    const [samEnrolment] = await tx
+      .insert(enrolments)
+      .values({
+        organisationId: acme.id,
+        userId: usersByEmail.get("learner@acme.test")!,
+        courseId: safety.courseId,
+        enrolledById: usersByEmail.get("admin@acme.test")!,
+        status: "in_progress",
+        startedAt: new Date(),
+        dueDate: new Date(Date.now() + 14 * 86_400_000),
+      })
+      .returning({ id: enrolments.id });
+
+    await tx.insert(progressRecords).values({
+      organisationId: acme.id,
+      enrolmentId: samEnrolment.id,
+      lessonId: safety.lessonIds[0],
+      state: "completed",
+      firstAccessedAt: new Date(),
+      lastAccessedAt: new Date(),
+      completedAt: new Date(),
+    });
+
+    await tx.insert(enrolments).values({
+      organisationId: acme.id,
+      userId: usersByEmail.get("manager@acme.test")!,
+      courseId: safety.courseId,
+      enrolledById: usersByEmail.get("admin@acme.test")!,
+      status: "assigned",
+      dueDate: new Date(Date.now() + 14 * 86_400_000),
+    });
   });
 
   console.log(`
