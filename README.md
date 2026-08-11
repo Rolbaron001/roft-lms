@@ -120,9 +120,49 @@ Three properties the tests assert rather than assume:
 - The Platform Owner can manage tenants but cannot read any tenant's learner
   data. Hosting a client's system is not the same as being entitled to read it.
 
+## Course authoring and the publish gate
+
+A course is built from sections, each holding lessons. It can stand alone, or
+be bound to a **curriculum module** of a qualification — one Knowledge,
+Practical skill or Workplace experience module, as the QCTO structure requires.
+
+**Publishing is refused, not merely warned about**, while any of these is true:
+
+- the course has no lessons;
+- the course is tagged to no competency, so its completions could not be
+  reported as capability coverage;
+- any Internal Assessment Criterion of its curriculum module has no lesson
+  covering it.
+
+The third is the Learning Material Matrix. Accreditation requires a provider to
+show that its material covers the official curriculum, and checking that by
+hand across a qualification is exactly the kind of task that gets signed off
+without really being checked. The course page shows a live readiness panel —
+each criterion marked covered or not — and publishing names precisely what is
+missing.
+
+A warning would be published past. A refusal cannot be, which is the point: the
+gap is found at authoring time rather than by an external verifier a year later.
+
+Coverage counts only this course's own lessons. A lesson in a different course
+on the same curriculum module does not make this one look covered — there is a
+test for exactly that.
+
+**A published course is fixed.** Learners' records refer to the version they
+were assessed against, so editing in place would rewrite history. Changes go
+into a new version; the published one is left exactly as it is, and competency
+tags carry forward.
+
 ## Getting set up
 
 Requires Node.js 20 or later and PostgreSQL 16 or later.
+
+**Everyday use, once set up:** double-click **`start-lms.bat`**. It checks the
+database, applies any schema changes, loads demo data if the database is empty,
+starts the server and opens the browser. It never overwrites existing data. To
+wipe the demo tenants and start again, run `reset-demo-data.bat`.
+
+The rest of this section is the one-time setup that batch file expects.
 
 **1. Install PostgreSQL** (once, needs administrator rights):
 

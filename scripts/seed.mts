@@ -126,7 +126,26 @@ const HARBOUR_USERS: SeedUser[] = [
 
 const DEMO_PASSWORD = "roft-demo-2026";
 
+/**
+ * `--if-empty` seeds only when no tenants exist. start-lms.bat passes it on
+ * every startup, so a first run gets demo data and later runs leave your work
+ * alone. Without the flag the demo tenants are deleted and rebuilt.
+ */
+const onlyIfEmpty = process.argv.includes("--if-empty");
+
 async function main() {
+  if (onlyIfEmpty) {
+    const existing = await withPlatformScope(
+      "checking whether the database already holds tenants",
+      (tx) => tx.select({ id: organisations.id }).from(organisations).limit(1),
+    );
+
+    if (existing.length > 0) {
+      console.log("  Data already present — leaving it alone.");
+      return;
+    }
+  }
+
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   await withPlatformScope("seeding local development data", async (tx) => {
