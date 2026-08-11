@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files. Real credentials never get committed; the template does.
 .env*
+!.env.example
+
+# locally uploaded evidence and course media (S3-compatible storage in deployment)
+/storage
 
 # vercel
 .vercel
