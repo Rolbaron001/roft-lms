@@ -68,18 +68,15 @@ if errorlevel 1 goto :failed
 echo   [5/5] Starting the server...
 echo.
 echo   ---------------------------------------------------------------
-echo    Opening:  http://acme.localhost:3000
+echo    Opening:  http://localhost:3000       ROFT's own system
 echo.
 echo    Demo password for every account:  roft-demo-2026
-echo      admin@acme.test      Administrator
-echo      instructor@acme.test Instructor
-echo      learner@acme.test    Learner
 echo.
-echo    Second client, to see tenant separation:
-echo      http://harbourtraining.localhost:3000
+echo      roland@roftbusiness.org   You: Platform Owner and Instructor
 echo.
-echo    Note the "acme." prefix. Plain localhost:3000 is the ROFT
-echo    platform console and belongs to no client.
+echo    Client organisations:
+echo      http://acme.localhost:3000              admin@acme.test
+echo      http://harbourtraining.localhost:3000   admin@harbour.test
 echo.
 echo    Leave this window open while you use the system.
 echo    Press Ctrl+C here to stop it.
@@ -89,7 +86,7 @@ echo.
 rem Give the server a moment to bind the port before the browser opens.
 rem `ping` is the delay rather than `timeout`, which aborts with "input
 rem redirection is not supported" whenever stdin is not a console.
-start "" /b cmd /c "ping -n 5 127.0.0.1 >nul & start "" http://acme.localhost:3000"
+start "" /b cmd /c "ping -n 5 127.0.0.1 >nul & start "" http://localhost:3000"
 
 call npm run dev
 

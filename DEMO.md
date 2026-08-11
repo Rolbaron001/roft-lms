@@ -5,8 +5,8 @@ A ten-minute walkthrough of what is built. Everything below works today.
 ## Before the meeting
 
 1. Double-click **`start-lms.bat`**. Wait for the browser to open at
-   `http://acme.localhost:3000`. Leave that black window open — closing it
-   stops the system.
+   `http://localhost:3000` — ROFT's own system. Leave that black window open;
+   closing it stops everything.
 2. Use **Chrome or Edge**. Any `*.localhost` address resolves to your own
    machine automatically in those browsers.
 3. If anything looks wrong, close the window, run **`reset-demo-data.bat`**,
@@ -15,14 +15,48 @@ A ten-minute walkthrough of what is built. Everything below works today.
 
 Every account below uses the password **`roft-demo-2026`**.
 
-Have two browser tabs ready:
+Have these ready:
 
+- `http://localhost:3000` — **ROFT's own system**, and the client console
 - `http://acme.localhost:3000` — Acme Mining Services
 - `http://harbourtraining.localhost:3000` — Harbour Training Centre
 
+ROFT's own people use `@roftbusiness.org` addresses; Roland is
+`roland@roftbusiness.org`.
+
 ---
 
-## 1. One platform, two clients (1 min)
+## 1. Setting up a client, live (2 min)
+
+**Open with this.** It is the shortest route to what the platform actually is.
+
+Sign in at **localhost:3000** as `roland@roftbusiness.org` and open
+**Clients**.
+
+> This is ROFT's own system. Same software the clients use — we are a tenant
+> on our own platform, which is the only honest way to sell it.
+
+Show the list, then set up a client in front of them. Legal name, display
+name, a web address, pick their two brand colours — the preview updates as you
+choose — and their first administrator's name and email.
+
+Press **Set up this client**. It gives you a password to hand over.
+
+Now open a new tab at `their-address.localhost:3000` and sign in as that
+administrator.
+
+> That took under a minute. Their own address, their own branding, their own
+> isolated data, and an administrator who can start adding their people now.
+> Nothing was built, configured or deployed for them.
+
+Point at the note above the list before moving on:
+
+> And I cannot see inside their system. I can see how much they are using and
+> manage their account — I cannot open their learners, their courses or their
+> assessment records. That is enforced by the software, not by my restraint,
+> which is the answer to the first question any client's IT department asks.
+
+## 2. One platform, several clients (1 min)
 
 Sign in at **acme.localhost:3000** as `admin@acme.test`.
 
@@ -46,7 +80,7 @@ Sign in to Harbour as `admin@harbour.test` if you want to show it works.
 
 ---
 
-## 2. An accredited qualification, not just courses (2 min)
+## 3. An accredited qualification, not just courses (2 min)
 
 Back in the Acme tab, as `admin@acme.test`, open **Qualifications**.
 
@@ -63,7 +97,7 @@ NQF level 4, 120 credits, and beneath it two modules:
 
 ---
 
-## 3. The part that is genuinely different (3 min)
+## 4. The part that is genuinely different (3 min)
 
 **This is the strongest thing to show. Give it time.**
 
@@ -97,7 +131,7 @@ version".
 
 ---
 
-## 4. Assigning people and tracking them (2 min)
+## 5. Assigning people and tracking them (2 min)
 
 From *Plant Safety Fundamentals*, click **Who is on this course**.
 
@@ -113,7 +147,7 @@ spreadsheet.
 
 ---
 
-## 5. The learner's view (2 min)
+## 6. The learner's view (2 min)
 
 Sign out. Sign in as `learner@acme.test`.
 
@@ -134,7 +168,7 @@ paste a link to a colleague's record. **Refused.**
 
 ---
 
-## 6. The assessment chain (3 min)
+## 7. The assessment chain (3 min)
 
 The demo data includes a **summative** quiz on *Plant Safety Fundamentals*.
 Summative means it counts towards the qualification, so it is judged by a
@@ -163,7 +197,7 @@ is moderated"*.
 > database itself, not by hiding a button — we test it by trying to write the
 > record directly, and the database refuses.
 
-## 7. The certificate issues itself (2 min)
+## 8. The certificate issues itself (2 min)
 
 Once the moderator has endorsed the decision, sign back in as
 `learner@acme.test`. A **My certificates** section has appeared. Open it.
@@ -190,7 +224,7 @@ If asked what happens to a certificate issued in error: it is withdrawn, not
 deleted. Verification then reports it as withdrawn and gives the reason,
 because someone holding the printed copy deserves to be told.
 
-## 8. Capability, not completions (2 min)
+## 9. Capability, not completions (2 min)
 
 As `admin@acme.test`, open **Reports**.
 
@@ -217,7 +251,7 @@ Finally, sign in as `manager@acme.test` and open Reports again.
 > Same screen, one person. A line manager sees their own team and nobody else
 > — including in the export, which runs the same rules rather than its own.
 
-## 9. The SETA and SAQA return (2 min)
+## 10. The SETA and SAQA return (2 min)
 
 Sign in as `sdf@acme.test` — the Skills Development Facilitator, the person who
 actually files these — and open **Statutory**.
@@ -253,7 +287,7 @@ validated; the exact file layout must be checked against the current SAQA
 specification first. Be straight about that — it is a formatting step, not a
 gap.
 
-## 10. Managing people (1 min)
+## 11. Managing people (1 min)
 
 As `admin@acme.test`, open **People**.
 
@@ -281,7 +315,7 @@ If POPIA comes up, scroll to **Erase personal information**:
 > the certificates stay valid and publicly verifiable. The qualification stays
 > on the record; it is just no longer attached to a named individual.
 
-## 11. Read-only oversight (1 min)
+## 12. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.

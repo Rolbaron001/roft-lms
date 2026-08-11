@@ -44,7 +44,7 @@ const {
 } = await import("../db/schema");
 const { hashPassword } = await import("../lib/password");
 
-const DEMO_SLUGS = ["acme", "harbourtraining"];
+const DEMO_SLUGS = ["roft", "acme", "harbourtraining"];
 
 type SeedUser = {
   email: string;
@@ -142,6 +142,37 @@ const HARBOUR_USERS: SeedUser[] = [
   },
 ];
 
+/**
+ * ROFT's own people. Roland holds platform_owner — which manages client
+ * organisations — alongside tenant_admin and instructor, which is what lets
+ * him run ROFT's own academy. The design document notes explicitly that one
+ * person may hold several roles.
+ */
+const ROFT_USERS: SeedUser[] = [
+  {
+    email: "roland@roftbusiness.org",
+    firstName: "Roland",
+    lastName: "Jones",
+    roles: ["platform_owner", "tenant_admin", "instructor"],
+    jobTitle: "Founder, Strategic Workforce Advisory",
+  },
+  {
+    email: "advisor@roftbusiness.org",
+    firstName: "Nomvula",
+    lastName: "Sithole",
+    roles: ["instructor", "assessor"],
+    jobTitle: "Principal Workforce Advisor",
+    registrationNumber: "ASR-2026-0001",
+  },
+  {
+    email: "associate@roftbusiness.org",
+    firstName: "Daniel",
+    lastName: "Meyer",
+    roles: ["learner"],
+    jobTitle: "Associate Consultant",
+  },
+];
+
 const DEMO_PASSWORD = "roft-demo-2026";
 
 /**
@@ -172,6 +203,43 @@ async function main() {
     await tx
       .delete(organisations)
       .where(inArray(organisations.slug, DEMO_SLUGS));
+
+    /**
+     * ROFT itself.
+     *
+     * The design document gives the platform two jobs: hosting the learning
+     * ROFT delivers in its own advisory engagements, and being deployable as a
+     * branded system for a client. ROFT is therefore a tenant like any other —
+     * its people sign in the same way, its courses work the same way — and
+     * what separates it is that its owner also holds the platform_owner role.
+     *
+     * It resolves at the platform host, so http://localhost:3000 is ROFT's own
+     * academy and the console for managing every other client.
+     */
+    const [roft] = await tx
+      .insert(organisations)
+      .values({
+        slug: "roft",
+        legalName: "ROFT Strategic Workforce Advisory",
+        displayName: "ROFT Strategic Workforce Advisory",
+        status: "active",
+        deploymentMode: "shared_cloud",
+        // The canonical ROFT palette: Deep Navy and Saffron Gold.
+        primaryColour: "#0d1e32",
+        accentColour: "#b9975b",
+        featureFlags: {
+          qcto_portfolio: true,
+          statutory_reporting: true,
+          learning_paths: true,
+        },
+        physicalAddress: {
+          city: "Johannesburg",
+          province: "Gauteng",
+          country: "South Africa",
+        },
+        dataRetentionYears: 7,
+      })
+      .returning({ id: organisations.id });
 
     const [acme] = await tx
       .insert(organisations)
@@ -218,6 +286,7 @@ async function main() {
     const usersByEmail = new Map<string, string>();
 
     for (const [organisationId, seedUsers] of [
+      [roft.id, ROFT_USERS],
       [acme.id, ACME_USERS],
       [harbour.id, HARBOUR_USERS],
     ] as const) {
@@ -249,6 +318,131 @@ async function main() {
         }
       }
     }
+
+    // -----------------------------------------------------------------------
+    // ROFT's own academy.
+    //
+    // Built from ROFT's actual service lines rather than filler, so the
+    // platform demonstrates the workforce-risk framing it is meant to carry:
+    // risk here means capability vulnerability — skills gaps, single points of
+    // failure, thin supervisory cover — never fraud or financial compliance.
+    // -----------------------------------------------------------------------
+    const [roftFramework] = await tx
+      .insert(competencyFrameworks)
+      .values({
+        organisationId: roft.id,
+        name: "ROFT Advisory Capability Framework",
+        description:
+          "The capabilities a ROFT advisor applies across competency framework, career path, skills gap and workforce planning engagements.",
+        source: "ROFT Strategic Workforce Advisory",
+        version: "1.0",
+      })
+      .returning({ id: competencyFrameworks.id });
+
+    const roftCompetencies = await tx
+      .insert(competencies)
+      .values(
+        [
+          [
+            "ADV-01",
+            "Workforce risk analysis",
+            "Identifies and scores human-capital vulnerabilities: skills deficiency, single points of failure, weak supervisory cover and succession gaps.",
+          ],
+          [
+            "ADV-02",
+            "Competency framework design",
+            "Builds capability-based frameworks with defined proficiency levels and behavioural indicators, mapped to recognised occupational standards.",
+          ],
+          [
+            "ADV-03",
+            "Skills gap analysis",
+            "Measures the distance between current and required capability, prioritises the gaps, and maps a build, buy or rent response.",
+          ],
+          [
+            "ADV-04",
+            "Career path design",
+            "Designs transparent progression routes and lateral moves that retain talent and remove single points of failure.",
+          ],
+          [
+            "ADV-05",
+            "Strategic workforce planning",
+            "Models workforce demand and supply three to five years out, including automation exposure and critical-role succession.",
+          ],
+        ].map(([code, name, description]) => ({
+          organisationId: roft.id,
+          frameworkId: roftFramework.id,
+          code,
+          name,
+          description,
+          proficiencyLevels: [
+            "Aware",
+            "Practitioner",
+            "Advisor",
+            "Lead Advisor",
+          ],
+        })),
+      )
+      .returning({ id: competencies.id, code: competencies.code });
+
+    const roftCompetencyByCode = new Map(
+      roftCompetencies.map((row) => [row.code, row.id]),
+    );
+
+    const [roftCourse] = await tx
+      .insert(courses)
+      .values({
+        organisationId: roft.id,
+        title: "Workforce Risk Fundamentals",
+        description:
+          "How ROFT identifies capability vulnerability in a client workforce, and why a completion report cannot show it.",
+        status: "published",
+        ownerId: usersByEmail.get("roland@roftbusiness.org")!,
+        publishedAt: new Date(),
+        estimatedMinutes: 60,
+      })
+      .returning({ id: courses.id });
+
+    await tx.insert(courseCompetencies).values({
+      organisationId: roft.id,
+      courseId: roftCourse.id,
+      competencyId: roftCompetencyByCode.get("ADV-01")!,
+      proficiencyLevel: "Practitioner",
+    });
+
+    const [roftSection] = await tx
+      .insert(courseSections)
+      .values({
+        organisationId: roft.id,
+        courseId: roftCourse.id,
+        title: "Seeing capability vulnerability",
+        sortOrder: 0,
+      })
+      .returning({ id: courseSections.id });
+
+    await tx.insert(lessons).values(
+      [
+        [
+          "What workforce risk actually means",
+          "Workforce risk is capability vulnerability: the gap between what a business needs its people to be able to do and what they can currently do. It is not fraud, and it is not regulatory compliance — those are different disciplines with different owners.\n\nFour vulnerabilities account for most of what we find in an engagement: skills deficiency against a stated strategy, single points of failure where one person holds a capability alone, thin or ineffective supervisory cover, and succession gaps in critical roles.",
+        ],
+        [
+          "Single points of failure",
+          "A single point of failure is a capability held by exactly one person. It rarely appears in any report, because on paper the capability is present — the organisation can do the thing.\n\nThe vulnerability only becomes visible when you count holders rather than completions. One resignation, one extended illness, and the capability leaves with them. This is why capability coverage is counted from assessed outcomes and reported per competency, not as a training completion percentage.",
+        ],
+        [
+          "Why completion reports mislead",
+          "A completion report answers 'did people attend the training'. A capability report answers 'can this workforce do the work'. They diverge constantly.\n\nA team can show ninety per cent completion and still hold a critical capability in one pair of hands. Conversely a low completion rate against irrelevant training tells you nothing worth acting on. When advising a client, always move the conversation from activity to coverage — and be ready for the discomfort when the first coverage report lands.",
+        ],
+      ].map(([title, body], index) => ({
+        organisationId: roft.id,
+        sectionId: roftSection.id,
+        title,
+        contentType: "text" as const,
+        body,
+        durationMinutes: 20,
+        sortOrder: index,
+      })),
+    );
 
     // A small competency framework, so course authoring has something to tag
     // against when that slice lands.
@@ -652,8 +846,16 @@ async function main() {
   console.log(`
 Demo data created.
 
+  ROFT (platform console)   http://localhost:3000
+  ROFT academy              http://roft.localhost:3000
   Acme Mining Services      http://acme.localhost:3000
   Harbour Training Centre   http://harbourtraining.localhost:3000
+
+ROFT's own people:
+
+  roland@roftbusiness.org    Platform Owner, Administrator, Instructor
+  advisor@roftbusiness.org   Instructor and Assessor
+  associate@roftbusiness.org Learner
 
 Every demo account uses the password: ${DEMO_PASSWORD}
 

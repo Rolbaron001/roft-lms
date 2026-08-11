@@ -65,8 +65,39 @@ describe("tenant resolution against the database", () => {
     expect(await resolveTenant(`${slug}${HOST_SUFFIX}`)).toBeNull();
   });
 
-  it("returns null for the platform host rather than a tenant", async () => {
-    expect(await resolveTenant("localhost:3000")).toBeNull();
+  /**
+   * The platform host resolves to ROFT's own organisation rather than to
+   * nothing. ROFT is a tenant like any other — its people sign in the same
+   * way — and what marks the Platform Owner out is the permissions they hold,
+   * not a separate, less-tested door into the system.
+   *
+   * This asserted the opposite until the Platform Owner console was built.
+   */
+  it("resolves the platform host to ROFT's own organisation", async () => {
+    const slug = process.env.PLATFORM_ORG_SLUG ?? "roft";
+
+    const [exists] = await withPlatformScope(
+      "checking whether the platform organisation is seeded",
+      (tx) =>
+        tx
+          .select({ id: organisations.id })
+          .from(organisations)
+          .where(eq(organisations.slug, slug)),
+    );
+
+    if (!exists) {
+      // A database seeded before ROFT existed. Nothing to assert beyond the
+      // fallback, which is the same as any unknown hostname.
+      expect(await resolveTenant("localhost:3000")).toBeNull();
+      return;
+    }
+
+    const resolved = await resolveTenant("localhost:3000");
+    expect(resolved?.slug).toBe(slug);
+  });
+
+  it("still returns nothing for a hostname belonging to nobody", async () => {
+    expect(await resolveTenant("nosuchclient.localhost:3000")).toBeNull();
   });
 
   it("carries the tenant's own branding, not ROFT's", async () => {

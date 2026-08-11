@@ -36,6 +36,9 @@ const NAV: NavItem[] = [
     anyPermission: ["report:team", "report:tenant"],
   },
   { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+  { href: "/settings", label: "Appearance", permission: "tenant:manage_branding" },
+  // ROFT's own console, for managing every other client.
+  { href: "/platform", label: "Clients", permission: "platform:manage_tenants" },
 ];
 
 export function AppShell({

@@ -191,6 +191,52 @@ Other things worth knowing:
   where a decision was overturned, otherwise the assessor's. Reading the
   decision directly would misreport an overridden result.
 
+## ROFT as a tenant, and the Platform Owner console
+
+The design document gives the platform two jobs: hosting the learning ROFT
+delivers in its own advisory engagements, and being deployable as a branded
+system for a client business. **ROFT is therefore a tenant on its own
+platform** — its people sign in the same way, its courses work the same way,
+and its academy carries its own competency framework built from its service
+lines. What distinguishes Roland's account is that it also holds
+`platform_owner`.
+
+That matters practically: there is no second, less-tested way into the system
+for administrators. The platform host (`lms.roftbusiness.org`, or
+`localhost:3000` in development) resolves to the ROFT organisation, so the
+console is reached through exactly the login path everyone else uses.
+
+**`/platform` provisions clients.** An organisation and its first
+administrator are created together — a client without an administrator cannot
+be handed over, and a half-provisioned one is the state most likely to be
+forgotten. The address, branding and enabled modules are set at creation, and
+the new client is reachable and able to sign in immediately.
+
+Suspending a client stops their hostname resolving, so nobody there reaches
+even a login form — while keeping every record, because a client who stopped
+paying may start again and their assessment history has to survive the gap.
+
+### The Platform Owner's boundary
+
+The design document says the Platform Owner sees usage across tenants "but not
+into a tenant's private content or learner data". That sentence is the reason
+a client would put their people's assessment records on someone else's
+platform, so it is enforced rather than promised:
+
+- every provisioning function returns counts and configuration — never a
+  learner, course, assessment decision or certificate;
+- the role holds no permission that reads tenant data, asserted in two
+  separate test suites;
+- row-level security still applies underneath.
+
+A client's administrators are named, so ROFT knows who to contact. That is the
+extent of it.
+
+**Branding is self-service.** A tenant administrator can restyle their own
+organisation at `/settings` with a live preview — but cannot change their web
+address, deployment mode or accreditation number, which belong to the
+contract rather than to taste.
+
 ## Managing people
 
 `/people` lists everyone in the tenant with their roles, and — usefully —

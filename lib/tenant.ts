@@ -131,14 +131,20 @@ export async function resolveTenant(
   host: string,
 ): Promise<TenantIdentity | null> {
   const resolution = resolveHost(host);
-  if (resolution.kind === "platform") {
-    return null;
-  }
 
+  // The platform host resolves to ROFT's own organisation.
+  //
+  // ROFT is a tenant like any other — it has users, roles and sessions — and
+  // treating it as one means the Platform Owner signs in through exactly the
+  // same path as everybody else, rather than needing a second, less-tested
+  // way in. What separates them is the permissions they hold, not a special
+  // door.
   const key =
-    resolution.kind === "tenant_slug"
-      ? `slug:${resolution.slug}`
-      : `domain:${resolution.domain}`;
+    resolution.kind === "platform"
+      ? `slug:${process.env.PLATFORM_ORG_SLUG ?? "roft"}`
+      : resolution.kind === "tenant_slug"
+        ? `slug:${resolution.slug}`
+        : `domain:${resolution.domain}`;
 
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
@@ -160,12 +166,14 @@ export async function resolveTenant(
         })
         .from(organisations)
         .where(
-          resolution.kind === "tenant_slug"
-            ? eq(organisations.slug, resolution.slug)
-            : or(
-                eq(organisations.customDomain, resolution.domain),
-                eq(organisations.customDomain, `www.${resolution.domain}`),
-              ),
+          resolution.kind === "platform"
+            ? eq(organisations.slug, process.env.PLATFORM_ORG_SLUG ?? "roft")
+            : resolution.kind === "tenant_slug"
+              ? eq(organisations.slug, resolution.slug)
+              : or(
+                  eq(organisations.customDomain, resolution.domain),
+                  eq(organisations.customDomain, `www.${resolution.domain}`),
+                ),
         )
         .limit(1);
 
