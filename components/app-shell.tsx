@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
+import { TenantLogo } from "./tenant-logo";
 import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
 import type { Permission } from "@/lib/rbac";
@@ -19,6 +20,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/", label: "Home", permission: "report:own" },
   { href: "/courses", label: "Courses", permission: "course:read" },
+  { href: "/paths", label: "Programmes", permission: "course:author" },
   {
     href: "/qualifications",
     label: "Qualifications",
@@ -75,9 +77,20 @@ export function AppShell({
         }}
       >
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-          <div>
-            <p className="text-base font-semibold">{tenant.displayName}</p>
-            <p className="text-xs opacity-75">Learning Management System</p>
+          <div className="flex items-center gap-3">
+            {tenant.logoUrl ? (
+              // Sits on the tenant's own header colour, so a logo with a
+              // transparent background reads correctly.
+              <TenantLogo
+                logoUrl={tenant.logoUrl}
+                displayName={tenant.displayName}
+                height={36}
+              />
+            ) : null}
+            <div>
+              <p className="text-base font-semibold">{tenant.displayName}</p>
+              <p className="text-xs opacity-75">Learning Management System</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs opacity-75">

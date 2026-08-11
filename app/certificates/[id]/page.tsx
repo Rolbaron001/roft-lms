@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { CertificateError, getCertificate } from "@/lib/certificates";
 import { AppShell } from "@/components/app-shell";
+import { TenantLogo } from "@/components/tenant-logo";
 
 export default async function CertificatePage({
   params,
@@ -50,6 +51,16 @@ export default async function CertificatePage({
         }`}
         style={{ borderColor: "var(--brand-accent)" }}
       >
+        {tenant.logoUrl ? (
+          <div className="mb-6 flex justify-center">
+            <TenantLogo
+              logoUrl={tenant.logoUrl}
+              displayName={tenant.displayName}
+              height={64}
+            />
+          </div>
+        ) : null}
+
         <p
           className="text-xs font-semibold uppercase tracking-[0.2em]"
           style={{ color: "var(--brand-accent)" }}

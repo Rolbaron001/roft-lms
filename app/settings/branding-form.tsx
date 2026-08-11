@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { TenantLogo } from "@/components/tenant-logo";
 import { updateBrandingAction, type BrandingState } from "./actions";
 
 const inputClass =
@@ -24,6 +25,7 @@ export function BrandingForm({
   const [name, setName] = useState(defaults.displayName);
   const [primary, setPrimary] = useState(defaults.primaryColour);
   const [accent, setAccent] = useState(defaults.accentColour);
+  const [logo, setLogo] = useState(defaults.logoUrl ?? "");
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -47,8 +49,17 @@ export function BrandingForm({
         className="mb-6 rounded-md border-b-4 px-5 py-4 text-white"
         style={{ background: primary, borderColor: accent }}
       >
-        <p className="text-base font-semibold">{name || "Your organisation"}</p>
-        <p className="text-xs opacity-75">Learning Management System</p>
+        <div className="flex items-center gap-3">
+          {logo ? (
+            <TenantLogo logoUrl={logo} displayName={name} height={36} />
+          ) : null}
+          <div>
+            <p className="text-base font-semibold">
+              {name || "Your organisation"}
+            </p>
+            <p className="text-xs opacity-75">Learning Management System</p>
+          </div>
+        </div>
         <span
           className="mt-3 inline-block rounded-full px-3 py-1 text-xs font-medium"
           style={{ background: accent, color: primary }}
@@ -122,10 +133,17 @@ export function BrandingForm({
           </span>
           <input
             name="logoUrl"
-            defaultValue={defaults.logoUrl ?? ""}
+            value={logo}
+            onChange={(event) => setLogo(event.target.value)}
             placeholder="https://…"
             className={inputClass}
           />
+          <span className="block text-xs text-[var(--muted)]">
+            A web address for the image. It appears in the header, on the sign-in
+            page and on every certificate. A transparent PNG or an SVG sits best
+            on the header colour. Uploading a file directly comes with the
+            document and video work.
+          </span>
         </label>
 
         <button

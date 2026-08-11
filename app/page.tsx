@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
 import { myEnrolments } from "@/lib/enrolment";
 import { listMyCertificates } from "@/lib/certificates";
+import { myLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -34,13 +35,21 @@ function dueLabel(dueDate: Date | null, status: string): string | null {
 export default async function HomePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
-  const [enrolments, certificates] = await Promise.all([
+  const [enrolments, certificates, paths] = await Promise.all([
     myEnrolments(session),
     listMyCertificates(session),
+    myLearningPaths(session),
   ]);
 
-  const outstanding = enrolments.filter((row) => row.status !== "completed");
-  const finished = enrolments.filter((row) => row.status === "completed");
+  // Courses reached through a programme are shown inside it, so they are not
+  // listed twice under "My learning".
+  const inAPath = new Set(
+    paths.flatMap((path) => path.steps.map((step) => step.courseId)),
+  );
+
+  const standalone = enrolments.filter((row) => !inAPath.has(row.courseId));
+  const outstanding = standalone.filter((row) => row.status !== "completed");
+  const finished = standalone.filter((row) => row.status === "completed");
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -62,10 +71,97 @@ export default async function HomePage() {
       </div>
 
       <div className="space-y-6">
+        {paths.map((path) => (
+          <Card key={path.enrolmentId} title={path.title}>
+            {path.description ? (
+              <p className="mb-4 text-sm text-[var(--muted)]">
+                {path.description}
+              </p>
+            ) : null}
+
+            <p className="mb-4 text-sm">
+              <span className="font-medium">
+                {path.completedSteps} of {path.totalSteps}
+              </span>{" "}
+              <span className="text-[var(--muted)]">
+                courses finished
+                {path.status === "completed" ? " — programme complete" : ""}
+              </span>
+            </p>
+
+            <ol className="space-y-2">
+              {path.steps.map((step, index) => {
+                const locked = step.state === "locked";
+                const done = step.state === "completed";
+
+                const inner = (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="flex items-center gap-3 text-sm">
+                      <span
+                        aria-hidden
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                        style={
+                          done
+                            ? { background: "var(--success)", color: "white" }
+                            : locked
+                              ? {
+                                  background: "var(--border)",
+                                  color: "var(--muted)",
+                                }
+                              : {
+                                  background: "var(--brand-primary)",
+                                  color: "white",
+                                }
+                        }
+                      >
+                        {done ? "✓" : index + 1}
+                      </span>
+                      <span className={locked ? "text-[var(--muted)]" : ""}>
+                        {step.title}
+                      </span>
+                    </span>
+
+                    <span className="text-xs text-[var(--muted)]">
+                      {done
+                        ? "Finished"
+                        : locked
+                          ? index === 0
+                            ? "Not started"
+                            : "Opens when you finish the step before"
+                          : step.state === "in_progress"
+                            ? "In progress"
+                            : "Ready to start"}
+                    </span>
+                  </div>
+                );
+
+                return (
+                  <li key={step.courseId}>
+                    {step.enrolmentId ? (
+                      <Link
+                        href={`/learn/${step.enrolmentId}`}
+                        className="block rounded-md border border-[var(--border)] px-4 py-3 transition hover:border-[var(--brand-accent)]"
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div className="rounded-md border border-dashed border-[var(--border)] px-4 py-3">
+                        {inner}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </Card>
+        ))}
+
         <Card title="My learning">
-          {enrolments.length === 0 ? (
+          {standalone.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
-              You have not been assigned any courses yet.
+              {paths.length > 0
+                ? "Nothing outside your programmes."
+                : "You have not been assigned any courses yet."}
             </p>
           ) : (
             <div className="space-y-3">

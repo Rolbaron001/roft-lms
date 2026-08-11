@@ -53,6 +53,29 @@ const RESERVED_SLUGS = new Set([
   "platform", "login", "signup", "billing", "help",
 ]);
 
+/**
+ * A logo address: either somewhere on the web, or a file served by this
+ * application. The relative form matters — a tenant whose logo is hosted on
+ * their own marketing site loses it the day that site is redesigned, so being
+ * able to hold the file here is the more durable option.
+ *
+ * Anything else is refused. In particular a `javascript:` or `data:` address
+ * has no business in a src attribute rendered for every user.
+ */
+const logoAddress = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    (value) =>
+      value === "" ||
+      value.startsWith("/") ||
+      /^https?:\/\//i.test(value),
+    { message: "Use a web address beginning http:// or https://, or a path beginning /." },
+  )
+  .optional()
+  .or(z.literal(""));
+
 export const tenantInput = z.object({
   slug: z
     .string()
@@ -79,7 +102,7 @@ export const tenantInput = z.object({
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #B9975B.")
     .default("#B9975B"),
-  logoUrl: z.string().trim().url().max(2000).optional().or(z.literal("")),
+  logoUrl: logoAddress,
   customDomain: z.string().trim().max(255).optional().or(z.literal("")),
   accreditationNumber: z.string().trim().max(100).optional(),
   wardCode: z.string().trim().max(20).optional(),
@@ -498,7 +521,7 @@ export const brandingInput = z.object({
     .string()
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #B9975B."),
-  logoUrl: z.string().trim().url().max(2000).optional().or(z.literal("")),
+  logoUrl: logoAddress,
 });
 
 export async function updateOwnBranding(

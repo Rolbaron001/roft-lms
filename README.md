@@ -237,6 +237,59 @@ organisation at `/settings` with a live preview — but cannot change their web
 address, deployment mode or accreditation number, which belong to the
 contract rather than to taste.
 
+## Programmes (learning paths)
+
+Several courses chained into a sequence — a new starter programme, or a full
+competency framework roll-out — with prerequisites and automatic progression.
+
+**How a locked step is represented is the design decision worth knowing.** A
+learner is enrolled only on the courses currently open to them; a locked course
+simply has no enrolment yet. The existing access rule — you may open an
+enrolment that is yours — therefore already refuses it, with no second
+permission system to keep in step with the first.
+
+Completing a course creates the enrolment for whatever it unlocks, inside the
+same transaction, so the next step is waiting by the time the page reloads.
+Progression is a consequence of finishing rather than an administrative act
+somebody has to remember.
+
+- A programme cannot be published containing an unpublished course, which
+  would let a draft bypass its own coverage gate.
+- Once published, its steps are fixed. People are working through it, and
+  reordering underneath them would change what they had already been told.
+- A step can be marked as not requiring the one before it, for a course that
+  can be taken at any point.
+- The programme's due date carries onto each course as it opens.
+- Progression runs on every completion and never double-enrols anybody.
+- Someone on a course but not the programme it belongs to is left alone —
+  finishing it does not silently sign them up to the rest.
+
+Learners see their programmes on the home page as a numbered sequence with
+each step marked finished, ready, or waiting on the one before. Courses inside
+a programme are not listed twice under "My learning".
+
+## Tenant logos
+
+A tenant's logo appears in the page header, on the sign-in page, in the
+branding preview, and on every certificate. It falls back to the organisation's
+name whenever there is no logo, the address is wrong, or the image fails to
+load — a header that collapses to nothing because a client moved their logo is
+worse than one that never had it.
+
+Two deliberate choices:
+
+- It is rendered with a plain `<img>` rather than `next/image`. The optimiser
+  would have *the server* fetch an address supplied by a tenant, making
+  outbound requests from inside our network to wherever a client typed. A plain
+  tag makes the browser fetch it, which is the browser's ordinary business.
+- The address may be a full `http(s)` URL **or** a path served by this
+  application. The second is more durable: a logo hosted on a client's
+  marketing site disappears the day that site is redesigned. Anything else —
+  `javascript:`, `data:` — is refused.
+
+Uploading a logo file through the interface comes with the document and video
+upload work; for now it is an address.
+
 ## Managing people
 
 `/people` lists everyone in the tenant with their roles, and — usefully —

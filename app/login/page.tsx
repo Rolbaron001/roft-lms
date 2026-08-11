@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentSession, currentTenant } from "@/lib/request";
+import { TenantLogo } from "@/components/tenant-logo";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
@@ -26,10 +27,20 @@ export default async function LoginPage() {
     >
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div
-            className="mx-auto mb-4 h-1 w-12 rounded-full"
-            style={{ background: "var(--brand-accent)" }}
-          />
+          {tenant?.logoUrl ? (
+            <div className="mb-5 flex justify-center">
+              <TenantLogo
+                logoUrl={tenant.logoUrl}
+                displayName={tenant.displayName}
+                height={56}
+              />
+            </div>
+          ) : (
+            <div
+              className="mx-auto mb-4 h-1 w-12 rounded-full"
+              style={{ background: "var(--brand-accent)" }}
+            />
+          )}
           <h1 className="text-xl font-semibold tracking-tight">
             {tenant ? tenant.displayName : "ROFT Learning Management System"}
           </h1>

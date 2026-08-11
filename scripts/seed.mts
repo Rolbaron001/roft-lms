@@ -41,6 +41,8 @@ const {
   progressRecords,
   assessments,
   assessmentItems,
+  learningPaths,
+  learningPathCourses,
 } = await import("../db/schema");
 const { hashPassword } = await import("../lib/password");
 
@@ -227,6 +229,9 @@ async function main() {
         // The canonical ROFT palette: Deep Navy and Saffron Gold.
         primaryColour: "#0d1e32",
         accentColour: "#b9975b",
+        // Served by the application itself, so it does not depend on ROFT's
+        // marketing site staying where it is.
+        logoUrl: "/roft-logo.png",
         featureFlags: {
           qcto_portfolio: true,
           statutory_reporting: true,
@@ -443,6 +448,100 @@ async function main() {
         sortOrder: index,
       })),
     );
+
+    // A second ROFT course, so there is a programme to chain rather than a
+    // sequence of one.
+    const [roftCourseTwo] = await tx
+      .insert(courses)
+      .values({
+        organisationId: roft.id,
+        title: "Reading a Capability Coverage Report",
+        description:
+          "Turning a coverage report into a conversation a client will act on.",
+        status: "published",
+        ownerId: usersByEmail.get("roland@roftbusiness.org")!,
+        publishedAt: new Date(),
+        estimatedMinutes: 40,
+      })
+      .returning({ id: courses.id });
+
+    await tx.insert(courseCompetencies).values({
+      organisationId: roft.id,
+      courseId: roftCourseTwo.id,
+      competencyId: roftCompetencyByCode.get("ADV-03")!,
+      proficiencyLevel: "Practitioner",
+    });
+
+    const [roftSectionTwo] = await tx
+      .insert(courseSections)
+      .values({
+        organisationId: roft.id,
+        courseId: roftCourseTwo.id,
+        title: "From numbers to a decision",
+        sortOrder: 0,
+      })
+      .returning({ id: courseSections.id });
+
+    await tx.insert(lessons).values({
+      organisationId: roft.id,
+      sectionId: roftSectionTwo.id,
+      title: "The two numbers that start every conversation",
+      contentType: "text",
+      body: "Open on coverage, not completions. 'Three of your nine capabilities sit with one person each' starts a different meeting from 'training completion is at 78 per cent'.\n\nThen give the client something to decide. A single point of failure has three responses: train a second person, hire one, or accept the risk deliberately and write it down. All three are legitimate. What is not legitimate is discovering it when the person resigns.",
+      durationMinutes: 40,
+      sortOrder: 0,
+    });
+
+    // A ROFT onboarding programme, chaining the two in order.
+    const [roftPath] = await tx
+      .insert(learningPaths)
+      .values({
+        organisationId: roft.id,
+        title: "ROFT Advisor Onboarding",
+        description:
+          "What a new associate works through before their first client engagement.",
+        status: "published",
+      })
+      .returning({ id: learningPaths.id });
+
+    await tx.insert(learningPathCourses).values([
+      {
+        organisationId: roft.id,
+        learningPathId: roftPath.id,
+        courseId: roftCourse.id,
+        sortOrder: 0,
+        requiresPrevious: 1,
+      },
+      {
+        organisationId: roft.id,
+        learningPathId: roftPath.id,
+        courseId: roftCourseTwo.id,
+        sortOrder: 1,
+        requiresPrevious: 1,
+      },
+    ]);
+
+    // Daniel is part-way through: on the programme, first course open, second
+    // still locked behind it.
+    await tx
+      .insert(enrolments)
+      .values({
+        organisationId: roft.id,
+        userId: usersByEmail.get("associate@roftbusiness.org")!,
+        learningPathId: roftPath.id,
+        enrolledById: usersByEmail.get("roland@roftbusiness.org")!,
+        enrolmentSource: "learning_path",
+        dueDate: new Date(Date.now() + 21 * 86_400_000),
+      });
+
+    await tx.insert(enrolments).values({
+      organisationId: roft.id,
+      userId: usersByEmail.get("associate@roftbusiness.org")!,
+      courseId: roftCourse.id,
+      enrolledById: usersByEmail.get("roland@roftbusiness.org")!,
+      enrolmentSource: "learning_path",
+      dueDate: new Date(Date.now() + 21 * 86_400_000),
+    });
 
     // A small competency framework, so course authoring has something to tag
     // against when that slice lands.

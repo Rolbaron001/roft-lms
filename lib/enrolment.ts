@@ -13,6 +13,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { issueCertificateAutomatically } from "./certificates";
+import { advanceLearningPaths } from "./learning-paths";
 
 /**
  * Enrolment, delivery and progress.
@@ -514,6 +515,16 @@ async function refreshCompletion(
       entityId: enrolmentId,
       after: { lessonsCompleted: done, lessonsTotal: total },
     });
+
+    // Unlock whatever this course opens in any programme the learner is on.
+    // Done inside the same transaction so the next step is waiting by the
+    // time the page reloads, rather than appearing on some later request.
+    await advanceLearningPaths(
+      tx,
+      session.organisationId,
+      enrolment.userId,
+      enrolment.courseId!,
+    );
   }
 
   return { total, done, completed: finished };
