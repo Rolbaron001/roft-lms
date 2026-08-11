@@ -16,6 +16,8 @@ const NAV: { href: string; label: string; permission: Permission }[] = [
     label: "Qualifications",
     permission: "qualification:manage",
   },
+  { href: "/assess", label: "To assess", permission: "assessment:assess" },
+  { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
 ];
 
 export function AppShell({

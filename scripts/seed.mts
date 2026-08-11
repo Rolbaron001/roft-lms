@@ -8,6 +8,7 @@
  * Safe to re-run: it deletes both demo tenants first. It refuses to run
  * against anything but a local database.
  */
+import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
 import { inArray } from "drizzle-orm";
 
@@ -38,6 +39,8 @@ const {
   lessonCriteria,
   enrolments,
   progressRecords,
+  assessments,
+  assessmentItems,
 } = await import("../db/schema");
 const { hashPassword } = await import("../lib/password");
 
@@ -483,6 +486,61 @@ async function main() {
         },
       ],
     });
+
+    // A summative quiz on the published course. Summative means every
+    // decision is moderated, so a demonstration reaches the moderation queue
+    // without waiting for a random sample to select it.
+    const [quiz] = await tx
+      .insert(assessments)
+      .values({
+        organisationId: acme.id,
+        courseId: safety.courseId,
+        curriculumModuleId: knowledgeModule.id,
+        title: "Plant safety knowledge check",
+        instructions:
+          "Answer both questions. This assessment counts towards the qualification.",
+        type: "quiz",
+        purpose: "summative",
+        status: "published",
+        passMark: 70,
+        moderationSampleRate: "1.000",
+      })
+      .returning({ id: assessments.id });
+
+    const employerOption = randomUUID();
+    const hazardOption = randomUUID();
+
+    await tx.insert(assessmentItems).values([
+      {
+        organisationId: acme.id,
+        assessmentId: quiz.id,
+        criterionId: criterionByCode.get("IAC-01")!,
+        stem: "Who holds the general duty to provide a safe working environment?",
+        type: "multiple_choice",
+        options: [
+          { id: employerOption, text: "The employer" },
+          { id: randomUUID(), text: "The learner" },
+          { id: randomUUID(), text: "The inspector" },
+        ],
+        correctOptionIds: [employerOption],
+        points: 1,
+        sortOrder: 0,
+      },
+      {
+        organisationId: acme.id,
+        assessmentId: quiz.id,
+        criterionId: criterionByCode.get("IAC-02")!,
+        stem: "A hazard is best described as:",
+        type: "multiple_choice",
+        options: [
+          { id: hazardOption, text: "Anything with the potential to cause harm" },
+          { id: randomUUID(), text: "An injury that has already happened" },
+        ],
+        correctOptionIds: [hazardOption],
+        points: 1,
+        sortOrder: 1,
+      },
+    ]);
 
     // Two learners on the published course, one part-way through, so the
     // progress reporting has something real to show.

@@ -134,7 +134,36 @@ paste a link to a colleague's record. **Refused.**
 
 ---
 
-## 6. Read-only oversight (1 min)
+## 6. The assessment chain (3 min)
+
+The demo data includes a **summative** quiz on *Plant Safety Fundamentals*.
+Summative means it counts towards the qualification, so it is judged by a
+person and every decision is moderated.
+
+As `learner@acme.test`, open the course and press **Start** on *Plant safety
+knowledge check*. Answer both questions and submit.
+
+> Note what it does not say. It does not say "passed". It says an assessor will
+> review it. An automatic score informs a qualification decision; it does not
+> make one.
+
+Sign in as `assessor@acme.test` and open **To assess**. Sam's submission is
+waiting. Open it: the answers are shown beside the official assessment
+criteria, and the assessor records a judgement against each one.
+
+Record the decision, then sign in as `moderator@acme.test` and open **To
+moderate**. The decision is already there, marked *"Summative — every decision
+is moderated"*.
+
+> Nobody chose to send this for review. The system routed it, because the rules
+> say a summative decision is always moderated, and a newly registered
+> assessor's work is always moderated in full whatever the sampling rate.
+>
+> And the assessor cannot moderate their own decision. That is enforced by the
+> database itself, not by hiding a button — we test it by trying to write the
+> record directly, and the database refuses.
+
+## 7. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.
@@ -157,9 +186,9 @@ decision to make — likely a South African data centre so learner data stays in
 the country for POPIA.
 
 **"What is still to build?"**
-Assessment is the next block: the quiz builder, evidence upload with tamper
-detection, and the assessor-then-moderator sign-off chain. After that,
-certificates, single sign-on, and the SAQA/NLRD statutory exports.
+Certificates, single sign-on, HRIS and payments, the SAQA/NLRD statutory
+exports, and the reporting dashboards. The assessment and moderation chain is
+built; what is not yet built is the certificate that issues at the end of it.
 
 **"How long?"**
 Better answered after the assessment block, when the shape of the remaining
@@ -181,8 +210,7 @@ every change, not promises.
 
 Say so if it comes up, rather than being caught out:
 
-- Assessment, marking and moderation — designed, not yet built.
-- Certificates.
+- Certificates at the end of the assessment chain.
 - Single sign-on, HRIS, payments.
 - Reporting dashboards beyond per-course progress.
 - Mobile app and offline use.

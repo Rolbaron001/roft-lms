@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
+import { listCourseAssessments } from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
 import { CoursePlayer } from "./course-player";
 
@@ -26,6 +27,12 @@ export default async function LearnPage({
     }
     throw error;
   }
+
+  // Only published assessments are offered; a draft is unfinished by
+  // definition and its questions may still change.
+  const assessments = (
+    await listCourseAssessments(session, delivery.course.id)
+  ).filter((assessment) => assessment.status === "published");
 
   const percentage =
     delivery.totalLessons === 0
@@ -52,6 +59,41 @@ export default async function LearnPage({
           </p>
         ) : null}
       </div>
+
+      {assessments.length > 0 ? (
+        <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Assessments
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {assessments.map((assessment) => (
+              <li
+                key={assessment.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] px-4 py-3"
+              >
+                <span className="text-sm">
+                  <span className="font-medium">{assessment.title}</span>
+                  <span className="block text-xs text-[var(--muted)]">
+                    {assessment.purpose === "summative"
+                      ? "Counts towards your qualification"
+                      : "Practice"}{" "}
+                    · pass mark {assessment.passMark}%
+                  </span>
+                </span>
+                {delivery.isOwn ? (
+                  <Link
+                    href={`/learn/${id}/assessment/${assessment.id}`}
+                    className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
+                    style={{ background: "var(--brand-primary)" }}
+                  >
+                    Start
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <CoursePlayer
         enrolmentId={id}

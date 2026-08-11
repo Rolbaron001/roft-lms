@@ -153,6 +153,44 @@ were assessed against, so editing in place would rewrite history. Changes go
 into a new version; the published one is left exactly as it is, and competency
 tags carry forward.
 
+## Assessment and moderation
+
+The chain a QCTO Portfolio of Evidence rests on: **learner submits → assessor
+decides → moderator reviews independently**, with every step recorded and
+nothing editable afterwards.
+
+Four rules live in this layer rather than in the screens, because an
+accreditation reviewer is entitled to ask what actually prevents them:
+
+1. **Nobody assesses their own submission.**
+2. **No moderator may moderate a decision they made as assessor.** Enforced
+   twice — in the application for a clear message, and by a database trigger
+   so it holds even if that check is ever removed. Both are tested, the trigger
+   by inserting directly and confirming the database refuses.
+3. **A signed decision is never edited.** A correction is a new decision that
+   supersedes the old one, and both stay readable.
+4. **Which decisions get moderated is decided by the system**, not chosen by
+   the person being moderated: every summative decision, every decision by a
+   newly registered assessor, and a configurable proportion of the rest (the
+   QCTO baseline of 25%).
+
+Other things worth knowing:
+
+- **Correct answers never reach the browser.** They are not selected in the
+  learner's query at all, which is the only reliable way to be sure they cannot
+  be read out of the page source. There is a test that serialises the whole
+  learner view and asserts the answer key is absent.
+- **No partial credit.** A multiple-response question is correct only when the
+  selected set matches exactly, otherwise ticking every box would pass.
+- **A summative quiz is not auto-passed.** The automatic score informs the
+  assessor's judgement; it does not replace it.
+- **Evidence is hashed on upload** with SHA-256, stored beside the file. If a
+  stored file is later altered it no longer matches, and the record is flagged.
+  A test proves the tampering is detected.
+- **`effectiveOutcome()` is the result that stands** — the moderator's revision
+  where a decision was overturned, otherwise the assessor's. Reading the
+  decision directly would misreport an overridden result.
+
 ## Enrolment and the learner experience
 
 People are assigned individually or in bulk — paste a column of email
@@ -279,6 +317,14 @@ compare what each may do; then take Acme's email and password to
 | `npm run db:generate` | Generate a migration from schema changes |
 | `npm run db:push` | Apply the schema and security policies to the database |
 | `npm run db:studio` | Browse the database in a web interface |
+
+### A known rough edge
+
+The tests run against the same database as development. They clean up the
+tenants they create, but the audit log is append-only by design, so test
+entries accumulate there and cannot be removed. Harmless — the log is scoped
+per tenant and those tenants are gone — but the tests should point at their own
+database. Worth doing before anyone else works on this.
 
 ## The data model
 
