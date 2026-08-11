@@ -191,6 +191,43 @@ Other things worth knowing:
   where a decision was overturned, otherwise the assessor's. Reading the
   decision directly would misreport an overridden result.
 
+## Reporting
+
+The design document is explicit that this platform reports on **capability
+coverage, not completion counts**. A list of finished courses tells you people
+were busy; it does not tell you whether the workforce can do the work.
+
+So the central report answers: which competencies does this workforce actually
+hold? Two flags carry most of its value, and both describe workforce
+vulnerability rather than performance:
+
+- **No coverage** — nobody in scope holds the competency at all. A competency
+  nobody holds still appears in the table; a gap is invisible if the report
+  only lists what people already have.
+- **Single point of failure** — exactly one person holds it, so a resignation
+  or a period of sick leave removes the capability entirely.
+
+**Capability is counted from certificates, not course completions.** A
+completion means somebody reached the end of the material. A certificate means
+a judgement was made and, where required, independently moderated. Only the
+second is evidence, and counting the first would overstate coverage — which is
+precisely the number a client would act on. Withdrawing a certificate removes
+the capability, and one person holding several certificates for the same
+competency counts once.
+
+Alongside it: headline numbers, completion by course, and overdue training,
+all filterable by team and site, with CSV export.
+
+**Scope is decided once**, in `scopeFor()`, and every report uses it: an
+administrator sees the tenant, a line manager sees their own direct reports and
+nobody else, a learner sees themselves. The CSV route calls the same reporting
+functions rather than querying separately — a download endpoint with its own
+query is the obvious place for that rule to drift.
+
+CSV exports neutralise values beginning `=`, `+`, `-` or `@`. Spreadsheet
+software treats those as formulas, so a value taken from a person's own name
+could otherwise execute on whoever opened the file.
+
 ## Certificates
 
 A certificate is the platform's only outward-facing claim: that a named person

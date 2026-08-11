@@ -10,7 +10,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 config({ path: ".env.local" });
 
@@ -575,6 +575,32 @@ async function main() {
       status: "assigned",
       dueDate: new Date(Date.now() + 14 * 86_400_000),
     });
+
+    // An overdue enrolment, so the reporting has something to flag rather than
+    // showing a uniformly healthy picture nobody would need a report for.
+    await tx.insert(enrolments).values({
+      organisationId: acme.id,
+      userId: usersByEmail.get("instructor@acme.test")!,
+      courseId: safety.courseId,
+      enrolledById: usersByEmail.get("admin@acme.test")!,
+      status: "overdue",
+      dueDate: new Date(Date.now() - 9 * 86_400_000),
+    });
+
+    // Team and site on a few people so the report filters do something, and
+    // the line manager has direct reports to see.
+    const managerId = usersByEmail.get("manager@acme.test")!;
+    for (const [email, team, site, reportsTo] of [
+      ["manager@acme.test", "Plant Operations", "Rustenburg", null],
+      ["learner@acme.test", "Plant Operations", "Rustenburg", managerId],
+      ["instructor@acme.test", "Learning", "Johannesburg", null],
+      ["assessor@acme.test", "Learning", "Johannesburg", null],
+    ] as const) {
+      await tx
+        .update(users)
+        .set({ team, site, lineManagerId: reportsTo })
+        .where(eq(users.id, usersByEmail.get(email)!));
+    }
   });
 
   console.log(`

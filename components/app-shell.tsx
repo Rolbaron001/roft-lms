@@ -8,7 +8,15 @@ import type { Permission } from "@/lib/rbac";
  * The shared frame. Navigation is filtered by permission rather than by role,
  * so a link never appears for a page the person would be refused.
  */
-const NAV: { href: string; label: string; permission: Permission }[] = [
+type NavItem = {
+  href: string;
+  label: string;
+  permission?: Permission;
+  /** Shown when the person holds any one of these. */
+  anyPermission?: Permission[];
+};
+
+const NAV: NavItem[] = [
   { href: "/", label: "Home", permission: "report:own" },
   { href: "/courses", label: "Courses", permission: "course:read" },
   {
@@ -18,6 +26,14 @@ const NAV: { href: string; label: string; permission: Permission }[] = [
   },
   { href: "/assess", label: "To assess", permission: "assessment:assess" },
   { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
+  // Every signed-in person holds report:own, but a learner has no dashboard
+  // worth a menu entry, so this is gated on team-or-wider reporting. Someone
+  // holding two roles can satisfy both, hence the deduplication below.
+  {
+    href: "/reports",
+    label: "Reports",
+    anyPermission: ["report:team", "report:tenant"],
+  },
 ];
 
 export function AppShell({
@@ -29,9 +45,12 @@ export function AppShell({
   session: AuthenticatedSession;
   children: React.ReactNode;
 }) {
-  const links = NAV.filter((item) =>
-    session.permissions.includes(item.permission),
-  );
+  const links = NAV.filter((item) => {
+    if (item.permission) return session.permissions.includes(item.permission);
+    return (item.anyPermission ?? []).some((permission) =>
+      session.permissions.includes(permission),
+    );
+  });
 
   return (
     <div

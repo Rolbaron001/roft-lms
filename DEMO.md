@@ -190,7 +190,34 @@ If asked what happens to a certificate issued in error: it is withdrawn, not
 deleted. Verification then reports it as withdrawn and gives the reason,
 because someone holding the printed copy deserves to be told.
 
-## 8. Read-only oversight (1 min)
+## 8. Capability, not completions (2 min)
+
+As `admin@acme.test`, open **Reports**.
+
+Headline numbers first — people, courses assigned, completion rate, overdue.
+Then the section that matters: **Capability coverage**.
+
+> Every other system on the market reports completions. This reports capability.
+> The difference is the whole reason we built rather than bought.
+>
+> Two flags. **No coverage** means nobody in this workforce holds that
+> competency at all. **Single point of failure** means exactly one person does
+> — so if they resign, or break an arm, that capability leaves the business
+> with them. That is a workforce risk you cannot see from a completion report,
+> and it is exactly what ROFT's advisory work is about.
+
+Point out the note under the heading: capability is counted from certificates,
+not completions. Somebody finishing a video is not evidence; a moderated
+judgement is.
+
+Then **Export CSV** — this is what a client's HR lead takes into a board pack.
+
+Finally, sign in as `manager@acme.test` and open Reports again.
+
+> Same screen, one person. A line manager sees their own team and nobody else
+> — including in the export, which runs the same rules rather than its own.
+
+## 9. Read-only oversight (1 min)
 
 Sign out, sign in as `verifier@acme.test` — the External Verifier, the role a
 SETA or QCTO auditor would hold.
@@ -213,9 +240,9 @@ decision to make — likely a South African data centre so learner data stays in
 the country for POPIA.
 
 **"What is still to build?"**
-Single sign-on, HRIS and payments, the SAQA/NLRD statutory exports, and the
-reporting dashboards. The full chain — enrol, learn, assess, moderate,
-certify, verify — is built and working.
+Single sign-on, HRIS and payments, and the SAQA/NLRD statutory exports. The
+full chain — enrol, learn, assess, moderate, certify, verify — is built and
+working, with capability reporting on top of it.
 
 **"How long?"**
 Better answered after the assessment block, when the shape of the remaining
@@ -239,5 +266,4 @@ Say so if it comes up, rather than being caught out:
 
 - Printable or PDF certificates (the certificate is a web page for now).
 - Single sign-on, HRIS, payments.
-- Reporting dashboards beyond per-course progress.
 - Mobile app and offline use.
