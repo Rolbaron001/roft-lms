@@ -223,6 +223,42 @@ job rather than a project.
 
 ---
 
+## 8. Notifications
+
+In-app notifications work immediately with no setup. Email needs a mail
+server, and until one is configured the messages queue rather than being lost.
+
+Schedule the sweep either way — in-app reminders depend on it:
+
+```cron
+# 07:00 SAST: look for overdue and upcoming training, and send anything queued
+0 5 * * * cd $HOME/roft-lms && npx tsx scripts/notify.mts >> /var/log/roft-notify.log 2>&1
+
+# Hourly: clear anything raised during the day
+0 * * * * cd $HOME/roft-lms && npx tsx scripts/notify.mts send >> /var/log/roft-notify.log 2>&1
+```
+
+(Cron runs in UTC on most servers; 05:00 UTC is 07:00 SAST.)
+
+**When you have a mail server**, add to `.env`:
+
+```
+MAIL_HOST=smtp.yourprovider.com
+MAIL_PORT=587
+MAIL_USER=...
+MAIL_PASSWORD=...
+MAIL_FROM="ROFT Learning <learning@roftbusiness.org>"
+```
+
+Then implement the marked block in `lib/mail.ts` — it is about ten lines with
+nodemailer. Everything already queued sends on the next run.
+
+Use a proper sending service rather than your own SMTP daemon. Mail from a new
+server's IP address goes to spam, and a learner who never sees a reminder is
+worse than one who was never sent it.
+
+---
+
 ## Everyday operations
 
 **Deploy a change:**

@@ -7,7 +7,10 @@ import {
   publishAssessmentAction,
   type AssessmentState,
 } from "./actions";
-import { StatusBadge } from "@/components/app-shell";
+// From ui, not app-shell: app-shell reads the database for the notification
+// count, and importing it here would pull the Postgres driver into the
+// browser bundle.
+import { StatusBadge } from "@/components/ui";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";

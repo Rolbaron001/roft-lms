@@ -14,6 +14,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { issueCertificateAutomatically } from "./certificates";
 import { advanceLearningPaths } from "./learning-paths";
+import { raise } from "./notifications";
 
 /**
  * Enrolment, delivery and progress.
@@ -120,6 +121,23 @@ export async function enrolUser(
         courseId: parsed.courseId,
         courseTitle: course.title,
       },
+    });
+
+    // Raised inside the same transaction: if the enrolment rolls back, so
+    // does the message telling somebody about it.
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: parsed.userId,
+      kind: "enrolment.assigned",
+      subject: `You have been assigned "${course.title}"`,
+      body: parsed.dueDate
+        ? `It is due by ${new Date(parsed.dueDate).toLocaleDateString("en-ZA")}.`
+        : "There is no due date on this one.",
+      linkPath: `/learn/${created.id}`,
+      entityType: "enrolment",
+      entityId: created.id,
+      dedupeKey: `assigned:${created.id}`,
+      channels: ["in_app", "email"],
     });
 
     return created;

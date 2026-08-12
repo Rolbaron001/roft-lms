@@ -268,6 +268,62 @@ Learners see their programmes on the home page as a numbered sequence with
 each step marked finished, ready, or waiting on the one before. Courses inside
 a programme are not listed twice under "My learning".
 
+## Notifications and reminders
+
+Notifications are written down first and delivered separately. Two things
+follow from that, and both were the reason for building it this way:
+
+- **A message is never lost because sending failed**, and the absence of a mail
+  server is not a reason to skip recording that somebody should have been told.
+  Everything queued now goes out when SMTP is configured.
+- **In-app is a first-class channel, not a consolation.** An assessor who signs
+  in to "three submissions waiting" has been notified, at the moment they can
+  act on it. The header carries an unread count on every page.
+
+### What raises one
+
+Raised as events happen, inside the same transaction as the thing that caused
+them — so if an enrolment rolls back, the message telling somebody about it
+rolls back too. A notification about something that did not happen is worse
+than none.
+
+| Event | Who hears |
+|---|---|
+| Course assigned | the learner |
+| Decision needs moderating | the moderators |
+| Decision finalised | the learner |
+| Moderator refers a decision back | the assessor who made it |
+| Certificate issued | the learner |
+
+A scheduled sweep adds the ones nothing triggers: training due within a week,
+overdue training (to the learner **and** their line manager, so the reminder
+does not rest entirely on the person already not doing it), and standing
+reminders that work is queued for assessors and moderators.
+
+### Not becoming noise
+
+Every notification carries a dedupe key including a weekly bucket. A nightly
+sweep therefore raises an overdue reminder **once a week**, not every night —
+which is the difference between a reminder people read and one they filter.
+There is a test that runs the sweep three times and asserts the count does not
+move.
+
+### The mail server
+
+`lib/mail.ts` is the only part that needs SMTP, and it is deliberately the
+smallest part. Until `MAIL_HOST` and `MAIL_FROM` are set, `deliver()` reports
+messages as undeliverable-but-retryable, so they stay queued rather than being
+marked failed. Wiring in a transport is a change to one marked block in that
+file; nothing else in the platform moves.
+
+```bash
+npx tsx scripts/notify.mts        # sweep and send — what cron runs
+npx tsx scripts/notify.mts sweep  # look for what people should be told
+npx tsx scripts/notify.mts send   # drain the outbox
+```
+
+Both are safe to run repeatedly.
+
 ## File uploads: course material and evidence
 
 Lessons carry video, images, audio, PDF, Word, PowerPoint, Excel or a SCORM

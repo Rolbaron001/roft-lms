@@ -17,6 +17,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { raise } from "./notifications";
 
 /**
  * Certificates.
@@ -324,6 +325,19 @@ async function issueWithin(
         competencies: eligibility.competencies.map((row) => row.code),
         courseVersion: course.version,
       },
+    });
+
+    await raise(tx, {
+      organisationId,
+      userId: eligibility.enrolment.userId,
+      kind: "certificate.issued",
+      subject: `Your certificate for "${course.title}"`,
+      body: `Reference ${created.verificationReference}. Anyone can confirm it with that reference, without needing an account.`,
+      linkPath: `/certificates/${created.id}`,
+      entityType: "certificate",
+      entityId: created.id,
+      dedupeKey: `certificate:${created.id}`,
+      channels: ["in_app", "email"],
     });
 
     return { ok: true as const, certificate: created, alreadyIssued: false };

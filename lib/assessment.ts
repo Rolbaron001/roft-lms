@@ -20,6 +20,7 @@ import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
 import { detectMedia } from "./media";
 import { issueCertificateAutomatically } from "./certificates";
+import { raise, usersWithRole } from "./notifications";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -916,6 +917,41 @@ export async function recordAssessorDecision(
       },
     });
 
+    if (sampling.moderate) {
+      // Tell the moderators there is work, rather than relying on them
+      // checking a queue nobody mentioned.
+      for (const moderatorId of await usersWithRole(tx, "moderator")) {
+        if (moderatorId === session.userId) continue;
+        await raise(tx, {
+          organisationId: session.organisationId,
+          userId: moderatorId,
+          kind: "moderation.waiting",
+          subject: "A decision is waiting for moderation",
+          body: `A ${assessment.purpose} decision on "${assessment.title}" has been sampled for independent review.`,
+          linkPath: "/moderate",
+          entityType: "assessment_decision",
+          entityId: decision.id,
+          dedupeKey: `moderate:${decision.id}:${moderatorId}`,
+        });
+      }
+    } else {
+      // Finalised outright, so the learner has their result now.
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: submission.userId,
+        kind: "assessment.decided",
+        subject: `Your result for "${assessment.title}"`,
+        body:
+          parsed.outcome === "competent"
+            ? "You have been assessed as competent."
+            : "You have been assessed as not yet competent. Your assessor's comments explain what is needed.",
+        entityType: "assessment_submission",
+        entityId: parsed.submissionId,
+        dedupeKey: `decided:${decision.id}`,
+        channels: ["in_app", "email"],
+      });
+    }
+
     return { decision, moderation: sampling };
   });
 }
@@ -1055,6 +1091,45 @@ export async function recordModeration(
         revisedOutcome: parsed.revisedOutcome ?? null,
       },
     });
+
+    const [submission] = await tx
+      .select({ userId: assessmentSubmissions.userId })
+      .from(assessmentSubmissions)
+      .where(eq(assessmentSubmissions.id, decision.submissionId));
+
+    if (parsed.outcome === "referred_back") {
+      // The assessor has to look again, so they are told directly rather than
+      // discovering it next time they happen to open the queue.
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: decision.assessorId,
+        kind: "assessment.referred_back",
+        subject: "A moderator has referred your decision back",
+        body:
+          parsed.comments ??
+          "A moderator has asked for this decision to be looked at again.",
+        linkPath: `/assess/${decision.submissionId}`,
+        entityType: "assessment_decision",
+        entityId: decision.id,
+        dedupeKey: `referred:${record.id}`,
+        channels: ["in_app", "email"],
+      });
+    } else if (submission) {
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: submission.userId,
+        kind: "assessment.decided",
+        subject: "Your assessment result has been confirmed",
+        body:
+          parsed.outcome === "overridden"
+            ? "A moderator reviewed your assessment and revised the outcome. Your record shows the result that stands."
+            : "A moderator has independently reviewed and confirmed your assessment result.",
+        entityType: "assessment_submission",
+        entityId: decision.submissionId,
+        dedupeKey: `moderated:${record.id}`,
+        channels: ["in_app", "email"],
+      });
+    }
 
     return { record, submissionId: decision.submissionId };
   }).then(async ({ record, submissionId }) => {

@@ -292,6 +292,84 @@ export const loginAttempts = pgTable(
   ],
 );
 
+export const notificationChannel = pgEnum("notification_channel", [
+  "in_app",
+  "email",
+]);
+
+export const notificationStatus = pgEnum("notification_status", [
+  "pending",
+  "sent",
+  "failed",
+  "suppressed",
+]);
+
+/**
+ * Notifications, held as an outbox rather than sent as they arise.
+ *
+ * Writing the message down first and delivering it separately means a failure
+ * to send never loses the message, and a mail server that does not exist yet
+ * is not a reason to skip recording that somebody should have been told. When
+ * SMTP is configured, everything queued in the meantime goes out.
+ *
+ * In-app notifications are the same rows with a different channel: an assessor
+ * who signs in and sees three submissions waiting has been notified perfectly
+ * well without an email.
+ */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    channel: notificationChannel("channel").notNull().default("in_app"),
+    status: notificationStatus("status").notNull().default("pending"),
+
+    /** Dot-namespaced: "enrolment.overdue", "moderation.waiting". */
+    kind: text("kind").notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    /** Where the notification points, so it is actionable rather than noise. */
+    linkPath: text("link_path"),
+
+    entityType: text("entity_type"),
+    entityId: uuid("entity_id"),
+
+    /**
+     * Stops the same message being raised twice.
+     *
+     * A nightly job that scans for overdue training would otherwise send the
+     * same reminder every night until the training is done, which teaches
+     * people to ignore it. The key carries a period, so a reminder repeats on
+     * a chosen cadence rather than daily or never.
+     */
+    dedupeKey: text("dedupe_key").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+  },
+  (t) => [
+    uniqueIndex("notifications_dedupe_idx").on(
+      t.userId,
+      t.channel,
+      t.dedupeKey,
+    ),
+    index("notifications_inbox_idx").on(t.userId, t.readAt, t.createdAt),
+    index("notifications_outbox_idx").on(t.channel, t.status, t.createdAt),
+    index("notifications_org_idx").on(t.organisationId),
+  ],
+);
+
 /**
  * Append-only. Nothing in the application updates or deletes from this table,
  * and a database trigger enforces that, because an audit trail an administrator
