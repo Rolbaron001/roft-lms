@@ -127,12 +127,48 @@ export default async function AssessSubmissionPage({
                       key={artifact.id}
                       className="rounded-md border border-[var(--border)] px-4 py-3 text-sm"
                     >
-                      <p className="font-medium">{artifact.filename}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="font-medium">{artifact.filename}</p>
+                        <a
+                          href={`/api/evidence/${artifact.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-medium text-[var(--brand-accent)] hover:underline"
+                        >
+                          Open
+                        </a>
+                      </div>
                       <p className="mt-0.5 text-xs text-[var(--muted)]">
                         {Math.round(artifact.sizeBytes / 1024)} KB · uploaded{" "}
                         {artifact.uploadedAt.toLocaleString("en-ZA")}
                       </p>
-                      <p className="mt-1 font-mono text-[11px] break-all text-[var(--muted)]">
+
+                      {/* An image or video is shown here rather than made a
+                          download, because an assessor judging a practical
+                          task should not have to leave the criteria to see
+                          the evidence. */}
+                      {artifact.mimeType.startsWith("image/") ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/evidence/${artifact.id}`}
+                          alt={artifact.filename}
+                          className="mt-3 max-h-96 rounded-md border border-[var(--border)]"
+                        />
+                      ) : artifact.mimeType.startsWith("video/") ? (
+                        <video
+                          controls
+                          preload="metadata"
+                          className="mt-3 w-full rounded-md border border-[var(--border)] bg-black"
+                          style={{ maxHeight: "24rem" }}
+                        >
+                          <source
+                            src={`/api/evidence/${artifact.id}`}
+                            type={artifact.mimeType}
+                          />
+                        </video>
+                      ) : null}
+
+                      <p className="mt-2 font-mono text-[11px] break-all text-[var(--muted)]">
                         SHA-256 {artifact.sha256}
                       </p>
                     </li>

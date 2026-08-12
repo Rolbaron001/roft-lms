@@ -100,6 +100,8 @@ export default async function CoursePage({
               id: lesson.id,
               title: lesson.title,
               contentType: lesson.contentType,
+              mediaFilename: lesson.mediaFilename,
+              mediaMimeType: lesson.mediaMimeType,
             })),
           }))}
           taggedCompetencies={detail.competencies.map((row) => ({

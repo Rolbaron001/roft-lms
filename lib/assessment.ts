@@ -18,6 +18,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
+import { detectMedia } from "./media";
 import { issueCertificateAutomatically } from "./certificates";
 
 /**
@@ -519,7 +520,14 @@ export async function submitEvidence(
   input: {
     assessmentId: string;
     enrolmentId?: string | null;
-    files: { filename: string; mimeType: string; bytes: Uint8Array }[];
+    /**
+     * `mimeType` is accepted for callers that have one to hand but is
+     * deliberately ignored: the type recorded is the one read from the file's
+     * own bytes. What a browser claims about an upload is supplied by whoever
+     * is uploading, and evidence is exactly the wrong place to take that on
+     * trust.
+     */
+    files: { filename: string; mimeType?: string; bytes: Uint8Array }[];
     note?: string;
     ipAddress?: string | null;
     userAgent?: string | null;
@@ -583,13 +591,24 @@ export async function submitEvidence(
   }[] = [];
 
   for (const file of input.files) {
+    const detected = detectMedia(file.bytes, file.filename);
+    if (!detected.ok) {
+      throw new AssessmentError(
+        `${file.filename}: ${detected.reason}`,
+        "invalid_state",
+      );
+    }
+
     const key = buildStorageKey(
       session.organisationId,
       submissionId,
       file.filename,
     );
     const object = await putObject(key, file.bytes);
-    stored.push({ file, object });
+    stored.push({
+      file: { filename: file.filename, mimeType: detected.mimeType },
+      object,
+    });
   }
 
   await withTenant(session.organisationId, async (tx) => {

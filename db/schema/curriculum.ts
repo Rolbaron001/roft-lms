@@ -1,4 +1,5 @@
 import {
+  bigint,
   index,
   integer,
   jsonb,
@@ -47,6 +48,10 @@ export const contentType = pgEnum("content_type", [
   "quiz",
   "practical_task",
   "workplace_logbook",
+  // Added with file uploads: a diagram or a recorded briefing is ordinary
+  // course material and was previously being filed as "document".
+  "image",
+  "audio",
 ]);
 
 /**
@@ -254,6 +259,16 @@ export const lessons = pgTable(
     body: text("body"),
     /** Object-storage key for video, documents and SCORM packages. */
     storageKey: text("storage_key"),
+    /**
+     * What the uploaded file actually is, decided by reading its leading
+     * bytes rather than trusting the name or what the browser claimed. The
+     * player uses this to decide how to present it, and the download route
+     * uses it as the content type it serves back.
+     */
+    mediaMimeType: text("media_mime_type"),
+    mediaFilename: text("media_filename"),
+    mediaSizeBytes: bigint("media_size_bytes", { mode: "number" }),
+    mediaSha256: text("media_sha256"),
     externalUrl: text("external_url"),
     durationMinutes: integer("duration_minutes"),
     sortOrder: integer("sort_order").notNull().default(0),

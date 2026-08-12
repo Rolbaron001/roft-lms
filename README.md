@@ -268,6 +268,65 @@ Learners see their programmes on the home page as a numbered sequence with
 each step marked finished, ready, or waiting on the one before. Courses inside
 a programme are not listed twice under "My learning".
 
+## File uploads: course material and evidence
+
+Lessons carry video, images, audio, PDF, Word, PowerPoint, Excel or a SCORM
+package. Learners submit evidence in the same formats.
+
+### What a file *is* comes from its contents
+
+Both the filename and the content type a browser sends are supplied by whoever
+is uploading, and neither survives contact with someone determined. A file
+called `diagram.png` announcing `image/png` can contain anything — and if the
+platform served it back with that content type, the browser would do whatever
+the real contents said. That is how an "image" in a portfolio becomes script
+running inside an assessor's session while they mark it.
+
+So the type is read from the file's leading bytes. The extension is used only
+to separate formats that genuinely share a container — the Office formats are
+all ZIP archives.
+
+- **Recognised**: PNG, JPEG, GIF, WebP, PDF, MP4, WebM, MP3, Ogg, DOCX, PPTX,
+  XLSX, ODT, ODP, ZIP, plain text and CSV.
+- **Refused outright**: SVG and HTML, because both can carry script; anything
+  unrecognised, because an allowlist is the only defensible position — a
+  denylist is a list of the formats somebody thought of.
+- Size ceilings are per kind: 500 MB for video, because a recorded practical
+  assessment is genuinely large, and 10 MB for an image.
+
+Verified against real files: a genuine PNG and PDF accepted and classified,
+and HTML named `attack.png` refused with an explanation.
+
+### Serving it back
+
+Three headers do the work, each load-bearing: `nosniff` stops the browser
+second-guessing the type; `Content-Disposition: attachment` sends anything not
+safe to embed as a download; and a `sandbox` CSP means even something that
+slipped through runs with no script and no access to anything.
+
+**Authorisation is decided from the database record, never the storage key.**
+Keys begin with the organisation id, but a key is a name, not a permission, and
+names appear in page source. A signed-in administrator of one client
+requesting another client's lesson file by id gets a 404 — tested live, not
+just asserted.
+
+### Placing it appropriately
+
+The player renders by what the file actually is: video and audio get real
+players so a learner can pause and resume; images show inline; PDFs are framed,
+because a slide deck exported to PDF is the commonest teaching artefact there
+is; Office formats download, because no browser renders them and pretending
+otherwise produces a blank rectangle. A file uploaded to a lesson marked "text"
+corrects the lesson's type rather than rendering as nothing.
+
+For an assessor, images and video in a portfolio are shown beside the criteria
+rather than made a download — judging a practical task should not mean leaving
+the page.
+
+Uploads go through a route handler rather than a server action, so a 400 MB
+video does not have to be buffered as a form payload, and the learner sees a
+real progress figure on a slow connection.
+
 ## Tenant logos
 
 A tenant's logo appears in the page header, on the sign-in page, in the

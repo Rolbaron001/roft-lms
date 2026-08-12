@@ -108,6 +108,9 @@ export default async function LearnPage({
             externalUrl: lesson.externalUrl,
             durationMinutes: lesson.durationMinutes,
             state: lesson.state,
+            mediaMimeType: lesson.mediaMimeType,
+            mediaFilename: lesson.mediaFilename,
+            mediaSizeBytes: lesson.mediaSizeBytes,
           })),
         }))}
         completedLessons={delivery.completedLessons}

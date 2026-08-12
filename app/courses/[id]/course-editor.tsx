@@ -11,11 +11,18 @@ import {
   type ActionState,
 } from "../actions";
 import type { CoverageReport } from "@/lib/authoring";
+import { LessonUpload } from "@/components/lesson-upload";
 
 type Section = {
   id: string;
   title: string;
-  lessons: { id: string; title: string; contentType: string }[];
+  lessons: {
+    id: string;
+    title: string;
+    contentType: string;
+    mediaFilename: string | null;
+    mediaMimeType: string | null;
+  }[];
 };
 
 type Competency = { id: string; code: string; name: string };
@@ -119,16 +126,28 @@ export function CourseEditor({
                   </p>
 
                   {section.lessons.length > 0 ? (
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-2 space-y-3">
                       {section.lessons.map((lesson) => (
                         <li
                           key={lesson.id}
-                          className="flex items-center justify-between gap-3 text-sm text-[var(--muted)]"
+                          className="rounded-md border border-[var(--border)] px-3 py-2"
                         >
-                          <span>{lesson.title}</span>
-                          <span className="text-xs capitalize">
-                            {lesson.contentType.replace(/_/g, " ")}
-                          </span>
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <span>{lesson.title}</span>
+                            <span className="text-xs capitalize text-[var(--muted)]">
+                              {lesson.contentType.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <div className="mt-2">
+                            <LessonUpload
+                              lessonId={lesson.id}
+                              existing={{
+                                filename: lesson.mediaFilename,
+                                mimeType: lesson.mediaMimeType,
+                              }}
+                              disabled={!editable}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>

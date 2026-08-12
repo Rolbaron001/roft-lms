@@ -5,6 +5,7 @@ import { AssessmentError, getAssessmentForLearner } from "@/lib/assessment";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { AppShell } from "@/components/app-shell";
 import { QuizForm } from "./quiz-form";
+import { EvidenceForm } from "./evidence-form";
 
 export default async function TakeAssessmentPage({
   params,
@@ -92,7 +93,7 @@ export default async function TakeAssessmentPage({
             You have used all your attempts at this assessment.
           </p>
         </section>
-      ) : (
+      ) : view.assessment.type === "quiz" ? (
         <QuizForm
           enrolmentId={id}
           assessmentId={assessmentId}
@@ -104,6 +105,10 @@ export default async function TakeAssessmentPage({
             options: item.options ?? [],
           }))}
         />
+      ) : (
+        // Evidence, practical observation and workplace logbook are all
+        // "upload what you did" from the learner's side.
+        <EvidenceForm assessmentId={assessmentId} enrolmentId={id} />
       )}
     </AppShell>
   );

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { markLessonCompleteAction, type LearnState } from "../actions";
+import { LessonMediaView } from "@/components/lesson-media";
 
 type Lesson = {
   id: string;
@@ -11,6 +12,9 @@ type Lesson = {
   externalUrl: string | null;
   durationMinutes: number | null;
   state: string;
+  mediaMimeType: string | null;
+  mediaFilename: string | null;
+  mediaSizeBytes: number | null;
 };
 
 type Section = { id: string; title: string; lessons: Lesson[] };
@@ -153,10 +157,21 @@ export function CoursePlayer({
               </span>
             </div>
 
-            <div className="mt-4 min-h-32 text-sm leading-relaxed">
+            <div className="mt-4 min-h-32 space-y-4 text-sm leading-relaxed">
+              {selected.mediaMimeType ? (
+                <LessonMediaView
+                  media={{
+                    lessonId: selected.id,
+                    mimeType: selected.mediaMimeType,
+                    filename: selected.mediaFilename,
+                    sizeBytes: selected.mediaSizeBytes,
+                  }}
+                />
+              ) : null}
+
               {selected.body ? (
                 <div className="whitespace-pre-wrap">{selected.body}</div>
-              ) : selected.externalUrl ? (
+              ) : selected.mediaMimeType ? null : selected.externalUrl ? (
                 <a
                   href={selected.externalUrl}
                   target="_blank"
