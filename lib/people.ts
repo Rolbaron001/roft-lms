@@ -59,6 +59,7 @@ const ROLE_VALUES = [
   "learner",
   "skills_development_facilitator",
   "external_verifier",
+  "workplace_coach",
 ] as const;
 
 /**

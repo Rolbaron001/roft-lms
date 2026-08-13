@@ -44,6 +44,12 @@ export const userRole = pgEnum("user_role", [
   "learner",
   "skills_development_facilitator",
   "external_verifier",
+  /**
+   * The learner's supervisor at the host employer, who signs off work
+   * experience. Employed by the employer rather than the provider, which is
+   * why they hold almost no permissions and see only their own learners.
+   */
+  "workplace_coach",
 ]);
 
 export const userStatus = pgEnum("user_status", [

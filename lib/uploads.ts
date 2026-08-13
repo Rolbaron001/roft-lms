@@ -5,6 +5,8 @@ import {
   courseSections,
   courses,
   evidenceArtifacts,
+  workplaceLogbookEntries,
+  workplaceLogbooks,
   lessons,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -247,6 +249,104 @@ export async function uploadEvidence(
         files: stored.map((item) => ({
           filename: item.filename,
           mimeType: item.mimeType,
+          sha256: item.sha256,
+        })),
+      },
+    });
+  });
+
+  return stored;
+}
+
+/**
+ * Attaches supporting evidence to a work experience logbook entry.
+ *
+ * Same store, same hashing and same limits as assessment evidence: to an
+ * external verifier the Portfolio of Evidence is one thing, and a second
+ * upload path would be a second place for the integrity check to be missing.
+ *
+ * Only the learner may attach, and only while the logbook is theirs to edit.
+ * Once the coach has signed, the evidence they attested to is fixed.
+ */
+export async function uploadLogbookEvidence(
+  session: AuthenticatedSession,
+  entryId: string,
+  files: { filename: string; bytes: Uint8Array }[],
+  context: { ipAddress?: string | null } = {},
+) {
+  assertSessionCan(session, "workplace:log");
+
+  if (files.length === 0) {
+    throw new UploadError("Choose at least one file.", "rejected");
+  }
+
+  const entry = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: workplaceLogbookEntries.id,
+        logbookId: workplaceLogbookEntries.logbookId,
+        learnerId: workplaceLogbooks.learnerId,
+        status: workplaceLogbooks.status,
+      })
+      .from(workplaceLogbookEntries)
+      .innerJoin(
+        workplaceLogbooks,
+        eq(workplaceLogbooks.id, workplaceLogbookEntries.logbookId),
+      )
+      .where(eq(workplaceLogbookEntries.id, entryId));
+    return row;
+  });
+
+  if (!entry) {
+    throw new UploadError("Logbook entry not found.", "not_found");
+  }
+
+  if (entry.learnerId !== session.userId) {
+    throw new UploadError("That is not your logbook.", "not_permitted");
+  }
+
+  if (entry.status !== "draft" && entry.status !== "returned_by_coach") {
+    throw new UploadError(
+      "This logbook has been submitted, so evidence cannot be added to it.",
+      "not_permitted",
+    );
+  }
+
+  const stored: StoredMedia[] = [];
+  for (const file of files) {
+    stored.push(
+      await acceptFile(
+        session.organisationId,
+        `logbook/${entry.logbookId}`,
+        file,
+      ),
+    );
+  }
+
+  await withTenant(session.organisationId, async (tx) => {
+    await tx.insert(evidenceArtifacts).values(
+      stored.map((item) => ({
+        organisationId: session.organisationId,
+        logbookEntryId: entryId,
+        filename: item.filename,
+        storageKey: item.storageKey,
+        mimeType: item.mimeType,
+        sizeBytes: item.sizeBytes,
+        sha256: item.sha256,
+        uploadedById: session.userId,
+        uploadedIp: context.ipAddress ?? null,
+      })),
+    );
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "workplace_evidence.uploaded",
+      entityType: "workplace_logbook_entry",
+      entityId: entryId,
+      after: {
+        files: stored.map((item) => ({
+          filename: item.filename,
           sha256: item.sha256,
         })),
       },

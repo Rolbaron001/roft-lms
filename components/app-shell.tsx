@@ -33,6 +33,13 @@ const NAV: NavItem[] = [
     label: "EISA readiness",
     permission: "enrolment:read_all",
   },
+  // Reached by learners, coaches and staff alike, so it is gated on any one
+  // of the three permissions rather than a single role's.
+  {
+    href: "/workplace",
+    label: "Work experience",
+    anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
+  },
   { href: "/assess", label: "To assess", permission: "assessment:assess" },
   { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
   // Every signed-in person holds report:own, but a learner has no dashboard

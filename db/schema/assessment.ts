@@ -17,7 +17,9 @@ import {
   assessmentCriteria,
   courses,
   curriculumModules,
+  curriculumTopicElements,
   publishStatus,
+  qualifications,
 } from "./curriculum";
 import { enrolments } from "./learning";
 
@@ -225,9 +227,21 @@ export const evidenceArtifacts = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    submissionId: uuid("submission_id")
-      .notNull()
-      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    /**
+     * Evidence belongs to an assessment submission or to a work experience
+     * logbook entry — exactly one, enforced by a check constraint in
+     * policies.sql.
+     *
+     * One store rather than two, because the Portfolio of Evidence is one
+     * thing to an external verifier. Splitting it would mean two hashing
+     * paths, two download routes and two integrity checks, and the second of
+     * each is where the gap appears.
+     */
+    submissionId: uuid("submission_id").references(
+      () => assessmentSubmissions.id,
+      { onDelete: "cascade" },
+    ),
+    logbookEntryId: uuid("logbook_entry_id"),
     criterionId: uuid("criterion_id").references(() => assessmentCriteria.id, {
       onDelete: "set null",
     }),
@@ -253,6 +267,7 @@ export const evidenceArtifacts = pgTable(
   },
   (t) => [
     index("evidence_artifacts_submission_idx").on(t.submissionId),
+    index("evidence_artifacts_logbook_entry_idx").on(t.logbookEntryId),
     index("evidence_artifacts_org_idx").on(t.organisationId),
     index("evidence_artifacts_sha256_idx").on(t.sha256),
   ],
@@ -403,5 +418,172 @@ export const certificates = pgTable(
     uniqueIndex("certificates_verification_ref_idx").on(t.verificationReference),
     index("certificates_org_idx").on(t.organisationId),
     index("certificates_user_idx").on(t.userId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Work Integrated Learning
+// ---------------------------------------------------------------------------
+
+/**
+ * The agreement that puts a learner in a workplace under a named coach.
+ *
+ * QCTO work experience happens at an employer, supervised by somebody the
+ * employer provides. The curriculum is explicit: "the supervisor must provide
+ * coaching and must sign the logbook indicating that the learner has gained
+ * adequate exposure". This record is what makes that person identifiable at
+ * audit — a signature from an unnamed supervisor attests to nothing.
+ *
+ * The coach's details are copied here as well as linked. People leave
+ * employers; the agreement has to keep saying who signed, in what role, at the
+ * time.
+ */
+export const workplaceAgreements = pgTable(
+  "workplace_agreements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    coachId: uuid("coach_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    qualificationId: uuid("qualification_id").references(
+      () => qualifications.id,
+      { onDelete: "set null" },
+    ),
+
+    employerName: text("employer_name").notNull(),
+    employerAddress: text("employer_address"),
+    coachName: text("coach_name").notNull(),
+    coachDesignation: text("coach_designation"),
+    coachEmail: text("coach_email").notNull(),
+
+    startDate: timestamp("start_date", { withTimezone: false }),
+    endDate: timestamp("end_date", { withTimezone: false }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+
+    createdById: uuid("created_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("workplace_agreements_org_idx").on(t.organisationId),
+    index("workplace_agreements_learner_idx").on(t.learnerId),
+    index("workplace_agreements_coach_idx").on(t.coachId),
+  ],
+);
+
+/**
+ * Where a work experience logbook has got to.
+ *
+ * The order matters and the platform enforces it: a learner records what they
+ * did, the coach attests to it, and only then does it reach an assessor. A
+ * logbook that reached an assessor without a coach's signature is the exact
+ * document an external verifier rejects.
+ */
+export const logbookStatus = pgEnum("logbook_status", [
+  "draft",
+  "submitted_to_coach",
+  "returned_by_coach",
+  "coach_signed",
+  "accepted_by_assessor",
+]);
+
+export const workplaceLogbooks = pgTable(
+  "workplace_logbooks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    agreementId: uuid("agreement_id")
+      .notNull()
+      .references(() => workplaceAgreements.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The Work Experience Module this logbook covers. */
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    status: logbookStatus("status").notNull().default("draft"),
+    /** The curriculum states a range; the learner records what it took. */
+    hoursClaimed: integer("hours_claimed"),
+
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+
+    coachSignedAt: timestamp("coach_signed_at", { withTimezone: true }),
+    coachComments: text("coach_comments"),
+    /**
+     * Hash over what was signed — the coach, the logbook, and every entry as
+     * it stood. Not a cryptographic signature, which would need a key the
+     * coach does not have, but enough that a later edit is detectable rather
+     * than deniable.
+     */
+    coachSignatureHash: text("coach_signature_hash"),
+
+    assessorId: uuid("assessor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("workplace_logbooks_learner_module_idx").on(
+      t.learnerId,
+      t.curriculumModuleId,
+    ),
+    index("workplace_logbooks_org_idx").on(t.organisationId),
+    index("workplace_logbooks_status_idx").on(t.status),
+  ],
+);
+
+/**
+ * One line of the logbook: a work activity done, a piece of workplace
+ * knowledge covered, or a piece of supporting evidence supplied.
+ *
+ * Generated from the curriculum's own WA / WK / SE lines rather than typed, so
+ * a logbook cannot quietly omit a requirement. Evidence files attach through
+ * evidence_artifacts, the same store the rest of the Portfolio of Evidence
+ * uses.
+ */
+export const workplaceLogbookEntries = pgTable(
+  "workplace_logbook_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    logbookId: uuid("logbook_id")
+      .notNull()
+      .references(() => workplaceLogbooks.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id")
+      .notNull()
+      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+
+    completed: boolean("completed").notNull().default(false),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    note: text("note"),
+  },
+  (t) => [
+    uniqueIndex("workplace_logbook_entries_unique_idx").on(
+      t.logbookId,
+      t.topicElementId,
+    ),
+    index("workplace_logbook_entries_org_idx").on(t.organisationId),
   ],
 );

@@ -53,6 +53,18 @@ export const PERMISSIONS = [
   "evidence:read_own",
   "evidence:submit",
 
+  // Work Integrated Learning.
+  //
+  // A QCTO work experience module is signed off by the learner's Workplace
+  // Coach — somebody employed by the host employer, not by the provider — and
+  // the curriculum requires it: "the supervisor must provide coaching and must
+  // sign the logbook". Without a role for that person the sign-off has to be
+  // faked by a member of staff, which is the one thing an external verifier
+  // checks.
+  "workplace:manage",
+  "workplace:log",
+  "workplace:sign",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -76,6 +88,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 const SELF_SERVICE: Permission[] = [
   "course:read",
   "assessment:take",
+  "workplace:log",
   "enrolment:read_own",
   "evidence:read_own",
   "evidence:submit",
@@ -113,8 +126,21 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "report:tenant",
     "report:statutory",
     "audit:read",
+    "workplace:manage",
     ...SELF_SERVICE,
   ],
+
+  /**
+   * The learner's supervisor at the host employer. Deliberately the narrowest
+   * role on the platform: they sign work experience logbooks for the learners
+   * they have an agreement with, and can do nothing else. They are not the
+   * provider's staff, and giving them a view of other learners would put one
+   * employer's people in front of another's.
+   *
+   * Which learners they can see is decided by the workplace agreement, not by
+   * this list — a permission cannot express "only mine".
+   */
+  workplace_coach: ["workplace:sign"],
 
   instructor: [
     "user:read",

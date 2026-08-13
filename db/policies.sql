@@ -114,6 +114,55 @@ create trigger moderation_segregation_of_duties
   before insert or update on moderation_records
   for each row execute function assert_moderator_is_not_assessor();
 
+-- A coach cannot sign off their own learning. The same rule as moderation:
+-- the person attesting that work was done must not be the person who did it.
+-- Enforced here rather than only in the application so that no future import
+-- routine, script or API can create the arrangement.
+
+create or replace function assert_coach_is_not_learner()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.coach_id = new.learner_id then
+    raise exception
+      'Segregation of duties: user % cannot be their own workplace coach.',
+      new.coach_id
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists workplace_coach_is_not_learner on workplace_agreements;
+create trigger workplace_coach_is_not_learner
+  before insert or update on workplace_agreements
+  for each row execute function assert_coach_is_not_learner();
+
+-- Evidence belongs to an assessment submission or to a work experience
+-- logbook entry, never to both and never to neither. Without this an orphaned
+-- artefact is unreachable from either side of the Portfolio of Evidence while
+-- still occupying storage and appearing in counts.
+alter table evidence_artifacts
+  drop constraint if exists evidence_artifacts_one_owner_check;
+alter table evidence_artifacts
+  add constraint evidence_artifacts_one_owner_check
+  check (
+    (submission_id is not null and logbook_entry_id is null)
+    or (submission_id is null and logbook_entry_id is not null)
+  );
+
+-- Declared here rather than in the schema so the check above is created first:
+-- adding the reference and the constraint in one migration would otherwise
+-- depend on table creation order.
+alter table evidence_artifacts
+  drop constraint if exists evidence_artifacts_logbook_entry_fk;
+alter table evidence_artifacts
+  add constraint evidence_artifacts_logbook_entry_fk
+  foreign key (logbook_entry_id)
+  references workplace_logbook_entries (id) on delete cascade;
+
 -- ---------------------------------------------------------------------------
 -- 4. Append-only audit log
 -- ---------------------------------------------------------------------------
