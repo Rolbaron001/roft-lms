@@ -119,7 +119,14 @@ services:
       # formatting is handled in the application, not here.
       TZ: Africa/Johannesburg
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data.
+      #
+      # Postgres 18 changed this. The data now lives in a version-numbered
+      # subdirectory, so mounting the old path leaves the actual data inside
+      # the container — the image detects that and refuses to start rather than
+      # letting you run a database that quietly loses everything on redeploy.
+      # Mounting the parent is also what makes a future pg_upgrade possible.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-roft_lms}"]
       interval: 10s
