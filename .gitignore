@@ -38,6 +38,9 @@ yarn-error.log*
 # locally uploaded evidence and course media (S3-compatible storage in deployment)
 /storage
 
+# encrypted database backups written on the server
+/backups
+
 # vercel
 .vercel
 

@@ -57,6 +57,55 @@ services:
       - edge
       - internal
 
+  # One-shot container for migrations, seeding, backups and notifications.
+  #
+  # Not started with the stack — `profiles` keeps it out of `up`. Run it with:
+  #   docker compose -f docker-compose.production.yml run --rm tools <command>
+  #
+  # It exists because the application image deliberately contains only the
+  # built app: no source, no dev dependencies, no scripts directory.
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    profiles: ["tools"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      AUTH_SECRET: ${AUTH_SECRET:?}
+      AUTH_URL: https://${LMS_DOMAIN:?}
+      PLATFORM_HOST: ${LMS_DOMAIN:?}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage
+      # Used by scripts/backup-database.sh when run through this container.
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:-roft_lms}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      BACKUP_DIR: /backups
+      BACKUP_BUCKET: ${BACKUP_BUCKET:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - evidence:/app/storage
+      # Backups land on the host so they survive the container and can be
+      # copied off the machine.
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
   db:
     image: postgres:18-alpine
     restart: unless-stopped

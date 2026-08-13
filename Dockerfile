@@ -27,6 +27,25 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
+# ----------------------------------------------------------------------- tools
+# Migrations, seeding, backups and the notification job.
+#
+# These need the source, the dev dependencies and the scripts directory, none
+# of which belong in the image that faces the internet. Keeping them in a
+# separate one-shot container means the running application stays minimal while
+# the operational commands still work — the alternative, discovered the hard
+# way, is a runtime image where `npx drizzle-kit` simply is not there.
+FROM node:24-alpine AS tools
+WORKDIR /app
+
+RUN apk add --no-cache postgresql18-client openssl bash aws-cli
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NODE_ENV=production
+CMD ["sh"]
+
 # --------------------------------------------------------------------- runtime
 FROM node:24-alpine AS runtime
 WORKDIR /app

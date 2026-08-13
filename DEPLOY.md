@@ -146,10 +146,15 @@ and check again rather than changing anything.
 ## 5. Create the schema
 
 ```bash
-docker compose -f docker-compose.production.yml exec app sh -c '
+docker compose -f docker-compose.production.yml run --rm tools sh -c '
   npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts
 '
 ```
+
+Note `run --rm tools`, not `exec app`. The application image contains only the
+built app — no source, no dev dependencies, no scripts directory — so the
+operational commands live in a separate one-shot container. Keeping the
+internet-facing image minimal is worth the extra word.
 
 It should end with `28 tables are tenant-isolated`. **If it does not, stop.**
 That line is the tenant separation everything else depends on.
@@ -162,7 +167,7 @@ There is no sign-up page by design — tenants are provisioned, not
 self-created. Do it once from the server:
 
 ```bash
-docker compose -f docker-compose.production.yml exec app npx tsx scripts/seed.mts
+docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/seed.mts
 ```
 
 That loads the demonstration organisations, which is what you want for
@@ -184,37 +189,50 @@ You want `{"status":"ok",...}`.
 This is the step that separates a system from a liability. Self-hosted
 Postgres without tested backups is the one arrangement not worth running.
 
-```bash
-sudo mkdir -p /var/backups/roft-lms
-sudo chown $USER /var/backups/roft-lms
-cp .env.backup.example ~/.env.backup
-nano ~/.env.backup
-chmod 600 ~/.env.backup
+Backups run **through the tools container**, not from the host. The database
+has no published port — that is deliberate, and it means the host itself has
+no route to it. The tools container is on the internal network and does.
+
+Add the backup settings to `.env` (bootstrap-server.sh generates the
+passphrase for you):
+
+```
+BACKUP_PASSPHRASE=...
+BACKUP_BUCKET=s3://your-bucket/roft-lms
+BACKUP_S3_ENDPOINT=https://<namespace>.compat.objectstorage.af-johannesburg-1.oraclecloud.com
 ```
 
-Configure the AWS CLI against your object storage (Oracle's is
-S3-compatible; the endpoint and keys come from the OCI console under
-Customer Secret Keys):
-
-```bash
-aws configure
-```
+**Keep `BACKUP_PASSPHRASE` somewhere other than this server.** A password
+manager, not a note on the machine. Without it every backup is permanently
+unreadable, which defeats having them.
 
 Run one by hand and watch it:
 
 ```bash
-set -a; source ~/.env.backup; set +a
-./scripts/backup-database.sh
+cd ~/roft-lms
+docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup-database.sh --local-only
 ```
 
-Then schedule it. `crontab -e`:
+Backups land in `~/roft-lms/backups` on the host. Once your object storage
+credentials are configured (`aws configure` inside the tools container, or
+mount `~/.aws`), drop `--local-only` and they are copied off the machine too.
+
+Then prove a restore works before trusting any of it:
+
+```bash
+docker compose -f docker-compose.production.yml run --rm tools   sh -c './scripts/restore-database.sh --verify $(ls -t /backups/*.enc | head -1)'
+```
+
+You want **VERIFY PASSED**, with a count of users and audit entries.
+
+Schedule both. `crontab -e`:
 
 ```cron
-# 02:15 SAST nightly
-15 2 * * * cd $HOME/roft-lms && set -a && . $HOME/.env.backup && set +a && ./scripts/backup-database.sh >> /var/log/roft-backup.log 2>&1
+# 02:15 SAST nightly backup
+15 0 * * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup-database.sh >> /var/log/roft-backup.log 2>&1
 
 # Prove a backup restores, on the first of each month
-30 3 1 * * cd $HOME/roft-lms && set -a && . $HOME/.env.backup && set +a && ./scripts/restore-database.sh --verify $(ls -t /var/backups/roft-lms/*.enc | head -1) >> /var/log/roft-restore-test.log 2>&1
+30 1 1 * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools sh -c './scripts/restore-database.sh --verify $(ls -t /backups/*.enc | head -1)' >> /var/log/roft-restore-test.log 2>&1
 ```
 
 **Read `/var/log/roft-restore-test.log` occasionally.** A backup nobody has
@@ -232,10 +250,10 @@ Schedule the sweep either way — in-app reminders depend on it:
 
 ```cron
 # 07:00 SAST: look for overdue and upcoming training, and send anything queued
-0 5 * * * cd $HOME/roft-lms && npx tsx scripts/notify.mts >> /var/log/roft-notify.log 2>&1
+0 5 * * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/notify.mts >> /var/log/roft-notify.log 2>&1
 
 # Hourly: clear anything raised during the day
-0 * * * * cd $HOME/roft-lms && npx tsx scripts/notify.mts send >> /var/log/roft-notify.log 2>&1
+0 * * * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/notify.mts send >> /var/log/roft-notify.log 2>&1
 ```
 
 (Cron runs in UTC on most servers; 05:00 UTC is 07:00 SAST.)
@@ -271,10 +289,15 @@ docker compose -f docker-compose.production.yml up -d --build app
 **Apply a schema change** (after the deploy above):
 
 ```bash
-docker compose -f docker-compose.production.yml exec app sh -c '
+docker compose -f docker-compose.production.yml run --rm tools sh -c '
   npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts
 '
 ```
+
+Note `run --rm tools`, not `exec app`. The application image contains only the
+built app — no source, no dev dependencies, no scripts directory — so the
+operational commands live in a separate one-shot container. Keeping the
+internet-facing image minimal is worth the extra word.
 
 Re-running the policies script after any schema change is not optional. A new
 table without its policy is a table with no tenant separation.
@@ -294,11 +317,15 @@ docker compose -f docker-compose.production.yml logs -f --tail=100 app
 **Restore after a disaster:**
 
 ```bash
-set -a; source ~/.env.backup; set +a
-aws s3 cp s3://your-bucket/roft-lms/roft-lms-<stamp>.dump.enc . --endpoint-url "$BACKUP_S3_ENDPOINT"
-./scripts/restore-database.sh --verify  roft-lms-<stamp>.dump.enc     # check it first
-./scripts/restore-database.sh --replace-production roft-lms-<stamp>.dump.enc
-docker compose -f docker-compose.production.yml exec app npx tsx scripts/apply-policies.ts
+cd ~/roft-lms
+DC="docker compose -f docker-compose.production.yml run --rm tools"
+
+# Bring the copy down from object storage into ./backups
+$DC sh -c 'aws s3 cp $BACKUP_BUCKET/roft-lms-<stamp>.dump.enc /backups/ --endpoint-url $BACKUP_S3_ENDPOINT'
+
+$DC ./scripts/restore-database.sh --verify /backups/roft-lms-<stamp>.dump.enc
+$DC ./scripts/restore-database.sh --replace-production /backups/roft-lms-<stamp>.dump.enc
+docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/apply-policies.ts
 ```
 
 Always `--verify` before `--replace-production`. The replace takes a safety
