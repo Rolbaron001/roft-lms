@@ -451,6 +451,79 @@ attached to a named, contactable individual. There are tests for both halves.
 It cannot be undone, so it asks for a written reason (kept in the audit log)
 and for the person's surname to be typed. A dialog gets clicked through.
 
+## EISA readiness
+
+Under the OQSF a learner finishes an occupational qualification by passing an
+External Integrated Summative Assessment, set by the Assessment Quality Partner
+and sat at a registered centre. Everything before that is the provider's, and
+it ends in a Statement of Results that admits the learner to the EISA.
+
+`lib/eisa.ts` produces two numbers, and confusing them would be the whole
+mistake:
+
+| | |
+|---|---|
+| `readinessIndex` | how far through, weighted by component. Progress. |
+| `eisaEligible` | whether they may sit it. **Every** criterion in **every** module. |
+
+The qualification document leaves no room here: admission requires
+"confirmation of achievement … that all internal assessment criteria for all
+modules in the related curriculum document have been achieved". No pass mark,
+nothing to round up. A learner at 99% is not nearly eligible.
+
+### The curriculum shape
+
+A QCTO curriculum document does not go module → criteria. It goes:
+
+```
+Qualification                         121150, weights 38/35/27
+└── Module            KM01            "Introduction to Organisations…", 4 credits
+    └── Topic         KM0101          "Introduction to Organisational Management" (25%)
+        ├── Elements  KT0101…         what must be TAUGHT
+        └── Criteria  IAC0101…        what must be ASSESSED
+```
+
+Topics carry their own weighting, so a module is not two-thirds finished
+because two of its three topics are. The Learning Material Matrix checks
+elements and criteria **separately** — a course can assess everything it
+teaches and still not teach everything the curriculum requires, and that gap is
+invisible from inside a course that hangs together.
+
+Component weights come from the document, not from arithmetic: 121150 states
+38/35/27 where its credits give 35/35/30. Where a document states none, the
+weighting is derived from credits and the interface says so.
+
+### Two guards
+
+**A module with no criteria cannot be failed.** A half-transcribed curriculum
+would therefore report every learner eligible — the captured modules complete,
+the missing ones contributing nothing. `curriculumComplete` blocks eligibility
+until every module carries criteria. It is the most dangerous number this code
+could produce, because it errs towards sending somebody to an assessment centre.
+
+**An unmoderated decision does not count**, matching the rule certificates
+already apply.
+
+### Loading a curriculum
+
+Curriculum documents are fixed published artefacts, so they are loaded from a
+file rather than typed into a form:
+
+```bash
+npx tsx scripts/import-curriculum.mts curricula/121150-hrm-administrator.json --check
+```
+
+`--check` validates without writing: percentages that do not add up, duplicate
+codes, modules with nothing to assess. Drop it and add `--org <slug>` to
+import. Re-importing the same QCTO code replaces that qualification's structure.
+
+`curricula/121150-hrm-administrator.json` is the Higher Occupational
+Certificate: HRM Administrator, with **KM01 fully transcribed as a worked
+example** and the other twelve modules listed but not yet broken down. The
+engine refuses to call anyone ready against it, which is correct.
+
+---
+
 ## Statutory reporting (SAQA NLRD, WSP/ATR)
 
 The point of doing this in software is not the file — anyone can write a CSV.
