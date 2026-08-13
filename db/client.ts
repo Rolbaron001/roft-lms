@@ -46,16 +46,49 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const pool = globalForDb.__roftLmsPool ?? createPool(requireEnv("DATABASE_URL"));
+let connection: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__roftLmsPool = pool;
+/**
+ * Opened on first use, not on import.
+ *
+ * The build reads every module to work out which pages are static, so anything
+ * this file does at import time happens on a machine with no database and no
+ * credentials. Connecting eagerly made `next build` fail with "DATABASE_URL is
+ * not set" — which passed locally only because a .env.local happened to be
+ * present, and failed the moment it was built in a container. Build-time
+ * secrets would be the wrong way to fix that: the build has no business
+ * holding production credentials.
+ */
+function connect() {
+  if (!connection) {
+    const pool =
+      globalForDb.__roftLmsPool ?? createPool(requireEnv("DATABASE_URL"));
+
+    // Reused across hot reloads in development, where each edit would
+    // otherwise leave its pool behind until Postgres refuses new connections.
+    if (process.env.NODE_ENV !== "production") {
+      globalForDb.__roftLmsPool = pool;
+    }
+
+    connection = drizzle(pool, { schema });
+  }
+  return connection;
 }
 
-/** RLS-bound. Cannot read any tenant's rows until a tenant context is set. */
-export const db = drizzle(pool, { schema });
+/**
+ * RLS-bound. Cannot read any tenant's rows until a tenant context is set.
+ *
+ * A proxy so that `db.select(...)` still reads as a plain object at every call
+ * site, while the connection itself is deferred to the first query.
+ */
+export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
+  get(_target, property, receiver) {
+    const value = Reflect.get(connect(), property, receiver);
+    return typeof value === "function" ? value.bind(connect()) : value;
+  },
+});
 
-export type Database = typeof db;
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
 export type TenantDatabase = Parameters<
   Parameters<Database["transaction"]>[0]
 >[0];
