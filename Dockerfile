@@ -54,6 +54,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
+# Next's standalone server binds to $HOSTNAME, and Docker sets that to the
+# container ID. The server then listens on one interface only: not on
+# 127.0.0.1, so the health check below can never pass, and the container is
+# reported unhealthy while actually serving traffic perfectly well.
+ENV HOSTNAME=0.0.0.0
+
 # Runs unprivileged. A container process that does not need root should not
 # have it, and Node needs nothing here that does.
 RUN addgroup --system --gid 1001 nodejs \
