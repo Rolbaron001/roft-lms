@@ -47,6 +47,13 @@ export const enrolInput = z.object({
   userId: z.string().uuid(),
   courseId: z.string().uuid(),
   dueDate: z.string().trim().optional(),
+  /**
+   * Set when this enrolment counts towards an accredited qualification. It is
+   * what puts the learner on the EISA readiness cohort, so an occupational
+   * programme enrolled without it looks like ordinary corporate training and
+   * silently never appears in the facilitator's list.
+   */
+  qualificationId: z.string().uuid().optional(),
 });
 
 /**
@@ -103,6 +110,7 @@ export async function enrolUser(
         organisationId: session.organisationId,
         userId: parsed.userId,
         courseId: parsed.courseId,
+        qualificationId: parsed.qualificationId ?? null,
         enrolledById: session.userId,
         enrolmentSource: "manual",
         dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,

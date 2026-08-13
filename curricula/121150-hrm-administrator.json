@@ -1,0 +1,136 @@
+{
+  "_source": [
+    "Transcribed from the QCTO documents for SAQA qualification 121150,",
+    "Higher Occupational Certificate: Human Resource Management Administrator:",
+    "  121150 Qualification Doc.pdf   (SAQA registered qualification record)",
+    "  121150 Curriculum Doc.pdf      (QCTO curriculum, 85 pages)",
+    "  121150 Assessment Doc.pdf      (assessment specification)",
+    "",
+    "PARTIAL. Every module is here with its official code, title and credits.",
+    "Only KM01 has been transcribed down to topics, topic elements and internal",
+    "assessment criteria — it is a worked example of the shape, not a complete",
+    "curriculum. Readiness reports curriculumComplete: false and refuses to call",
+    "anybody EISA eligible until the remaining twelve modules are transcribed.",
+    "",
+    "Note on KM01's credits: the curriculum document's module list says 4 and its",
+    "detail heading says 12. The qualification record says 4, and 4 is what makes",
+    "the Knowledge component add up to its stated 42. Taken as 4; the heading",
+    "appears to be an error in the source document."
+  ],
+
+  "title": "Higher Occupational Certificate: Human Resource Management Administrator",
+  "saqaId": "121150",
+  "qctoCode": "441601-001-00",
+  "ofoCode": "441601",
+  "nqfLevel": 5,
+  "totalCredits": 120,
+  "assessmentQualityPartner": "SERVICES SETA",
+
+  "_componentWeights": [
+    "The curriculum document states these percentages directly, under 'Summary",
+    "and Distribution of Credits'. They are not the credit split — credits give",
+    "35/35/30 — and the document is what a moderator checks against."
+  ],
+  "componentWeights": { "knowledge": 38, "practical": 35, "workplace": 27 },
+
+  "modules": [
+    {
+      "component": "knowledge",
+      "code": "441601-001-00-KM-01",
+      "title": "Introduction to Organisations and Human Resource Management",
+      "credits": 4,
+      "nqfLevel": 5,
+      "purpose": "To build an informed base of knowledge and understanding of the theories, concepts and principles that underpin the basic operations of organisations, with specific reference to the HRM function.",
+      "topics": [
+        {
+          "code": "KM0101",
+          "title": "Introduction to Organisational Management",
+          "weightPercent": 25,
+          "elements": [
+            { "kind": "knowledge_topic", "code": "KT0101", "description": "Definition of an organisation and the generic organisational value chain." },
+            { "kind": "knowledge_topic", "code": "KT0102", "description": "Different types of organisations and their purpose." },
+            { "kind": "knowledge_topic", "code": "KT0103", "description": "The concept of staff, line, and professional work in organisations." },
+            { "kind": "knowledge_topic", "code": "KT0104", "description": "Definition of management and the functions and activities of management." },
+            { "kind": "knowledge_topic", "code": "KT0105", "description": "Introduction to the different levels of management in organisations (Strategic, Functional, Tactical and Operational)." },
+            { "kind": "knowledge_topic", "code": "KT0106", "description": "Introduction to an ecosystemic approach to organisational sustainability." }
+          ],
+          "criteria": [
+            { "code": "IAC0101", "description": "Define an organisation and explain the generic organisational value chain." },
+            { "code": "IAC0102", "description": "Identify different types of organisations and explain their purpose." },
+            { "code": "IAC0103", "description": "Define management and discuss the functions and activities of management." },
+            { "code": "IAC0104", "description": "Differentiate the different levels of management in organisations (Strategic, Functional, Tactical and Operational)." },
+            { "code": "IAC0105", "description": "Explain the ecosystemic approach to organisational sustainability." }
+          ]
+        },
+        {
+          "code": "KM0102",
+          "title": "Introduction to HRM",
+          "weightPercent": 25,
+          "elements": [
+            { "kind": "knowledge_topic", "code": "KT0201", "description": "Brief overview of the origin, history, and evolution of HRM." },
+            { "kind": "knowledge_topic", "code": "KT0202", "description": "The typical employment life cycle and the associated HRM value chain." },
+            { "kind": "knowledge_topic", "code": "KT0203", "description": "Introduction to the legislative framework that governs and guides the work in HRM." },
+            { "kind": "knowledge_topic", "code": "KT0204", "description": "The importance of data and data management within the HRM function." }
+          ],
+          "criteria": [
+            { "code": "IAC0201", "description": "Summarise the origin, history, and evolution of HRM." },
+            { "code": "IAC0202", "description": "Explain the typical employment life cycle and the associated HRM value chain." },
+            { "code": "IAC0203", "description": "Discuss the legislative framework that governs and guides the work in HRM." },
+            { "code": "IAC0204", "description": "Define data and explain data management within the HRM function." }
+          ]
+        },
+        {
+          "code": "KM0103",
+          "title": "The use of information in organisations",
+          "weightPercent": 25,
+          "elements": [
+            { "kind": "knowledge_topic", "code": "KT0301", "description": "Definitions and terms associated with data, data collection and data processing." },
+            { "kind": "knowledge_topic", "code": "KT0302", "description": "Importance of data and data collection within organisations." },
+            { "kind": "knowledge_topic", "code": "KT0303", "description": "The evolving concept of the information economy and how it impacts data management." },
+            { "kind": "knowledge_topic", "code": "KT0304", "description": "Legislative and ethical issues relating to data management." }
+          ],
+          "criteria": [
+            { "code": "IAC0301", "description": "Define terms associated with data, data collection and data processing." },
+            { "code": "IAC0302", "description": "Discuss the importance of data and data collection within organisations." },
+            { "code": "IAC0303", "description": "Explain the evolving concept of the information economy and how it impacts data management." },
+            { "code": "IAC0304", "description": "List legislative and indicate ethical issues relating to data management." }
+          ]
+        },
+        {
+          "code": "KM0104",
+          "title": "Administration and the administrative role in HRM",
+          "weightPercent": 25,
+          "elements": [
+            { "kind": "knowledge_topic", "code": "KT0401", "description": "Definitions, terms and concepts associated with administration." },
+            { "kind": "knowledge_topic", "code": "KT0402", "description": "The difference between clerical and administrative work." },
+            { "kind": "knowledge_topic", "code": "KT0403", "description": "The functions and activities of an office administrator." },
+            { "kind": "knowledge_topic", "code": "KT0404", "description": "The role and importance of good administration within the HRM function." },
+            { "kind": "knowledge_topic", "code": "KT0405", "description": "Key abilities, attributes and professional standards that underpin the work of a HRM administrator." }
+          ],
+          "criteria": [
+            { "code": "IAC0401", "description": "Define terms and concepts associated with administration." },
+            { "code": "IAC0402", "description": "Differentiate between clerical and administrative work." },
+            { "code": "IAC0403", "description": "List the functions and activities of an office administrator." },
+            { "code": "IAC0404", "description": "Discuss the role and importance of good administration within the HRM function." },
+            { "code": "IAC0405", "description": "Discuss the essential abilities, attributes and professional standards that underpin the work of a HRM administrator." }
+          ]
+        }
+      ]
+    },
+
+    { "component": "knowledge", "code": "441601-001-00-KM-02", "title": "Data Management and Interpretation", "credits": 12, "nqfLevel": 5, "topics": [] },
+    { "component": "knowledge", "code": "441601-001-00-KM-03", "title": "Administration of Staff Procurement", "credits": 16, "nqfLevel": 5, "topics": [] },
+    { "component": "knowledge", "code": "441601-001-00-KM-04", "title": "Professional Administration for HRM Service Delivery", "credits": 6, "nqfLevel": 5, "topics": [] },
+    { "component": "knowledge", "code": "441601-001-00-KM-05", "title": "HRM Record Keeping", "credits": 4, "nqfLevel": 5, "topics": [] },
+
+    { "component": "practical", "code": "441601-001-00-PM-01", "title": "Collect and Process HRM Data", "credits": 12, "nqfLevel": 5, "topics": [] },
+    { "component": "practical", "code": "441601-001-00-PM-02", "title": "Coordinate and Provide Administrative Services for a Full Range of HRM Processes", "credits": 12, "nqfLevel": 5, "topics": [] },
+    { "component": "practical", "code": "441601-001-00-PM-03", "title": "Coordinate HRM Communication to Enhance Employment Relations", "credits": 8, "nqfLevel": 5, "topics": [] },
+    { "component": "practical", "code": "441601-001-00-PM-04", "title": "Compile, Maintain and ensure the Safeguarding of all HRM Records", "credits": 10, "nqfLevel": 5, "topics": [] },
+
+    { "component": "workplace", "code": "441601-001-00-WM-01", "title": "HRM Data Collection and Data Management Processes", "credits": 8, "nqfLevel": 5, "topics": [] },
+    { "component": "workplace", "code": "441601-001-00-WM-02", "title": "Administrative Processes for Full Range of HRM Services and Processes", "credits": 12, "nqfLevel": 5, "topics": [] },
+    { "component": "workplace", "code": "441601-001-00-WM-03", "title": "Organisational Communication Processes", "credits": 8, "nqfLevel": 5, "topics": [] },
+    { "component": "workplace", "code": "441601-001-00-WM-04", "title": "Processes for Compiling, Maintaining, and Securing HRM Records", "credits": 8, "nqfLevel": 5, "topics": [] }
+  ]
+}

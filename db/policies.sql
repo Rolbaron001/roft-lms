@@ -159,10 +159,17 @@ alter table assessments add constraint assessments_pass_mark_check
   check (pass_mark >= 0 and pass_mark <= 100);
 
 -- EISA component weights must sum to 1, or the readiness index is meaningless.
+--
+-- Null is allowed and means "the curriculum document does not state them", in
+-- which case readiness derives the weighting from module credits and says so.
+-- The previous version of this check treated a missing weighting as three
+-- zeroes and rejected the row, which forced every qualification to carry an
+-- invented split.
 alter table qualifications drop constraint if exists qualifications_weights_check;
 alter table qualifications add constraint qualifications_weights_check
   check (
-    abs(
+    component_weights is null
+    or abs(
       coalesce((component_weights ->> 'knowledge')::numeric, 0)
       + coalesce((component_weights ->> 'practical')::numeric, 0)
       + coalesce((component_weights ->> 'workplace')::numeric, 0)

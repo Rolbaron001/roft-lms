@@ -86,13 +86,21 @@ export const qualifications = pgTable(
     }),
 
     /**
-     * Component weightings used by the EISA readiness index, mirroring the
-     * credit weighting in the official curriculum document. Must sum to 1.
+     * Component weightings for the EISA readiness index, copied from the
+     * curriculum document. Must sum to 1.
+     *
+     * Null when the document does not state them, in which case readiness
+     * derives them from module credits. There is deliberately no default: the
+     * HRM Administrator curriculum states 38/35/27, which is *not* its credit
+     * split of 35/35/30, so a plausible-looking default would quietly produce
+     * a number that disagrees with the official document while looking right.
+     * Better to say "not stated" and derive visibly.
      */
-    componentWeights: jsonb("component_weights")
-      .notNull()
-      .$type<{ knowledge: number; practical: number; workplace: number }>()
-      .default({ knowledge: 0.4, practical: 0.3, workplace: 0.3 }),
+    componentWeights: jsonb("component_weights").$type<{
+      knowledge: number;
+      practical: number;
+      workplace: number;
+    }>(),
 
     status: publishStatus("status").notNull().default("draft"),
     version: text("version").notNull().default("1.0"),
@@ -148,11 +156,110 @@ export const curriculumModules = pgTable(
 );
 
 /**
+ * The level between a module and its assessment criteria.
+ *
+ * A QCTO curriculum document does not go module → criteria. Every module is
+ * divided first, and the division carries its own weighting: KM01 of the HRM
+ * Administrator curriculum splits into four topics of 25% each. Flattening
+ * that loses the weighting and, with it, any honest statement of how far
+ * through a module a learner is.
+ *
+ * The three components divide differently, which is why `code` is free text
+ * rather than a pattern:
+ *
+ *   Knowledge        Topics            KM0101, KM0102 …
+ *   Practical        Skills            PS0101, PS0102 …
+ *   Work Experience  Experiences       WE0101, WE0102 …
+ */
+export const curriculumTopics = pgTable(
+  "curriculum_topics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    title: text("title").notNull(),
+
+    /**
+     * The percentage the curriculum document gives this topic within its
+     * module. Knowledge modules state one; practical and work experience
+     * modules generally do not, and null means "share the module evenly with
+     * the other topics" rather than "worth nothing".
+     */
+    weightPercent: integer("weight_percent"),
+
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("curriculum_topics_module_code_idx").on(
+      t.curriculumModuleId,
+      t.code,
+    ),
+    index("curriculum_topics_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What a topic is made of, and therefore what the learning material has to
+ * cover.
+ *
+ * These are the KT / PA / AK / WA / WK / SE lines of the curriculum document.
+ * They are the specification a course is written against: the Learning
+ * Material Matrix asks whether a lesson exists for each of them, which is a
+ * different question from whether an assessment exists for each criterion.
+ * A course can assess everything it teaches and still not teach everything
+ * the curriculum requires.
+ */
+export const topicElementKind = pgEnum("topic_element_kind", [
+  /** KT — knowledge topic element. */
+  "knowledge_topic",
+  /** PA — practical activity, the required performance. */
+  "practical_activity",
+  /** AK — applied knowledge that must be mastered to perform the skill. */
+  "applied_knowledge",
+  /** WA — work activity carried out in the workplace. */
+  "work_activity",
+  /** WK — contextual workplace knowledge that must be tested. */
+  "contextual_knowledge",
+  /** SE — supporting evidence the workplace must produce. */
+  "supporting_evidence",
+]);
+
+export const curriculumTopicElements = pgTable(
+  "curriculum_topic_elements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => curriculumTopics.id, { onDelete: "cascade" }),
+    kind: topicElementKind("kind").notNull(),
+    code: text("code").notNull(),
+    description: text("description").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("curriculum_topic_elements_code_idx").on(t.topicId, t.code),
+    index("curriculum_topic_elements_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
  * Internal Assessment Criteria. These are the specific statements from the
- * official curriculum document that a learner's evidence is judged against.
- * The Learning Material Matrix checks that every one of them is covered by
- * some piece of content and tested by some assessment item before a programme
- * can be published.
+ * official curriculum document that a learner's evidence is judged against,
+ * and achieving every one of them across every module is what admits a learner
+ * to the EISA. The Learning Material Matrix checks that each is covered by
+ * content and tested by an assessment item before a programme can be
+ * published.
  */
 export const assessmentCriteria = pgTable(
   "assessment_criteria",
@@ -164,6 +271,16 @@ export const assessmentCriteria = pgTable(
     curriculumModuleId: uuid("curriculum_module_id")
       .notNull()
       .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    /**
+     * Nullable because a tenant outside the QCTO system, or one that captured
+     * a qualification before topics existed, still has criteria that belong
+     * directly to a module. Readiness treats those as a single implicit topic.
+     */
+    topicId: uuid("topic_id").references(() => curriculumTopics.id, {
+      onDelete: "cascade",
+    }),
+
     code: text("code").notNull(),
     description: text("description").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -379,5 +496,38 @@ export const learningPathCourses = pgTable(
       t.courseId,
     ),
     index("learning_path_courses_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Which lesson teaches which topic element.
+ *
+ * The companion to lesson_criteria, and a genuinely different question.
+ * lesson_criteria answers "is this criterion assessed by material we hold";
+ * this answers "is this piece of the curriculum taught at all". A course can
+ * assess everything it teaches and still not teach everything the curriculum
+ * document requires — which is precisely the gap an external verifier looks
+ * for, because it is invisible from inside a course that hangs together.
+ */
+export const lessonTopicElements = pgTable(
+  "lesson_topic_elements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id")
+      .notNull()
+      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("lesson_topic_elements_unique_idx").on(
+      t.lessonId,
+      t.topicElementId,
+    ),
+    index("lesson_topic_elements_org_idx").on(t.organisationId),
   ],
 );

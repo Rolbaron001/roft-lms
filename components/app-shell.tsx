@@ -28,6 +28,11 @@ const NAV: NavItem[] = [
     permission: "qualification:manage",
   },
   { href: "/people", label: "People", permission: "user:invite" },
+  {
+    href: "/readiness",
+    label: "EISA readiness",
+    permission: "enrolment:read_all",
+  },
   { href: "/assess", label: "To assess", permission: "assessment:assess" },
   { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
   // Every signed-in person holds report:own, but a learner has no dashboard

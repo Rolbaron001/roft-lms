@@ -8,6 +8,8 @@ import {
   courseSections,
   courses,
   curriculumModules,
+  curriculumTopicElements,
+  curriculumTopics,
   lessonCriteria,
   lessons,
   qualifications,
@@ -626,6 +628,19 @@ export type CoverageReport = {
     coveredByLessons: number;
   }[];
   uncovered: { id: string; code: string; description: string }[];
+  /**
+   * The KT / PA / AK / WA lines of the curriculum document: what has to be
+   * taught, as opposed to what has to be assessed. Empty for a curriculum
+   * captured without topics, and for tenants outside the QCTO system.
+   */
+  topicElements: {
+    id: string;
+    code: string;
+    description: string;
+    kind: string;
+    coveredByLessons: number;
+  }[];
+  uncoveredElements: { id: string; code: string; description: string }[];
   competencyCount: number;
   lessonCount: number;
 };
@@ -673,6 +688,8 @@ export async function coverageReport(
         curriculumModuleId: null,
         criteria: [],
         uncovered: [],
+        topicElements: [],
+        uncoveredElements: [],
         competencyCount,
         lessonCount,
       };
@@ -700,11 +717,40 @@ export async function coverageReport(
       )
       .orderBy(asc(assessmentCriteria.sortOrder));
 
+    const topicElements = await tx
+      .select({
+        id: curriculumTopicElements.id,
+        code: curriculumTopicElements.code,
+        description: curriculumTopicElements.description,
+        kind: curriculumTopicElements.kind,
+        coveredByLessons: sql<number>`(
+          select count(*)::int from lesson_topic_elements lte
+          join lessons l on l.id = lte.lesson_id
+          join course_sections cs on cs.id = l.section_id
+          where lte.topic_element_id = curriculum_topic_elements.id
+            and cs.course_id = ${courseId}
+        )`,
+      })
+      .from(curriculumTopicElements)
+      .innerJoin(
+        curriculumTopics,
+        eq(curriculumTopics.id, curriculumTopicElements.topicId),
+      )
+      .where(eq(curriculumTopics.curriculumModuleId, course.curriculumModuleId))
+      .orderBy(
+        asc(curriculumTopics.sortOrder),
+        asc(curriculumTopicElements.sortOrder),
+      );
+
     return {
       curriculumModuleId: course.curriculumModuleId,
       criteria,
       uncovered: criteria
         .filter((criterion) => criterion.coveredByLessons === 0)
+        .map(({ id, code, description }) => ({ id, code, description })),
+      topicElements,
+      uncoveredElements: topicElements
+        .filter((element) => element.coveredByLessons === 0)
         .map(({ id, code, description }) => ({ id, code, description })),
       competencyCount,
       lessonCount,
@@ -756,6 +802,20 @@ export async function publishCourse(
         one ? "criterion has" : "criteria have"
       } no lesson covering ${one ? "it" : "them"}: ${report.uncovered
         .map((criterion) => criterion.code)
+        .join(", ")}.`,
+    );
+  }
+
+  // Separate from the criteria check, and not merged with it. "Nothing teaches
+  // this" and "nothing assesses this" are different failures with different
+  // fixes, and a verifier asks about them separately.
+  if (report.uncoveredElements.length > 0) {
+    const one = report.uncoveredElements.length === 1;
+    reasons.push(
+      `${report.uncoveredElements.length} curriculum ${
+        one ? "topic element has" : "topic elements have"
+      } no lesson teaching ${one ? "it" : "them"}: ${report.uncoveredElements
+        .map((element) => element.code)
         .join(", ")}.`,
     );
   }
