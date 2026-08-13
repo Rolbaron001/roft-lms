@@ -156,7 +156,7 @@ built app — no source, no dev dependencies, no scripts directory — so the
 operational commands live in a separate one-shot container. Keeping the
 internet-facing image minimal is worth the extra word.
 
-It should end with `28 tables are tenant-isolated`. **If it does not, stop.**
+It should end with `29 tables are tenant-isolated`. **If it does not, stop.**
 That line is the tenant separation everything else depends on.
 
 ---
@@ -167,8 +167,13 @@ There is no sign-up page by design — tenants are provisioned, not
 self-created. Do it once from the server:
 
 ```bash
-docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/seed.mts
+docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/seed.mts --allow-remote
 ```
+
+`--allow-remote` is required because the script refuses to touch a database
+that is not local unless you say so. It deletes and recreates the demonstration
+tenants, so on a system carrying a real client that flag is the difference
+between a demo refresh and a bad afternoon.
 
 That loads the demonstration organisations, which is what you want for
 showing the system. For a real client, create their organisation instead and

@@ -15,11 +15,30 @@ import { eq, inArray } from "drizzle-orm";
 config({ path: ".env.local" });
 
 const adminUrl = process.env.DATABASE_ADMIN_URL ?? "";
-if (!/localhost|127\.0\.0\.1/.test(adminUrl)) {
+const allowRemote = process.argv.includes("--allow-remote");
+
+// This script deletes the demonstration tenants before recreating them, so
+// pointing it at the wrong database destroys data. The hostname check catches
+// the ordinary accident; --allow-remote is for the deliberate case, which is
+// real — the demonstration tenants are seeded once on the server when it is
+// first stood up, and a check that cannot be satisfied is a check people work
+// around by editing the script.
+if (!/localhost|127\.0\.0\.1/.test(adminUrl) && !allowRemote) {
   console.error(
-    "Refusing to seed: DATABASE_ADMIN_URL does not point at a local database.",
+    "Refusing to seed: DATABASE_ADMIN_URL does not point at a local database.\n" +
+      "\n" +
+      "This deletes and recreates the demonstration tenants. If that is what\n" +
+      "you intend on this database, say so explicitly:\n" +
+      "\n" +
+      "    npx tsx scripts/seed.mts --allow-remote\n",
   );
   process.exit(1);
+}
+
+if (allowRemote) {
+  console.warn(
+    "--allow-remote: seeding a non-local database. The demonstration tenants will be replaced.",
+  );
 }
 
 const { withPlatformScope } = await import("../db/client");

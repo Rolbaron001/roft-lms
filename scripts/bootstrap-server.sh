@@ -180,7 +180,7 @@ say "Creating the schema and applying the security policies"
 $DC run --rm tools sh -c 'npx drizzle-kit push --force >/dev/null && npx tsx scripts/apply-policies.ts'
 
 say "Loading the starting data"
-$DC run --rm tools npx tsx scripts/seed.mts --if-empty
+$DC run --rm tools npx tsx scripts/seed.mts --if-empty --allow-remote
 
 # ------------------------------------------------------------------ check
 say "Checking it is answering"
