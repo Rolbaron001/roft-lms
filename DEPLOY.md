@@ -19,7 +19,8 @@ Roughly an hour the first time, most of it waiting for things to install.
             |
         [ db ]          PostgreSQL, internal network only, never exposed
             |
-   nightly backup       encrypted, copied off the server, restore tested
+   nightly backup       database + evidence files, encrypted, copied off the
+                        server, restore tested against each other
 ```
 
 The database is deliberately unreachable from the internet. A Postgres open to
@@ -194,9 +195,23 @@ You want `{"status":"ok",...}`.
 This is the step that separates a system from a liability. Self-hosted
 Postgres without tested backups is the one arrangement not worth running.
 
+Each run produces **two** files, and you need both:
+
+| File | Holds |
+|---|---|
+| `roft-lms-<stamp>.dump.enc` | the database — every decision, mark and record |
+| `roft-lms-<stamp>.evidence.tar.gz.enc` | the files those decisions were made on |
+
+Restoring one without the other gives you a Portfolio of Evidence full of
+references to files that no longer exist. In front of an accreditation body
+that is worse than having no record, because the record says evidence existed
+and cannot produce it. The verify step below checks the two against each other
+rather than trusting that they match.
+
 Backups run **through the tools container**, not from the host. The database
 has no published port — that is deliberate, and it means the host itself has
-no route to it. The tools container is on the internal network and does.
+no route to it. The tools container is on the internal network and does, and it
+mounts the evidence volume too.
 
 Add the backup settings to `.env` (bootstrap-server.sh generates the
 passphrase for you):
@@ -215,7 +230,7 @@ Run one by hand and watch it:
 
 ```bash
 cd ~/roft-lms
-docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup-database.sh --local-only
+docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup.sh --local-only
 ```
 
 Backups land in `~/roft-lms/backups` on the host. Once your object storage
@@ -225,19 +240,28 @@ mount `~/.aws`), drop `--local-only` and they are copied off the machine too.
 Then prove a restore works before trusting any of it:
 
 ```bash
-docker compose -f docker-compose.production.yml run --rm tools   sh -c './scripts/restore-database.sh --verify $(ls -t /backups/*.enc | head -1)'
+docker compose -f docker-compose.production.yml run --rm tools   sh -c './scripts/restore.sh --verify $(ls -t /backups/*.dump.enc | head -1)'
 ```
 
-You want **VERIFY PASSED**, with a count of users and audit entries.
+You want **VERIFY PASSED**, and above it the line that matters:
+
+```
+  12 files referenced by the database, 12 in the archive.
+  Every file the database refers to is present.
+```
+
+Give it the `.dump.enc` file, not the evidence archive — it finds the matching
+evidence beside it. If that check ever reports missing files, the backup is not
+usable for an accreditation audit no matter how cleanly the database restores.
 
 Schedule both. `crontab -e`:
 
 ```cron
 # 02:15 SAST nightly backup
-15 0 * * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup-database.sh >> /var/log/roft-backup.log 2>&1
+15 0 * * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools ./scripts/backup.sh >> /var/log/roft-backup.log 2>&1
 
 # Prove a backup restores, on the first of each month
-30 1 1 * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools sh -c './scripts/restore-database.sh --verify $(ls -t /backups/*.enc | head -1)' >> /var/log/roft-restore-test.log 2>&1
+30 1 1 * * cd $HOME/roft-lms && docker compose -f docker-compose.production.yml run --rm tools sh -c './scripts/restore.sh --verify $(ls -t /backups/*.dump.enc | head -1)' >> /var/log/roft-restore-test.log 2>&1
 ```
 
 **Read `/var/log/roft-restore-test.log` occasionally.** A backup nobody has
@@ -330,17 +354,30 @@ docker compose -f docker-compose.production.yml logs -f --tail=100 app
 cd ~/roft-lms
 DC="docker compose -f docker-compose.production.yml run --rm tools"
 
-# Bring the copy down from object storage into ./backups
+# Bring BOTH halves down from object storage into ./backups
 $DC sh -c 'aws s3 cp $BACKUP_BUCKET/roft-lms-<stamp>.dump.enc /backups/ --endpoint-url $BACKUP_S3_ENDPOINT'
+$DC sh -c 'aws s3 cp $BACKUP_BUCKET/roft-lms-<stamp>.evidence.tar.gz.enc /backups/ --endpoint-url $BACKUP_S3_ENDPOINT'
 
-$DC ./scripts/restore-database.sh --verify /backups/roft-lms-<stamp>.dump.enc
-$DC ./scripts/restore-database.sh --replace-production /backups/roft-lms-<stamp>.dump.enc
+$DC ./scripts/restore.sh --verify /backups/roft-lms-<stamp>.dump.enc
+$DC ./scripts/restore.sh --replace-production /backups/roft-lms-<stamp>.dump.enc
 docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/apply-policies.ts
 ```
 
+Fetch both files. `--replace-production` refuses to start without the evidence
+archive rather than rebuilding the database and discovering the files are
+missing afterwards — by which point it has already discarded the one copy that
+had both.
+
 Always `--verify` before `--replace-production`. The replace takes a safety
-copy of the current database first, but checking costs a minute and removes
-the possibility of restoring the wrong file over a working system.
+copy of the current database *and* the current evidence first, but checking
+costs a minute and removes the possibility of restoring the wrong file over a
+working system.
+
+Restoring evidence **adds** files rather than replacing the directory, so
+anything uploaded since the backup survives. Evidence is write-once and
+content-hashed, so there is nothing to gain from deleting files the restored
+database has not heard of — and a recent upload is exactly what you would not
+want thrown away.
 
 ---
 

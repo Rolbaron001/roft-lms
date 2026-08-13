@@ -194,16 +194,16 @@ fi
 # Proving a backup restores before anything real is on the system is the
 # cheapest time to find out it does not.
 say "Taking a first backup and proving it restores"
-if $DC run --rm tools ./scripts/backup-database.sh --local-only >/dev/null 2>&1; then
+if $DC run --rm tools ./scripts/backup.sh --local-only >/dev/null 2>&1; then
   if $DC run --rm tools sh -c \
-    './scripts/restore-database.sh --verify $(ls -t /backups/*.enc | head -1)' \
+    './scripts/restore.sh --verify $(ls -t /backups/*.dump.enc | head -1)' \
     2>&1 | grep -q "VERIFY PASSED"; then
     note "Backup taken and restore verified."
   else
     note "Backup taken but the restore check did not pass. Look into this."
   fi
 else
-  note "First backup did not run. Check: ${DC} run --rm tools ./scripts/backup-database.sh --local-only"
+  note "First backup did not run. Check: ${DC} run --rm tools ./scripts/backup.sh --local-only"
 fi
 
 # ------------------------------------------------------------------- done

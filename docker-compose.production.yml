@@ -82,7 +82,7 @@ services:
       PLATFORM_HOST: ${LMS_DOMAIN:?}
       STORAGE_DRIVER: local
       STORAGE_LOCAL_ROOT: /app/storage
-      # Used by scripts/backup-database.sh when run through this container.
+      # Used by scripts/backup.sh when run through this container.
       PGHOST: db
       PGPORT: "5432"
       PGUSER: ${POSTGRES_USER:-postgres}
