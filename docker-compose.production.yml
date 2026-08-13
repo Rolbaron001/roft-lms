@@ -41,7 +41,9 @@ services:
       # The owner role: migrations, tenant provisioning, backups.
       DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
       ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
-      AUTH_SECRET: ${AUTH_SECRET:?generate with: npx auth secret}
+      # Quoted: the message after :? contains a colon and a space, which YAML
+      # would otherwise read as the start of another key.
+      AUTH_SECRET: "${AUTH_SECRET:?generate one with npx auth secret}"
       AUTH_URL: https://${LMS_DOMAIN:?}
       PLATFORM_HOST: ${LMS_DOMAIN:?}
       STORAGE_DRIVER: local
