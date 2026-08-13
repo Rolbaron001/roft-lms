@@ -336,6 +336,23 @@ internet-facing image minimal is worth the extra word.
 Re-running the policies script after any schema change is not optional. A new
 table without its policy is a table with no tenant separation.
 
+**Somebody is locked out — including you:**
+
+```bash
+docker compose -f docker-compose.production.yml run --rm tools npx tsx scripts/reset-password.mts someone@example.org
+```
+
+Add `--org <slug>` if the same address exists in more than one tenant. It
+prints a new password once and requires the person to choose their own at the
+next sign-in.
+
+Ordinary resets should go through **People** in the interface, by an
+administrator. This exists for the case that cannot: the administrator is the
+one locked out, so there is no session to act with. It needs access to this
+server, which is deliberate — until there is a mail server there can be no
+emailed reset link, and a security question would be weaker than the SSH key
+already protecting the machine.
+
 **Look at the database:**
 
 ```bash
