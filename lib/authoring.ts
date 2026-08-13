@@ -208,6 +208,93 @@ export async function addCurriculumModule(
   });
 }
 
+/**
+ * The whole curriculum of one qualification, down to the last line.
+ *
+ * Distinct from listCurriculumModules, which returns counts for a summary
+ * list. This is what somebody checking the platform against the printed
+ * curriculum document needs: the same codes in the same order, so the two can
+ * be read side by side.
+ */
+export async function curriculumOutline(
+  session: AuthenticatedSession,
+  qualificationId: string,
+) {
+  assertSessionCan(session, "course:read");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [qualification] = await tx
+      .select()
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+
+    if (!qualification) {
+      throw new AuthoringError("Qualification not found.", "not_found");
+    }
+
+    const modules = await tx
+      .select({
+        id: curriculumModules.id,
+        component: curriculumModules.component,
+        code: curriculumModules.code,
+        title: curriculumModules.title,
+        description: curriculumModules.description,
+        credits: curriculumModules.credits,
+        sortOrder: curriculumModules.sortOrder,
+      })
+      .from(curriculumModules)
+      .where(eq(curriculumModules.qualificationId, qualificationId))
+      .orderBy(asc(curriculumModules.sortOrder));
+
+    const moduleIds = modules.map((m) => m.id);
+
+    const topics = moduleIds.length
+      ? await tx
+          .select()
+          .from(curriculumTopics)
+          .where(inArray(curriculumTopics.curriculumModuleId, moduleIds))
+          .orderBy(asc(curriculumTopics.sortOrder))
+      : [];
+
+    const topicIds = topics.map((t) => t.id);
+
+    const elements = topicIds.length
+      ? await tx
+          .select()
+          .from(curriculumTopicElements)
+          .where(inArray(curriculumTopicElements.topicId, topicIds))
+          .orderBy(asc(curriculumTopicElements.sortOrder))
+      : [];
+
+    const criteria = moduleIds.length
+      ? await tx
+          .select()
+          .from(assessmentCriteria)
+          .where(inArray(assessmentCriteria.curriculumModuleId, moduleIds))
+          .orderBy(asc(assessmentCriteria.sortOrder))
+      : [];
+
+    return {
+      qualification,
+      modules: modules.map((curriculumModule) => ({
+        ...curriculumModule,
+        topics: topics
+          .filter((t) => t.curriculumModuleId === curriculumModule.id)
+          .map((topic) => ({
+            ...topic,
+            elements: elements.filter((e) => e.topicId === topic.id),
+            criteria: criteria.filter((c) => c.topicId === topic.id),
+          })),
+        // Criteria captured before topics existed, or by a tenant not using
+        // them. Shown separately rather than hidden.
+        looseCriteria: criteria.filter(
+          (c) => c.curriculumModuleId === curriculumModule.id && !c.topicId,
+        ),
+      })),
+    };
+  });
+}
+
 export const criterionInput = z.object({
   curriculumModuleId: z.string().uuid(),
   code: z.string().trim().min(1).max(50),

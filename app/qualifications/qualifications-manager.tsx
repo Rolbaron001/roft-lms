@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   addCriterionAction,
@@ -88,7 +89,14 @@ export function QualificationsManager({
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-medium">{qualification.title}</h2>
+              <h2 className="font-medium">
+                <Link
+                  href={`/qualifications/${qualification.id}`}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {qualification.title}
+                </Link>
+              </h2>
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {[
                   qualification.qctoCode
@@ -123,8 +131,13 @@ export function QualificationsManager({
                     <span className="text-xs text-[var(--muted)]">
                       {COMPONENT_LABELS[module.component] ?? module.component}
                       {module.credits ? ` · ${module.credits} credits` : ""} ·{" "}
-                      {module.criterionCount}{" "}
-                      {module.criterionCount === 1 ? "criterion" : "criteria"}
+                      <Link
+                        href={`/qualifications/${qualification.id}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {module.criterionCount}{" "}
+                        {module.criterionCount === 1 ? "criterion" : "criteria"}
+                      </Link>
                     </span>
                   </div>
 
