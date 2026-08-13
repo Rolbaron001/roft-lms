@@ -288,8 +288,13 @@ worse than one who was never sent it.
 
 ```bash
 cd roft-lms && git pull
-docker compose -f docker-compose.production.yml up -d --build app
+docker compose -f docker-compose.production.yml up -d --build app tools
 ```
+
+Build `tools` as well as `app`. The tools image copies the source in at build
+time, so until you rebuild it, migrations and scripts run the version of the
+code that was current when it was last built — which looks like your change
+simply having no effect.
 
 **Apply a schema change** (after the deploy above):
 
