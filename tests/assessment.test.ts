@@ -65,6 +65,7 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
     lastName: "User",
     roles,
     permissions: permissionsFor({ roles }),
+    mustChangePassword: false,
   };
 }
 

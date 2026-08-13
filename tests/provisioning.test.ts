@@ -43,6 +43,7 @@ function sessionFor(
     lastName: "User",
     roles,
     permissions: permissionsFor({ roles }),
+    mustChangePassword: false,
   };
 }
 

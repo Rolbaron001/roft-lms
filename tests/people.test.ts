@@ -37,6 +37,7 @@ import {
   anonymisePerson,
   generateInitialPassword,
   getPerson,
+  changeOwnPassword,
   invitePerson,
   listPeople,
   resetPassword,
@@ -45,6 +46,7 @@ import {
   updatePerson,
 } from "@/lib/people";
 import { resolveSession, signIn } from "@/lib/session";
+import { WeakPasswordError } from "@/lib/password";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -66,6 +68,7 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
     lastName: "User",
     roles,
     permissions: permissionsFor({ roles }),
+    mustChangePassword: false,
   };
 }
 
@@ -384,6 +387,7 @@ describe("not locking yourself out", () => {
       lastName: "Administrator",
       roles: ["tenant_admin"],
       permissions: permissionsFor({ roles: ["tenant_admin"] }),
+      mustChangePassword: false,
     };
 
     // Two administrators: removing one is fine.
@@ -396,6 +400,7 @@ describe("not locking yourself out", () => {
       userId: soloId,
       roles: ["tenant_admin"],
       permissions: permissionsFor({ roles: ["tenant_admin"] }),
+      mustChangePassword: false,
     };
 
     await expect(
@@ -606,5 +611,76 @@ describe("anonymising for POPIA", () => {
     await expect(
       anonymisePerson(learner, userId, "Trying it on."),
     ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+});
+
+describe("changing your own password", () => {
+  async function invitedPerson() {
+    const email = `pw-${suffix()}@people.test`;
+    const { userId, initialPassword } = await invitePerson(admin, {
+      email,
+      firstName: "Temp",
+      lastName: "Password",
+      roles: ["learner"],
+    });
+    const result = await signIn(organisationId, email, initialPassword);
+    if (!result.ok) throw new Error("could not sign in with initial password");
+    return { email, userId, initialPassword, session: result.session };
+  }
+
+  it("marks an invited person as needing to choose their own", async () => {
+    const { session } = await invitedPerson();
+    expect(session.mustChangePassword).toBe(true);
+  });
+
+  it("clears the flag once they have chosen one", async () => {
+    const { email, initialPassword, session } = await invitedPerson();
+    await changeOwnPassword(session, initialPassword, "a-much-longer-passphrase");
+
+    const again = await signIn(organisationId, email, "a-much-longer-passphrase");
+    expect(again.ok).toBe(true);
+    if (again.ok) expect(again.session.mustChangePassword).toBe(false);
+  });
+
+  it("refuses without the current password", async () => {
+    const { session } = await invitedPerson();
+    await expect(
+      changeOwnPassword(session, "not-the-password", "a-much-longer-passphrase"),
+    ).rejects.toMatchObject({ code: "not_permitted" });
+  });
+
+  it("refuses a new password that is too weak to be worth setting", async () => {
+    const { initialPassword, session } = await invitedPerson();
+    await expect(
+      changeOwnPassword(session, initialPassword, "short"),
+    ).rejects.toBeInstanceOf(WeakPasswordError);
+  });
+
+  it("refuses reusing the password that was handed over", async () => {
+    const { initialPassword, session } = await invitedPerson();
+    await expect(
+      changeOwnPassword(session, initialPassword, initialPassword),
+    ).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
+  it("ends other sessions but not the one making the change", async () => {
+    const { email, initialPassword, session } = await invitedPerson();
+
+    // A second sign-in: whoever was given the password and used it.
+    const other = await signIn(organisationId, email, initialPassword);
+    if (!other.ok) throw new Error("second sign-in failed");
+
+    await changeOwnPassword(session, initialPassword, "a-much-longer-passphrase");
+
+    expect(await resolveSession(organisationId, other.token)).toBeNull();
+  });
+
+  it("makes an administrator reset require a fresh choice", async () => {
+    const { email, userId } = await invitedPerson();
+    const reset = await resetPassword(admin, userId);
+
+    const result = await signIn(organisationId, email, reset);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.session.mustChangePassword).toBe(true);
   });
 });

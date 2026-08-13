@@ -121,9 +121,13 @@ export async function AppShell({
               ) : null}
             </Link>
 
-            <span className="text-xs opacity-75">
+            <Link
+              href="/account/password"
+              className="text-xs opacity-75 underline-offset-2 transition hover:underline hover:opacity-100"
+              title="Change your password"
+            >
               {session.firstName} {session.lastName}
-            </span>
+            </Link>
             <form action={logoutAction}>
               <button
                 type="submit"

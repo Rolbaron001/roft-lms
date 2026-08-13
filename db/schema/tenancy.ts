@@ -129,6 +129,18 @@ export const users = pgTable(
 
     email: text("email").notNull(),
     passwordHash: text("password_hash"),
+
+    /**
+     * Set whenever somebody other than the account holder chose the password:
+     * an invitation, an administrator's reset, a reset from the server.
+     *
+     * Until there is a mail server, a new password has to be read out or
+     * messaged, which means it is known to at least two people from the moment
+     * it exists. Forcing a change at the next sign-in is what keeps that
+     * window to a single use rather than for as long as the account lives.
+     */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
+
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     status: userStatus("status").notNull().default("invited"),

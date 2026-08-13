@@ -4,7 +4,11 @@ import { z } from "zod";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import { certificates, enrolments, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
-import { hashPassword } from "./password";
+import {
+  assertPasswordAcceptable,
+  hashPassword,
+  verifyPassword,
+} from "./password";
 import {
   assertSessionCan,
   revokeAllSessionsForUser,
@@ -234,6 +238,9 @@ export async function invitePerson(
         organisationId: session.organisationId,
         email: parsed.email,
         passwordHash,
+        // The administrator reads this password out to them, so it is known to
+        // two people from the moment it exists. It gets exactly one use.
+        mustChangePassword: true,
         firstName: parsed.firstName,
         lastName: parsed.lastName,
         status: "active",
@@ -507,7 +514,7 @@ export async function resetPassword(
 
     await tx
       .update(users)
-      .set({ passwordHash, updatedAt: new Date() })
+      .set({ passwordHash, mustChangePassword: true, updatedAt: new Date() })
       .where(eq(users.id, userId));
 
     await recordAudit(tx, {
@@ -527,6 +534,75 @@ export async function resetPassword(
   );
 
   return password;
+}
+
+/**
+ * Changes your own password.
+ *
+ * The one password operation that needs no permission: it is about your own
+ * account, and requiring a permission would mean a learner could be handed a
+ * password they were then unable to replace.
+ *
+ * The current password is required even when a change is being forced. An
+ * unattended signed-in browser is the ordinary way an account is taken over,
+ * and without this check that browser is enough to lock the owner out.
+ */
+export async function changeOwnPassword(
+  session: AuthenticatedSession,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  if (newPassword === currentPassword) {
+    throw new PeopleError(
+      "The new password must be different from the current one.",
+      "invalid_input",
+    );
+  }
+
+  // Throws WeakPasswordError before anything is read or written, so a rejected
+  // password never reaches the database.
+  assertPasswordAcceptable(newPassword);
+
+  const passwordHash = await hashPassword(newPassword);
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [person] = await tx
+      .select({ id: users.id, passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, session.userId));
+
+    if (!person?.passwordHash) {
+      throw new PeopleError("Account not found.", "not_found");
+    }
+
+    if (!(await verifyPassword(currentPassword, person.passwordHash))) {
+      throw new PeopleError("Current password is not correct.", "not_permitted");
+    }
+
+    await tx
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
+      .where(eq(users.id, session.userId));
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "user.password_changed",
+      entityType: "user",
+      entityId: session.userId,
+    });
+  });
+
+  // Every other session for this person ends. If the password is being changed
+  // because somebody else knew it — which is exactly the case after an
+  // administrator reset — leaving their session alive achieves nothing.
+  await revokeAllSessionsForUser(
+    session.organisationId,
+    session.userId,
+    "password_changed_by_owner",
+    session.userId,
+    { exceptSessionId: session.sessionId },
+  );
 }
 
 /**

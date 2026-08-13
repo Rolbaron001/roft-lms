@@ -65,6 +65,29 @@ export async function requireSession(): Promise<AuthenticatedSession> {
   if (!session) {
     redirect("/login");
   }
+
+  // A password somebody else chose gets one use: the one that sets a new one.
+  // Enforced here rather than on each page, because a rule about what an
+  // account may reach is only worth having if it cannot be walked around by
+  // typing a different address.
+  if (session.mustChangePassword) {
+    redirect("/account/password");
+  }
+
+  return session;
+}
+
+/**
+ * The signed-in session, without the forced-password-change redirect.
+ *
+ * Only the change-password page itself may use this. Anything else calling it
+ * reopens the hole the redirect above closes.
+ */
+export async function requireSessionForPasswordChange(): Promise<AuthenticatedSession> {
+  const session = await currentSession();
+  if (!session) {
+    redirect("/login");
+  }
   return session;
 }
 

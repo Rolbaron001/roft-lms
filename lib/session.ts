@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import { loginAttempts, sessions, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -31,6 +31,9 @@ export type AuthenticatedSession = {
   lastName: string;
   roles: Role[];
   permissions: Permission[];
+  /** Somebody else chose the current password. Nothing else is reachable
+   *  until it has been replaced — see requireSession. */
+  mustChangePassword: boolean;
 };
 
 export type RequestContext = {
@@ -114,6 +117,7 @@ export async function signIn(
         lastName: users.lastName,
         passwordHash: users.passwordHash,
         status: users.status,
+        mustChangePassword: users.mustChangePassword,
       })
       .from(users)
       .where(eq(users.email, normalisedEmail))
@@ -186,6 +190,7 @@ export async function signIn(
         lastName: user.lastName,
         roles,
         permissions: permissionsFor({ roles }),
+        mustChangePassword: user.mustChangePassword,
       },
     };
   });
@@ -218,6 +223,7 @@ export async function resolveSession(
         firstName: users.firstName,
         lastName: users.lastName,
         userStatus: users.status,
+        mustChangePassword: users.mustChangePassword,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
@@ -253,6 +259,7 @@ export async function resolveSession(
       lastName: row.lastName,
       roles,
       permissions: permissionsFor({ roles }),
+      mustChangePassword: row.mustChangePassword,
     };
   });
 }
@@ -300,12 +307,24 @@ export async function revokeAllSessionsForUser(
   userId: string,
   reason: string,
   actorId?: string,
+  options: { exceptSessionId?: string } = {},
 ): Promise<number> {
   return withTenant(organisationId, async (tx) => {
     const revoked = await tx
       .update(sessions)
       .set({ revokedAt: new Date(), revokedReason: reason })
-      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+      .where(
+        and(
+          eq(sessions.userId, userId),
+          isNull(sessions.revokedAt),
+          // Changing your own password should end every other session but not
+          // the one doing it — being signed out by your own success reads as
+          // the change having failed.
+          options.exceptSessionId
+            ? ne(sessions.id, options.exceptSessionId)
+            : undefined,
+        ),
+      )
       .returning({ id: sessions.id });
 
     if (revoked.length > 0) {
