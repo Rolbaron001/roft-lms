@@ -99,9 +99,12 @@ check_evidence_against() {
 
   # Paths in the archive are relative to the storage root, so they are the
   # storage keys themselves once the leading ./ is removed.
+  # Directory entries and the archive's own root are not files; left in, the
+  # root becomes an empty line and the count reports one file too many.
   tar -tzf "$plain" \
     | sed 's|^\./||' \
     | grep -v '/$' \
+    | grep -v '^$' \
     | LC_ALL=C sort -u > "${workdir}/in-archive.txt"
 
   storage_keys_in "$database" \
