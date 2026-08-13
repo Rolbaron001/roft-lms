@@ -13,6 +13,7 @@ import {
   lessonCriteria,
   lessons,
   qualifications,
+  topicElementAlignment,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
@@ -274,6 +275,17 @@ export async function curriculumOutline(
           .orderBy(asc(assessmentCriteria.sortOrder))
       : [];
 
+    // What the provider's alignment matrix says covers each line. Read from an
+    // uploaded spreadsheet, so it is shown beside the curriculum rather than
+    // left in the file it came from.
+    const elementIds = elements.map((e) => e.id);
+    const alignment = elementIds.length
+      ? await tx
+          .select()
+          .from(topicElementAlignment)
+          .where(inArray(topicElementAlignment.topicElementId, elementIds))
+      : [];
+
     return {
       qualification,
       modules: modules.map((curriculumModule) => ({
@@ -282,7 +294,14 @@ export async function curriculumOutline(
           .filter((t) => t.curriculumModuleId === curriculumModule.id)
           .map((topic) => ({
             ...topic,
-            elements: elements.filter((e) => e.topicId === topic.id),
+            elements: elements
+              .filter((e) => e.topicId === topic.id)
+              .map((element) => ({
+                ...element,
+                coveredBy: alignment.filter(
+                  (a) => a.topicElementId === element.id,
+                ),
+              })),
             criteria: criteria.filter((c) => c.topicId === topic.id),
           })),
         // Criteria captured before topics existed, or by a tenant not using

@@ -260,7 +260,8 @@ export default async function QualificationPage({
                       {[...byKind.entries()].map(([kind, items]) => (
                         <div key={kind}>
                           <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                            {ELEMENT_LABELS[kind] ?? kind} — what must be taught
+                            {ELEMENT_LABELS[kind] ?? kind} — what must be
+                            taught
                           </p>
                           <ul className="mt-1.5 space-y-1">
                             {items.map((element) => (
@@ -269,6 +270,19 @@ export default async function QualificationPage({
                                   {element.code}
                                 </span>{" "}
                                 {element.description}
+                                {element.coveredBy.length > 0 ? (
+                                  <span className="mt-1 flex flex-wrap gap-1">
+                                    {element.coveredBy.map((cover) => (
+                                      <span
+                                        key={cover.id}
+                                        title={cover.kind.replace(/_/g, " ")}
+                                        className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-[var(--muted)]"
+                                      >
+                                        {cover.reference}
+                                      </span>
+                                    ))}
+                                  </span>
+                                ) : null}
                               </li>
                             ))}
                           </ul>
