@@ -20,13 +20,12 @@
 {
 	email {$LMS_TLS_EMAIL}
 
+	# `ask` is the whole control. Caddy removed its own rate-limit options
+	# (`interval`/`burst`) precisely because they gave false comfort: they
+	# throttled issuance without ever answering whether the hostname was
+	# legitimate. This endpoint answers that.
 	on_demand_tls {
 		ask http://app:3000/api/tls/allow
-
-		# A burst limit, not a security control — the `ask` endpoint is that.
-		# This bounds the damage if a tenant hostname is under a flood.
-		interval 2m
-		burst 5
 	}
 }
 
