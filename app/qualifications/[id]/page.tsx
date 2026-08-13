@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
+import {
+  DOCUMENT_KINDS,
+  DOCUMENT_KIND_LABELS,
+  listProgrammeDocuments,
+  qualificationForDocumentUpload,
+} from "@/lib/programme-documents";
+import { describeSize } from "@/lib/media";
 import { AppShell, Card } from "@/components/app-shell";
+import { DocumentUploader } from "./documents/document-uploader";
 
 const COMPONENT_LABELS: Record<string, string> = {
   knowledge: "Knowledge module",
@@ -37,6 +45,10 @@ export default async function QualificationPage({
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
   const { qualification, modules } = await curriculumOutline(session, id);
+  const [documents, uploadTargets] = await Promise.all([
+    listProgrammeDocuments(session, id),
+    qualificationForDocumentUpload(session, id),
+  ]);
 
   const totalCriteria = modules.reduce(
     (sum, m) =>
@@ -100,6 +112,88 @@ export default async function QualificationPage({
         </div>
       ) : null}
 
+      <section className="mb-8">
+        <h2 className="mb-2 font-semibold">Programme documents</h2>
+        <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
+          The handbooks, workbooks, marking memoranda and workplace sign-off
+          sheets are written in Word and Excel, and stay that way — they are
+          print artefacts a facilitator annotates and a moderator marks up.
+          What the platform holds is the authoritative copy, attached to the
+          part of the curriculum it serves and hashed so it can be proved
+          unchanged.
+        </p>
+
+        <Card>
+          <DocumentUploader
+            qualificationId={id}
+            kinds={DOCUMENT_KINDS.map((kind) => ({
+              value: kind,
+              label: DOCUMENT_KIND_LABELS[kind],
+            }))}
+            units={uploadTargets.units}
+            modules={uploadTargets.modules}
+          />
+        </Card>
+
+        {documents.length > 0 ? (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <table className="w-full text-sm">
+              <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Document</th>
+                  <th className="px-4 py-3 font-medium">Kind</th>
+                  <th className="px-4 py-3 font-medium">Attached to</th>
+                  <th className="px-4 py-3 font-medium">Size</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((document) => (
+                  <tr
+                    key={document.id}
+                    className="border-b border-[var(--border)] last:border-0"
+                  >
+                    <td className="px-4 py-3">
+                      <a
+                        href={`/api/programme-documents/${document.id}`}
+                        className="font-medium underline-offset-2 hover:underline"
+                      >
+                        {document.title}
+                      </a>
+                      {document.version ? (
+                        <span className="ml-2 text-xs text-[var(--muted)]">
+                          {document.version}
+                        </span>
+                      ) : null}
+                      <p className="text-xs text-[var(--muted)]">
+                        {document.filename}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--muted)]">
+                      {DOCUMENT_KIND_LABELS[
+                        document.kind as keyof typeof DOCUMENT_KIND_LABELS
+                      ] ?? document.kind}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--muted)]">
+                      {document.studyUnitCode ??
+                        document.moduleCode ??
+                        "Qualification"}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--muted)] tabular-nums">
+                      {describeSize(document.sizeBytes)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            No documents held yet.
+          </p>
+        )}
+      </section>
+
+      <h2 className="mb-2 font-semibold">Curriculum</h2>
       <div className="space-y-4">
         {modules.map((curriculumModule) => {
           const criteriaHere =

@@ -531,3 +531,286 @@ export const lessonTopicElements = pgTable(
     index("lesson_topic_elements_org_idx").on(t.organisationId),
   ],
 );
+
+/**
+ * An Exit Level Outcome, and what it is assessed against.
+ *
+ * ELOs sit above modules: they are what the qualification claims a person can
+ * do, and the EISA is set against them. The curriculum's modules are the route
+ * to them, which is why one ELO draws on a Knowledge, a Practical and a Work
+ * Experience module together.
+ *
+ * Distinct from assessment_criteria, which are the *internal* criteria a
+ * provider assesses module by module. These are the Associated Assessment
+ * Criteria published with the qualification, and the two are not
+ * interchangeable — conflating them is how a provider ends up believing it has
+ * covered an ELO because it covered the modules underneath it.
+ */
+export const exitLevelOutcomes = pgTable(
+  "exit_level_outcomes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+    /** "1", "2" … as the qualification document numbers them. */
+    number: text("number").notNull(),
+    description: text("description").notNull(),
+    credits: integer("credits"),
+    nqfLevel: integer("nqf_level"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("exit_level_outcomes_qual_number_idx").on(
+      t.qualificationId,
+      t.number,
+    ),
+    index("exit_level_outcomes_org_idx").on(t.organisationId),
+  ],
+);
+
+export const exitLevelOutcomeCriteria = pgTable(
+  "exit_level_outcome_criteria",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    exitLevelOutcomeId: uuid("exit_level_outcome_id")
+      .notNull()
+      .references(() => exitLevelOutcomes.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("exit_level_outcome_criteria_org_idx").on(t.organisationId)],
+);
+
+/**
+ * A Study Unit: how a provider actually delivers the curriculum.
+ *
+ * The QCTO publishes modules; a provider teaches study units, each bundling
+ * the Knowledge, Practical and Work Experience modules that serve one Exit
+ * Level Outcome, with its own workbook and summative assessment. Curiosa's
+ * 121150 programme runs five of them.
+ *
+ * This is the provider's structure, not the QCTO's, which is why it is a
+ * separate table rather than a column on the module: two providers delivering
+ * the same qualification may group it differently, and both are correct.
+ */
+export const studyUnits = pgTable(
+  "study_units",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+    /** "SU1", "SU2" … */
+    code: text("code").notNull(),
+    title: text("title").notNull(),
+    /**
+     * Null for a study unit that serves no ELO. Study Unit 1 of the HRM
+     * Administrator programme is exactly that: an introduction carrying
+     * credits but aligned to no Exit Level Outcome.
+     */
+    exitLevelOutcomeId: uuid("exit_level_outcome_id").references(
+      () => exitLevelOutcomes.id,
+      { onDelete: "set null" },
+    ),
+    credits: integer("credits"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("study_units_qual_code_idx").on(t.qualificationId, t.code),
+    index("study_units_org_idx").on(t.organisationId),
+  ],
+);
+
+/** Which curriculum modules a study unit delivers. */
+export const studyUnitModules = pgTable(
+  "study_unit_modules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    studyUnitId: uuid("study_unit_id")
+      .notNull()
+      .references(() => studyUnits.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("study_unit_modules_unique_idx").on(
+      t.studyUnitId,
+      t.curriculumModuleId,
+    ),
+    index("study_unit_modules_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What covers a topic element, according to the provider's alignment matrix.
+ *
+ * The matrix is the document an accreditation visit asks for first: for every
+ * line of the curriculum, which workbook teaches it, which assessment tests
+ * it, which chapter of the handbook covers it, and which standard, policy or
+ * piece of legislation it draws on.
+ *
+ * One row per (element, kind, reference) rather than a column per kind,
+ * because the columns differ by provider — Curiosa's matrix has fourteen, the
+ * next provider's will have others — and a schema that changes every time a
+ * client arrives is a schema that will be worked around.
+ */
+export const alignmentResourceKind = pgEnum("alignment_resource_kind", [
+  "workbook",
+  "summative_assessment",
+  "theory_guide",
+  "video",
+  "standard",
+  "legislation",
+  "national_document",
+  "article",
+  "policy",
+  "industry_document",
+  "code_of_good_practice",
+  "other",
+]);
+
+export const topicElementAlignment = pgTable(
+  "topic_element_alignment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id")
+      .notNull()
+      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+    kind: alignmentResourceKind("kind").notNull(),
+    /** "SA2", "Chapter 2", "BCEA s.29" — as the matrix writes it. */
+    reference: text("reference").notNull(),
+  },
+  (t) => [
+    uniqueIndex("topic_element_alignment_unique_idx").on(
+      t.topicElementId,
+      t.kind,
+      t.reference,
+    ),
+    index("topic_element_alignment_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What a programme document is, in the provider's own design process.
+ *
+ * Taken from the four-step design sequence a QCTO provider actually follows —
+ * align, write the handbook, write the workbooks, write the assessments — plus
+ * the workplace pack and the programme-level artefacts an accreditation visit
+ * asks for. A document whose kind is unknown is still worth holding, hence
+ * "other": refusing an upload because it has no category is how documents end
+ * up on somebody's laptop instead.
+ */
+export const programmeDocumentKind = pgEnum("programme_document_kind", [
+  // Published by SAQA/QCTO. The authority everything else is checked against.
+  "qualification_document",
+  "curriculum_document",
+  "assessment_specification",
+  // Step 1: the master alignment of curriculum to delivery.
+  "alignment_matrix",
+  // Step 2: the learning material itself.
+  "learner_handbook",
+  "theory_guide",
+  // Step 3: what the learner works through, and how it is marked.
+  "workbook",
+  "workbook_memorandum",
+  // Step 4: summative assessment, and how it is marked.
+  "summative_assessment",
+  "summative_memorandum",
+  // The workplace pack.
+  "workplace_signoff",
+  "workplace_coach_guide",
+  "workplace_agreement",
+  // Programme-level.
+  "learning_programme_guide",
+  "facilitation_plan",
+  "rollout_schedule",
+  "induction",
+  "learning_roadmap",
+  "other",
+]);
+
+/**
+ * A document produced outside the platform and held against the programme.
+ *
+ * The handbooks, workbooks, memoranda and sign-off sheets are written in Word
+ * and Excel and always will be — they are print artefacts a moderator marks up
+ * by hand. What matters is that the platform holds the authoritative copy, at
+ * a known version, attached to the part of the curriculum it serves, so that
+ * "which workbook covers KM0201, and which version did this cohort sit" has an
+ * answer that does not depend on somebody's filing.
+ *
+ * Attached at whichever level fits: a handbook belongs to the qualification, a
+ * workbook to a study unit, a sign-off sheet to a work experience module.
+ * Exactly one of the three is set.
+ */
+export const programmeDocuments = pgTable(
+  "programme_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    qualificationId: uuid("qualification_id").references(
+      () => qualifications.id,
+      { onDelete: "cascade" },
+    ),
+    studyUnitId: uuid("study_unit_id").references(() => studyUnits.id, {
+      onDelete: "cascade",
+    }),
+    curriculumModuleId: uuid("curriculum_module_id").references(
+      () => curriculumModules.id,
+      { onDelete: "cascade" },
+    ),
+
+    kind: programmeDocumentKind("kind").notNull(),
+    title: text("title").notNull(),
+    /** The provider's own version marker: "V2", "Final", "07072025". */
+    version: text("version"),
+
+    filename: text("filename").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    /**
+     * Hashed on the way in, like assessment evidence. A moderator asking
+     * whether the file they were sent is the file the platform holds gets a
+     * check rather than an assurance.
+     */
+    sha256: text("sha256").notNull(),
+
+    /** Plain text pulled out of the file, for searching. Null for PDFs. */
+    extractedText: text("extracted_text"),
+
+    uploadedById: uuid("uploaded_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    supersedesId: uuid("supersedes_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("programme_documents_org_idx").on(t.organisationId),
+    index("programme_documents_qualification_idx").on(t.qualificationId),
+    index("programme_documents_study_unit_idx").on(t.studyUnitId),
+    index("programme_documents_sha256_idx").on(t.sha256),
+  ],
+);

@@ -47,7 +47,7 @@ import {
 import {
   importCurriculum,
   inspectCurriculum,
-  type CurriculumFile,
+  type CurriculumFileInput,
 } from "@/lib/curriculum-import";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -105,7 +105,7 @@ function suffix() {
  * A miniature qualification with the shape of a real one: two knowledge
  * topics carrying different weights, and one practical module.
  */
-function curriculumFile(code: string): CurriculumFile {
+function curriculumFile(code: string): CurriculumFileInput {
   return {
     title: `Test Qualification ${code}`,
     qctoCode: code,
@@ -289,7 +289,7 @@ describe("topic weights", () => {
 describe("checking a curriculum file before importing it", () => {
   it("notices topic percentages that do not add up", () => {
     const file = curriculumFile(`chk-${suffix()}`);
-    file.modules[0].topics[0].weightPercent = 60;
+    file.modules[0].topics![0].weightPercent = 60;
 
     expect(inspectCurriculum(file).join(" ")).toContain("add up to 85");
   });
@@ -303,7 +303,7 @@ describe("checking a curriculum file before importing it", () => {
 
   it("notices a topic with nothing to assess", () => {
     const file = curriculumFile(`chk-${suffix()}`);
-    file.modules[0].topics[1].criteria = [];
+    file.modules[0].topics![1].criteria = [];
 
     expect(inspectCurriculum(file).join(" ")).toContain(
       "no internal assessment criteria",

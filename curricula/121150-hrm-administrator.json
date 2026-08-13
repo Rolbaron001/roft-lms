@@ -33,6 +33,108 @@
   ],
   "componentWeights": { "knowledge": 38, "practical": 35, "workplace": 27 },
 
+  "_exitLevelOutcomes": [
+    "From the SAQA qualification document: the four Exit Level Outcomes and",
+    "their Associated Assessment Criteria. The EISA is set against these; the",
+    "IACs inside modules are what the provider assesses internally."
+  ],
+  "exitLevelOutcomes": [
+    {
+      "number": "1",
+      "description": "Collect Human Resources data and process the data into appropriate information that is available for decision-making.",
+      "credits": 32,
+      "nqfLevel": 5,
+      "criteria": [
+        "Use appropriate information technology to collect HRM data that is required for specific HRM tasks and processes.",
+        "Validate, analyse, and convert collected HRM data into information that is reported for HRM decision-making.",
+        "Prepare and present appropriate presentations at meetings, stakeholders and to diverse groups of decision-makers.",
+        "Maintain HRM databases, and extract appropriate information in response to specific authorised requests."
+      ]
+    },
+    {
+      "number": "2",
+      "description": "Select and use appropriate methods, techniques, and procedures to provide professional administrative services for the full range of HRM processes and activities.",
+      "credits": 40,
+      "nqfLevel": 5,
+      "criteria": [
+        "Provide administrative services for Workforce Planning in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for Staff Recruitment, Selection and Placement in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for Performance Management in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for employee Learning and Development in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for Grievance and Discipline Handling in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for Career Management in an ethical and legally compliant way that is aligned with HRM professional standards.",
+        "Provide administrative services for all Staff Separations in an ethical and legally compliant way that is aligned with HRM professional standards."
+      ]
+    },
+    {
+      "number": "3",
+      "description": "Monitor, support and maintain the various communication and administrative processes with relevant stakeholders to optimise the employment relations in the organisation.",
+      "credits": 22,
+      "nqfLevel": 5,
+      "criteria": [
+        "Update and maintain information systems relating to all HRM policies, procedures, and legislative requirements.",
+        "Maintain, update, and make accessible approved HRM policy guideline documents to relevant organisational stakeholders.",
+        "Maintain and make available records of regular and ad hoc employee meetings and forums to authorised persons in the organisation.",
+        "Receive, record and respond to employee queries relating to policies, procedures, and related employment contractual issues appropriately.",
+        "Official HRM communication channels are coordinated and maintained within the organisation."
+      ]
+    },
+    {
+      "number": "4",
+      "description": "Access and use appropriate HRM systems and processes for the compilation, maintenance and safeguarding of all HRM records.",
+      "credits": 22,
+      "nqfLevel": 5,
+      "criteria": [
+        "Compile and maintain HRM records, including personal employee records.",
+        "Control and manage access to information in employee and HRM records.",
+        "Archive and retrieve employee and HRM records effectively as needed."
+      ]
+    }
+  ],
+
+  "_studyUnits": [
+    "The provider's delivery structure, from STEP 1 - CA - 121150 - KM PM ELO",
+    "Alignment. Each study unit bundles the Knowledge, Practical and Work",
+    "Experience modules serving one Exit Level Outcome. Study Unit 1 serves",
+    "none: it is an introduction carrying credits but aligned to no ELO."
+  ],
+  "studyUnits": [
+    {
+      "code": "SU1",
+      "title": "Introduction to HRM",
+      "credits": 4,
+      "modules": ["441601-001-00-KM-01"]
+    },
+    {
+      "code": "SU2",
+      "title": "Data Management",
+      "exitLevelOutcome": "1",
+      "credits": 32,
+      "modules": ["441601-001-00-KM-02", "441601-001-00-PM-01", "441601-001-00-WM-01"]
+    },
+    {
+      "code": "SU3",
+      "title": "HRM Administration",
+      "exitLevelOutcome": "2",
+      "credits": 40,
+      "modules": ["441601-001-00-KM-03", "441601-001-00-PM-02", "441601-001-00-WM-02"]
+    },
+    {
+      "code": "SU4",
+      "title": "Communication in HRM",
+      "exitLevelOutcome": "3",
+      "credits": 22,
+      "modules": ["441601-001-00-KM-04", "441601-001-00-PM-03", "441601-001-00-WM-03"]
+    },
+    {
+      "code": "SU5",
+      "title": "Record Keeping",
+      "exitLevelOutcome": "4",
+      "credits": 22,
+      "modules": ["441601-001-00-KM-05", "441601-001-00-PM-04", "441601-001-00-WM-04"]
+    }
+  ],
+
   "modules": [
     {
       "component": "knowledge",

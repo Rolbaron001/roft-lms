@@ -6,7 +6,11 @@ import {
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
+  exitLevelOutcomeCriteria,
+  exitLevelOutcomes,
   qualifications,
+  studyUnitModules,
+  studyUnits,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
@@ -93,14 +97,59 @@ export const curriculumFileSchema = z.object({
     )
     .optional(),
 
+  /**
+   * The Exit Level Outcomes published with the qualification, and the
+   * Associated Assessment Criteria they are judged against. Distinct from the
+   * internal criteria inside modules: the EISA is set against these.
+   */
+  exitLevelOutcomes: z
+    .array(
+      z.object({
+        number: z.string().trim().min(1).max(20),
+        description: z.string().trim().min(3).max(2000),
+        credits: z.number().int().min(0).max(1000).optional(),
+        nqfLevel: z.number().int().min(1).max(10).optional(),
+        criteria: z.array(z.string().trim().min(3).max(2000)).default([]),
+      }),
+    )
+    .default([]),
+
+  /**
+   * How the provider delivers it. The QCTO publishes modules; a provider
+   * teaches study units, each bundling the Knowledge, Practical and Work
+   * Experience modules that serve one Exit Level Outcome.
+   */
+  studyUnits: z
+    .array(
+      z.object({
+        code: z.string().trim().min(1).max(20),
+        title: z.string().trim().min(1).max(300),
+        /** The ELO number this serves. Omit for a unit aligned to none. */
+        exitLevelOutcome: z.string().trim().max(20).optional(),
+        credits: z.number().int().min(0).max(1000).optional(),
+        /** Module codes, exactly as they appear in `modules`. */
+        modules: z.array(z.string().trim().min(1).max(50)).default([]),
+      }),
+    )
+    .default([]),
+
   modules: z.array(moduleSchema).min(1),
 });
 
 export type CurriculumFile = z.infer<typeof curriculumFileSchema>;
 
+/**
+ * What a caller writes. Distinct from CurriculumFile because the schema fills
+ * in defaults, so the parsed value has fields required that a hand-written
+ * file may omit.
+ */
+export type CurriculumFileInput = z.input<typeof curriculumFileSchema>;
+
 export type ImportSummary = {
   qualificationId: string;
   created: boolean;
+  exitLevelOutcomes: number;
+  studyUnits: number;
   modules: number;
   topics: number;
   elements: number;
@@ -116,7 +165,11 @@ export type ImportSummary = {
  * to teach. Catching them here means the failure names the line in the file
  * rather than surfacing months later as a readiness figure nobody trusts.
  */
-export function inspectCurriculum(file: CurriculumFile): string[] {
+export function inspectCurriculum(input: CurriculumFileInput): string[] {
+  // Parsed here so the defaults are applied before anything is counted: a file
+  // that omits `topics` is not a file with undefined topics, it is a module
+  // with none, and the warnings should say so.
+  const file = curriculumFileSchema.parse(input);
   const warnings: string[] = [];
 
   const statedCredits = file.modules.reduce((sum, m) => sum + (m.credits ?? 0), 0);
@@ -166,6 +219,29 @@ export function inspectCurriculum(file: CurriculumFile): string[] {
     }
   }
 
+  const eloNumbers = new Set(file.exitLevelOutcomes.map((e) => e.number));
+  for (const unit of file.studyUnits) {
+    if (unit.exitLevelOutcome && !eloNumbers.has(unit.exitLevelOutcome)) {
+      warnings.push(
+        `${unit.code} is aligned to ELO ${unit.exitLevelOutcome}, which is not listed.`,
+      );
+    }
+    for (const code of unit.modules) {
+      if (!moduleCodes.has(code)) {
+        warnings.push(`${unit.code} lists module ${code}, which is not listed.`);
+      }
+    }
+  }
+
+  const placed = new Set(file.studyUnits.flatMap((u) => u.modules));
+  if (file.studyUnits.length > 0) {
+    for (const code of moduleCodes) {
+      if (!placed.has(code)) {
+        warnings.push(`${code} belongs to no study unit, so it will not be taught.`);
+      }
+    }
+  }
+
   return warnings;
 }
 
@@ -175,7 +251,7 @@ export async function importCurriculum(
 ): Promise<ImportSummary> {
   assertSessionCan(session, "qualification:manage");
   const file = curriculumFileSchema.parse(input);
-  const warnings = inspectCurriculum(file);
+  const warnings = inspectCurriculum(input as CurriculumFileInput);
 
   return withTenant(session.organisationId, async (tx) => {
     // Matched on the QCTO code, which is the qualification's identity in the
@@ -232,6 +308,7 @@ export async function importCurriculum(
       qualificationId = created.id;
     }
 
+    const moduleIdByCode = new Map<string, string>();
     let topicCount = 0;
     let elementCount = 0;
     let criterionCount = 0;
@@ -250,6 +327,8 @@ export async function importCurriculum(
           sortOrder: moduleIndex,
         })
         .returning({ id: curriculumModules.id });
+
+      moduleIdByCode.set(curriculumModule.code, createdModule.id);
 
       for (const [topicIndex, topic] of curriculumModule.topics.entries()) {
         const [createdTopic] = await tx
@@ -295,6 +374,77 @@ export async function importCurriculum(
       }
     }
 
+    // Exit Level Outcomes, then the study units that serve them. Both hang off
+    // the qualification, so replacing the modules above did not remove them —
+    // they are cleared explicitly.
+    await tx
+      .delete(exitLevelOutcomes)
+      .where(eq(exitLevelOutcomes.qualificationId, qualificationId));
+    await tx
+      .delete(studyUnits)
+      .where(eq(studyUnits.qualificationId, qualificationId));
+
+    const eloIdByNumber = new Map<string, string>();
+
+    for (const [index, elo] of file.exitLevelOutcomes.entries()) {
+      const [created] = await tx
+        .insert(exitLevelOutcomes)
+        .values({
+          organisationId: session.organisationId,
+          qualificationId,
+          number: elo.number,
+          description: elo.description,
+          credits: elo.credits ?? null,
+          nqfLevel: elo.nqfLevel ?? null,
+          sortOrder: index,
+        })
+        .returning({ id: exitLevelOutcomes.id });
+
+      eloIdByNumber.set(elo.number, created.id);
+
+      if (elo.criteria.length > 0) {
+        await tx.insert(exitLevelOutcomeCriteria).values(
+          elo.criteria.map((description, order) => ({
+            organisationId: session.organisationId,
+            exitLevelOutcomeId: created.id,
+            description,
+            sortOrder: order,
+          })),
+        );
+      }
+    }
+
+    for (const [index, unit] of file.studyUnits.entries()) {
+      const [created] = await tx
+        .insert(studyUnits)
+        .values({
+          organisationId: session.organisationId,
+          qualificationId,
+          code: unit.code,
+          title: unit.title,
+          exitLevelOutcomeId: unit.exitLevelOutcome
+            ? (eloIdByNumber.get(unit.exitLevelOutcome) ?? null)
+            : null,
+          credits: unit.credits ?? null,
+          sortOrder: index,
+        })
+        .returning({ id: studyUnits.id });
+
+      const moduleLinks = unit.modules
+        .map((code) => moduleIdByCode.get(code))
+        .filter((id): id is string => Boolean(id));
+
+      if (moduleLinks.length > 0) {
+        await tx.insert(studyUnitModules).values(
+          moduleLinks.map((curriculumModuleId) => ({
+            organisationId: session.organisationId,
+            studyUnitId: created.id,
+            curriculumModuleId,
+          })),
+        );
+      }
+    }
+
     await recordAudit(tx, {
       organisationId: session.organisationId,
       actorId: session.userId,
@@ -315,6 +465,8 @@ export async function importCurriculum(
     return {
       qualificationId,
       created: !existing,
+      exitLevelOutcomes: file.exitLevelOutcomes.length,
+      studyUnits: file.studyUnits.length,
       modules: file.modules.length,
       topics: topicCount,
       elements: elementCount,

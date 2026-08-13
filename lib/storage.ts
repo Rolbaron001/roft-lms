@@ -37,9 +37,15 @@ export function buildStorageKey(
   organisationId: string,
   submissionId: string,
   filename: string,
+  /**
+   * The area of the bucket. Evidence and programme documents have very
+   * different retention and access rules, so they are kept apart from the
+   * start rather than separated later by prefix archaeology.
+   */
+  area: "evidence" | "programme" = "evidence",
 ): string {
   const safe = filename.replace(/[^A-Za-z0-9._-]/g, "_").slice(-120);
-  return `${organisationId}/evidence/${submissionId}/${randomUUID()}-${safe}`;
+  return `${organisationId}/${area}/${submissionId}/${randomUUID()}-${safe}`;
 }
 
 export async function putObject(
