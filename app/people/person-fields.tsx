@@ -200,6 +200,11 @@ const ROLES: { value: string; label: string; note?: string }[] = [
     label: "Skills Development Facilitator",
   },
   { value: "external_verifier", label: "External Verifier", note: "Read-only" },
+  {
+    value: "workplace_coach",
+    label: "Workplace Coach",
+    note: "The employer's supervisor — sees only their own learners",
+  },
 ];
 
 export function RoleChecklist({

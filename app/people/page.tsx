@@ -14,6 +14,7 @@ const ROLE_LABELS: Record<string, string> = {
   learner: "Learner",
   skills_development_facilitator: "SDF",
   external_verifier: "External Verifier",
+  workplace_coach: "Workplace Coach",
 };
 
 export default async function PeoplePage({
