@@ -9,6 +9,7 @@ import {
   workplaceLogbooks,
   lessons,
 } from "@/db/schema";
+import { readDocxText, OfficeReadError } from "./office";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
@@ -137,7 +138,39 @@ export async function uploadLessonMedia(
     file,
   );
 
+  // A Word document is read, not merely attached.
+  //
+  // Learning material is written in Word and always will be. Left as an
+  // attachment, a chapter becomes a download: the learner leaves the platform
+  // to read it, the text cannot be searched, and progress through it cannot be
+  // observed. Pulling the text into the lesson body means it renders as a
+  // lesson, while the original file stays attached for anyone who wants the
+  // formatted version.
+  //
+  // Only when the lesson has no body already. Overwriting something an author
+  // typed, because they later attached the source document, would be the
+  // upload destroying work.
+  let extracted: string | null = null;
+
+  if (stored.mimeType.includes("wordprocessingml")) {
+    try {
+      const text = readDocxText(file.bytes).trim();
+      if (text.length > 0) extracted = text.slice(0, 200_000);
+    } catch (error) {
+      // A file that cannot be read is still worth attaching. The lesson simply
+      // keeps the download and no body, which is the truth.
+      if (!(error instanceof OfficeReadError)) throw error;
+    }
+  }
+
   await withTenant(session.organisationId, async (tx) => {
+    const [current] = await tx
+      .select({ body: lessons.body })
+      .from(lessons)
+      .where(eq(lessons.id, lessonId));
+
+    const keepsExistingBody = Boolean(current?.body?.trim());
+
     await tx
       .update(lessons)
       .set({
@@ -146,7 +179,13 @@ export async function uploadLessonMedia(
         mediaFilename: stored.filename,
         mediaSizeBytes: stored.sizeBytes,
         mediaSha256: stored.sha256,
-        contentType: lessonContentTypeFor(stored.kind) as "video",
+        // A document whose text was read renders as a readable lesson with the
+        // file attached, rather than as a bare download.
+        contentType:
+          extracted && !keepsExistingBody
+            ? ("text" as "video")
+            : (lessonContentTypeFor(stored.kind) as "video"),
+        ...(extracted && !keepsExistingBody ? { body: extracted } : {}),
       })
       .where(eq(lessons.id, lessonId));
 
@@ -161,11 +200,12 @@ export async function uploadLessonMedia(
         mimeType: stored.mimeType,
         sizeBytes: stored.sizeBytes,
         sha256: stored.sha256,
+        textExtracted: extracted !== null,
       },
     });
   });
 
-  return stored;
+  return { ...stored, textExtracted: extracted !== null };
 }
 
 /**

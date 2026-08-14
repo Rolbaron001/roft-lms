@@ -8,6 +8,7 @@
  * session while they marked the learner's portfolio.
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { zipSync, strToU8 } from "fflate";
 import { eq } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
@@ -477,5 +478,96 @@ describe("reading somebody else's file", () => {
         .delete(organisations)
         .where(eq(organisations.id, other.organisationId)),
     );
+  });
+});
+
+describe("a Word document uploaded as learning material", () => {
+  /** A .docx with two paragraphs, built the way Word builds one. */
+  function handbookChapter(paragraphs: string[]): Uint8Array {
+    const body = paragraphs
+      .map((text) => `<w:p><w:r><w:t>${text}</w:t></w:r></w:p>`)
+      .join("");
+
+    return zipSync({
+      "[Content_Types].xml": strToU8("<Types/>"),
+      "word/document.xml": strToU8(
+        `<?xml version="1.0"?><w:document><w:body>${body}</w:body></w:document>`,
+      ),
+    });
+  }
+
+  it("is read into the lesson so a learner reads it in the page", async () => {
+    // Left as an attachment, a chapter is a download: the learner leaves the
+    // platform, the text cannot be searched, and progress cannot be observed.
+    const result = await uploadLessonMedia(author, lessonId, {
+      filename: "Chapter 1 - Introduction to HRM.docx",
+      bytes: handbookChapter([
+        "Human Resource Management supports the organisation.",
+        "This chapter introduces the HRM value chain.",
+      ]),
+    });
+
+    expect(result.textExtracted).toBe(true);
+
+    const [lesson] = await withTenant(organisationId, (tx) =>
+      tx.select().from(lessons).where(eq(lessons.id, lessonId)),
+    );
+
+    expect(lesson.body).toContain("Human Resource Management supports");
+    expect(lesson.body).toContain("HRM value chain");
+    // Renders as a readable lesson rather than a bare download.
+    expect(lesson.contentType).toBe("text");
+    // And the original stays attached, for whoever wants the formatted version.
+    expect(lesson.mediaFilename).toBe("Chapter 1 - Introduction to HRM.docx");
+  });
+
+  it("does not overwrite text an author has already written", async () => {
+    await withTenant(organisationId, (tx) =>
+      tx
+        .update(lessons)
+        .set({ body: "Written by hand and worth keeping." })
+        .where(eq(lessons.id, lessonId)),
+    );
+
+    const result = await uploadLessonMedia(author, lessonId, {
+      filename: "later-draft.docx",
+      bytes: handbookChapter(["Something else entirely."]),
+    });
+
+    expect(result.textExtracted).toBe(true);
+
+    const [lesson] = await withTenant(organisationId, (tx) =>
+      tx.select().from(lessons).where(eq(lessons.id, lessonId)),
+    );
+
+    // Attaching a source document must never destroy work already typed.
+    expect(lesson.body).toBe("Written by hand and worth keeping.");
+    expect(lesson.mediaFilename).toBe("later-draft.docx");
+  });
+
+  it("still attaches a document it cannot read", async () => {
+    await withTenant(organisationId, (tx) =>
+      tx.update(lessons).set({ body: null }).where(eq(lessons.id, lessonId)),
+    );
+
+    // A PDF is stored whole; there is no text extraction for it.
+    const pdf = new Uint8Array([
+      0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xe2, 0xe3,
+      0xcf, 0xd3, 0x0a,
+    ]);
+
+    const result = await uploadLessonMedia(author, lessonId, {
+      filename: "handbook.pdf",
+      bytes: pdf,
+    });
+
+    expect(result.textExtracted).toBe(false);
+
+    const [lesson] = await withTenant(organisationId, (tx) =>
+      tx.select().from(lessons).where(eq(lessons.id, lessonId)),
+    );
+
+    expect(lesson.mediaFilename).toBe("handbook.pdf");
+    expect(lesson.contentType).toBe("document");
   });
 });
