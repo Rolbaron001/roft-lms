@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
 import {
+  acceptLogbook,
   coachSignOff,
+  createAgreement,
+  openLogbook,
   setEntryCompleted,
   submitToCoach,
-  acceptLogbook,
   WorkplaceError,
 } from "@/lib/workplace";
 import { uploadLogbookEvidence, UploadError } from "@/lib/uploads";
@@ -124,5 +126,83 @@ export async function acceptLogbookAction(
     return { message: "Logbook received." };
   } catch (error) {
     return describe(error) ?? { error: "That could not be accepted." };
+  }
+}
+
+export async function createAgreementAction(
+  _previous: WorkplaceState,
+  formData: FormData,
+): Promise<WorkplaceState> {
+  const session = await requireSession();
+
+  const learnerId = String(formData.get("learnerId") ?? "");
+  const coachId = String(formData.get("coachId") ?? "");
+
+  if (!learnerId || !coachId) {
+    return { error: "Choose both a learner and a workplace coach." };
+  }
+
+  try {
+    const agreement = await createAgreement(session, {
+      learnerId,
+      coachId,
+      employerName: String(formData.get("employerName") ?? "").trim(),
+      employerAddress:
+        String(formData.get("employerAddress") ?? "").trim() || undefined,
+      coachDesignation:
+        String(formData.get("coachDesignation") ?? "").trim() || undefined,
+      startDate: String(formData.get("startDate") ?? "").trim() || undefined,
+      endDate: String(formData.get("endDate") ?? "").trim() || undefined,
+    });
+
+    revalidatePath("/workplace/setup");
+    return {
+      message: `Agreement created with ${agreement.coachName} at ${agreement.employerName}.`,
+    };
+  } catch (error) {
+    const described = describe(error);
+    if (described) return described;
+
+    // The database trigger is the guarantee behind the application check, and
+    // it speaks SQL. Translate rather than showing a stack trace.
+    if (String((error as { cause?: unknown }).cause).includes("Segregation")) {
+      return { error: "A learner cannot be their own workplace coach." };
+    }
+    if (error instanceof Error && error.name === "ZodError") {
+      return { error: "Fill in the employer's name." };
+    }
+    throw error;
+  }
+}
+
+export async function openLogbookAction(
+  _previous: WorkplaceState,
+  formData: FormData,
+): Promise<WorkplaceState> {
+  const session = await requireSession();
+
+  const agreementId = String(formData.get("agreementId") ?? "");
+  const curriculumModuleId = String(formData.get("curriculumModuleId") ?? "");
+
+  if (!agreementId || !curriculumModuleId) {
+    return { error: "Choose an agreement and a work experience module." };
+  }
+
+  try {
+    await openLogbook(session, agreementId, curriculumModuleId);
+    revalidatePath("/workplace");
+    revalidatePath("/workplace/setup");
+    return { message: "Logbook opened. The learner can start recording." };
+  } catch (error) {
+    const described = describe(error);
+    if (described) return described;
+
+    // One logbook per learner per module, enforced by a unique index.
+    if (String((error as { cause?: unknown }).cause).includes("duplicate key")) {
+      return {
+        error: "That learner already has a logbook open for this module.",
+      };
+    }
+    throw error;
   }
 }

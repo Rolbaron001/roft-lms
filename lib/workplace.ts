@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
@@ -7,6 +7,8 @@ import {
   curriculumTopicElements,
   curriculumTopics,
   evidenceArtifacts,
+  qualifications,
+  userRoles,
   users,
   workplaceAgreements,
   workplaceLogbookEntries,
@@ -739,4 +741,107 @@ export async function listAgreements(session: AuthenticatedSession) {
       .innerJoin(users, eq(users.id, workplaceAgreements.learnerId))
       .where(isNull(workplaceAgreements.endedAt)),
   );
+}
+
+/**
+ * Everything the "new agreement" and "open logbook" forms need to offer.
+ *
+ * Learners and coaches are listed separately rather than as one list of
+ * people, so the form cannot present an arrangement the database will refuse.
+ * Work experience modules are listed with the logbooks already open against
+ * them, because opening a second logbook for the same learner and module is
+ * the mistake this screen would otherwise invite.
+ */
+export async function workplaceSetupData(session: AuthenticatedSession) {
+  assertSessionCan(session, "workplace:manage");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const people = await tx
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        jobTitle: users.jobTitle,
+        role: userRoles.role,
+      })
+      .from(users)
+      .innerJoin(userRoles, eq(userRoles.userId, users.id))
+      .where(and(eq(users.status, "active"), isNull(userRoles.revokedAt)))
+      .orderBy(asc(users.lastName), asc(users.firstName));
+
+    const uniqueBy = (role: string) => {
+      const seen = new Map<string, (typeof people)[number]>();
+      for (const person of people) {
+        if (person.role === role && !seen.has(person.id)) {
+          seen.set(person.id, person);
+        }
+      }
+      return [...seen.values()];
+    };
+
+    const modules = await tx
+      .select({
+        id: curriculumModules.id,
+        code: curriculumModules.code,
+        title: curriculumModules.title,
+        qualificationTitle: qualifications.title,
+        /**
+         * A module with no work activities cannot produce a logbook that
+         * attests to anything, so the form says so rather than letting
+         * openLogbook refuse after the fact.
+         */
+        elementCount: sql<number>`(
+          select count(*)::int
+          from curriculum_topic_elements cte
+          join curriculum_topics ct on ct.id = cte.topic_id
+          where ct.curriculum_module_id = curriculum_modules.id
+            and cte.kind in ('work_activity', 'contextual_knowledge', 'supporting_evidence')
+        )`,
+      })
+      .from(curriculumModules)
+      .innerJoin(
+        qualifications,
+        eq(qualifications.id, curriculumModules.qualificationId),
+      )
+      .where(eq(curriculumModules.component, "workplace"))
+      .orderBy(asc(curriculumModules.sortOrder));
+
+    const agreements = await tx
+      .select({
+        id: workplaceAgreements.id,
+        learnerId: workplaceAgreements.learnerId,
+        employerName: workplaceAgreements.employerName,
+        coachName: workplaceAgreements.coachName,
+        coachEmail: workplaceAgreements.coachEmail,
+        coachDesignation: workplaceAgreements.coachDesignation,
+        startDate: workplaceAgreements.startDate,
+        endDate: workplaceAgreements.endDate,
+        learnerFirst: users.firstName,
+        learnerLast: users.lastName,
+      })
+      .from(workplaceAgreements)
+      .innerJoin(users, eq(users.id, workplaceAgreements.learnerId))
+      .where(isNull(workplaceAgreements.endedAt))
+      .orderBy(asc(users.lastName));
+
+    const openLogbooks = await tx
+      .select({
+        agreementId: workplaceLogbooks.agreementId,
+        curriculumModuleId: workplaceLogbooks.curriculumModuleId,
+      })
+      .from(workplaceLogbooks);
+
+    return {
+      learners: uniqueBy("learner"),
+      coaches: uniqueBy("workplace_coach"),
+      modules,
+      agreements: agreements.map((agreement) => ({
+        ...agreement,
+        moduleIdsOpen: openLogbooks
+          .filter((entry) => entry.agreementId === agreement.id)
+          .map((entry) => entry.curriculumModuleId),
+      })),
+    };
+  });
 }

@@ -12,6 +12,10 @@
     "curriculum. Readiness reports curriculumComplete: false and refuses to call",
     "anybody EISA eligible until the remaining twelve modules are transcribed.",
     "",
+    "Note on WE0102: the curriculum document codes all five of its work",
+    "activities WA0201. Transcribed as WA0201-WA0205 so each can be signed off",
+    "separately; the duplication appears to be an error in the source.",
+    "",
     "Note on KM01's credits: the curriculum document's module list says 4 and its",
     "detail heading says 12. The qualification record says 4, and 4 is what makes",
     "the Knowledge component add up to its stated 42. Taken as 4; the heading",
@@ -230,7 +234,309 @@
     { "component": "practical", "code": "441601-001-00-PM-03", "title": "Coordinate HRM Communication to Enhance Employment Relations", "credits": 8, "nqfLevel": 5, "topics": [] },
     { "component": "practical", "code": "441601-001-00-PM-04", "title": "Compile, Maintain and ensure the Safeguarding of all HRM Records", "credits": 10, "nqfLevel": 5, "topics": [] },
 
-    { "component": "workplace", "code": "441601-001-00-WM-01", "title": "HRM Data Collection and Data Management Processes", "credits": 8, "nqfLevel": 5, "topics": [] },
+    {
+          "component": "workplace",
+          "code": "441601-001-00-WM-01",
+          "title": "HRM Data Collection and Data Management Processes",
+          "credits": 8,
+          "nqfLevel": 5,
+          "purpose": "To apply HRM data collection and management skills in a real workplace, guided by a workplace coach who signs off the logbook.",
+          "topics": [
+                {
+                      "code": "WE0101",
+                      "title": "Use appropriate information technology to collect required HRM data",
+                      "elements": [
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0101",
+                                  "description": "Receive coaching, training and orientation on the operation and use of organisation specific HRM information systems."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0102",
+                                  "description": "Execute a range of organisation specific tasks relating to the collection of HRM data using the databases or hard copy files available in the organisation."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0103",
+                                  "description": "Access and extract data from external sources where appropriate."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK01",
+                                  "description": "Site specific policies."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK02",
+                                  "description": "Site specific procedures and SOPs."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK03",
+                                  "description": "Regulatory requirements."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK04",
+                                  "description": "Professional guidelines."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE01",
+                                  "description": "Performance reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE02",
+                                  "description": "Managers observation reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE03",
+                                  "description": "Minutes of meetings."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE04",
+                                  "description": "Peer and customer feedback."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE05",
+                                  "description": "Signed off logbook."
+                            }
+                      ],
+                      "criteria": []
+                },
+                {
+                      "code": "WE0102",
+                      "title": "Process data and produce accurate reports (regular reports and in response to ad hoc requests)",
+                      "elements": [
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0201",
+                                  "description": "Verify the accuracy and completeness of the data being processed."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0202",
+                                  "description": "Enter data into the appropriate HRM systems or databases."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0203",
+                                  "description": "Maintain the security and confidentiality of the data being processed."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0204",
+                                  "description": "Perform quality control checks to identify and correct errors in the processed data."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0205",
+                                  "description": "Generate reports and analyses of the processed data to inform HRM decision-making."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK01",
+                                  "description": "Site specific policies."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK02",
+                                  "description": "Site specific procedures and SOPs."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK03",
+                                  "description": "Regulatory requirements."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK04",
+                                  "description": "Professional guidelines."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE01",
+                                  "description": "Performance reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE02",
+                                  "description": "Managers observation reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE03",
+                                  "description": "Minutes of meetings."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE04",
+                                  "description": "Peer and customer feedback."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE05",
+                                  "description": "Signed off logbook."
+                            }
+                      ],
+                      "criteria": []
+                },
+                {
+                      "code": "WE0103",
+                      "title": "Prepare and present reports at meetings and to stakeholders when required",
+                      "elements": [
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0301",
+                                  "description": "Identify the target audience and their information needs relating to the specific report."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0302",
+                                  "description": "Select the appropriate format, content and visual aids to effectively communicate the information."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0303",
+                                  "description": "Organise the report in a clear, logical and easy to understand manner."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0304",
+                                  "description": "Provide a summary of the main findings and recommendations."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0305",
+                                  "description": "Answer any questions or provide further clarification as needed to ensure understanding and actionability of the report."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0306",
+                                  "description": "Follow up to check that there was correct understanding of the communication."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK01",
+                                  "description": "Site specific policies."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK02",
+                                  "description": "Site specific procedures and SOPs."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK03",
+                                  "description": "Regulatory requirements."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK04",
+                                  "description": "Professional guidelines."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE01",
+                                  "description": "Performance reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE02",
+                                  "description": "Managers observation reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE03",
+                                  "description": "Minutes of meetings."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE04",
+                                  "description": "Peer and customer feedback."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE05",
+                                  "description": "Signed off logbook."
+                            }
+                      ],
+                      "criteria": []
+                },
+                {
+                      "code": "WE0104",
+                      "title": "Maintain appropriate databases of information and extract reports in response to specific authorised requests",
+                      "elements": [
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0401",
+                                  "description": "Access the HRM databases according to laid down procedures."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0402",
+                                  "description": "Update information of employees."
+                            },
+                            {
+                                  "kind": "work_activity",
+                                  "code": "WA0403",
+                                  "description": "Extract data to meet specific information requests."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK01",
+                                  "description": "Site specific policies."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK02",
+                                  "description": "Site specific procedures and SOPs."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK03",
+                                  "description": "Regulatory requirements."
+                            },
+                            {
+                                  "kind": "contextual_knowledge",
+                                  "code": "WK04",
+                                  "description": "Professional guidelines."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE01",
+                                  "description": "Performance reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE02",
+                                  "description": "Managers observation reports."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE03",
+                                  "description": "Minutes of meetings."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE04",
+                                  "description": "Peer and customer feedback."
+                            },
+                            {
+                                  "kind": "supporting_evidence",
+                                  "code": "SE05",
+                                  "description": "Signed off logbook."
+                            }
+                      ],
+                      "criteria": []
+                }
+          ]
+    },
     { "component": "workplace", "code": "441601-001-00-WM-02", "title": "Administrative Processes for Full Range of HRM Services and Processes", "credits": 12, "nqfLevel": 5, "topics": [] },
     { "component": "workplace", "code": "441601-001-00-WM-03", "title": "Organisational Communication Processes", "credits": 8, "nqfLevel": 5, "topics": [] },
     { "component": "workplace", "code": "441601-001-00-WM-04", "title": "Processes for Compiling, Maintaining, and Securing HRM Records", "credits": 8, "nqfLevel": 5, "topics": [] }

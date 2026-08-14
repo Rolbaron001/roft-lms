@@ -25,6 +25,7 @@ export default async function WorkplacePage() {
   const logbooks = await myLogbooks(session);
 
   const isCoach = session.permissions.includes("workplace:sign");
+  const canManage = session.permissions.includes("workplace:manage");
   const waiting = logbooks.filter(
     (row) => row.status === "submitted_to_coach",
   ).length;
@@ -38,6 +39,16 @@ export default async function WorkplacePage() {
             ? "The learners you supervise. You confirm what they did in the workplace; nothing reaches an assessor without your signature."
             : "Work experience is done at an employer and signed off by the workplace coach there. The order is fixed: you record it, your coach confirms it, then it goes to an assessor."}
         </p>
+        {canManage ? (
+          <p className="mt-3">
+            <Link
+              href="/workplace/setup"
+              className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Set up work experience
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       {isCoach && waiting > 0 ? (
@@ -55,9 +66,9 @@ export default async function WorkplacePage() {
       {logbooks.length === 0 ? (
         <Card>
           <p className="text-sm text-[var(--muted)]">
-            No work experience logbooks yet. An administrator opens one once a
-            workplace agreement is in place naming the learner, the employer and
-            the coach.
+            {canManage
+              ? "No work experience logbooks yet. Set one up above: an agreement naming the learner, the employer and the coach, then a logbook for each work experience module."
+              : "No work experience logbooks yet. An administrator opens one once a workplace agreement is in place naming the learner, the employer and the coach."}
           </p>
         </Card>
       ) : (
