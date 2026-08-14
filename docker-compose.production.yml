@@ -136,6 +136,10 @@ services:
     volumes:
       # Attachments are stored the same way evidence is, in the same place.
       - evidence:/app/storage
+      # Caddy's certificates, read-only, so STARTTLS presents a real one
+      # instead of smtp-server's built-in certificate whose private key is
+      # publicly known. Renewal is Caddy's job and needs nothing here.
+      - caddy_data:/caddy:ro
     depends_on:
       db:
         condition: service_healthy

@@ -17,6 +17,8 @@
  * application down, and so the process facing the internet on port 25 holds no
  * more than it needs.
  */
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { SMTPServer } from "smtp-server";
 import { simpleParser } from "mailparser";
 import { config } from "dotenv";
@@ -41,6 +43,49 @@ function log(...parts: unknown[]) {
   console.log(new Date().toISOString(), ...parts);
 }
 
+/**
+ * The real certificate, borrowed from Caddy.
+ *
+ * A sending server that offers STARTTLS and receives a self-signed
+ * certificate will usually deliver anyway — opportunistic TLS does not verify
+ * — but "usually" is not a property to rely on, and smtp-server's built-in
+ * certificate has a publicly known private key, which makes the encryption
+ * decorative.
+ *
+ * Caddy already holds a valid certificate for this hostname on the same
+ * machine, renewed automatically. Its volume is mounted here read-only and the
+ * files are found by searching rather than by a hard-coded path, because the
+ * directory is named after whichever authority issued it and that changes if
+ * Caddy ever falls back to a different one.
+ */
+function certificateFor(hostname: string): { key: string; cert: string } | null {
+  const root = process.env.MAIL_TLS_ROOT ?? "/caddy/caddy/certificates";
+  if (!existsSync(root)) return null;
+
+  for (const issuer of readdirSync(root)) {
+    const directory = join(root, issuer, hostname);
+    const cert = join(directory, `${hostname}.crt`);
+    const key = join(directory, `${hostname}.key`);
+
+    if (existsSync(cert) && existsSync(key)) {
+      try {
+        return {
+          cert: readFileSync(cert, "utf8"),
+          key: readFileSync(key, "utf8"),
+        };
+      } catch (error) {
+        log(`found a certificate for ${hostname} but could not read it:`, error);
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+const MAIL_HOSTNAME = process.env.MAIL_DOMAIN ?? "lms.roftbusiness.org";
+const certificate = certificateFor(MAIL_HOSTNAME);
+
 const server = new SMTPServer({
   // A public MX accepts mail from strangers; that is what an MX is. There is
   // nothing to authenticate against, so authentication is disabled rather than
@@ -49,6 +94,7 @@ const server = new SMTPServer({
   disabledCommands: ["AUTH"],
   size: MAX_MESSAGE_BYTES,
   banner: "ROFT Learning Management System",
+  ...(certificate ? { key: certificate.key, cert: certificate.cert } : {}),
 
   onRcptTo(address, session, callback) {
     void resolveMailbox(address.address)
@@ -190,7 +236,12 @@ server.on("error", (error) => {
 server.listen(PORT, "0.0.0.0", () => {
   log(`Inbound mail server listening on port ${PORT}.`);
   log(
-    `Accepting mail only for addresses issued by the platform; everything else is refused with 550.`,
+    "Accepting mail only for addresses issued by the platform; everything else is refused with 550.",
+  );
+  log(
+    certificate
+      ? `STARTTLS using the certificate for ${MAIL_HOSTNAME}.`
+      : `No certificate found for ${MAIL_HOSTNAME}; STARTTLS will offer an untrusted one. Mail will still be delivered by most senders, but the encryption is not verifiable.`,
   );
 });
 
