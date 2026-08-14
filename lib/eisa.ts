@@ -5,11 +5,14 @@ import {
   assessmentDecisions,
   assessmentSubmissions,
   curriculumModules,
+  curriculumTopicElements,
   curriculumTopics,
   enrolments,
   moderationRecords,
   qualifications,
   users,
+  workplaceLogbookEntries,
+  workplaceLogbooks,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -62,12 +65,25 @@ export type TopicReadiness = {
   percent: number;
 };
 
+/**
+ * How a module is proved.
+ *
+ * Knowledge and practical modules carry Internal Assessment Criteria and are
+ * proved by achieving all of them. Work experience modules carry none: the
+ * QCTO curriculum defines work activities, contextual knowledge and supporting
+ * evidence, and the proof is a logbook signed by the workplace coach and
+ * accepted by an assessor. Counting criteria for a work experience module
+ * therefore counts zero out of zero forever.
+ */
+export type EvidenceRoute = "criteria" | "logbook";
+
 export type ModuleReadiness = {
   moduleId: string;
   code: string;
   title: string;
   component: Component;
   credits: number | null;
+  route: EvidenceRoute;
   topics: TopicReadiness[];
   achievedCount: number;
   totalCount: number;
@@ -75,11 +91,17 @@ export type ModuleReadiness = {
   percent: number;
   complete: boolean;
   /**
-   * When the last outstanding criterion in this module was achieved. The
-   * Statement of Results has to carry a date per module, and this is it.
-   * Null until the module is complete — a partial module has no such date.
+   * When the last outstanding criterion in this module was achieved, or when
+   * the assessor accepted the logbook. The Statement of Results has to carry a
+   * date per module, and this is it. Null until the module is complete.
    */
   competenceAchievedAt: Date | null;
+  /** Present for a work experience module: where its logbook has got to. */
+  logbook: {
+    id: string;
+    status: string;
+    coachSignedAt: Date | null;
+  } | null;
 };
 
 export type Component = "knowledge" | "practical" | "workplace";
@@ -354,6 +376,29 @@ export async function qualificationReadiness(
           .where(inArray(curriculumTopics.curriculumModuleId, moduleIds))
       : [];
 
+    const topicElementRows = topics.length
+      ? await tx
+          .select({
+            topicId: curriculumTopicElements.topicId,
+            id: curriculumTopicElements.id,
+          })
+          .from(curriculumTopicElements)
+          .where(
+            inArray(
+              curriculumTopicElements.topicId,
+              topics.map((topic) => topic.id),
+            ),
+          )
+      : [];
+
+    const topicElementCounts = new Map<string, number>();
+    for (const row of topicElementRows) {
+      topicElementCounts.set(
+        row.topicId,
+        (topicElementCounts.get(row.topicId) ?? 0) + 1,
+      );
+    }
+
     const criteria = moduleIds.length
       ? await tx
           .select({
@@ -369,6 +414,53 @@ export async function qualificationReadiness(
       : [];
 
     const achieved = await achievedCriteriaFor(tx, userId);
+
+    // Work experience is proved by a signed logbook, not by criteria. Both the
+    // requirements the curriculum lists and the learner's progress against them
+    // are read here so a workplace module can report something truthful.
+    const logbooks = moduleIds.length
+      ? await tx
+          .select({
+            id: workplaceLogbooks.id,
+            curriculumModuleId: workplaceLogbooks.curriculumModuleId,
+            status: workplaceLogbooks.status,
+            coachSignedAt: workplaceLogbooks.coachSignedAt,
+            acceptedAt: workplaceLogbooks.acceptedAt,
+          })
+          .from(workplaceLogbooks)
+          .where(
+            and(
+              eq(workplaceLogbooks.learnerId, userId),
+              inArray(workplaceLogbooks.curriculumModuleId, moduleIds),
+            ),
+          )
+      : [];
+
+    const logbookProgress = logbooks.length
+      ? await tx
+          .select({
+            logbookId: workplaceLogbookEntries.logbookId,
+            completed: workplaceLogbookEntries.completed,
+          })
+          .from(workplaceLogbookEntries)
+          .where(
+            inArray(
+              workplaceLogbookEntries.logbookId,
+              logbooks.map((entry) => entry.id),
+            ),
+          )
+      : [];
+
+    // Counted per module so a workplace module with requirements captured is
+    // distinguishable from one nobody has transcribed yet.
+    const elementCounts = new Map<string, number>();
+    for (const topic of topics) {
+      const forTopic = topicElementCounts.get(topic.id) ?? 0;
+      elementCounts.set(
+        topic.curriculumModuleId,
+        (elementCounts.get(topic.curriculumModuleId) ?? 0) + forTopic,
+      );
+    }
 
     const creditsByComponent: Record<Component, number> = {
       knowledge: 0,
@@ -495,12 +587,64 @@ export async function qualificationReadiness(
           .filter((t) => t.totalCount > 0)
           .reduce((sum, t) => sum + t.weight * (t.achievedCount / t.totalCount), 0);
 
-        const complete = moduleTotal > 0 && moduleAchieved === moduleTotal;
+        // A work experience module carries no Internal Assessment Criteria; the
+        // QCTO curriculum gives it work activities, contextual knowledge and
+        // supporting evidence instead, and the proof is a logbook signed by the
+        // workplace coach and accepted by an assessor. Counting criteria for
+        // one would count zero out of zero for ever, so it is never complete
+        // and the learner is never eligible.
+        const route: EvidenceRoute =
+          component === "workplace" && moduleTotal === 0 ? "logbook" : "criteria";
 
-        const dates = topicResults
-          .flatMap((t) => t.criteria)
-          .map((c) => c.achievedAt)
-          .filter((d): d is Date => d !== null);
+        const logbook = logbooks.find(
+          (entry) => entry.curriculumModuleId === curriculumModule.id,
+        );
+
+        let complete: boolean;
+        let weighted = weightedPercent;
+        let dates: Date[];
+
+        if (route === "logbook") {
+          const entries = logbook
+            ? logbookProgress.filter((row) => row.logbookId === logbook.id)
+            : [];
+          const done = entries.filter((row) => row.completed).length;
+
+          // Progress is what the learner has recorded; completion is what the
+          // assessor accepted. A logbook can be 100 per cent recorded and still
+          // not signed, and that gap is the whole point of the sign-off.
+          weighted =
+            entries.length > 0 ? done / entries.length : 0;
+          complete = logbook?.status === "accepted_by_assessor";
+          dates = logbook?.acceptedAt ? [logbook.acceptedAt] : [];
+
+          // Said in the same list as an outstanding criterion, because to the
+          // facilitator planning next month it is the same kind of fact: a
+          // thing standing between this learner and the EISA.
+          if (!complete) {
+            outstanding.push({
+              component,
+              moduleCode: curriculumModule.code,
+              moduleTitle: curriculumModule.title,
+              criterionCode: "Logbook",
+              description: !logbook
+                ? "No work experience logbook has been opened."
+                : logbook.status === "coach_signed"
+                  ? "Signed by the workplace coach, waiting for an assessor to accept it."
+                  : logbook.status === "submitted_to_coach"
+                    ? "With the workplace coach for signature."
+                    : logbook.status === "returned_by_coach"
+                      ? "Returned by the workplace coach for more evidence."
+                      : `${done} of ${entries.length} requirements recorded; not yet submitted to the coach.`,
+            });
+          }
+        } else {
+          complete = moduleTotal > 0 && moduleAchieved === moduleTotal;
+          dates = topicResults
+            .flatMap((t) => t.criteria)
+            .map((c) => c.achievedAt)
+            .filter((d): d is Date => d !== null);
+        }
 
         return {
           moduleId: curriculumModule.id,
@@ -511,8 +655,16 @@ export async function qualificationReadiness(
           topics: topicResults,
           achievedCount: moduleAchieved,
           totalCount: moduleTotal,
-          percent: round(weightedPercent * 100),
+          route,
+          percent: round(weighted * 100),
           complete,
+          logbook: logbook
+            ? {
+                id: logbook.id,
+                status: logbook.status,
+                coachSignedAt: logbook.coachSignedAt,
+              }
+            : null,
           // The date the module was finished is the date of its *last*
           // criterion, not its first.
           competenceAchievedAt:
@@ -558,14 +710,20 @@ export async function qualificationReadiness(
         achievedCount: componentAchieved,
         totalCount: componentTotal,
         percent: round(componentPercent),
-        complete: componentTotal > 0 && componentAchieved === componentTotal,
+        // Every module of the component, whichever way each is proved. Summing
+        // criteria alone would call a component complete while its work
+        // experience logbooks sat unsigned.
+        complete: moduleResults.length > 0 && moduleResults.every((m) => m.complete),
       });
     }
 
     // Components carrying no criteria are dropped from the weighting rather
     // than counted as zero. A qualification with no workplace component should
     // not be capped at 73% for the whole of its existence.
-    const present = componentResults.filter((c) => c.totalCount > 0);
+    // A component is "present" if it has modules at all, not if it has
+    // criteria. Work experience has none by design, and dropping it from the
+    // weighting would silently redistribute its 27 per cent to the others.
+    const present = componentResults.filter((c) => c.modules.length > 0);
     const presentWeight = present.reduce((sum, c) => sum + c.weight, 0);
 
     const readinessIndex =
@@ -581,13 +739,22 @@ export async function qualificationReadiness(
     // that were captured are complete. That is the most dangerous number this
     // file could produce, because it is wrong in the direction of sending
     // somebody to an assessment centre.
+    // A module nobody has transcribed has neither criteria nor requirements.
+    // A work experience module with requirements captured is not missing
+    // anything: it is simply proved a different way.
     const modulesWithoutCriteria = componentResults
       .flatMap((c) => c.modules)
-      .filter((m) => m.totalCount === 0)
+      .filter(
+        (m) =>
+          m.totalCount === 0 &&
+          (m.route !== "logbook" || (elementCounts.get(m.moduleId) ?? 0) === 0),
+      )
       .map((m) => m.code);
 
+    const allModules = componentResults.flatMap((c) => c.modules);
+
     const curriculumComplete =
-      modulesWithoutCriteria.length === 0 && totalCriteria > 0;
+      modulesWithoutCriteria.length === 0 && allModules.length > 0;
 
     return {
       qualificationId: qualification.id,
@@ -598,7 +765,12 @@ export async function qualificationReadiness(
       weightSource: source,
       readinessIndex,
       // The gate. Not the index, and not a threshold on it.
-      eisaEligible: curriculumComplete && achievedCriteria === totalCriteria,
+      // Every criterion achieved and every work experience logbook accepted.
+      // The qualification document requires all internal assessment criteria
+      // for all modules; for work experience the Statement of Work Experience
+      // is what stands in their place, so both routes must be satisfied.
+      eisaEligible:
+        curriculumComplete && allModules.every((module) => module.complete),
       achievedCriteria,
       totalCriteria,
       outstanding,

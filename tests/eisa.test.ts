@@ -10,7 +10,7 @@
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { withPlatformScope } from "@/db/client";
+import { withPlatformScope, withTenant } from "@/db/client";
 import {
   competencies,
   competencyFrameworks,
@@ -49,6 +49,16 @@ import {
   inspectCurriculum,
   type CurriculumFileInput,
 } from "@/lib/curriculum-import";
+import {
+  acceptLogbook,
+  coachSignOff,
+  createAgreement,
+  getLogbook,
+  openLogbook,
+  setEntryCompleted,
+  submitToCoach,
+} from "@/lib/workplace";
+import { uploadLogbookEvidence } from "@/lib/uploads";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -58,6 +68,7 @@ let learner: AuthenticatedSession;
 let stranger: AuthenticatedSession;
 let assessor: AuthenticatedSession;
 let moderator: AuthenticatedSession;
+let coach: AuthenticatedSession;
 let competencyId: string;
 
 function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
@@ -216,6 +227,10 @@ beforeAll(async () => {
     ["moderator"],
     await createPerson("moderator@eisa.test", ["moderator"]),
   );
+  coach = sessionFor(
+    ["workplace_coach"],
+    await createPerson("coach@eisa.test", ["workplace_coach"]),
+  );
 });
 
 afterAll(async () => {
@@ -223,6 +238,84 @@ afterAll(async () => {
     tx.delete(organisations).where(eq(organisations.id, organisationId)),
   );
 });
+
+/**
+ * Runs a learner through a real assessment and records a decision carrying
+ * per-criterion outcomes. The course is deliberately not bound to the
+ * curriculum module: this is about the readiness arithmetic, and binding it
+ * would drag the publish gate in as well.
+ */
+async function achieve(
+  criterionIds: string[],
+  outcomes: ("competent" | "not_yet_competent")[],
+  moderate = true,
+) {
+  const course = await createCourse(admin, { title: `EISA course ${suffix()}` });
+  const section = await addSection(admin, { courseId: course.id, title: "S" });
+  await addLesson(admin, { sectionId: section.id, title: "L" });
+  await tagCourseCompetency(admin, course.id, competencyId);
+  const published = await publishCourse(admin, course.id);
+  if (!published.ok) throw new Error(published.reasons.join(" "));
+
+  const assessment = await createAssessment(admin, {
+    courseId: course.id,
+    title: "Assessment",
+    purpose: "summative",
+  });
+  const item = await addAssessmentItem(admin, {
+    assessmentId: assessment.id,
+    stem: "A question for the learner",
+    options: ["Right", "Wrong"],
+    correctIndexes: [0],
+  });
+  await publishAssessment(admin, assessment.id);
+
+  const enrolment = await enrolUser(admin, {
+    userId: learner.userId,
+    courseId: course.id,
+  });
+  const delivery = await getEnrolmentForDelivery(learner, enrolment.id);
+  for (const lesson of delivery.sections.flatMap((s) => s.lessons)) {
+    await markLessonComplete(learner, enrolment.id, lesson.id);
+  }
+
+  const submission = await submitQuiz(learner, {
+    assessmentId: assessment.id,
+    enrolmentId: enrolment.id,
+    responses: { [item.id]: [item.options![0].id] },
+  });
+
+  const criterionOutcomes: Record<string, "competent" | "not_yet_competent"> = {};
+  criterionIds.forEach((id, index) => {
+    criterionOutcomes[id] = outcomes[index];
+  });
+
+  // Every decision by a new assessor is moderated, so the submission sits at
+  // "assessed" until a moderator has seen it — and an unmoderated judgement
+  // must not count towards readiness. Moderating it here is what production
+  // does, and is the only route to a decision the engine will accept.
+  const { decision } = await recordAssessorDecision(
+    assessor,
+    {
+      submissionId: submission.submissionId,
+      outcome: outcomes.every((o) => o === "competent")
+        ? "competent"
+        : "not_yet_competent",
+      criterionOutcomes,
+    },
+    { random: 1 },
+  );
+
+  if (moderate) {
+    await recordModeration(moderator, {
+      decisionId: decision.id,
+      outcome: "endorsed",
+      comments: "Checked against the criteria.",
+    });
+  }
+
+  return decision;
+}
 
 describe("component weights", () => {
   it("prefers what the curriculum document states over the credit split", () => {
@@ -409,84 +502,6 @@ describe("re-importing a curriculum", () => {
 });
 
 describe("achieving criteria", () => {
-  /**
-   * Runs a learner through a real assessment and records a decision carrying
-   * per-criterion outcomes. The course is deliberately not bound to the
-   * curriculum module: this is about the readiness arithmetic, and binding it
-   * would drag the publish gate in as well.
-   */
-  async function achieve(
-    criterionIds: string[],
-    outcomes: ("competent" | "not_yet_competent")[],
-    moderate = true,
-  ) {
-    const course = await createCourse(admin, { title: `EISA course ${suffix()}` });
-    const section = await addSection(admin, { courseId: course.id, title: "S" });
-    await addLesson(admin, { sectionId: section.id, title: "L" });
-    await tagCourseCompetency(admin, course.id, competencyId);
-    const published = await publishCourse(admin, course.id);
-    if (!published.ok) throw new Error(published.reasons.join(" "));
-
-    const assessment = await createAssessment(admin, {
-      courseId: course.id,
-      title: "Assessment",
-      purpose: "summative",
-    });
-    const item = await addAssessmentItem(admin, {
-      assessmentId: assessment.id,
-      stem: "A question for the learner",
-      options: ["Right", "Wrong"],
-      correctIndexes: [0],
-    });
-    await publishAssessment(admin, assessment.id);
-
-    const enrolment = await enrolUser(admin, {
-      userId: learner.userId,
-      courseId: course.id,
-    });
-    const delivery = await getEnrolmentForDelivery(learner, enrolment.id);
-    for (const lesson of delivery.sections.flatMap((s) => s.lessons)) {
-      await markLessonComplete(learner, enrolment.id, lesson.id);
-    }
-
-    const submission = await submitQuiz(learner, {
-      assessmentId: assessment.id,
-      enrolmentId: enrolment.id,
-      responses: { [item.id]: [item.options![0].id] },
-    });
-
-    const criterionOutcomes: Record<string, "competent" | "not_yet_competent"> = {};
-    criterionIds.forEach((id, index) => {
-      criterionOutcomes[id] = outcomes[index];
-    });
-
-    // Every decision by a new assessor is moderated, so the submission sits at
-    // "assessed" until a moderator has seen it — and an unmoderated judgement
-    // must not count towards readiness. Moderating it here is what production
-    // does, and is the only route to a decision the engine will accept.
-    const { decision } = await recordAssessorDecision(
-      assessor,
-      {
-        submissionId: submission.submissionId,
-        outcome: outcomes.every((o) => o === "competent")
-          ? "competent"
-          : "not_yet_competent",
-        criterionOutcomes,
-      },
-      { random: 1 },
-    );
-
-    if (moderate) {
-      await recordModeration(moderator, {
-        decisionId: decision.id,
-        outcome: "endorsed",
-        comments: "Checked against the criteria.",
-      });
-    }
-
-    return decision;
-  }
-
   it("counts achieved criteria and weights the index by topic", async () => {
     const imported = await importCurriculum(admin, curriculumFile(`ach-${suffix()}`));
     const before = await qualificationReadiness(
@@ -649,5 +664,183 @@ describe("achieving criteria", () => {
 
     expect(row).toBeDefined();
     expect(row?.totalCriteria).toBe(4);
+  });
+});
+
+describe("work experience modules", () => {
+  /**
+   * A qualification with one knowledge module carrying criteria and one work
+   * experience module carrying none, which is the shape the QCTO curriculum
+   * actually publishes.
+   */
+  function withWorkExperience(code: string): CurriculumFileInput {
+    return {
+      title: `Qualification with work experience ${code}`,
+      qctoCode: code,
+      modules: [
+        {
+          component: "knowledge",
+          code: `${code}-KM-01`,
+          title: "Knowledge module",
+          credits: 10,
+          topics: [
+            {
+              code: "KM0101",
+              title: "A topic",
+              elements: [
+                { kind: "knowledge_topic", code: "KT0101", description: "Teach this." },
+              ],
+              criteria: [{ code: "IAC0101", description: "Achieve this." }],
+            },
+          ],
+        },
+        {
+          component: "workplace",
+          code: `${code}-WM-01`,
+          title: "Work experience module",
+          credits: 10,
+          topics: [
+            {
+              code: "WE0101",
+              title: "An experience",
+              elements: [
+                { kind: "work_activity", code: "WA0101", description: "Do this at work." },
+                { kind: "supporting_evidence", code: "SE01", description: "Performance report." },
+              ],
+              // Deliberately none. The curriculum does not define internal
+              // assessment criteria for work experience.
+              criteria: [],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  async function moduleIdFor(qualificationId: string, component: string) {
+    const { curriculumModules } = await import("@/db/schema");
+    return withTenant(organisationId, async (tx) => {
+      const rows = await tx
+        .select({ id: curriculumModules.id, component: curriculumModules.component })
+        .from(curriculumModules)
+        .where(eq(curriculumModules.qualificationId, qualificationId));
+      return rows.find((row) => row.component === component)!.id;
+    });
+  }
+
+  it("does not treat a criterion-free work experience module as untranscribed", async () => {
+    const imported = await importCurriculum(admin, withWorkExperience(`we-${suffix()}`));
+
+    const readiness = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    // Before this was fixed, the module reported zero criteria and the whole
+    // qualification was declared incompletely captured.
+    expect(readiness.curriculumComplete).toBe(true);
+    expect(readiness.modulesWithoutCriteria).toEqual([]);
+  });
+
+  it("marks the work experience module as proved by a logbook, not criteria", async () => {
+    const imported = await importCurriculum(admin, withWorkExperience(`we-${suffix()}`));
+
+    const readiness = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    const workplace = readiness.components.find((c) => c.component === "workplace")!;
+    expect(workplace.modules[0].route).toBe("logbook");
+
+    const knowledge = readiness.components.find((c) => c.component === "knowledge")!;
+    expect(knowledge.modules[0].route).toBe("criteria");
+  });
+
+  it("keeps the learner ineligible while the logbook is unsigned, even with every criterion achieved", async () => {
+    // This is the failure the fix exists to prevent: counting criteria alone
+    // would call this learner ready while their workplace evidence had never
+    // been witnessed by anybody.
+    const imported = await importCurriculum(admin, withWorkExperience(`we-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    const after = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    expect(after.achievedCriteria).toBe(after.totalCriteria);
+    expect(after.eisaEligible).toBe(false);
+
+    const blocking = after.outstanding.find((o) => o.criterionCode === "Logbook");
+    expect(blocking).toBeDefined();
+    expect(blocking?.description).toContain("No work experience logbook");
+  });
+
+  it("completes the module when an assessor accepts the logbook", async () => {
+    const imported = await importCurriculum(admin, withWorkExperience(`we-${suffix()}`));
+    const moduleId = await moduleIdFor(imported.qualificationId, "workplace");
+
+    const agreement = await createAgreement(admin, {
+      learnerId: learner.userId,
+      coachId: coach.userId,
+      employerName: "Acme Mining Services",
+    });
+    const logbook = await openLogbook(admin, agreement.id, moduleId);
+
+    const view = await getLogbook(learner, logbook.id);
+    for (const entry of view.entries) {
+      await setEntryCompleted(learner, entry.entryId, true);
+    }
+    const evidenceEntry = view.entries.find((e) => e.code === "SE01")!;
+    await uploadLogbookEvidence(learner, evidenceEntry.entryId, [
+      { filename: "report.txt", bytes: new TextEncoder().encode("A report.") },
+    ]);
+
+    await submitToCoach(learner, logbook.id, 120);
+
+    // Recorded in full, but nobody has witnessed it yet.
+    const recorded = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const pending = recorded.components
+      .find((c) => c.component === "workplace")!
+      .modules[0];
+    expect(pending.percent).toBe(100);
+    expect(pending.complete).toBe(false);
+
+    await coachSignOff(coach, logbook.id, { outcome: "signed" });
+    await acceptLogbook(assessor, logbook.id);
+
+    const accepted = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const done = accepted.components
+      .find((c) => c.component === "workplace")!
+      .modules[0];
+
+    expect(done.complete).toBe(true);
+    // The Statement of Results needs a date per module; for work experience it
+    // is the date the assessor took receipt.
+    expect(done.competenceAchievedAt).toBeInstanceOf(Date);
   });
 });

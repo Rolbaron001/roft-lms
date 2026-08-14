@@ -89,7 +89,8 @@ export default async function LearnerReadinessPage({
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {readiness.achievedCriteria} of {readiness.totalCriteria} internal
-              assessment criteria achieved.
+              assessment criteria achieved, and work experience proved by signed
+              logbook.
               {readiness.eisaEligible
                 ? " A Statement of Results can be issued."
                 : " Every one of them is required — there is no pass mark."}
@@ -152,7 +153,9 @@ export default async function LearnerReadinessPage({
                     </div>
                     <div className="text-right text-sm">
                       <p className="tabular-nums">
-                        {module.achievedCount} / {module.totalCount} criteria
+                        {module.route === "logbook"
+                          ? "Logbook"
+                          : `${module.achievedCount} / ${module.totalCount} criteria`}
                       </p>
                       {module.complete ? (
                         <p className="text-xs" style={{ color: "var(--success)" }}>
@@ -166,7 +169,33 @@ export default async function LearnerReadinessPage({
                     </div>
                   </div>
 
-                  {module.totalCount === 0 ? (
+                  {module.route === "logbook" ? (
+                    <div className="mt-3 text-sm">
+                      <p className="text-[var(--muted)]">
+                        Work experience is proved by a logbook signed by the
+                        workplace coach and accepted by an assessor, not by
+                        assessment criteria. The curriculum defines none for
+                        this module.
+                      </p>
+                      {module.logbook ? (
+                        <p className="mt-2">
+                          <Link
+                            href={`/workplace/${module.logbook.id}`}
+                            className="underline underline-offset-2"
+                          >
+                            Open the logbook
+                          </Link>
+                          {module.logbook.coachSignedAt
+                            ? ` · signed by the coach ${formatDate(module.logbook.coachSignedAt)}`
+                            : ""}
+                        </p>
+                      ) : (
+                        <p className="mt-2" style={{ color: "var(--danger)" }}>
+                          No logbook has been opened for this module.
+                        </p>
+                      )}
+                    </div>
+                  ) : module.totalCount === 0 ? (
                     <p className="mt-3 text-sm" style={{ color: "var(--danger)" }}>
                       No assessment criteria captured for this module.
                     </p>
