@@ -63,6 +63,9 @@ export function IssueStatement({
 
   return (
     <form action={formAction} className="mt-3">
+      {/* Shown even when the learner is plainly not ready. Pressing it returns
+          the list of what is outstanding, which is the question the person
+          pressing it actually has. */}
       <input type="hidden" name="qualificationId" value={qualificationId} />
       <input type="hidden" name="userId" value={userId} />
 

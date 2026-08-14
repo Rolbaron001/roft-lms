@@ -105,7 +105,11 @@ export default async function LearnerReadinessPage({
                 : " Every one of them is required — there is no pass mark."}
             </p>
 
-            {canIssue && (readiness.eisaEligible || current) ? (
+            {/* Offered whether or not the learner is eligible. The engine
+                refuses and names what is missing, which is more useful than a
+                button that silently is not there - and it closes the gap
+                between the page being rendered and the button being pressed. */}
+            {canIssue ? (
               <IssueStatement
                 qualificationId={qualificationId}
                 userId={userId}
