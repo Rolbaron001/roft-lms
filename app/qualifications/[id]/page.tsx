@@ -44,7 +44,8 @@ export default async function QualificationPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
-  const { qualification, modules } = await curriculumOutline(session, id);
+  const { qualification, modules, studyUnits, outcomes, unplacedModules } =
+    await curriculumOutline(session, id);
   const [documents, uploadTargets] = await Promise.all([
     listProgrammeDocuments(session, id),
     qualificationForDocumentUpload(session, id),
@@ -110,6 +111,110 @@ export default async function QualificationPage({
             every learner look finished.
           </p>
         </div>
+      ) : null}
+
+      {studyUnits.length > 0 || outcomes.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="mb-2 font-semibold">Delivery structure</h2>
+          <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
+            The QCTO publishes modules; a provider teaches study units. Each
+            bundles the Knowledge, Practical and Work Experience modules that
+            serve one Exit Level Outcome, which is what the External Integrated
+            Summative Assessment is set against. Two providers may group the
+            same qualification differently and both be correct, so this is the
+            provider&rsquo;s structure rather than the QCTO&rsquo;s.
+          </p>
+
+          {unplacedModules.length > 0 ? (
+            <div
+              className="mb-4 rounded-lg border-2 p-4"
+              style={{ borderColor: "var(--danger)" }}
+            >
+              <p
+                className="text-sm font-semibold"
+                style={{ color: "var(--danger)" }}
+              >
+                {unplacedModules.length}{" "}
+                {unplacedModules.length === 1 ? "module belongs" : "modules belong"}{" "}
+                to no study unit.
+              </p>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {unplacedModules.map((m) => m.code).join(", ")}. A module no
+                study unit delivers is a module nobody teaches, however
+                completely its curriculum has been captured.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="space-y-3">
+            {studyUnits.map((unit) => (
+              <Card key={unit.id}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="font-medium">
+                      <span className="font-mono text-sm">{unit.code}</span>{" "}
+                      {unit.title}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {unit.outcome
+                        ? `Exit Level Outcome ${unit.outcome.number}`
+                        : "Aligned to no Exit Level Outcome"}
+                      {unit.credits ? ` · ${unit.credits} credits` : ""}
+                    </p>
+                  </div>
+                  <p className="text-sm text-[var(--muted)] tabular-nums">
+                    {unit.modules.length}{" "}
+                    {unit.modules.length === 1 ? "module" : "modules"}
+                  </p>
+                </div>
+
+                {unit.outcome ? (
+                  <div className="mt-3 border-t border-[var(--border)] pt-3">
+                    <p className="text-sm">{unit.outcome.description}</p>
+                    {unit.outcome.criteria.length > 0 ? (
+                      <>
+                        <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                          Associated assessment criteria — what the EISA tests
+                        </p>
+                        <ul className="mt-1.5 space-y-1">
+                          {unit.outcome.criteria.map((criterion) => (
+                            <li key={criterion.id} className="text-sm">
+                              {criterion.description}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {unit.modules.length > 0 ? (
+                  <ul className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+                    {unit.modules.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs"
+                      >
+                        <span className="font-mono">{entry.code}</span>{" "}
+                        <span className="text-[var(--muted)]">
+                          {COMPONENT_LABELS[entry.component] ?? entry.component}
+                          {entry.credits ? ` · ${entry.credits} cr` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p
+                    className="mt-3 border-t border-[var(--border)] pt-3 text-sm"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    This study unit delivers no modules.
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <section className="mb-8">

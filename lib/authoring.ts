@@ -12,7 +12,11 @@ import {
   curriculumTopics,
   lessonCriteria,
   lessons,
+  exitLevelOutcomeCriteria,
+  exitLevelOutcomes,
   qualifications,
+  studyUnitModules,
+  studyUnits,
   topicElementAlignment,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -286,8 +290,76 @@ export async function curriculumOutline(
           .where(inArray(topicElementAlignment.topicElementId, elementIds))
       : [];
 
+    // How the provider delivers it: study units bundling the modules that
+    // serve one Exit Level Outcome. Read alongside the modules rather than
+    // instead of them, because a moderator checks both - the QCTO publishes
+    // modules, the provider teaches study units.
+    const units = await tx
+      .select()
+      .from(studyUnits)
+      .where(eq(studyUnits.qualificationId, qualificationId))
+      .orderBy(asc(studyUnits.sortOrder));
+
+    const unitModules = units.length
+      ? await tx
+          .select()
+          .from(studyUnitModules)
+          .where(
+            inArray(
+              studyUnitModules.studyUnitId,
+              units.map((unit) => unit.id),
+            ),
+          )
+      : [];
+
+    const outcomes = await tx
+      .select()
+      .from(exitLevelOutcomes)
+      .where(eq(exitLevelOutcomes.qualificationId, qualificationId))
+      .orderBy(asc(exitLevelOutcomes.sortOrder));
+
+    const outcomeCriteria = outcomes.length
+      ? await tx
+          .select()
+          .from(exitLevelOutcomeCriteria)
+          .where(
+            inArray(
+              exitLevelOutcomeCriteria.exitLevelOutcomeId,
+              outcomes.map((outcome) => outcome.id),
+            ),
+          )
+          .orderBy(asc(exitLevelOutcomeCriteria.sortOrder))
+      : [];
+
+    // Built once so a study unit points at the outcome complete with its
+    // associated assessment criteria, rather than at the bare row.
+    const outcomesWithCriteria = outcomes.map((outcome) => ({
+      ...outcome,
+      criteria: outcomeCriteria.filter(
+        (criterion) => criterion.exitLevelOutcomeId === outcome.id,
+      ),
+    }));
+
     return {
       qualification,
+      outcomes: outcomesWithCriteria,
+      studyUnits: units.map((unit) => ({
+        ...unit,
+        outcome:
+          outcomesWithCriteria.find((o) => o.id === unit.exitLevelOutcomeId) ??
+          null,
+        modules: unitModules
+          .filter((link) => link.studyUnitId === unit.id)
+          .map((link) =>
+            modules.find((m) => m.id === link.curriculumModuleId),
+          )
+          .filter((m): m is (typeof modules)[number] => Boolean(m))
+          .sort((a, b) => a.sortOrder - b.sortOrder),
+      })),
+      /** Modules no study unit delivers, which means they are not taught. */
+      unplacedModules: modules.filter(
+        (m) => !unitModules.some((link) => link.curriculumModuleId === m.id),
+      ),
       modules: modules.map((curriculumModule) => ({
         ...curriculumModule,
         topics: topics
