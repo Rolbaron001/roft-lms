@@ -4,6 +4,7 @@
  *   npx tsx scripts/notify.mts sweep    look for what people should be told
  *   npx tsx scripts/notify.mts send     deliver whatever is queued
  *   npx tsx scripts/notify.mts          both, which is what cron runs
+ *   npx tsx scripts/notify.mts check    confirm the relay accepts our login
  *
  * Both are safe to run repeatedly. The sweep deduplicates, and sending only
  * touches messages still pending.
@@ -23,7 +24,7 @@ const {
   pendingEmails,
   sweepAllTenants,
 } = await import("../lib/notifications");
-const { deliver, mailIsConfigured } = await import("../lib/mail");
+const { deliver, mailIsConfigured, verifyRelay } = await import("../lib/mail");
 
 const mode = process.argv[2] ?? "both";
 
@@ -92,7 +93,9 @@ async function send() {
       await markEmailSent(message.id);
       sent += 1;
     } else {
-      await markEmailFailed(message.id, result.error);
+      await markEmailFailed(message.id, result.error, {
+        retryable: result.retryable,
+      });
       failed += 1;
     }
   }
@@ -100,7 +103,26 @@ async function send() {
   log(`Sent ${sent}, failed ${failed}.`);
 }
 
-if (mode === "sweep") {
+if (mode === "check") {
+  // "Can we log in to the relay" and "did that message arrive" are different
+  // questions. Being able to answer the first on its own turns a misconfigured
+  // relay from a mystery into a one-line check.
+  if (!mailIsConfigured()) {
+    log("No mail server configured. Set MAIL_HOST and MAIL_FROM in .env.");
+    process.exit(1);
+  }
+
+  log(`Connecting to ${process.env.MAIL_HOST}:${process.env.MAIL_PORT ?? 587}...`);
+  const result = await verifyRelay();
+
+  if (result.ok) {
+    log(`Relay accepted the credentials. Mail will be sent as ${process.env.MAIL_FROM}.`);
+    process.exit(0);
+  }
+
+  log(`Relay refused: ${result.error}`);
+  process.exit(1);
+} else if (mode === "sweep") {
   await sweep();
 } else if (mode === "send") {
   await send();

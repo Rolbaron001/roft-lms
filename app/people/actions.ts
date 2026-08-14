@@ -8,6 +8,7 @@ import {
   invitePerson,
   PeopleError,
   resetPassword,
+  setMailboxAddress,
   setPersonStatus,
   setRoles,
   updatePerson,
@@ -165,6 +166,32 @@ export async function resetPasswordAction(
     );
     return { notice: "New password set.", password };
   } catch (error) {
+    return { error: describe(error) };
+  }
+}
+
+export async function setMailboxAction(
+  _previous: PeopleState,
+  formData: FormData,
+): Promise<PeopleState> {
+  const session = await requireSession();
+  const userId = String(formData.get("userId") ?? "");
+  const address = String(formData.get("mailboxAddress") ?? "").trim();
+
+  try {
+    await setMailboxAddress(session, userId, address || null);
+    revalidatePath(`/people/${userId}`);
+    return {
+      notice: address
+        ? `Mailbox set to ${address.toLowerCase()}.`
+        : "Mailbox removed.",
+    };
+  } catch (error) {
+    // Addresses are unique across the whole platform, because an address is a
+    // destination on the internet and two people cannot both own one.
+    if (String((error as { cause?: unknown }).cause).includes("duplicate key")) {
+      return { error: "That address is already in use." };
+    }
     return { error: describe(error) };
   }
 }

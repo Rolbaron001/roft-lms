@@ -147,6 +147,19 @@ export const users = pgTable(
      */
     mustChangePassword: boolean("must_change_password").notNull().default(false),
 
+    /**
+     * The address this person holds *on the platform*, distinct from `email`.
+     *
+     * `email` is who they are when signing in, and is often their own work
+     * address. This is the mailbox learners and assessors write to and from —
+     * n.mahlangu@lms.roftbusiness.org — so the conversation lands inside the
+     * learner's record rather than in somebody's private inbox, where it is
+     * outside the audit log, outside the backup, and lost when they leave.
+     *
+     * Null for anyone who has no need of one.
+     */
+    mailboxAddress: text("mailbox_address"),
+
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     status: userStatus("status").notNull().default("invited"),
@@ -192,6 +205,9 @@ export const users = pgTable(
     // Email is unique within a tenant, not across the platform: the same person
     // may legitimately hold accounts at two client businesses.
     uniqueIndex("users_org_email_idx").on(t.organisationId, t.email),
+    // Unique across the whole platform, not per tenant: a mailbox address is
+    // a real destination on the internet, and two tenants cannot both own one.
+    uniqueIndex("users_mailbox_address_idx").on(t.mailboxAddress),
     index("users_org_idx").on(t.organisationId),
     index("users_line_manager_idx").on(t.lineManagerId),
   ],

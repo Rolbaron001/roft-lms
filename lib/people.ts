@@ -1,7 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
-import { withTenant, type TenantDatabase } from "@/db/client";
+import {
+  withPlatformScope,
+  withTenant,
+  type TenantDatabase,
+} from "@/db/client";
 import { certificates, enrolments, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
 import {
@@ -745,3 +749,121 @@ export async function possibleLineManagers(
 
 export { ROLE_VALUES };
 export type { Role };
+
+/**
+ * The platform mailbox address for a person, e.g. n.mahlangu@lms.roftbusiness.org
+ *
+ * Built from the name rather than being random, because a learner has to read
+ * it off a screen and type it into their own mail client, and because an
+ * assessor's address appears on documents a moderator reads.
+ *
+ * The domain comes from settings, so a tenant on their own domain gets
+ * addresses on it. Nothing here contacts the network — this only proposes an
+ * address; whether the platform can receive at it is a matter of DNS.
+ */
+export function proposeMailboxAddress(
+  firstName: string,
+  lastName: string,
+  domain: string,
+  taken: Set<string> = new Set(),
+): string {
+  const strip = (value: string) =>
+    value
+      .normalize("NFD")
+      // Mail addresses are ASCII in practice. Nkosi and Nkösi must not become
+      // two different mailboxes, and a local part with an accent in it is
+      // rejected by servers that never implemented SMTPUTF8.
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+  const first = strip(firstName);
+  const last = strip(lastName);
+  const base = first && last ? `${first[0]}.${last}` : first || last || "user";
+
+  let candidate = `${base}@${domain}`;
+  let suffix = 2;
+
+  // Two people called Nkosi is ordinary, and the second one still needs an
+  // address. Numbering is ugly and honest; silently reusing the first
+  // person's would deliver one learner's mail to another.
+  while (taken.has(candidate)) {
+    candidate = `${base}${suffix}@${domain}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+export class MailboxError extends PeopleError {}
+
+/**
+ * Gives somebody a mailbox on the platform, or changes the one they have.
+ *
+ * Deliberately separate from updatePerson: an address that has received mail
+ * is referred to by every message in the thread, so changing it is a decision
+ * rather than a field edit.
+ */
+export async function setMailboxAddress(
+  session: AuthenticatedSession,
+  userId: string,
+  address: string | null,
+) {
+  assertSessionCan(session, "user:invite");
+
+  const normalised = address?.trim().toLowerCase() || null;
+
+  if (normalised && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(normalised)) {
+    throw new PeopleError("That is not a valid email address.", "invalid_input");
+  }
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [person] = await tx
+      .select({ id: users.id, mailboxAddress: users.mailboxAddress })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!person) throw new PeopleError("Person not found.", "not_found");
+
+    await tx
+      .update(users)
+      .set({ mailboxAddress: normalised, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      actorRole: session.roles[0],
+      action: "user.mailbox_changed",
+      entityType: "user",
+      entityId: userId,
+      before: { mailboxAddress: person.mailboxAddress },
+      after: { mailboxAddress: normalised },
+    });
+  });
+}
+
+/** Every mailbox address in use, so a proposal cannot collide with one. */
+export async function takenMailboxAddresses(
+  session: AuthenticatedSession,
+): Promise<Set<string>> {
+  assertSessionCan(session, "user:read");
+
+  // Deliberately across every tenant: an address is a destination on the
+  // internet and two tenants cannot both own one. Only the addresses are read,
+  // never who holds them.
+  const rows = await withPlatformScope(
+    "checking a proposed mailbox address is not already in use on another tenant",
+    (tx) =>
+      tx
+        .select({ mailboxAddress: users.mailboxAddress })
+        .from(users)
+        .where(isNotNull(users.mailboxAddress)),
+  );
+
+  return new Set(
+    rows
+      .map((row) => row.mailboxAddress)
+      .filter((address): address is string => address !== null),
+  );
+}

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import {
   anonymiseAction,
   resetPasswordAction,
+  setMailboxAction,
   setRolesAction,
   setStatusAction,
   updatePersonAction,
@@ -48,6 +49,8 @@ export function PersonEditor({
   managers,
   canManageRoles,
   canAnonymise,
+  mailboxAddress,
+  proposedMailbox,
 }: {
   userId: string;
   isSelf: boolean;
@@ -59,6 +62,8 @@ export function PersonEditor({
   managers: { id: string; label: string }[];
   canManageRoles: boolean;
   canAnonymise: boolean;
+  mailboxAddress: string | null;
+  proposedMailbox: string;
 }) {
   const [detailState, detailAction, detailPending] = useActionState<
     PeopleState,
@@ -76,6 +81,10 @@ export function PersonEditor({
     PeopleState,
     FormData
   >(resetPasswordAction, {});
+  const [mailboxState, mailboxAction, mailboxPending] = useActionState<
+    PeopleState,
+    FormData
+  >(setMailboxAction, {});
   const [anonState, anonAction, anonPending] = useActionState<
     PeopleState,
     FormData
@@ -139,6 +148,53 @@ export function PersonEditor({
           )}
         </section>
       ) : null}
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+          Platform mailbox
+        </h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          The address learners and assessors write to and from. Separate from
+          the sign-in address above, so a conversation about an assessment
+          lands inside the learner&rsquo;s record rather than in somebody&rsquo;s
+          private inbox — where it is outside the audit log, outside the backup,
+          and gone when they leave.
+        </p>
+
+        <Message state={mailboxState} />
+
+        <form action={mailboxAction} className="mt-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="userId" value={userId} />
+          <div className="flex-1" style={{ minWidth: "18rem" }}>
+            <label
+              htmlFor="mailboxAddress"
+              className="block text-sm font-medium"
+            >
+              Mailbox address
+            </label>
+            <input
+              id="mailboxAddress"
+              name="mailboxAddress"
+              type="email"
+              defaultValue={mailboxAddress ?? ""}
+              placeholder={proposedMailbox}
+              className="mt-1 w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {mailboxAddress
+                ? "Changing it does not move mail already received."
+                : `Suggested: ${proposedMailbox}. Leave blank for no mailbox.`}
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={mailboxPending}
+            className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium disabled:opacity-60"
+          >
+            {mailboxPending ? "Saving…" : "Save mailbox"}
+          </button>
+        </form>
+      </section>
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">

@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { getPerson, PeopleError, possibleLineManagers } from "@/lib/people";
+import {
+  getPerson,
+  PeopleError,
+  possibleLineManagers,
+  proposeMailboxAddress,
+  takenMailboxAddresses,
+} from "@/lib/people";
+import { mailDomainFor } from "@/lib/mail";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
 
@@ -24,6 +31,17 @@ export default async function PersonPage({
 
   const managers = await possibleLineManagers(session, id);
   const { person } = detail;
+
+  // The domain a tenant's mailboxes live on. ROFT's own people sit on the
+  // mail domain itself; a client's sit on a subdomain of it, so an address
+  // plainly belongs to that client rather than to ROFT.
+  const mailDomain = mailDomainFor(tenant.slug);
+  const proposedMailbox = proposeMailboxAddress(
+    person.firstName,
+    person.lastName,
+    mailDomain,
+    await takenMailboxAddresses(session),
+  );
   const isSelf = person.id === session.userId;
 
   return (
@@ -77,6 +95,8 @@ export default async function PersonPage({
         <PersonEditor
           userId={person.id}
           isSelf={isSelf}
+          mailboxAddress={person.mailboxAddress}
+          proposedMailbox={proposedMailbox}
           status={person.status}
           surname={person.lastName}
           defaults={{

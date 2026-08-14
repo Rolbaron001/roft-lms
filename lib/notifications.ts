@@ -463,15 +463,22 @@ export async function markEmailSent(notificationId: string) {
 }
 
 /**
- * Records a failure. After several attempts the message is given up on rather
- * than retried forever — a permanently bad address would otherwise be tried
- * on every run until somebody noticed.
+ * Records a failure.
+ *
+ * A transient failure — the relay was down, the connection timed out — is
+ * retried, and given up on after several attempts so a permanently bad address
+ * is not tried on every run until somebody notices.
+ *
+ * A permanent rejection is given up on at once. SMTP distinguishes the two
+ * itself: 4xx means "not now", 5xx means "not ever". Retrying a 5xx five times
+ * achieves nothing except making the pending count meaningless.
  */
 export async function markEmailFailed(
   notificationId: string,
   error: string,
-  giveUpAfter = 5,
+  options: { retryable?: boolean; giveUpAfter?: number } = {},
 ) {
+  const { retryable = true, giveUpAfter = 5 } = options;
   await withPlatformScope("recording a failed delivery", async (tx) => {
     const [row] = await tx
       .select({ attempts: notifications.attempts })
@@ -485,7 +492,8 @@ export async function markEmailFailed(
       .set({
         attempts,
         lastError: error.slice(0, 500),
-        status: attempts >= giveUpAfter ? "failed" : "pending",
+        status:
+          !retryable || attempts >= giveUpAfter ? "failed" : "pending",
       })
       .where(eq(notifications.id, notificationId));
   });
