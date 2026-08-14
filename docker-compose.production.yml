@@ -108,6 +108,41 @@ services:
     networks:
       - internal
 
+  # Inbound mail. Its own container, so a bug in mail handling cannot take the
+  # application down and the process facing the internet on port 25 holds no
+  # more than it needs.
+  #
+  # Port 25 inbound is unaffected by Oracle's outbound block: that stops this
+  # machine connecting *out* on 25, not other servers connecting *in*.
+  mail:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    restart: unless-stopped
+    command: ["npx", "tsx", "scripts/mail-receiver.mts"]
+    ports:
+      - "25:25"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      AUTH_SECRET: ${AUTH_SECRET:?}
+      PLATFORM_HOST: ${LMS_DOMAIN:?}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage
+    volumes:
+      # Attachments are stored the same way evidence is, in the same place.
+      - evidence:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edge
+      - internal
+
   db:
     image: postgres:18-alpine
     restart: unless-stopped

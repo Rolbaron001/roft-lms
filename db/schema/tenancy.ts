@@ -488,3 +488,106 @@ export const competencies = pgTable(
     index("competencies_org_idx").on(t.organisationId),
   ],
 );
+
+/**
+ * Mail held by the platform.
+ *
+ * The point of holding it here rather than in somebody's Outlook is that an
+ * exchange about an assessment is part of the record. A learner who says they
+ * sent their evidence, an assessor who says they asked twice for it — both are
+ * answerable from the same place as the assessment itself, inside the audit
+ * log and inside the backup.
+ *
+ * Inbound and outbound sit in one table because a conversation is one thing.
+ * Splitting them would mean assembling a thread from two places every time it
+ * is displayed.
+ */
+export const mailDirection = pgEnum("mail_direction", ["inbound", "outbound"]);
+
+export const mailMessages = pgTable(
+  "mail_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** Whose mailbox this belongs to — the platform user, either end. */
+    mailboxUserId: uuid("mailbox_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    direction: mailDirection("direction").notNull(),
+
+    /**
+     * The RFC 5322 Message-ID, and the headers that thread a conversation.
+     * Kept as the sender wrote them: rewriting them breaks threading in every
+     * mail client the other party might be using.
+     */
+    messageId: text("message_id"),
+    inReplyTo: text("in_reply_to"),
+    references: text("references"),
+
+    fromAddress: text("from_address").notNull(),
+    fromName: text("from_name"),
+    toAddresses: text("to_addresses").notNull(),
+    subject: text("subject"),
+    bodyText: text("body_text"),
+
+    /**
+     * The envelope sender, which is where a bounce goes and is often not the
+     * From address. Worth keeping separately: forged From headers are ordinary
+     * and this is the address the connecting server actually claimed.
+     */
+    envelopeFrom: text("envelope_from"),
+    remoteIp: text("remote_ip"),
+
+    sizeBytes: integer("size_bytes"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("mail_messages_org_idx").on(t.organisationId),
+    index("mail_messages_mailbox_idx").on(t.mailboxUserId),
+    index("mail_messages_thread_idx").on(t.inReplyTo),
+    // A retried delivery must not create the message twice. Null message ids
+    // are left alone, which is why this is not a plain unique index.
+    uniqueIndex("mail_messages_message_id_idx").on(
+      t.mailboxUserId,
+      t.messageId,
+    ),
+  ],
+);
+
+/**
+ * What came attached.
+ *
+ * Stored the same way evidence is — hashed on arrival, held in object storage
+ * — because an attachment on a message from a learner is very often the
+ * evidence itself, and moving it into the Portfolio should be a decision
+ * rather than a re-upload.
+ */
+export const mailAttachments = pgTable(
+  "mail_attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => mailMessages.id, { onDelete: "cascade" }),
+
+    filename: text("filename").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+  },
+  (t) => [
+    index("mail_attachments_org_idx").on(t.organisationId),
+    index("mail_attachments_message_idx").on(t.messageId),
+  ],
+);
