@@ -1,4 +1,5 @@
 import { verifyByReference } from "@/lib/certificates";
+import { verifyStatement } from "@/lib/statement-of-results";
 import { currentTenant } from "@/lib/request";
 
 /**
@@ -17,7 +18,15 @@ export default async function VerifyPage({
   const { reference } = await searchParams;
   const tenant = await currentTenant();
 
-  const result = reference ? await verifyByReference(reference) : null;
+  // Certificates and Statements of Results share one reference format and one
+  // check, because whoever holds a printed reference has no reason to know
+  // which kind of document it came from. A certificate attests to what somebody
+  // achieved; a statement admits them to the EISA. Both are checked here.
+  const certificate = reference ? await verifyByReference(reference) : null;
+  const statement =
+    reference && !certificate?.found ? await verifyStatement(reference) : null;
+
+  const result = certificate?.found ? certificate : null;
 
   return (
     <main
@@ -81,7 +90,60 @@ export default async function VerifyPage({
             }}
             aria-live="polite"
           >
-            {!result.found ? (
+            {statement?.found ? (
+              statement.valid ? (
+                <>
+                  <h2
+                    className="font-semibold"
+                    style={{ color: "var(--success)" }}
+                  >
+                    Valid Statement of Results
+                  </h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    This learner has achieved every internal assessment
+                    criterion for the qualification below and may be entered for
+                    the External Integrated Summative Assessment.
+                  </p>
+                  <dl className="mt-4 space-y-2 text-sm">
+                    <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                      <dt className="text-[var(--muted)]">Learner</dt>
+                      <dd className="font-medium">{statement.learnerName}</dd>
+                    </div>
+                    <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                      <dt className="text-[var(--muted)]">Qualification</dt>
+                      <dd>{statement.qualificationTitle}</dd>
+                    </div>
+                    <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                      <dt className="text-[var(--muted)]">Issued by</dt>
+                      <dd>{statement.issuedBy}</dd>
+                    </div>
+                    <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                      <dt className="text-[var(--muted)]">Issued on</dt>
+                      <dd>{statement.issuedAt?.toLocaleDateString("en-ZA")}</dd>
+                    </div>
+                    <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                      <dt className="text-[var(--muted)]">Modules</dt>
+                      <dd>{statement.moduleCount} recorded as competent</dd>
+                    </div>
+                  </dl>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-semibold" style={{ color: "var(--danger)" }}>
+                    Statement of Results withdrawn
+                  </h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Withdrawn on{" "}
+                    {statement.revokedAt?.toLocaleDateString("en-ZA")}.{" "}
+                    {statement.revokedReason}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Do not accept this document. Contact the provider named on
+                    it if the learner believes this is a mistake.
+                  </p>
+                </>
+              )
+            ) : !result?.found ? (
               <>
                 <h2 className="font-semibold">No certificate found</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">

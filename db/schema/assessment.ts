@@ -587,3 +587,88 @@ export const workplaceLogbookEntries = pgTable(
     index("workplace_logbook_entries_org_idx").on(t.organisationId),
   ],
 );
+
+/**
+ * The Statement of Results.
+ *
+ * The document that admits a learner to the External Integrated Summative
+ * Assessment. The qualification document requires the provider to produce one
+ * "indicating the final result and the date on which the competence in each
+ * module, of each component, was achieved", and the learner presents it, with
+ * their identity document, at the assessment centre.
+ *
+ * Everything it claims is frozen here at issue rather than recomputed when the
+ * page is opened. A curriculum can be reimported and a module renamed; the
+ * statement a learner is holding must keep saying what it said on the day it
+ * was signed, or it is not evidence of anything.
+ */
+export const statementsOfResults = pgTable(
+  "statements_of_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+
+    /** Checkable by an assessment centre without signing in. */
+    verificationReference: text("verification_reference").notNull(),
+
+    /**
+     * The whole statement as issued: learner, qualification, provider, and
+     * every module with its result and the date competence was achieved.
+     */
+    statement: jsonb("statement")
+      .notNull()
+      .$type<{
+        learner: {
+          firstName: string;
+          lastName: string;
+          nationalId: string | null;
+        };
+        qualification: {
+          title: string;
+          saqaId: string | null;
+          qctoCode: string | null;
+          nqfLevel: number | null;
+          totalCredits: number | null;
+          assessmentQualityPartner: string | null;
+        };
+        provider: {
+          legalName: string;
+          accreditationNumber: string | null;
+        };
+        modules: {
+          code: string;
+          title: string;
+          component: string;
+          credits: number | null;
+          route: string;
+          result: string;
+          achievedAt: string | null;
+        }[];
+      }>(),
+
+    issuedById: uuid("issued_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    issuedAt: timestamp("issued_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedReason: text("revoked_reason"),
+  },
+  (t) => [
+    uniqueIndex("statements_of_results_reference_idx").on(
+      t.verificationReference,
+    ),
+    index("statements_of_results_org_idx").on(t.organisationId),
+    index("statements_of_results_user_idx").on(t.userId),
+  ],
+);

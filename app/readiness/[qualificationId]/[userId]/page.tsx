@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
 import { qualificationReadiness, type Component } from "@/lib/eisa";
+import { listStatementsFor } from "@/lib/statement-of-results";
 import { AppShell, Card } from "@/components/app-shell";
+import { IssueStatement } from "./issue";
 
 const COMPONENT_LABEL: Record<Component, string> = {
   knowledge: "Knowledge modules",
@@ -44,6 +46,13 @@ export default async function LearnerReadinessPage({
   // anybody else needs enrolment:read_all.
   const readiness = await qualificationReadiness(session, qualificationId, userId);
   const isSelf = readiness.learner.userId === session.userId;
+
+  const statements = await listStatementsFor(session, userId);
+  const current = statements.find(
+    (statement) =>
+      statement.qualificationId === qualificationId && !statement.revokedAt,
+  );
+  const canIssue = session.permissions.includes("certificate:issue");
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -95,6 +104,29 @@ export default async function LearnerReadinessPage({
                 ? " A Statement of Results can be issued."
                 : " Every one of them is required — there is no pass mark."}
             </p>
+
+            {canIssue && (readiness.eisaEligible || current) ? (
+              <IssueStatement
+                qualificationId={qualificationId}
+                userId={userId}
+                existing={
+                  current
+                    ? { id: current.id, reference: current.verificationReference }
+                    : null
+                }
+              />
+            ) : null}
+
+            {!canIssue && current ? (
+              <p className="mt-3 text-sm">
+                <Link
+                  href={`/statements/${current.id}`}
+                  className="underline underline-offset-2"
+                >
+                  Your Statement of Results
+                </Link>
+              </p>
+            ) : null}
           </div>
           <div className="text-right">
             <p className="text-3xl font-semibold tabular-nums">

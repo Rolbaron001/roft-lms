@@ -59,6 +59,12 @@ import {
   submitToCoach,
 } from "@/lib/workplace";
 import { uploadLogbookEvidence } from "@/lib/uploads";
+import {
+  getStatementOfResults,
+  issueStatementOfResults,
+  revokeStatementOfResults,
+  verifyStatement,
+} from "@/lib/statement-of-results";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -842,5 +848,195 @@ describe("work experience modules", () => {
     // The Statement of Results needs a date per module; for work experience it
     // is the date the assessor took receipt.
     expect(done.competenceAchievedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("the Statement of Results", () => {
+  /**
+   * A minimal qualification the learner can actually finish: one knowledge
+   * module with one criterion, so the eligible path is reachable in a test.
+   */
+  function finishable(code: string): CurriculumFileInput {
+    return {
+      title: `Finishable Qualification ${code}`,
+      qctoCode: code,
+      saqaId: `SAQA-${code}`,
+      nqfLevel: 5,
+      totalCredits: 10,
+      assessmentQualityPartner: "SERVICES SETA",
+      modules: [
+        {
+          component: "knowledge",
+          code: `${code}-KM-01`,
+          title: "The only module",
+          credits: 10,
+          topics: [
+            {
+              code: "KM0101",
+              title: "A topic",
+              elements: [
+                { kind: "knowledge_topic", code: "KT0101", description: "Teach." },
+              ],
+              criteria: [{ code: "IAC0101", description: "Achieve." }],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("refuses while anything is outstanding, and says what", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+
+    const result = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      // The learner is the one who travels to the assessment centre, so the
+      // refusal has to name what is missing rather than just decline.
+      expect(result.reasons.join(" ")).toContain("outstanding");
+      expect(result.reasons.join(" ")).toContain("IAC0101");
+    }
+  });
+
+  it("refuses while the curriculum is only half transcribed", async () => {
+    const file = finishable(`sor-${suffix()}`);
+    file.modules.push({
+      component: "practical",
+      code: `${file.qctoCode}-PM-01`,
+      title: "Not transcribed",
+      credits: 10,
+      topics: [],
+    });
+
+    const imported = await importCurriculum(admin, file);
+    const result = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reasons[0]).toContain("not fully captured");
+    }
+  });
+
+  it("issues once every criterion is achieved, carrying a date per module", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    const issued = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+
+    const statement = await getStatementOfResults(admin, issued.statementId);
+
+    // The qualification document requires the final result and the date
+    // competence was achieved, for every module of every component.
+    expect(statement.statement.modules).toHaveLength(1);
+    expect(statement.statement.modules[0].result).toBe("Competent");
+    expect(statement.statement.modules[0].achievedAt).toBeTruthy();
+
+    // And the identifiers an assessment centre checks against their own record.
+    expect(statement.statement.qualification.saqaId).toContain("SAQA-");
+    expect(statement.statement.qualification.nqfLevel).toBe(5);
+    expect(statement.statement.qualification.assessmentQualityPartner).toBe(
+      "SERVICES SETA",
+    );
+  });
+
+  it("refuses a second statement while the first stands", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    await issueStatementOfResults(admin, imported.qualificationId, learner.userId);
+
+    // Two documents making the same claim must never be in circulation.
+    await expect(
+      issueStatementOfResults(admin, imported.qualificationId, learner.userId),
+    ).rejects.toMatchObject({ code: "already_issued" });
+  });
+
+  it("can be checked by reference without signing in, and reports a withdrawal", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    const issued = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    if (!issued.ok) throw new Error("expected the statement to issue");
+
+    const checked = await verifyStatement(issued.reference);
+    expect(checked).toMatchObject({ found: true, valid: true });
+    expect(checked.learnerName).toContain("learner");
+
+    await revokeStatementOfResults(
+      admin,
+      issued.statementId,
+      "Issued against the wrong qualification.",
+    );
+
+    // Never deleted: an assessment centre may hold a copy, and the honest
+    // answer is "withdrawn, and here is why".
+    const after = await verifyStatement(issued.reference);
+    expect(after).toMatchObject({ found: true, valid: false });
+    expect(after.revokedReason).toContain("wrong qualification");
+  });
+
+  it("returns nothing for a reference that does not exist", async () => {
+    expect(await verifyStatement("ROFT-AAAAA-AAAAA-AAAAA-AAAAA")).toMatchObject({
+      found: false,
+      valid: false,
+    });
+  });
+
+  it("keeps a learner from issuing one to themselves", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    await expect(
+      issueStatementOfResults(learner, imported.qualificationId, learner.userId),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
   });
 });
