@@ -28,6 +28,9 @@ const NAV: NavItem[] = [
     permission: "qualification:manage",
   },
   { href: "/people", label: "People", permission: "user:invite" },
+  // Everyone who has been given a platform mailbox. The page itself explains
+  // it when somebody has not.
+  { href: "/mail", label: "Mail", permission: "report:own" },
   {
     href: "/readiness",
     label: "EISA readiness",
