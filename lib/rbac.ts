@@ -55,7 +55,7 @@ export const PERMISSIONS = [
 
   // Work Integrated Learning.
   //
-  // A QCTO work experience module is signed off by the learner's Workplace
+  // A work experience module is signed off by the learner's Workplace
   // Coach — somebody employed by the host employer, not by the provider — and
   // the curriculum requires it: "the supervisor must provide coaching and must
   // sign the logbook". Without a role for that person the sign-off has to be

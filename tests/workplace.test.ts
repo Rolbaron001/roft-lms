@@ -1,7 +1,7 @@
 /**
  * Work Integrated Learning, against a live database.
  *
- * The workplace sign-off is the part of a QCTO qualification the provider does
+ * The workplace sign-off is the part of an occupational qualification the provider does
  * not witness. Everything an external verifier probes about it is here: that
  * the coach is not the learner, that the order learner → coach → assessor
  * cannot be jumped, and that "supporting evidence" means a file rather than a

@@ -16,7 +16,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
- * Loading a QCTO curriculum document into the platform.
+ * Loading a curriculum document into the platform.
  *
  * A curriculum document is a fixed, published artefact — 85 pages for the HRM
  * Administrator qualification, a few hundred numbered lines, identical for
@@ -115,7 +115,7 @@ export const curriculumFileSchema = z.object({
     .default([]),
 
   /**
-   * How the provider delivers it. The QCTO publishes modules; a provider
+   * How the provider delivers it. The curriculum publishes modules; a provider
    * teaches study units, each bundling the Knowledge, Practical and Work
    * Experience modules that serve one Exit Level Outcome.
    */

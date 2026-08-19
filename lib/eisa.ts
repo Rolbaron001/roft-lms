@@ -70,7 +70,7 @@ export type TopicReadiness = {
  *
  * Knowledge and practical modules carry Internal Assessment Criteria and are
  * proved by achieving all of them. Work experience modules carry none: the
- * QCTO curriculum defines work activities, contextual knowledge and supporting
+ * curriculum defines work activities, contextual knowledge and supporting
  * evidence, and the proof is a logbook signed by the workplace coach and
  * accepted by an assessor. Counting criteria for a work experience module
  * therefore counts zero out of zero forever.
@@ -588,7 +588,7 @@ export async function qualificationReadiness(
           .reduce((sum, t) => sum + t.weight * (t.achievedCount / t.totalCount), 0);
 
         // A work experience module carries no Internal Assessment Criteria; the
-        // QCTO curriculum gives it work activities, contextual knowledge and
+        // curriculum gives it work activities, contextual knowledge and
         // supporting evidence instead, and the proof is a logbook signed by the
         // workplace coach and accepted by an assessor. Counting criteria for
         // one would count zero out of zero for ever, so it is never complete

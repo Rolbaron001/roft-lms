@@ -1,7 +1,7 @@
 /**
  * Assessment, assessor decisions and moderation, against a live database.
  *
- * These are the behaviours a QCTO verifier would probe. Each has a silent
+ * These are the behaviours an external verifier would probe. Each has a silent
  * failure mode - a portfolio that looks complete but was self-assessed, a
  * moderator who signed off their own judgement, an overridden result reported
  * as the original - so each is tested rather than assumed.

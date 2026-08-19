@@ -21,7 +21,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * Work Integrated Learning: the workplace agreement, the logbook, and the
  * coach's sign-off.
  *
- * A QCTO work experience module is not assessed by the provider watching. The
+ * A work experience module is not assessed by the provider watching. The
  * learner does real work at a real employer, and somebody there — the
  * Workplace Coach — attests that they did it. The curriculum says so plainly:
  * "the supervisor must provide coaching and must sign the logbook indicating

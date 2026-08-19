@@ -305,7 +305,7 @@ export function AssessmentManager({
               defaultValue="0.25"
               className={inputClass}
             >
-              <option value="0.25">25% — the QCTO baseline</option>
+              <option value="0.25">25% — platform default</option>
               <option value="0.5">50%</option>
               <option value="1">Every decision</option>
               <option value="0">None</option>

@@ -29,10 +29,12 @@ export const tenantStatus = pgEnum("tenant_status", [
 ]);
 
 /**
- * The seven roles from Section 3 of the design document, plus the two the QCTO
- * framework requires: Skills Development Facilitator (drives WSP/ATR reporting)
- * and External Verifier (read-only audit access for a SETA, AQP or the QCTO).
- * A user may hold several.
+ * The seven roles from Section 3 of the design document, plus two the
+ * occupational qualification workflow needs: Skills Development Facilitator
+ * (drives WSP/ATR reporting) and External Verifier (read-only audit access for
+ * a SETA, an Assessment Quality Partner or the QCTO). These two are titles
+ * this platform uses to model the workflow, not role names any authority
+ * prescribes. A user may hold several.
  */
 export const userRole = pgEnum("user_role", [
   "platform_owner",
@@ -85,7 +87,7 @@ export const organisations = pgTable(
     /**
      * Which modules this tenant sees. An internal corporate client gets the
      * training modules only; an accredited Skills Development Provider also
-     * gets the QCTO portfolio-of-evidence and statutory reporting modules.
+     * gets the portfolio-of-evidence and statutory reporting modules.
      * Read through lib/features.ts rather than touched directly.
      */
     featureFlags: jsonb("feature_flags")
@@ -93,7 +95,7 @@ export const organisations = pgTable(
       .$type<Record<string, boolean>>()
       .default({}),
 
-    // QCTO / SAQA provider identity, used by the NLRD Provider Record export.
+    // Provider identity, used by the NLRD Provider Record export.
     accreditationNumber: text("accreditation_number"),
     wardCode: text("ward_code"),
     physicalAddress: jsonb("physical_address").$type<{

@@ -117,12 +117,12 @@ export default async function QualificationPage({
         <section className="mb-8">
           <h2 className="mb-2 font-semibold">Delivery structure</h2>
           <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-            The QCTO publishes modules; a provider teaches study units. Each
+            The curriculum publishes modules; a provider teaches study units. Each
             bundles the Knowledge, Practical and Work Experience modules that
             serve one Exit Level Outcome, which is what the External Integrated
             Summative Assessment is set against. Two providers may group the
             same qualification differently and both be correct, so this is the
-            provider&rsquo;s structure rather than the QCTO&rsquo;s.
+            provider&rsquo;s structure rather than the curriculum&rsquo;s.
           </p>
 
           {unplacedModules.length > 0 ? (

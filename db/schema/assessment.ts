@@ -92,8 +92,14 @@ export const assessments = pgTable(
 
     /**
      * Proportion of this assessment's decisions routed to a moderator, as a
-     * fraction. The QCTO baseline is 0.25; an externally accredited summative
-     * assessment is set to 1.0 so every decision is moderated.
+     * fraction.
+     *
+     * 0.25 is this platform's default, not a figure any authority prescribes.
+     * Sampling rates are set by the provider's own assessment and moderation
+     * policy, and by whatever the relevant Quality Partner requires of it, so
+     * a provider should set this to match their approved policy rather than
+     * assume the default is compliant. An externally accredited summative
+     * assessment is usually set to 1.0 so every decision is moderated.
      */
     moderationSampleRate: numeric("moderation_sample_rate", {
       precision: 4,
@@ -428,7 +434,7 @@ export const certificates = pgTable(
 /**
  * The agreement that puts a learner in a workplace under a named coach.
  *
- * QCTO work experience happens at an employer, supervised by somebody the
+ * Work experience happens at an employer, supervised by somebody the
  * employer provides. The curriculum is explicit: "the supervisor must provide
  * coaching and must sign the logbook indicating that the learner has gained
  * adequate exposure". This record is what makes that person identifiable at

@@ -13,7 +13,7 @@ import {
 import { competencies, organisations, users } from "./tenancy";
 
 /**
- * The QCTO tripartite curriculum structure. Every occupational qualification
+ * The tripartite curriculum structure. Every occupational qualification
  * registered on the Occupational Qualifications Sub-Framework is delivered,
  * tracked and assessed across these three components, and they are weighted
  * differently in the readiness calculation, so the distinction is a column
@@ -55,7 +55,7 @@ export const contentType = pgEnum("content_type", [
 ]);
 
 /**
- * A qualification or programme a learner is working towards. For a QCTO
+ * A qualification or programme a learner is working towards. For an
  * occupational qualification this carries the SAQA and QCTO identifiers the
  * statutory exports need. For ordinary corporate training it is optional —
  * a course can stand alone.
@@ -158,7 +158,7 @@ export const curriculumModules = pgTable(
 /**
  * The level between a module and its assessment criteria.
  *
- * A QCTO curriculum document does not go module → criteria. Every module is
+ * A curriculum document does not go module → criteria. Every module is
  * divided first, and the division carries its own weighting: KM01 of the HRM
  * Administrator curriculum splits into four topics of 25% each. Flattening
  * that loses the weighting and, with it, any honest statement of how far
@@ -273,7 +273,7 @@ export const assessmentCriteria = pgTable(
       .references(() => curriculumModules.id, { onDelete: "cascade" }),
 
     /**
-     * Nullable because a tenant outside the QCTO system, or one that captured
+     * Nullable because a tenant outside the occupational qualification system, or one that captured
      * a qualification before topics existed, still has criteria that belong
      * directly to a module. Readiness treats those as a single implicit topic.
      */
@@ -591,12 +591,12 @@ export const exitLevelOutcomeCriteria = pgTable(
 /**
  * A Study Unit: how a provider actually delivers the curriculum.
  *
- * The QCTO publishes modules; a provider teaches study units, each bundling
+ * The curriculum publishes modules; a provider teaches study units, each bundling
  * the Knowledge, Practical and Work Experience modules that serve one Exit
  * Level Outcome, with its own workbook and summative assessment. Curiosa's
  * 121150 programme runs five of them.
  *
- * This is the provider's structure, not the QCTO's, which is why it is a
+ * This is the provider's structure, not the curriculum's, which is why it is a
  * separate table rather than a column on the module: two providers delivering
  * the same qualification may group it differently, and both are correct.
  */
@@ -710,7 +710,7 @@ export const topicElementAlignment = pgTable(
 /**
  * What a programme document is, in the provider's own design process.
  *
- * Taken from the four-step design sequence a QCTO provider actually follows —
+ * Taken from the four-step design sequence a provider actually follows —
  * align, write the handbook, write the workbooks, write the assessments — plus
  * the workplace pack and the programme-level artefacts an accreditation visit
  * asks for. A document whose kind is unknown is still worth holding, hence

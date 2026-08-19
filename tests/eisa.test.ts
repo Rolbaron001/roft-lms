@@ -676,7 +676,7 @@ describe("achieving criteria", () => {
 describe("work experience modules", () => {
   /**
    * A qualification with one knowledge module carrying criteria and one work
-   * experience module carrying none, which is the shape the QCTO curriculum
+   * experience module carrying none, which is the shape the curriculum
    * actually publishes.
    */
   function withWorkExperience(code: string): CurriculumFileInput {

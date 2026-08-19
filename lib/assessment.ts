@@ -73,7 +73,10 @@ export const assessmentInput = z.object({
   purpose: z.enum(["formative", "summative"]).default("formative"),
   passMark: z.coerce.number().int().min(0).max(100).default(70),
   maxAttempts: z.coerce.number().int().min(1).max(20).optional(),
-  /** Fraction of decisions routed to a moderator. QCTO baseline is 0.25. */
+  /**
+   * Fraction of decisions routed to a moderator. 0.25 is a platform default,
+   * not a prescribed figure: the provider's own moderation policy sets it.
+   */
   moderationSampleRate: z.coerce.number().min(0).max(1).default(0.25),
 });
 

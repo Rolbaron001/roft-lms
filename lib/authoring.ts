@@ -292,7 +292,7 @@ export async function curriculumOutline(
 
     // How the provider delivers it: study units bundling the modules that
     // serve one Exit Level Outcome. Read alongside the modules rather than
-    // instead of them, because a moderator checks both - the QCTO publishes
+    // instead of them, because a moderator checks both - the curriculum publishes
     // modules, the provider teaches study units.
     const units = await tx
       .select()
@@ -809,7 +809,7 @@ export type CoverageReport = {
   /**
    * The KT / PA / AK / WA lines of the curriculum document: what has to be
    * taught, as opposed to what has to be assessed. Empty for a curriculum
-   * captured without topics, and for tenants outside the QCTO system.
+   * captured without topics, and for tenants outside the occupational system.
    */
   topicElements: {
     id: string;

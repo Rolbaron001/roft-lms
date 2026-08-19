@@ -1,0 +1,786 @@
+{
+  "_about": [
+    "The ROFT Learning Dictionary: the settled meaning of every term used across",
+    "the platform, its documents and its learning material.",
+    "",
+    "Every entry carries a definedBy field, and that field is the point of the",
+    "whole document. It separates three things that are easy to confuse and",
+    "expensive to confuse:",
+    "",
+    "  authority  A body defines the term and we must use it as they do.",
+    "             Changing the meaning puts a submission or an accreditation at",
+    "             risk. The authority is named on the entry.",
+    "",
+    "  platform   ROFT chose the word. It is ours to change and no regulator is",
+    "             watching. Study Unit, readiness index, Workplace Coach.",
+    "",
+    "  practice   Widely used across the sector with no single owner. Useful,",
+    "             but never cite it as a requirement.",
+    "",
+    "Definitions are written in ROFT's own words rather than copied from the",
+    "source publications, so the voice is consistent and the dictionary can be",
+    "circulated freely. Where a term is defined in law or by an authority, the",
+    "authority is named so the original can be checked.",
+    "",
+    "Drawn from the SAQA NQFpedia, the DHET Dictionary of Terms and Concepts for",
+    "Post-School Education and Training, the HSRC Labour Market Intelligence",
+    "Partnership dictionary, and the platform's own usage."
+  ],
+  "version": "1.0",
+  "issued": "2026-08-19",
+  "categories": {
+    "system": "The national education and training system",
+    "qualification": "Qualifications and curriculum",
+    "delivery": "Delivering a programme",
+    "assessment": "Assessment, moderation and verification",
+    "workplace": "Work experience",
+    "records": "Records, reporting and data",
+    "platform": "The platform itself"
+  },
+  "entries": [
+    {
+      "term": "Accreditation",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "Formal recognition that a provider is fit to offer a specific qualification: that it has the staff, the material, the facilities and the quality management to deliver and assess it. Accreditation is granted for named qualifications, not for a provider in general, so being accredited for one qualification says nothing about another.",
+      "seeAlso": [
+        "Skills Development Provider"
+      ]
+    },
+    {
+      "term": "Alignment Matrix",
+      "category": "platform",
+      "definedBy": "practice",
+      "definition": "The provider's master mapping of the curriculum to its own material: for every curriculum line, which workbook teaches it, which assessment tests it, which handbook chapter covers it, and which standards or legislation it draws on. Usually maintained as a spreadsheet; the platform reads one and records what it says.",
+      "seeAlso": [
+        "Learning Material Matrix"
+      ]
+    },
+    {
+      "term": "Annual Training Report",
+      "abbreviation": "ATR",
+      "category": "records",
+      "definedBy": "authority",
+      "authority": "Skills Development Act",
+      "definition": "The yearly report an employer submits to its SETA describing the training actually delivered in the year just ended. Submitted alongside the Workplace Skills Plan, which sets out what is intended for the year ahead.",
+      "seeAlso": [
+        "Workplace Skills Plan",
+        "Skills Development Facilitator"
+      ]
+    },
+    {
+      "term": "Articulation",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The ability to move from one qualification to another, either onward to a higher level or sideways into a related field, without repeating learning already done.",
+      "seeAlso": [
+        "National Qualifications Framework",
+        "Recognition of Prior Learning"
+      ]
+    },
+    {
+      "term": "Assessment Quality Partner",
+      "abbreviation": "AQP",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The body appointed to own the external assessment for a qualification: it sets and administers that assessment and recommends certification. For the HRM Administrator qualification the Assessment Quality Partner is the Services SETA.",
+      "seeAlso": [
+        "External Integrated Summative Assessment",
+        "Development Quality Partner"
+      ]
+    },
+    {
+      "term": "Assessment Specification",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The published document describing how a qualification's external assessment is conducted: its form, duration, conditions and the focus areas it covers. Issued alongside the qualification and curriculum documents.",
+      "seeAlso": [
+        "Curriculum Document",
+        "Qualification Document"
+      ]
+    },
+    {
+      "term": "Assessor",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "The person who judges a learner's evidence against the assessment criteria and records a decision of competent or not yet competent. On this platform an assessor cannot assess their own work, and their decisions may be sampled for moderation.",
+      "seeAlso": [
+        "Moderator",
+        "Competent",
+        "Moderation"
+      ]
+    },
+    {
+      "term": "Associated Assessment Criteria",
+      "abbreviation": "AAC",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The criteria attached to an exit level outcome, describing how achievement of that outcome is judged. Distinct from internal assessment criteria, which sit inside modules and are assessed by the provider. Confusing the two is how a provider concludes it has covered an outcome because it covered the modules beneath it.",
+      "seeAlso": [
+        "Exit Level Outcome",
+        "Internal Assessment Criterion"
+      ]
+    },
+    {
+      "term": "Competent",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "The judgement that a learner has met a requirement in full. Occupational assessment is criterion-referenced rather than marked on a curve: a learner is competent or not yet competent against each criterion, and there is no partial credit.",
+      "seeAlso": [
+        "Not Yet Competent",
+        "Internal Assessment Criterion"
+      ]
+    },
+    {
+      "term": "Credit",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The measure of the size of a piece of learning. One credit represents ten notional hours, so a 120-credit qualification represents roughly 1 200 hours of a learner's effort including study, practice and assessment.",
+      "seeAlso": [
+        "Notional Hours",
+        "NQF Level"
+      ]
+    },
+    {
+      "term": "Curriculum Document",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The published document setting out exactly what a qualification contains: its modules, the topics inside each, what must be taught, and the criteria a learner is assessed against. It is the authority a provider's material is checked against, and the platform records it line by line so the two can be compared.",
+      "seeAlso": [
+        "Qualification Document",
+        "Assessment Specification",
+        "Internal Assessment Criterion"
+      ]
+    },
+    {
+      "term": "Curriculum Module",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "One named part of a qualification's curriculum, of one of three kinds: Knowledge, Practical Skill or Work Experience. Modules carry credits and codes, and are the unit a Statement of Results reports on.",
+      "seeAlso": [
+        "Knowledge Module",
+        "Practical Skill Module",
+        "Work Experience Module",
+        "Study Unit"
+      ]
+    },
+    {
+      "term": "Department of Higher Education and Training",
+      "abbreviation": "DHET",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "DHET",
+      "definition": "The national department responsible for post-school education and training, including universities, colleges, the SETAs and the skills development system.",
+      "seeAlso": [
+        "Post-School Education and Training"
+      ]
+    },
+    {
+      "term": "Development Quality Partner",
+      "abbreviation": "DQP",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The body appointed to develop a qualification and its curriculum. Deliberately a different body from the one that later assesses it, so that writing and examining a qualification are not in the same hands.",
+      "seeAlso": [
+        "Assessment Quality Partner"
+      ]
+    },
+    {
+      "term": "EISA Eligible",
+      "category": "platform",
+      "definedBy": "platform",
+      "definition": "The platform's term for a learner who has met every requirement to be entered for the external assessment: every internal assessment criterion achieved in every knowledge and practical module, and every work experience logbook accepted by an assessor. It is a yes or a no and never a percentage.",
+      "seeAlso": [
+        "Readiness Index",
+        "Statement of Results"
+      ]
+    },
+    {
+      "term": "Enrolment",
+      "category": "delivery",
+      "definedBy": "platform",
+      "definition": "The record that puts one learner on one course, optionally counting towards a qualification. An enrolment without a qualification is ordinary training; one with a qualification is what places the learner on the readiness list.",
+      "seeAlso": [
+        "Readiness Index"
+      ]
+    },
+    {
+      "term": "Evidence",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "Anything a learner produces that shows competence: submitted work, photographs, recordings, workplace documents. Evidence is expected to be valid, authentic, reliable, current and sufficient. On this platform every file is hashed as it arrives, so it can later be shown to be unaltered.",
+      "seeAlso": [
+        "Portfolio of Evidence"
+      ]
+    },
+    {
+      "term": "Exit Level Outcome",
+      "abbreviation": "ELO",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "A statement of what a qualified person can do on completing the qualification. The external assessment is set against the exit level outcomes rather than against individual modules, and each outcome carries its own associated assessment criteria.",
+      "seeAlso": [
+        "Associated Assessment Criteria",
+        "External Integrated Summative Assessment"
+      ]
+    },
+    {
+      "term": "External Integrated Summative Assessment",
+      "abbreviation": "EISA",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The final assessment for an occupational qualification, set by the Assessment Quality Partner and written at a registered assessment centre rather than at the provider. A learner is admitted to it on a Statement of Results from their provider, presented with an identity document.",
+      "seeAlso": [
+        "Statement of Results",
+        "Assessment Quality Partner",
+        "EISA Eligible"
+      ]
+    },
+    {
+      "term": "External Verifier",
+      "category": "assessment",
+      "definedBy": "platform",
+      "definition": "The platform's role for an auditor from a SETA, an Assessment Quality Partner or the QCTO. Read-only by construction: the role can inspect everything within a tenant and change nothing, so an audit cannot alter the record it is auditing.",
+      "seeAlso": [
+        "Verification"
+      ]
+    },
+    {
+      "term": "Facilitator",
+      "category": "delivery",
+      "definedBy": "practice",
+      "definition": "The person who delivers the learning: teaching, guiding practice and giving feedback. Distinct from the assessor, though one person may hold both roles for different learners.",
+      "seeAlso": [
+        "Assessor"
+      ]
+    },
+    {
+      "term": "Formative Assessment",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "Assessment during learning, meant to guide it: quizzes, workbook activities, practice tasks and feedback. It shapes what happens next rather than deciding whether the learner has finished.",
+      "seeAlso": [
+        "Summative Assessment",
+        "Workbook"
+      ]
+    },
+    {
+      "term": "Internal Assessment Criterion",
+      "abbreviation": "IAC",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "A single statement inside a curriculum module describing something a learner must demonstrate, assessed by the provider. Every internal assessment criterion in every module must be achieved before a learner can be entered for the external assessment. Work experience modules carry none: they are evidenced by a signed logbook instead.",
+      "seeAlso": [
+        "Associated Assessment Criteria",
+        "Statement of Results",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Knowledge Module",
+      "abbreviation": "KM",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The component of a curriculum covering what a learner must understand: theory, concepts, principles and the legislative framework. Divided into topics, each carrying a percentage of the module and its own topic elements and assessment criteria.",
+      "seeAlso": [
+        "Practical Skill Module",
+        "Work Experience Module",
+        "Topic Element"
+      ]
+    },
+    {
+      "term": "Learner",
+      "category": "delivery",
+      "definedBy": "practice",
+      "definition": "The person undertaking the learning. Used throughout in preference to student or candidate, except where a specific document uses another word.",
+      "seeAlso": [
+        "Enrolment"
+      ]
+    },
+    {
+      "term": "Learnership",
+      "category": "delivery",
+      "definedBy": "authority",
+      "authority": "Skills Development Act",
+      "definition": "A structured programme combining classroom learning with workplace experience, leading to a registered qualification, under a formal agreement between learner, employer and provider.",
+      "seeAlso": [
+        "Work Integrated Learning",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Learning Material Matrix",
+      "category": "platform",
+      "definedBy": "platform",
+      "definition": "The check that every line of the curriculum has material behind it. The platform asks two separate questions: is each topic element taught by some lesson, and is each assessment criterion tested by some assessment. A course can assess everything it teaches and still not teach everything the curriculum requires.",
+      "seeAlso": [
+        "Alignment Matrix",
+        "Topic Element"
+      ]
+    },
+    {
+      "term": "Level Descriptor",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The published description of what learning at each NQF level involves, across dimensions such as scope of knowledge, problem solving, ethics and accountability. Used to judge whether a qualification is pitched at the level it claims.",
+      "seeAlso": [
+        "NQF Level"
+      ]
+    },
+    {
+      "term": "Logbook",
+      "category": "workplace",
+      "definedBy": "practice",
+      "definition": "The record of what a learner did in the workplace, listing each work activity, the workplace knowledge to be covered and the supporting evidence to be collected. Completed by the learner, signed by the workplace coach, then accepted by an assessor. Nothing reaches an assessor unsigned.",
+      "seeAlso": [
+        "Statement of Work Experience",
+        "Workplace Coach",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Moderation",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "A second, independent check of assessment decisions, confirming they were fair, consistent and correctly applied. A moderator may endorse a decision, refer it back, or overturn it. On this platform a moderator can never moderate their own assessment decision, and that rule is enforced by the database rather than by the interface.",
+      "seeAlso": [
+        "Moderator",
+        "Verification"
+      ]
+    },
+    {
+      "term": "Moderator",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "The person who carries out moderation, independent of the assessor whose decisions they are checking.",
+      "seeAlso": [
+        "Moderation",
+        "Assessor"
+      ]
+    },
+    {
+      "term": "National Learners' Records Database",
+      "abbreviation": "NLRD",
+      "category": "records",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The national record of who holds which qualification. Providers submit learner, enrolment and achievement data to it, so a qualification can be verified nationally years after it was awarded.",
+      "seeAlso": [
+        "South African Qualifications Authority",
+        "Statutory Reporting"
+      ]
+    },
+    {
+      "term": "National Qualifications Framework",
+      "abbreviation": "NQF",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The ten-level framework on which all South African qualifications are registered, so that qualifications from different parts of the system can be compared and articulated. Organised into three sub-frameworks.",
+      "seeAlso": [
+        "Occupational Qualifications Sub-Framework",
+        "NQF Level",
+        "Credit"
+      ]
+    },
+    {
+      "term": "Not Yet Competent",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "The judgement that a learner has not yet met a requirement. Deliberately phrased as not yet rather than failed: occupational assessment expects reassessment after further learning.",
+      "seeAlso": [
+        "Competent"
+      ]
+    },
+    {
+      "term": "Notional Hours",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The estimated total time an average learner needs to achieve a piece of learning, counting contact time, self-study, practice and assessment. Ten notional hours make one credit.",
+      "seeAlso": [
+        "Credit"
+      ]
+    },
+    {
+      "term": "NQF Level",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "Where a qualification sits on the ten-level framework, indicating the complexity and autonomy expected rather than how long it takes. Level 4 is broadly school-leaving; the HRM Administrator qualification is Level 5.",
+      "seeAlso": [
+        "National Qualifications Framework",
+        "Level Descriptor"
+      ]
+    },
+    {
+      "term": "Occupational Qualification",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "A qualification built around an occupation rather than a subject, made up of knowledge, practical skill and work experience components, and completed by passing an external assessment.",
+      "seeAlso": [
+        "Occupational Qualifications Sub-Framework",
+        "Curriculum Module"
+      ]
+    },
+    {
+      "term": "Occupational Qualifications Sub-Framework",
+      "abbreviation": "OQSF",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The part of the National Qualifications Framework covering occupational and trade qualifications, overseen by the QCTO. The other two sub-frameworks cover general and further education, and higher education.",
+      "seeAlso": [
+        "National Qualifications Framework",
+        "Quality Council for Trades and Occupations"
+      ]
+    },
+    {
+      "term": "Organising Framework for Occupations",
+      "abbreviation": "OFO",
+      "category": "records",
+      "definedBy": "authority",
+      "authority": "DHET",
+      "definition": "The national coded list of occupations, used to describe jobs consistently in skills planning and statutory returns. An OFO code on a person's record is what lets a SETA return group them by occupation.",
+      "seeAlso": [
+        "Workplace Skills Plan",
+        "Statutory Reporting"
+      ]
+    },
+    {
+      "term": "Portfolio of Evidence",
+      "abbreviation": "PoE",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "The collected evidence of a learner's competence: submitted work, assessor decisions, moderation records, workplace logbooks and their supporting documents. Held on this platform as one body of evidence rather than several, because that is how a verifier reads it.",
+      "seeAlso": [
+        "Evidence",
+        "Statement of Work Experience"
+      ]
+    },
+    {
+      "term": "Post-School Education and Training",
+      "abbreviation": "PSET",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "DHET",
+      "definition": "The whole education and training system beyond school: universities, TVET and community colleges, the SETAs, and workplace-based learning.",
+      "seeAlso": [
+        "Department of Higher Education and Training"
+      ]
+    },
+    {
+      "term": "Practical Skill Module",
+      "abbreviation": "PM",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The component of a curriculum covering what a learner must be able to do, practised under supervision in a simulated or real setting. Divided into skills, each with required practical activities and the applied knowledge needed to perform them.",
+      "seeAlso": [
+        "Knowledge Module",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Programme Document",
+      "category": "platform",
+      "definedBy": "platform",
+      "definition": "Any document the platform holds against a qualification rather than inside a lesson: handbooks, workbooks, marking memoranda, sign-off sheets, the alignment matrix. Roughly, if a learner reads it, it is a lesson; if a moderator asks for it, it is a programme document.",
+      "seeAlso": [
+        "Alignment Matrix",
+        "Workbook"
+      ]
+    },
+    {
+      "term": "Qualification Document",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The registered record of a qualification on the National Qualifications Framework: its purpose, exit level outcomes, associated assessment criteria, rules of combination, credits and registration dates.",
+      "seeAlso": [
+        "Curriculum Document",
+        "Exit Level Outcome"
+      ]
+    },
+    {
+      "term": "Quality Council for Trades and Occupations",
+      "abbreviation": "QCTO",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The quality council responsible for occupational qualifications: their design, the accreditation of providers to offer them, and their certification. Name it only where it genuinely sets the requirement being described, never as a general label for occupational training.",
+      "seeAlso": [
+        "Occupational Qualifications Sub-Framework",
+        "Accreditation"
+      ]
+    },
+    {
+      "term": "Quality Management System",
+      "abbreviation": "QMS",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The set of policies and procedures a provider must hold and follow to be accredited, covering matters such as assessment, moderation, certification, appeals and learner support. A provider's own moderation sampling rate is set by its approved policy, not by a national figure.",
+      "seeAlso": [
+        "Accreditation",
+        "Moderation"
+      ]
+    },
+    {
+      "term": "Readiness Index",
+      "category": "platform",
+      "definedBy": "platform",
+      "definition": "The platform's progress figure: how far through a qualification a learner is, weighted across the three components. A planning aid for facilitators and nothing more. It is not a pass mark and admits nobody to anything, however close to 100 it reads.",
+      "seeAlso": [
+        "EISA Eligible"
+      ]
+    },
+    {
+      "term": "Recognition of Prior Learning",
+      "abbreviation": "RPL",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "Assessing what somebody already knows and can do, however they learned it, so it can count towards a qualification or towards admission to one. Used for access, for exemption from modules, and for awarding credits.",
+      "seeAlso": [
+        "Credit",
+        "Competent"
+      ]
+    },
+    {
+      "term": "Sector Education and Training Authority",
+      "abbreviation": "SETA",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "Skills Development Act",
+      "definition": "A body responsible for skills development within an economic sector: it plans sector skills, disburses levy funds, and may act as Assessment Quality Partner for qualifications in its field.",
+      "seeAlso": [
+        "Assessment Quality Partner",
+        "Workplace Skills Plan"
+      ]
+    },
+    {
+      "term": "Skills Development Facilitator",
+      "abbreviation": "SDF",
+      "category": "records",
+      "definedBy": "authority",
+      "authority": "Skills Development Act",
+      "definition": "The person in an employer responsible for skills planning and for the statutory returns to the SETA: the Workplace Skills Plan and the Annual Training Report.",
+      "seeAlso": [
+        "Workplace Skills Plan",
+        "Annual Training Report"
+      ]
+    },
+    {
+      "term": "Skills Development Provider",
+      "abbreviation": "SDP",
+      "category": "delivery",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "An organisation accredited to deliver and internally assess a named occupational qualification. It carries out everything up to the external assessment, and issues the Statement of Results that admits a learner to it.",
+      "seeAlso": [
+        "Accreditation",
+        "Statement of Results"
+      ]
+    },
+    {
+      "term": "South African Qualifications Authority",
+      "abbreviation": "SAQA",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "SAQA",
+      "definition": "The body that oversees the National Qualifications Framework, registers qualifications on it, and maintains the national record of learner achievement.",
+      "seeAlso": [
+        "National Qualifications Framework",
+        "National Learners' Records Database"
+      ]
+    },
+    {
+      "term": "Statement of Results",
+      "abbreviation": "SoR",
+      "category": "assessment",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The document a provider issues confirming that a learner has achieved every internal assessment criterion in every module, stating the result and the date competence was achieved for each. The learner presents it, with an identity document, to be admitted to the external assessment.",
+      "seeAlso": [
+        "EISA Eligible",
+        "External Integrated Summative Assessment"
+      ]
+    },
+    {
+      "term": "Statement of Work Experience",
+      "category": "workplace",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The record for a work experience module, listing each work activity and each item of supporting evidence with the date completed, signed by the workplace supervisor. It is the evidence that stands in place of assessment criteria for that module.",
+      "seeAlso": [
+        "Work Experience Module",
+        "Logbook",
+        "Workplace Coach"
+      ]
+    },
+    {
+      "term": "Statutory Reporting",
+      "category": "records",
+      "definedBy": "platform",
+      "definition": "The platform's term for the returns a provider or employer must submit: the SAQA National Learners' Records Database records, and the Workplace Skills Plan and Annual Training Report to a SETA.",
+      "seeAlso": [
+        "National Learners' Records Database",
+        "Workplace Skills Plan"
+      ]
+    },
+    {
+      "term": "Study Unit",
+      "abbreviation": "SU",
+      "category": "delivery",
+      "definedBy": "platform",
+      "definition": "How a provider groups the curriculum for teaching: a bundle of the knowledge, practical and work experience modules that together serve one exit level outcome. The curriculum publishes modules; a provider teaches study units. Two providers may group the same qualification differently and both be correct.",
+      "seeAlso": [
+        "Curriculum Module",
+        "Exit Level Outcome"
+      ]
+    },
+    {
+      "term": "Summative Assessment",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "Assessment that decides whether a learner has met a requirement, rather than guiding further learning. Internal summative assessment is set by the provider at the end of a module or study unit; the final summative assessment is external.",
+      "seeAlso": [
+        "Formative Assessment",
+        "External Integrated Summative Assessment"
+      ]
+    },
+    {
+      "term": "Technical and Vocational Education and Training",
+      "abbreviation": "TVET",
+      "category": "system",
+      "definedBy": "authority",
+      "authority": "DHET",
+      "definition": "Education and training oriented towards a trade or occupation, delivered mainly through the public TVET college system.",
+      "seeAlso": [
+        "Post-School Education and Training"
+      ]
+    },
+    {
+      "term": "Tenant",
+      "category": "platform",
+      "definedBy": "platform",
+      "definition": "One client organisation on the platform, with its own people, courses, records and branding. Tenants cannot see each other's data, and that separation is enforced by the database rather than by the application.",
+      "seeAlso": []
+    },
+    {
+      "term": "Topic",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "A division of a curriculum module, carrying its own percentage of that module in a knowledge module. Topics hold the topic elements to be taught and the criteria to be assessed.",
+      "seeAlso": [
+        "Topic Element",
+        "Curriculum Module"
+      ]
+    },
+    {
+      "term": "Topic Element",
+      "category": "qualification",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "One line of what must actually be taught or done, inside a topic. Knowledge modules list topic elements; practical modules list practical activities and applied knowledge; work experience modules list work activities, contextual knowledge and supporting evidence. Together they are the specification learning material is written against.",
+      "seeAlso": [
+        "Topic",
+        "Learning Material Matrix"
+      ]
+    },
+    {
+      "term": "Verification",
+      "category": "assessment",
+      "definedBy": "practice",
+      "definition": "An external check, by a SETA, an Assessment Quality Partner or the QCTO, that a provider's assessment and moderation were sound. It examines the provider's system and records rather than reassessing learners.",
+      "seeAlso": [
+        "Moderation",
+        "External Verifier"
+      ]
+    },
+    {
+      "term": "Work Experience Module",
+      "abbreviation": "WM",
+      "category": "workplace",
+      "definedBy": "authority",
+      "authority": "QCTO",
+      "definition": "The component of a curriculum carried out at a real employer, doing real work under a workplace supervisor. It lists work activities, the contextual workplace knowledge to be tested and the supporting evidence to be collected. It carries no internal assessment criteria: the evidence is a signed logbook.",
+      "seeAlso": [
+        "Workplace Coach",
+        "Logbook",
+        "Statement of Work Experience"
+      ]
+    },
+    {
+      "term": "Work Integrated Learning",
+      "abbreviation": "WIL",
+      "category": "workplace",
+      "definedBy": "practice",
+      "definition": "Learning that takes place through real work, structured and supervised so that it counts towards a qualification.",
+      "seeAlso": [
+        "Work Experience Module",
+        "Learnership"
+      ]
+    },
+    {
+      "term": "Workbook",
+      "category": "delivery",
+      "definedBy": "practice",
+      "definition": "The document a learner works through for a study unit, containing the activities that practise and diagnose against the assessment criteria. Formative rather than summative: it prepares for assessment rather than deciding it.",
+      "seeAlso": [
+        "Formative Assessment",
+        "Programme Document"
+      ]
+    },
+    {
+      "term": "Workplace Agreement",
+      "category": "workplace",
+      "definedBy": "practice",
+      "definition": "The record placing a learner at a named employer under a named coach for the work experience component, with dates. It is what makes the person who signs the logbook identifiable at audit.",
+      "seeAlso": [
+        "Workplace Coach",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Workplace Coach",
+      "category": "workplace",
+      "definedBy": "platform",
+      "definition": "The platform's term for the learner's supervisor at the host employer, who guides the work experience and signs the logbook attesting that the learner did it. Employed by the employer, not by the provider, which is why the role can see only the learners named on its own agreements. Some documents call the same person a workplace mentor or supervisor.",
+      "seeAlso": [
+        "Workplace Agreement",
+        "Logbook",
+        "Work Experience Module"
+      ]
+    },
+    {
+      "term": "Workplace Skills Plan",
+      "abbreviation": "WSP",
+      "category": "records",
+      "definedBy": "authority",
+      "authority": "Skills Development Act",
+      "definition": "The yearly plan an employer submits to its SETA setting out the training it intends to deliver, grouped by occupation. Submitted with the Annual Training Report covering the year just ended.",
+      "seeAlso": [
+        "Annual Training Report",
+        "Organising Framework for Occupations"
+      ]
+    }
+  ]
+}

@@ -18,7 +18,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 /**
  * The programme document library.
  *
- * A QCTO provider's learning material is written in Word and Excel and always
+ * A provider's learning material is written in Word and Excel and always
  * will be: handbooks, workbooks, marking memoranda and workplace sign-off
  * sheets are print artefacts that a facilitator annotates and a moderator
  * marks up by hand. Trying to author them in a web form would produce worse
@@ -67,7 +67,7 @@ export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
   qualification_document: "SAQA qualification document",
-  curriculum_document: "QCTO curriculum document",
+  curriculum_document: "Curriculum document",
   assessment_specification: "Assessment specification",
   alignment_matrix: "Curriculum alignment matrix",
   learner_handbook: "Learner handbook",

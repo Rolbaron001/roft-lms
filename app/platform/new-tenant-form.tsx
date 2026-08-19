@@ -210,7 +210,7 @@ export function NewTenantForm() {
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" name="qcto_portfolio" className="mt-1" />
             <span>
-              QCTO portfolio of evidence
+              Portfolio of evidence
               <span className="block text-xs text-[var(--muted)]">
                 For an accredited Skills Development Provider. An internal
                 training department does not need it.

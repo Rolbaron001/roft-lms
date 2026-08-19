@@ -54,6 +54,9 @@ const NAV: NavItem[] = [
     anyPermission: ["report:team", "report:tenant"],
   },
   { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+  // A reference, not a record. Every signed-in person can read it, learners
+  // included — it exists so that everybody uses the same words.
+  { href: "/dictionary", label: "Dictionary", permission: "report:own" },
   { href: "/settings", label: "Appearance", permission: "tenant:manage_branding" },
   // ROFT's own console, for managing every other client.
   { href: "/platform", label: "Clients", permission: "platform:manage_tenants" },
