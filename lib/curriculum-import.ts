@@ -206,7 +206,10 @@ export function inspectCurriculum(input: CurriculumFileInput): string[] {
     }
 
     for (const topic of entry.topics) {
-      if (topic.criteria.length === 0) {
+      // Work experience modules carry no criteria by design: they are proved
+      // by a signed logbook, not by assessment. Warning about it here would
+      // train the reader to ignore the warnings that matter.
+      if (topic.criteria.length === 0 && entry.component !== "workplace") {
         warnings.push(
           `${entry.code} / ${topic.code} has no internal assessment criteria, so it can never be achieved.`,
         );

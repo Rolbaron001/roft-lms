@@ -1,27 +1,21 @@
 {
   "_source": [
-    "Transcribed from the QCTO documents for SAQA qualification 121150,",
+    "Transcribed from the published documents for SAQA qualification 121150,",
     "Higher Occupational Certificate: Human Resource Management Administrator:",
     "  121150 Qualification Doc.pdf   (SAQA registered qualification record)",
-    "  121150 Curriculum Doc.pdf      (QCTO curriculum, 85 pages)",
+    "  121150 Curriculum Doc.pdf      (curriculum document, 85 pages)",
     "  121150 Assessment Doc.pdf      (assessment specification)",
     "",
-    "PARTIAL. Every module is here with its official code, title and credits.",
-    "Only KM01 has been transcribed down to topics, topic elements and internal",
-    "assessment criteria — it is a worked example of the shape, not a complete",
-    "curriculum. Readiness reports curriculumComplete: false and refuses to call",
-    "anybody EISA eligible until the remaining twelve modules are transcribed.",
+    "COMPLETE. All thirteen modules are transcribed to topics, topic elements",
+    "and, for the knowledge and practical modules, internal assessment criteria.",
+    "Work experience modules carry no criteria by design: they are evidenced by",
+    "a logbook signed by the workplace coach and accepted by an assessor.",
     "",
-    "Note on WE0102: the curriculum document codes all five of its work",
-    "activities WA0201. Transcribed as WA0201-WA0205 so each can be signed off",
-    "separately; the duplication appears to be an error in the source.",
-    "",
-    "Note on KM01's credits: the curriculum document's module list says 4 and its",
-    "detail heading says 12. The qualification record says 4, and 4 is what makes",
-    "the Knowledge component add up to its stated 42. Taken as 4; the heading",
-    "appears to be an error in the source document."
+    "Where the source document is internally inconsistent, the evident intent",
+    "has been followed and the discrepancy recorded here rather than silently",
+    "corrected. A moderator comparing this against the document will find these",
+    "differences, and each one is deliberate."
   ],
-
   "title": "Higher Occupational Certificate: Human Resource Management Administrator",
   "saqaId": "121150",
   "qctoCode": "441601-001-00",
@@ -29,14 +23,16 @@
   "nqfLevel": 5,
   "totalCredits": 120,
   "assessmentQualityPartner": "SERVICES SETA",
-
   "_componentWeights": [
     "The curriculum document states these percentages directly, under 'Summary",
     "and Distribution of Credits'. They are not the credit split — credits give",
     "35/35/30 — and the document is what a moderator checks against."
   ],
-  "componentWeights": { "knowledge": 38, "practical": 35, "workplace": 27 },
-
+  "componentWeights": {
+    "knowledge": 38,
+    "practical": 35,
+    "workplace": 27
+  },
   "_exitLevelOutcomes": [
     "From the SAQA qualification document: the four Exit Level Outcomes and",
     "their Associated Assessment Criteria. The EISA is set against these; the",
@@ -95,7 +91,6 @@
       ]
     }
   ],
-
   "_studyUnits": [
     "The provider's delivery structure, from STEP 1 - CA - 121150 - KM PM ELO",
     "Alignment. Each study unit bundles the Knowledge, Practical and Work",
@@ -107,38 +102,55 @@
       "code": "SU1",
       "title": "Introduction to HRM",
       "credits": 4,
-      "modules": ["441601-001-00-KM-01"]
+      "modules": [
+        "441601-001-00-KM-01"
+      ]
     },
     {
       "code": "SU2",
       "title": "Data Management",
       "exitLevelOutcome": "1",
       "credits": 32,
-      "modules": ["441601-001-00-KM-02", "441601-001-00-PM-01", "441601-001-00-WM-01"]
+      "modules": [
+        "441601-001-00-KM-02",
+        "441601-001-00-PM-01",
+        "441601-001-00-WM-01"
+      ]
     },
     {
       "code": "SU3",
       "title": "HRM Administration",
       "exitLevelOutcome": "2",
       "credits": 40,
-      "modules": ["441601-001-00-KM-03", "441601-001-00-PM-02", "441601-001-00-WM-02"]
+      "modules": [
+        "441601-001-00-KM-03",
+        "441601-001-00-PM-02",
+        "441601-001-00-WM-02"
+      ]
     },
     {
       "code": "SU4",
       "title": "Communication in HRM",
       "exitLevelOutcome": "3",
       "credits": 22,
-      "modules": ["441601-001-00-KM-04", "441601-001-00-PM-03", "441601-001-00-WM-03"]
+      "modules": [
+        "441601-001-00-KM-04",
+        "441601-001-00-PM-03",
+        "441601-001-00-WM-03"
+      ]
     },
     {
       "code": "SU5",
       "title": "Record Keeping",
       "exitLevelOutcome": "4",
       "credits": 22,
-      "modules": ["441601-001-00-KM-05", "441601-001-00-PM-04", "441601-001-00-WM-04"]
+      "modules": [
+        "441601-001-00-KM-05",
+        "441601-001-00-PM-04",
+        "441601-001-00-WM-04"
+      ]
     }
   ],
-
   "modules": [
     {
       "component": "knowledge",
@@ -153,19 +165,58 @@
           "title": "Introduction to Organisational Management",
           "weightPercent": 25,
           "elements": [
-            { "kind": "knowledge_topic", "code": "KT0101", "description": "Definition of an organisation and the generic organisational value chain." },
-            { "kind": "knowledge_topic", "code": "KT0102", "description": "Different types of organisations and their purpose." },
-            { "kind": "knowledge_topic", "code": "KT0103", "description": "The concept of staff, line, and professional work in organisations." },
-            { "kind": "knowledge_topic", "code": "KT0104", "description": "Definition of management and the functions and activities of management." },
-            { "kind": "knowledge_topic", "code": "KT0105", "description": "Introduction to the different levels of management in organisations (Strategic, Functional, Tactical and Operational)." },
-            { "kind": "knowledge_topic", "code": "KT0106", "description": "Introduction to an ecosystemic approach to organisational sustainability." }
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0101",
+              "description": "Definition of an organisation and the generic organisational value chain."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0102",
+              "description": "Different types of organisations and their purpose."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0103",
+              "description": "The concept of staff, line, and professional work in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0104",
+              "description": "Definition of management and the functions and activities of management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0105",
+              "description": "Introduction to the different levels of management in organisations (Strategic, Functional, Tactical and Operational)."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0106",
+              "description": "Introduction to an ecosystemic approach to organisational sustainability."
+            }
           ],
           "criteria": [
-            { "code": "IAC0101", "description": "Define an organisation and explain the generic organisational value chain." },
-            { "code": "IAC0102", "description": "Identify different types of organisations and explain their purpose." },
-            { "code": "IAC0103", "description": "Define management and discuss the functions and activities of management." },
-            { "code": "IAC0104", "description": "Differentiate the different levels of management in organisations (Strategic, Functional, Tactical and Operational)." },
-            { "code": "IAC0105", "description": "Explain the ecosystemic approach to organisational sustainability." }
+            {
+              "code": "IAC0101",
+              "description": "Define an organisation and explain the generic organisational value chain."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Identify different types of organisations and explain their purpose."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Define management and discuss the functions and activities of management."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Differentiate the different levels of management in organisations (Strategic, Functional, Tactical and Operational)."
+            },
+            {
+              "code": "IAC0105",
+              "description": "Explain the ecosystemic approach to organisational sustainability."
+            }
           ]
         },
         {
@@ -173,16 +224,44 @@
           "title": "Introduction to HRM",
           "weightPercent": 25,
           "elements": [
-            { "kind": "knowledge_topic", "code": "KT0201", "description": "Brief overview of the origin, history, and evolution of HRM." },
-            { "kind": "knowledge_topic", "code": "KT0202", "description": "The typical employment life cycle and the associated HRM value chain." },
-            { "kind": "knowledge_topic", "code": "KT0203", "description": "Introduction to the legislative framework that governs and guides the work in HRM." },
-            { "kind": "knowledge_topic", "code": "KT0204", "description": "The importance of data and data management within the HRM function." }
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0201",
+              "description": "Brief overview of the origin, history, and evolution of HRM."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0202",
+              "description": "The typical employment life cycle and the associated HRM value chain."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0203",
+              "description": "Introduction to the legislative framework that governs and guides the work in HRM."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0204",
+              "description": "The importance of data and data management within the HRM function."
+            }
           ],
           "criteria": [
-            { "code": "IAC0201", "description": "Summarise the origin, history, and evolution of HRM." },
-            { "code": "IAC0202", "description": "Explain the typical employment life cycle and the associated HRM value chain." },
-            { "code": "IAC0203", "description": "Discuss the legislative framework that governs and guides the work in HRM." },
-            { "code": "IAC0204", "description": "Define data and explain data management within the HRM function." }
+            {
+              "code": "IAC0201",
+              "description": "Summarise the origin, history, and evolution of HRM."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Explain the typical employment life cycle and the associated HRM value chain."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Discuss the legislative framework that governs and guides the work in HRM."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Define data and explain data management within the HRM function."
+            }
           ]
         },
         {
@@ -190,16 +269,44 @@
           "title": "The use of information in organisations",
           "weightPercent": 25,
           "elements": [
-            { "kind": "knowledge_topic", "code": "KT0301", "description": "Definitions and terms associated with data, data collection and data processing." },
-            { "kind": "knowledge_topic", "code": "KT0302", "description": "Importance of data and data collection within organisations." },
-            { "kind": "knowledge_topic", "code": "KT0303", "description": "The evolving concept of the information economy and how it impacts data management." },
-            { "kind": "knowledge_topic", "code": "KT0304", "description": "Legislative and ethical issues relating to data management." }
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0301",
+              "description": "Definitions and terms associated with data, data collection and data processing."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0302",
+              "description": "Importance of data and data collection within organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0303",
+              "description": "The evolving concept of the information economy and how it impacts data management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0304",
+              "description": "Legislative and ethical issues relating to data management."
+            }
           ],
           "criteria": [
-            { "code": "IAC0301", "description": "Define terms associated with data, data collection and data processing." },
-            { "code": "IAC0302", "description": "Discuss the importance of data and data collection within organisations." },
-            { "code": "IAC0303", "description": "Explain the evolving concept of the information economy and how it impacts data management." },
-            { "code": "IAC0304", "description": "List legislative and indicate ethical issues relating to data management." }
+            {
+              "code": "IAC0301",
+              "description": "Define terms associated with data, data collection and data processing."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Discuss the importance of data and data collection within organisations."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Explain the evolving concept of the information economy and how it impacts data management."
+            },
+            {
+              "code": "IAC0304",
+              "description": "List legislative and indicate ethical issues relating to data management."
+            }
           ]
         },
         {
@@ -207,338 +314,3989 @@
           "title": "Administration and the administrative role in HRM",
           "weightPercent": 25,
           "elements": [
-            { "kind": "knowledge_topic", "code": "KT0401", "description": "Definitions, terms and concepts associated with administration." },
-            { "kind": "knowledge_topic", "code": "KT0402", "description": "The difference between clerical and administrative work." },
-            { "kind": "knowledge_topic", "code": "KT0403", "description": "The functions and activities of an office administrator." },
-            { "kind": "knowledge_topic", "code": "KT0404", "description": "The role and importance of good administration within the HRM function." },
-            { "kind": "knowledge_topic", "code": "KT0405", "description": "Key abilities, attributes and professional standards that underpin the work of a HRM administrator." }
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0401",
+              "description": "Definitions, terms and concepts associated with administration."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0402",
+              "description": "The difference between clerical and administrative work."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0403",
+              "description": "The functions and activities of an office administrator."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0404",
+              "description": "The role and importance of good administration within the HRM function."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0405",
+              "description": "Key abilities, attributes and professional standards that underpin the work of a HRM administrator."
+            }
           ],
           "criteria": [
-            { "code": "IAC0401", "description": "Define terms and concepts associated with administration." },
-            { "code": "IAC0402", "description": "Differentiate between clerical and administrative work." },
-            { "code": "IAC0403", "description": "List the functions and activities of an office administrator." },
-            { "code": "IAC0404", "description": "Discuss the role and importance of good administration within the HRM function." },
-            { "code": "IAC0405", "description": "Discuss the essential abilities, attributes and professional standards that underpin the work of a HRM administrator." }
+            {
+              "code": "IAC0401",
+              "description": "Define terms and concepts associated with administration."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Differentiate between clerical and administrative work."
+            },
+            {
+              "code": "IAC0403",
+              "description": "List the functions and activities of an office administrator."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Discuss the role and importance of good administration within the HRM function."
+            },
+            {
+              "code": "IAC0405",
+              "description": "Discuss the essential abilities, attributes and professional standards that underpin the work of a HRM administrator."
+            }
           ]
         }
       ]
     },
-
-    { "component": "knowledge", "code": "441601-001-00-KM-02", "title": "Data Management and Interpretation", "credits": 12, "nqfLevel": 5, "topics": [] },
-    { "component": "knowledge", "code": "441601-001-00-KM-03", "title": "Administration of Staff Procurement", "credits": 16, "nqfLevel": 5, "topics": [] },
-    { "component": "knowledge", "code": "441601-001-00-KM-04", "title": "Professional Administration for HRM Service Delivery", "credits": 6, "nqfLevel": 5, "topics": [] },
-    { "component": "knowledge", "code": "441601-001-00-KM-05", "title": "HRM Record Keeping", "credits": 4, "nqfLevel": 5, "topics": [] },
-
-    { "component": "practical", "code": "441601-001-00-PM-01", "title": "Collect and Process HRM Data", "credits": 12, "nqfLevel": 5, "topics": [] },
-    { "component": "practical", "code": "441601-001-00-PM-02", "title": "Coordinate and Provide Administrative Services for a Full Range of HRM Processes", "credits": 12, "nqfLevel": 5, "topics": [] },
-    { "component": "practical", "code": "441601-001-00-PM-03", "title": "Coordinate HRM Communication to Enhance Employment Relations", "credits": 8, "nqfLevel": 5, "topics": [] },
-    { "component": "practical", "code": "441601-001-00-PM-04", "title": "Compile, Maintain and ensure the Safeguarding of all HRM Records", "credits": 10, "nqfLevel": 5, "topics": [] },
-
     {
-          "component": "workplace",
-          "code": "441601-001-00-WM-01",
-          "title": "HRM Data Collection and Data Management Processes",
-          "credits": 8,
-          "nqfLevel": 5,
-          "purpose": "To apply HRM data collection and management skills in a real workplace, guided by a workplace coach who signs off the logbook.",
-          "topics": [
-                {
-                      "code": "WE0101",
-                      "title": "Use appropriate information technology to collect required HRM data",
-                      "elements": [
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0101",
-                                  "description": "Receive coaching, training and orientation on the operation and use of organisation specific HRM information systems."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0102",
-                                  "description": "Execute a range of organisation specific tasks relating to the collection of HRM data using the databases or hard copy files available in the organisation."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0103",
-                                  "description": "Access and extract data from external sources where appropriate."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK01",
-                                  "description": "Site specific policies."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK02",
-                                  "description": "Site specific procedures and SOPs."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK03",
-                                  "description": "Regulatory requirements."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK04",
-                                  "description": "Professional guidelines."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE01",
-                                  "description": "Performance reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE02",
-                                  "description": "Managers observation reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE03",
-                                  "description": "Minutes of meetings."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE04",
-                                  "description": "Peer and customer feedback."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE05",
-                                  "description": "Signed off logbook."
-                            }
-                      ],
-                      "criteria": []
-                },
-                {
-                      "code": "WE0102",
-                      "title": "Process data and produce accurate reports (regular reports and in response to ad hoc requests)",
-                      "elements": [
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0201",
-                                  "description": "Verify the accuracy and completeness of the data being processed."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0202",
-                                  "description": "Enter data into the appropriate HRM systems or databases."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0203",
-                                  "description": "Maintain the security and confidentiality of the data being processed."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0204",
-                                  "description": "Perform quality control checks to identify and correct errors in the processed data."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0205",
-                                  "description": "Generate reports and analyses of the processed data to inform HRM decision-making."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK01",
-                                  "description": "Site specific policies."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK02",
-                                  "description": "Site specific procedures and SOPs."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK03",
-                                  "description": "Regulatory requirements."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK04",
-                                  "description": "Professional guidelines."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE01",
-                                  "description": "Performance reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE02",
-                                  "description": "Managers observation reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE03",
-                                  "description": "Minutes of meetings."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE04",
-                                  "description": "Peer and customer feedback."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE05",
-                                  "description": "Signed off logbook."
-                            }
-                      ],
-                      "criteria": []
-                },
-                {
-                      "code": "WE0103",
-                      "title": "Prepare and present reports at meetings and to stakeholders when required",
-                      "elements": [
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0301",
-                                  "description": "Identify the target audience and their information needs relating to the specific report."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0302",
-                                  "description": "Select the appropriate format, content and visual aids to effectively communicate the information."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0303",
-                                  "description": "Organise the report in a clear, logical and easy to understand manner."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0304",
-                                  "description": "Provide a summary of the main findings and recommendations."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0305",
-                                  "description": "Answer any questions or provide further clarification as needed to ensure understanding and actionability of the report."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0306",
-                                  "description": "Follow up to check that there was correct understanding of the communication."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK01",
-                                  "description": "Site specific policies."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK02",
-                                  "description": "Site specific procedures and SOPs."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK03",
-                                  "description": "Regulatory requirements."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK04",
-                                  "description": "Professional guidelines."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE01",
-                                  "description": "Performance reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE02",
-                                  "description": "Managers observation reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE03",
-                                  "description": "Minutes of meetings."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE04",
-                                  "description": "Peer and customer feedback."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE05",
-                                  "description": "Signed off logbook."
-                            }
-                      ],
-                      "criteria": []
-                },
-                {
-                      "code": "WE0104",
-                      "title": "Maintain appropriate databases of information and extract reports in response to specific authorised requests",
-                      "elements": [
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0401",
-                                  "description": "Access the HRM databases according to laid down procedures."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0402",
-                                  "description": "Update information of employees."
-                            },
-                            {
-                                  "kind": "work_activity",
-                                  "code": "WA0403",
-                                  "description": "Extract data to meet specific information requests."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK01",
-                                  "description": "Site specific policies."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK02",
-                                  "description": "Site specific procedures and SOPs."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK03",
-                                  "description": "Regulatory requirements."
-                            },
-                            {
-                                  "kind": "contextual_knowledge",
-                                  "code": "WK04",
-                                  "description": "Professional guidelines."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE01",
-                                  "description": "Performance reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE02",
-                                  "description": "Managers observation reports."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE03",
-                                  "description": "Minutes of meetings."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE04",
-                                  "description": "Peer and customer feedback."
-                            },
-                            {
-                                  "kind": "supporting_evidence",
-                                  "code": "SE05",
-                                  "description": "Signed off logbook."
-                            }
-                      ],
-                      "criteria": []
-                }
+      "component": "knowledge",
+      "code": "441601-001-00-KM-02",
+      "title": "Data Management and Interpretation",
+      "credits": 12,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "KM0201",
+          "title": "Definition of data and data management",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0101",
+              "description": "Definitions of terms and concepts associated with data and data management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0102",
+              "description": "The data management process."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0103",
+              "description": "General data management governance."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Define terms and concepts associated with data and data management."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Explain the data management process."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Discuss the general data management governance."
+            }
           ]
+        },
+        {
+          "code": "KM0202",
+          "title": "Sources and collection processes for HR data",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0201",
+              "description": "Sources of data collection for HR processes."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0202",
+              "description": "Principles of HR data collection (validity)."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0203",
+              "description": "Collecting HRM data utilising a variety of methods."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0204",
+              "description": "Storing and managing the collected data."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Identify sources of data collection for HR processes."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Discuss principles of HR data collection (validity)."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Explain various methods of collecting HRM data."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Discuss the storing and managing of collected data."
+            }
+          ]
+        },
+        {
+          "code": "KM0203",
+          "title": "Basic analysis and interpretation of data",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0301",
+              "description": "Prepare collected data for analysis."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0302",
+              "description": "Analyse the data using various methods (table, graph, basic statistics and similar)."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0303",
+              "description": "Interpret the data, draw conclusions, and make recommendations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0304",
+              "description": "Present the data (visual presentations and written reports)."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0301",
+              "description": "Explain data preparation."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Explain data analysis methods and techniques (table, graph, basic statistics and similar)."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Discuss how data conclusions and interpretations are drawn and recommendations are made."
+            },
+            {
+              "code": "IAC0304",
+              "description": "Discuss the forms of final data presentation (visual presentations and written reports)."
+            }
+          ]
+        },
+        {
+          "code": "KM0204",
+          "title": "HR information systems",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0401",
+              "description": "Definition of an information system."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0402",
+              "description": "Types of HR information systems."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0403",
+              "description": "Introduction to the operating principles of HR information systems."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0404",
+              "description": "How HR information systems are used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0405",
+              "description": "Impact and utilisation of HR information systems on stakeholders."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0401",
+              "description": "Define an information system."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Identify the types of HR information systems."
+            },
+            {
+              "code": "IAC0403",
+              "description": "Discuss the operating principles of HR information systems."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Explain how HR information systems are used in organisations."
+            },
+            {
+              "code": "IAC0405",
+              "description": "Discuss the impact and utilisation of HR information systems on stakeholders."
+            }
+          ]
+        },
+        {
+          "code": "KM0205",
+          "title": "HR metrics utilisation",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0501",
+              "description": "Introduction to HR metrics."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0502",
+              "description": "Introduction to people analytics."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0503",
+              "description": "The use of the HR information systems to collect, store, retrieve and analyse HR data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0504",
+              "description": "Introduction to HR metrics within organisations (planning, review and decision making)."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0505",
+              "description": "Introduction to the integration of business metrics and HR metrics in organisations."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0501",
+              "description": "Explain the term HR metrics."
+            },
+            {
+              "code": "IAC0502",
+              "description": "Define the term people analytics."
+            },
+            {
+              "code": "IAC0503",
+              "description": "Explain the use of the HR information systems to collect, store, retrieve and analyse HR data."
+            },
+            {
+              "code": "IAC0504",
+              "description": "Explain the use of HR metrics within organisations (planning, review and decision making)."
+            },
+            {
+              "code": "IAC0505",
+              "description": "Discuss the integration of business metrics and HR metrics in organisations."
+            }
+          ]
+        },
+        {
+          "code": "KM0206",
+          "title": "Ethical information management",
+          "weightPercent": 15,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0601",
+              "description": "Definition of ethics and the importance of ethical conduct."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0602",
+              "description": "Legislative framework, regulations, and codes of conduct in the workplace regarding information management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0603",
+              "description": "Elements of ethical information management."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0601",
+              "description": "Define ethics and explain the importance of ethical conduct."
+            },
+            {
+              "code": "IAC0602",
+              "description": "List and explain the legislative framework, regulations, and codes of conduct in the workplace regarding information management."
+            },
+            {
+              "code": "IAC0603",
+              "description": "Discuss the elements of ethical information management."
+            }
+          ]
+        },
+        {
+          "code": "KM0207",
+          "title": "Communication and presentation of information",
+          "weightPercent": 10,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0701",
+              "description": "Introduction to business communication."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0702",
+              "description": "Types of business communication."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0703",
+              "description": "Effective report writing."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0704",
+              "description": "Communicating and presenting HR information (verbal and written)."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0701",
+              "description": "Define terms and concepts related to business communication."
+            },
+            {
+              "code": "IAC0702",
+              "description": "Explain and discuss the types of business communication."
+            },
+            {
+              "code": "IAC0703",
+              "description": "Discuss the principles of effective report writing."
+            },
+            {
+              "code": "IAC0704",
+              "description": "Discuss the principles of communicating and presenting HR information (verbal and written)."
+            }
+          ]
+        }
+      ],
+      "purpose": "To build knowledge and understanding of the theories, concepts and principles that underpin data collection, interpretation and management, so that a learner can gather information from a range of oral, written or symbolic sources, select what is appropriate to the task, and apply basic analysis, synthesis and evaluation to it within the role of an HRM Administrator."
     },
-    { "component": "workplace", "code": "441601-001-00-WM-02", "title": "Administrative Processes for Full Range of HRM Services and Processes", "credits": 12, "nqfLevel": 5, "topics": [] },
-    { "component": "workplace", "code": "441601-001-00-WM-03", "title": "Organisational Communication Processes", "credits": 8, "nqfLevel": 5, "topics": [] },
-    { "component": "workplace", "code": "441601-001-00-WM-04", "title": "Processes for Compiling, Maintaining, and Securing HRM Records", "credits": 8, "nqfLevel": 5, "topics": [] }
+    {
+      "component": "knowledge",
+      "code": "441601-001-00-KM-03",
+      "title": "Administration of Staff Procurement",
+      "credits": 16,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "KM0301",
+          "title": "The recruitment process",
+          "weightPercent": 20,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0101",
+              "description": "Different recruitment platforms and the evolution of the recruitment of staff."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0102",
+              "description": "Diversity and inclusion issues relating to recruitment."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0103",
+              "description": "The importance of feedback and how it impacts the client experience."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0104",
+              "description": "Legislative requirements applicable to recruitment."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0105",
+              "description": "The administrative requirements for the recruitment process."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Differentiate between different recruitment platforms and discuss the evolution of staff recruitment."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Discuss the diversity and inclusion issues relating to recruitment."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Explain the importance of feedback and how it impacts the client experience."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Identify and explain legislative requirements applicable to recruitment."
+            },
+            {
+              "code": "IAC0105",
+              "description": "Explain the administrative requirements for the recruitment process."
+            }
+          ]
+        },
+        {
+          "code": "KM0302",
+          "title": "The selection process",
+          "weightPercent": 20,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0201",
+              "description": "Different selection methods and the evolution of the selection of staff."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0202",
+              "description": "Diversity and inclusion issues relating to staff selection."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0203",
+              "description": "The importance of feedback and how it impacts the client experience."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0204",
+              "description": "Legislative requirements applicable to staff selection."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0205",
+              "description": "The administrative requirements for the staff selection process."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Differentiate between selection methods and discuss the evolution of staff selection."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Discuss diversity and inclusion issues relating to staff selection."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Explain the importance of feedback and how it impacts the client experience."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Identify and explain legislative requirements applicable to staff selection."
+            },
+            {
+              "code": "IAC0205",
+              "description": "Explain the administrative requirements for the staff selection process."
+            }
+          ]
+        },
+        {
+          "code": "KM0303",
+          "title": "The placement process",
+          "weightPercent": 20,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0301",
+              "description": "Different staff placement methods and the evolution of the placement of staff."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0302",
+              "description": "Diversity and inclusion issues relating to staff placement."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0303",
+              "description": "The importance of feedback and how it impacts the client experience."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0304",
+              "description": "Legislative requirements applicable to staff placement."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0305",
+              "description": "The administrative requirements for the staff placement process."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0301",
+              "description": "Discuss different staff placement methods and explain the evolution of staff placement."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Discuss diversity and inclusion issues relating to staff placement."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Explain the importance of feedback and how it impacts the client experience."
+            },
+            {
+              "code": "IAC0304",
+              "description": "Identify and explain legislative requirements applicable to staff placement."
+            },
+            {
+              "code": "IAC0305",
+              "description": "Explain the administrative requirements for the staff placement process."
+            }
+          ]
+        },
+        {
+          "code": "KM0304",
+          "title": "The contracting process",
+          "weightPercent": 20,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0401",
+              "description": "Different staff contracting methods and the evolution of the contracting of staff."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0402",
+              "description": "Diversity and inclusion issues relating to staff contracting."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0403",
+              "description": "The importance of feedback and how it impacts the client experience."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0404",
+              "description": "Legislative requirements applicable to staff contracting."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0405",
+              "description": "The administrative requirements for the staff contracting process."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0401",
+              "description": "Discuss staff contracting methods and explain the evolution of staff contracting."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Discuss diversity and inclusion issues relating to staff contracting."
+            },
+            {
+              "code": "IAC0403",
+              "description": "Explain the importance of feedback and how it impacts the client experience."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Identify and explain legislative requirements applicable to staff contracting."
+            },
+            {
+              "code": "IAC0405",
+              "description": "Explain the administrative requirements for the staff contracting process."
+            }
+          ]
+        },
+        {
+          "code": "KM0305",
+          "title": "The onboarding and induction process",
+          "weightPercent": 20,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0501",
+              "description": "Different staff onboarding and induction methods and the evolution of induction and onboarding."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0502",
+              "description": "Diversity and inclusion issues relating to staff onboarding and induction."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0503",
+              "description": "The importance of feedback and how it impacts the client experience."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0504",
+              "description": "Legislative requirements applicable to staff onboarding and induction."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0505",
+              "description": "The administrative requirements for the staff onboarding and induction processes."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0501",
+              "description": "Discuss different staff onboarding and induction methods and explain the evolution of induction and onboarding."
+            },
+            {
+              "code": "IAC0502",
+              "description": "Discuss diversity and inclusion issues relating to staff onboarding and induction."
+            },
+            {
+              "code": "IAC0503",
+              "description": "Explain the importance of feedback and how it impacts the client experience."
+            },
+            {
+              "code": "IAC0504",
+              "description": "Identify and explain legislative requirements applicable to staff onboarding and induction."
+            },
+            {
+              "code": "IAC0505",
+              "description": "Explain the administrative requirements for the staff onboarding and induction processes."
+            }
+          ]
+        }
+      ],
+      "purpose": "To build an informed base of knowledge and understanding of the theories, concepts and principles that underpin the administration associated with staff procurement: recruitment, selection, placement, contracting, onboarding and induction. Learners must act in accordance with prescribed organisational and professional ethical codes of conduct and contextualise these processes within the role of an HRM Administrator."
+    },
+    {
+      "component": "knowledge",
+      "code": "441601-001-00-KM-04",
+      "title": "Professional Administration for HRM Service Delivery",
+      "credits": 6,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "KM0401",
+          "title": "Administrative services for workforce planning",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0101",
+              "description": "Definition of Workforce Planning and description of how it is used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0102",
+              "description": "The HRM function's role in meeting Workforce Planning objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0103",
+              "description": "Data required to support the effective execution of Workforce Planning."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0104",
+              "description": "Sources of Workforce Planning data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0105",
+              "description": "The use of HRM information systems to collect and analyse data for Workforce Planning."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0106",
+              "description": "The administrative requirements for effective Workforce Planning."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Explain and give examples to illustrate the definition of Workforce Planning and how it is used in organisations."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Explain the HRM function's role in meeting Workforce Planning objectives."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Describe the data required to support the effective execution of Workforce Planning."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Discuss the sources of Workforce Planning data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0105",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Workforce Planning."
+            },
+            {
+              "code": "IAC0106",
+              "description": "Explain and contextualise the administrative requirements for effective Workforce Planning."
+            }
+          ]
+        },
+        {
+          "code": "KM0402",
+          "title": "Administrative services for performance management",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0201",
+              "description": "Definition of Performance Management and description of how it is used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0202",
+              "description": "The HRM function's role in meeting Performance Management objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0203",
+              "description": "Data required to support the effective execution of Performance Management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0204",
+              "description": "Sources of Performance Management data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0205",
+              "description": "The use of HRM information systems to collect and analyse data for Performance Management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0206",
+              "description": "The administrative requirements for effective Performance Management."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Explain and give examples to illustrate the definition of Performance Management and how it is used in organisations."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Explain the HRM function's role in meeting Performance Management objectives."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Describe the data required to support the effective execution of Performance Management."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Discuss the sources of Performance Management data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0205",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Performance Management."
+            },
+            {
+              "code": "IAC0206",
+              "description": "Explain and contextualise the administrative requirements for effective Performance Management."
+            }
+          ]
+        },
+        {
+          "code": "KM0403",
+          "title": "Administrative services for employee learning and development",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0301",
+              "description": "Definition of Learning and Development and description of how it is used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0302",
+              "description": "The HRM function's role in meeting Learning and Development objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0303",
+              "description": "Data required to support the effective execution of Learning and Development."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0304",
+              "description": "Sources of Learning and Development data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0305",
+              "description": "The use of HRM information systems to collect and analyse data for Learning and Development."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0306",
+              "description": "The administrative requirements for effective Learning and Development."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0301",
+              "description": "Explain and give examples to illustrate the definition of Learning and Development and how it is used in organisations."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Explain the HRM function's role in meeting Learning and Development objectives."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Describe the data required to support the effective execution of Learning and Development."
+            },
+            {
+              "code": "IAC0304",
+              "description": "Discuss the sources of Learning and Development data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0305",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Learning and Development."
+            },
+            {
+              "code": "IAC0306",
+              "description": "Explain and contextualise the administrative requirements for effective Learning and Development."
+            }
+          ]
+        },
+        {
+          "code": "KM0404",
+          "title": "Administrative services for grievance and discipline handling",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0401",
+              "description": "Definition of Grievance and Discipline handling and description of how it is used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0402",
+              "description": "The HRM function's role in meeting Grievance and Discipline handling objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0403",
+              "description": "Data required to support the effective execution of Grievance and Discipline handling."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0404",
+              "description": "Sources of Grievance and Discipline handling data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0405",
+              "description": "The use of HRM information systems to collect and analyse data for Grievance and Discipline handling."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0406",
+              "description": "The administrative requirements for effective Grievance and Discipline handling."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0401",
+              "description": "Explain and give examples to illustrate the definition of Grievance and Discipline handling and how it is used in organisations."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Explain the HRM function's role in meeting Grievance and Discipline handling objectives."
+            },
+            {
+              "code": "IAC0403",
+              "description": "Describe the data required to support the effective execution of Grievance and Discipline handling."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Discuss the sources of Grievance and Discipline handling data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0405",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Grievance and Discipline handling."
+            },
+            {
+              "code": "IAC0406",
+              "description": "Explain and contextualise the administrative requirements for effective Grievance and Discipline handling."
+            }
+          ]
+        },
+        {
+          "code": "KM0405",
+          "title": "Administrative services for career management",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0501",
+              "description": "Definition of Career Management and description of how it is used in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0502",
+              "description": "The HRM function's role in meeting Career Management objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0503",
+              "description": "Data required to support the effective execution of Career Management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0504",
+              "description": "Sources of Career Management data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0505",
+              "description": "The use of HRM information systems to collect and analyse data for Career Management."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0506",
+              "description": "The administrative requirements for effective Career Management."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0501",
+              "description": "Explain and give examples to illustrate the definition of Career Management and how it is used in organisations."
+            },
+            {
+              "code": "IAC0502",
+              "description": "Explain the HRM function's role in meeting Career Management objectives."
+            },
+            {
+              "code": "IAC0503",
+              "description": "Describe the data required to support the effective execution of Career Management."
+            },
+            {
+              "code": "IAC0504",
+              "description": "Discuss the sources of Career Management data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0505",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Career Management."
+            },
+            {
+              "code": "IAC0506",
+              "description": "Explain and contextualise the administrative requirements for effective Career Management."
+            }
+          ]
+        },
+        {
+          "code": "KM0406",
+          "title": "Administrative services for individual and organisational wellness processes",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0601",
+              "description": "Definition of Individual and organisational wellness and description of how it is applied in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0602",
+              "description": "The HRM function's role in meeting Individual and organisational wellness objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0603",
+              "description": "Data required to support the effective execution of Individual and organisational wellness."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0604",
+              "description": "Sources of Individual and organisational wellness data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0605",
+              "description": "The use of HRM information systems to collect and analyse data for Individual and organisational wellness."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0606",
+              "description": "The administrative requirements for effective Individual and organisational wellness."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0601",
+              "description": "Explain and give examples to illustrate the definition of Individual and organisational wellness and how it is applied in organisations."
+            },
+            {
+              "code": "IAC0602",
+              "description": "Explain the HRM function's role in meeting Individual and organisational wellness objectives."
+            },
+            {
+              "code": "IAC0603",
+              "description": "Describe the data required to support the effective execution of Individual and organisational wellness."
+            },
+            {
+              "code": "IAC0604",
+              "description": "Discuss the sources of Individual and organisational wellness data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0605",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Individual and organisational wellness."
+            },
+            {
+              "code": "IAC0606",
+              "description": "Explain and contextualise the administrative requirements for effective Individual and organisational wellness."
+            }
+          ]
+        },
+        {
+          "code": "KM0407",
+          "title": "Administrative services for all staff separations",
+          "weightPercent": 12,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0701",
+              "description": "Definition of Staff Separations and description of how it is applied in organisations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0702",
+              "description": "The HRM function's role in meeting Staff Separations objectives."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0703",
+              "description": "Data required to support the effective execution of Staff Separations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0704",
+              "description": "Sources of Staff Separations data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0705",
+              "description": "The use of HRM information systems to collect and analyse data for Staff Separations."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0706",
+              "description": "The administrative requirements for effective Staff Separations."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0701",
+              "description": "Explain and give examples to illustrate the definition of Staff Separations and how it is applied in organisations."
+            },
+            {
+              "code": "IAC0702",
+              "description": "Explain the HRM function's role in meeting Staff Separations objectives."
+            },
+            {
+              "code": "IAC0703",
+              "description": "Describe the data required to support the effective execution of Staff Separations."
+            },
+            {
+              "code": "IAC0704",
+              "description": "Discuss the sources of Staff Separations data and discuss possible barriers in accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0705",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for Staff Separations."
+            },
+            {
+              "code": "IAC0706",
+              "description": "Explain and contextualise the administrative requirements for effective Staff Separations."
+            }
+          ]
+        },
+        {
+          "code": "KM0408",
+          "title": "Administrative services for workplace injuries and incapacity",
+          "weightPercent": 16,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0801",
+              "description": "Definition of workplace injuries and incapacity."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0802",
+              "description": "The role of the HRM function in documenting workplace injuries and incapacity."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0803",
+              "description": "Data required to support workplace injuries and incapacity."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0804",
+              "description": "Sources of workplace injuries and incapacity data."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0805",
+              "description": "The use of HRM information systems to collect and analyse data for workplace injuries and incapacity."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0806",
+              "description": "The administrative requirements for effective handling of workplace injuries and incapacity."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0801",
+              "description": "Explain and give examples to illustrate the definition of workplace injuries and incapacity."
+            },
+            {
+              "code": "IAC0802",
+              "description": "Discuss the role of the HRM function when documenting workplace injuries and incapacity."
+            },
+            {
+              "code": "IAC0803",
+              "description": "Explain the data required to administer workplace injuries and incapacity effectively."
+            },
+            {
+              "code": "IAC0804",
+              "description": "Discuss the sources of workplace injuries and incapacity data and possible barriers to accessing these sources. Suggest ways of overcoming the barriers."
+            },
+            {
+              "code": "IAC0805",
+              "description": "Discuss the use of HRM information systems to collect and analyse data for workplace injuries and incapacity."
+            },
+            {
+              "code": "IAC0806",
+              "description": "Explain and contextualise the administrative requirements for effective handling of workplace injuries and incapacity."
+            }
+          ]
+        }
+      ],
+      "purpose": "To build an informed base of knowledge and understanding of the theories, concepts and principles that underpin the professional administration of the full range of HRM service processes: workforce planning, performance management, learning and development, grievance and disciplinary handling, career management, wellness management, staff separations, and workplace injuries and incapacity."
+    },
+    {
+      "component": "knowledge",
+      "code": "441601-001-00-KM-05",
+      "title": "HRM Record Keeping",
+      "credits": 4,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "KM0501",
+          "title": "Importance of record keeping within the HRM function",
+          "weightPercent": 50,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0101",
+              "description": "Definition and types of HRM records."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0102",
+              "description": "Importance of the availability, integrity, and security of HRM records."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0103",
+              "description": "Principles for effective digital records."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0104",
+              "description": "Principles for effective manual and paper-based records."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Define HRM records and explain their types."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Discuss the importance of the availability, integrity, and security of HRM records."
+            },
+            {
+              "code": "IAC0103",
+              "description": "List and explain the principles for effective digital records."
+            },
+            {
+              "code": "IAC0104",
+              "description": "List and explain the principles for effective manual and paper-based records."
+            }
+          ]
+        },
+        {
+          "code": "KM0502",
+          "title": "Principles of professional record keeping practices",
+          "weightPercent": 50,
+          "elements": [
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0201",
+              "description": "Professional record keeping standards."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0202",
+              "description": "Professional standards for HRM record security."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0203",
+              "description": "Professional standard for maintaining digital records."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0204",
+              "description": "Issues relating to cloud-based records."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0205",
+              "description": "Security measures for backup and recovery of HRM records (paper-based and digital)."
+            },
+            {
+              "kind": "knowledge_topic",
+              "code": "KT0206",
+              "description": "Legislative requirements related to HRM record keeping."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Discuss professional record keeping standards."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Discuss professional standards for HRM record security and clarify misconceptions regarding access to HRM records."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Explain the professional standard for maintaining digital records."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Discuss issues relating to cloud-based records."
+            },
+            {
+              "code": "IAC0205",
+              "description": "Describe the processes for implementing security measures for backup and recovery of HRM records (paper-based and digital)."
+            },
+            {
+              "code": "IAC0206",
+              "description": "Discuss the legislative requirements related to HRM record keeping."
+            }
+          ]
+        }
+      ],
+      "purpose": "To build an informed base of knowledge and understanding of the theories, concepts and principles that underpin professional and secure record keeping within the HRM discipline, contextualised within the role and functions of an HRM Administrator."
+    },
+    {
+      "component": "practical",
+      "code": "441601-001-00-PM-01",
+      "title": "Collect and Process HRM Data",
+      "credits": 12,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "PS0101",
+          "title": "Use appropriate information technology to collect required HRM data",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0101",
+              "description": "Prepare to execute the skill."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0102",
+              "description": "Check and verify all information."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0103",
+              "description": "Execute the skill following specific processes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0104",
+              "description": "Validate the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0105",
+              "description": "Report the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0106",
+              "description": "Modify and improve where possible."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0101",
+              "description": "Technical Techniques: Familiarity with data collection tools and techniques. Knowledge of databases and data storage systems. Ability to work with different software applications. Understanding of data cleaning and pre-processing techniques to handle missing, duplicated, and irrelevant data."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0102",
+              "description": "Analytical Techniques: Knowledge of basic statistics and statistical analysis. Ability to perform exploratory data analysis (EDA) to identify patterns and relationships in the data. Knowledge of machine learning and data mining techniques, including supervised and unsupervised learning algorithms. Understanding of data visualization techniques and tools to effectively communicate insights."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0103",
+              "description": "Domain knowledge: Understanding of the problem you are trying to solve and the data that is relevant to that problem. Familiarity with the data sources and the quality of the data they provide. Awareness of ethical and privacy considerations when collecting and processing data."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0102",
+          "title": "Process data and produce accurate reports (Regular reports and in response to ad hoc requests)",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0201",
+              "description": "Prepare to execute the skill."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0202",
+              "description": "Check and verify all information."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0203",
+              "description": "Execute the skill following specific processes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0204",
+              "description": "Validate the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0205",
+              "description": "Report the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0206",
+              "description": "Modify and improve where possible."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0201",
+              "description": "Technical skills: Familiarity with data processing and analysis tools. Knowledge of databases and data storage systems. Ability to clean, pre-process, and manipulate large datasets to extract meaningful insights. Knowledge of statistics and statistical analysis, including hypothesis testing, regression analysis, and descriptive statistics."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0202",
+              "description": "Communication skills: Ability to communicate complex data and insights in a clear, concise, and accessible manner. Knowledge of data visualization techniques and tools to effectively communicate insights, such as bar charts, line charts, scatter plots, and heatmaps. Understanding of how to effectively present and communicate data-driven insights and recommendations to a variety of audiences, including technical and nontechnical stakeholders."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0203",
+              "description": "Domain knowledge: Understanding of the problem you are trying to solve and the data that is relevant to that problem. Familiarity with the data sources and the quality of the data they provide. Awareness of ethical and privacy considerations when processing and reporting on data."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0103",
+          "title": "Prepare and present reports at meetings and to stakeholders when required",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0301",
+              "description": "Prepare to execute the skill."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0302",
+              "description": "Check and verify all information."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0303",
+              "description": "Execute the skill following specific processes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0304",
+              "description": "Validate the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0305",
+              "description": "Report the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0306",
+              "description": "Modify and improve where possible."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0301",
+              "description": "Planning: Identify the purpose and audience of the report, determine the scope, and focus of the report, and gather all relevant information and data."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0302",
+              "description": "Data Collection: Collect and analyse data using appropriate tools and techniques, such as surveys, experiments, or observational studies."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0303",
+              "description": "Data Analysis: Clean and pre-process the data, perform exploratory data analysis (EDA) to identify patterns and relationships in the data, and apply statistical analysis techniques to extract meaningful insights."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0304",
+              "description": "Writing the Report: Write an introduction that provides background information and sets the context for the report, write a methodology section that describes how the data was collected and processed, write a results section that presents the findings and insights generated from the data, and write a conclusion that summarizes the essential findings and makes recommendations based on the data."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0305",
+              "description": "Visualization: Use appropriate data visualization techniques, such as bar charts, line charts, scatter plots, and heatmaps, to effectively communicate insights and findings."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0306",
+              "description": "Editing and Proofreading: Review the report for clarity, accuracy, and completeness, and make any necessary revisions and edits."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0307",
+              "description": "Finalizing the Report: Ensure that the report meets all technical and format requirements, such as using proper citation styles and including an executive summary, table of contents, and appendix."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0301",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0304",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0104",
+          "title": "Maintain appropriate databases of information and extract reports in response to specific authorised requests",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0401",
+              "description": "Prepare to execute the skill."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0402",
+              "description": "Check and verify all information."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0403",
+              "description": "Execute the skill following specific processes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0404",
+              "description": "Validate the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0405",
+              "description": "Report the results."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0406",
+              "description": "Modify and improve where possible."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0401",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0403",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        }
+      ],
+      "purpose": "To give learners the opportunity to practise the skills required to collect and process HRM data: to select and apply standard practices, policies and techniques, to plan and manage an implementation process, and to identify, evaluate and solve routine and new problems within the context, applying solutions based on relevant evidence and procedures."
+    },
+    {
+      "component": "practical",
+      "code": "441601-001-00-PM-02",
+      "title": "Coordinate and Provide Administrative Services for a Full Range of HRM Processes",
+      "credits": 12,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "PS0201",
+          "title": "Provide administrative services for Workforce Planning",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0101",
+              "description": "Prepare analyse and present data."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0102",
+              "description": "Prepare reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0103",
+              "description": "Maintain records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0104",
+              "description": "Coordinate events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0105",
+              "description": "Take minutes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0106",
+              "description": "Complete regulatory reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0107",
+              "description": "Update employee records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0108",
+              "description": "Schedule events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0109",
+              "description": "Provide stakeholder feedback."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0101",
+              "description": "Foundational data analysis techniques."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0102",
+              "description": "Minute taking techniques."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0103",
+              "description": "Reporting techniques."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0104",
+              "description": "Scheduling techniques."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0105",
+              "description": "Organising techniques."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0202",
+          "title": "Provide administrative services for Staff Recruitment, Selection and Placement",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0201",
+              "description": "Prepare and distribute advertisements."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0202",
+              "description": "Receive and screen applications."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0203",
+              "description": "Acknowledge receipt of applications."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0204",
+              "description": "Verify documents."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0205",
+              "description": "Conduct reference checks."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0206",
+              "description": "Develop long lists."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0207",
+              "description": "Arrange logistics for candidate testing and interviews."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0208",
+              "description": "Record findings of interview panels."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0209",
+              "description": "Communicate with candidates for required additional information."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0210",
+              "description": "Develop shortlists."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0211",
+              "description": "Notify candidates of results of applications."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0212",
+              "description": "Facilitate contracting."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0213",
+              "description": "Facilitate onboarding."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0214",
+              "description": "Facilitate induction."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0201",
+              "description": "Technical skills: Knowledge of recruitment laws, regulations, and best practices, including equal employment opportunity laws and antidiscrimination laws Familiarity with recruitment and selection tools, such as applicant tracking systems (ATS), online job boards, and preemployment assessments. Ability to create and manage job postings and advertising campaigns, and to review and assess job applications and resumes."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0202",
+              "description": "Interpersonal skills: Excellent communication and interpersonal skills, including the ability to effectively communicate with candidates, hiring managers, and other stakeholders. Ability to build and maintain strong relationships with internal and external partners, including recruitment agencies and professional associations. Strong negotiation and conflict resolution skills to handle challenges and issues that may arise during the recruitment process. AK 0203 Organizational skills: Strong project management skills, including the ability to coordinate and prioritize multiple recruitment projects and tasks. Ability to analyse and evaluate data, including data related to recruitment metrics, candidate diversity, and the success of recruitment initiatives. Excellent time management and attention to detail, with the ability to work independently and meet deadlines in a fast-paced environment,."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0201",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0202",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0203",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0204",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0203",
+          "title": "Provide administrative services for Performance Management",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0301",
+              "description": "Maintain KPA and KPI records per occupation."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0302",
+              "description": "Provide assessment templates."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0303",
+              "description": "Provide HRM KPI data inputs."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0304",
+              "description": "Schedule and coordinate performance review interviews."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0305",
+              "description": "Maintain and update employee records."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0301",
+              "description": "Technical skills: Knowledge of performance management theories, models, and best practices, including goal setting, feedback, and performance appraisal Familiarity with performance management tools, such as performance appraisal software, 360degree feedback tools, and goal setting software Ability to analyse and evaluate performance data, including data related to employee performance, goals, and development plans."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0302",
+              "description": "Interpersonal skills: Excellent communication and interpersonal skills, including the ability to effectively communicate with employees, managers, and other stakeholders. Ability to build and maintain strong relationships with employees, providing guidance and support to help them meet their performance goals. Strong conflict resolution skills to handle challenges and issues that may arise during the performance management process."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0303",
+              "description": "Organizational skills: Strong project management skills, including the ability to coordinate and prioritize multiple performance management initiatives and tasks. Ability to analyse and evaluate data, including data related to performance metrics, employee satisfaction, and the success of performance management initiatives. Excellent time management and attention to detail, with the ability to work independently and meet deadlines in a fast-paced environment."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0301",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0302",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0303",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0304",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0204",
+          "title": "Provide administrative services for employee Learning and Development",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0402",
+              "description": "Prepare reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0403",
+              "description": "Maintain records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0404",
+              "description": "Coordinate events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0405",
+              "description": "Take minutes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0406",
+              "description": "Complete regulatory reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0407",
+              "description": "Update employee records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0408",
+              "description": "Schedule events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0409",
+              "description": "Provide stakeholder feedback."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0401",
+              "description": "Administrative requirements for L&D needs analysis."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0402",
+              "description": "Administrative requirements for Learning Resource development/procurement."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0403",
+              "description": "Administrative requirements for L&D intervention delivery."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0404",
+              "description": "Administrative requirements for L&D assessments."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0405",
+              "description": "Administrative requirements for Learnership and internship implementation."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0406",
+              "description": "Administrative requirements for L&D accreditation and accreditation audits."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0407",
+              "description": "Administrative requirements for L&D evaluation,."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0408",
+              "description": "Administrative requirements for L&D internal and external reporting."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0401",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0402",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0403",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0404",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0205",
+          "title": "Provide administrative services for Grievance and Discipline Handling",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0501",
+              "description": "Provide administrative support for investigations."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0502",
+              "description": "Provide administrative support for hearings and consultations."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0503",
+              "description": "Provide administrative support for providing records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0504",
+              "description": "Provide administrative support for recording decisions."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0505",
+              "description": "Provide administrative support for appeal processes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0506",
+              "description": "Provide administrative support for CCMA and labour court cases."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0501",
+              "description": "Technical skills: Knowledge of labour laws, regulations, and best practices, including equal employment opportunity laws and antidiscrimination laws Familiarity with the organization's policies and procedures related to discipline and grievance handling, including any relevant collective bargaining agreements. Ability to analyse and evaluate data and informat ion related to discipline and grievance issues, including documentation, witness statements, and other relevant evidence."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0502",
+              "description": "Interpersonal skills: Excellent communication and interpersonal skills, including the ability to effectively communicate with employees, managers, and other stakeholders. Ability to build and maintain strong relationships with employees, providing guidance and support during the discipline and grievance handling process. Strong conflict resolution skills to handle challenges and issues that may arise during the process. Ability to remain impartial and neutral during the process, considering the interests of all parties involved."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0503",
+              "description": "Organizational skills: Strong project management skills, including the ability to coordinate and prioritize multiple discipline and grievance handling cases. Ability to analyse and evaluate data, including data related to discipline and grievance metrics, employee satisfaction, and the success of discipline and grievance handling initiatives. Excellent time management and attention to detail, with the ability to work independently and meet deadlines in a fast-paced environment."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0501",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0502",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0503",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0504",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0206",
+          "title": "Provide administrative services for Career Management",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0601",
+              "description": "Prepare reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0602",
+              "description": "Maintain records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0603",
+              "description": "Coordinate events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0604",
+              "description": "Take minutes."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0605",
+              "description": "Complete regulatory reports."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0606",
+              "description": "Update employee records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0607",
+              "description": "Schedule events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0608",
+              "description": "Provide stakeholder feedback."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0601",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0602",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0603",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0604",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        },
+        {
+          "code": "PS0207",
+          "title": "Provide administrative services for all Staff Separations",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0701",
+              "description": "Provide administrative support in cases of resignation."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0702",
+              "description": "Provide administrative support in cases of retirement."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0703",
+              "description": "Provide administrative support in cases of retrenchment."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0704",
+              "description": "Provide administrative support in cases of transfer."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0705",
+              "description": "Provide administrative support in cases of redeployment."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0706",
+              "description": "Provide administrative support in cases of death."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0707",
+              "description": "Provide administrative support in cases of incapacitation."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0708",
+              "description": "Provide administrative support in cases of dismissal."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0709",
+              "description": "Provide administrative support in cases of desertion."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0701",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0702",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0703",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0704",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        }
+      ],
+      "purpose": "To give learners the opportunity to practise the skills required to provide administrative services across the full range of HRM services and processes, contextualising the procedures within a real-world environment."
+    },
+    {
+      "component": "practical",
+      "code": "441601-001-00-PM-03",
+      "title": "Coordinate HRM Communication to Enhance Employment Relations",
+      "credits": 8,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "PS0301",
+          "title": "Administer organisational communications",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0101",
+              "description": "Maintain updated filing system on all HRM policies, procedures, and legislative requirements."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0102",
+              "description": "Collate approved guideline documents for the implementation and management of HRM policies and procedures."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0103",
+              "description": "Coordinate and maintain records of regular and ad hoc employee meetings and forums."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0104",
+              "description": "Maintain a calendar of HRM activities and coordinate the scheduling of meetings and events."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0105",
+              "description": "Receive and respond to employee queries and questions relating to policies and procedures."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0106",
+              "description": "Receive and direct/escalate employee queries and questions regarding contractual and conditions of employment issues."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0107",
+              "description": "Produce and maintain official HRM newsletters and social media communication platforms (Such as Web Pages, Facebook Page, WhatsAPP groups)"
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0108",
+              "description": "Evaluate if the messages were heard and correctly understood and report."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0101",
+              "description": "Communication theories and best practices: A thorough understanding of different communication models, theories, and best practices, and how they apply to different organizational contexts and audiences. This includes knowledge of effective communication strategies, message design, and delivery, as well as other communication channels (e.g., email, intranet, face-to-face communication)."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0102",
+              "description": "Internal and external stakeholders: Knowledge of the organization’s internal and external stakeholders, including e mployees, customers, shareholders, partners, and the media, and an understanding of their needs, expectations, and priorities with respect to communication."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0103",
+              "description": "Brand management: Knowledge of the organization's brand, including its values, mission, and messaging, and the ability to effectively communicate the brand to internal and external stakeholders."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0104",
+              "description": "Change management: Knowledge of change management principles and practices, and the ability to effectively communicate change initiatives and programs to employees and other stakeholders."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0105",
+              "description": "Crisis communication: Knowledge of crisis communication best practices and the ability to effectively manage and communicate through crises, ensuring that accurate and timely information is shared with internal and external stakeholders."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0106",
+              "description": "Digital communication: Knowledge of digital communication technologies, including social media, websites, and mobile applications, and the ability to effectively use these tools for organizational communication."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0107",
+              "description": "Data analysis and metrics: Knowledge of data analysis and metrics, and the ability to track and measure the effectiveness of organizational communication initiatives. Interpersonal and leadership skills: Strong interpersonal and leadership skills, includ ing the ability to build relationships and work effectively with employees, senior leaders, and other stakeholders, and the ability to effectively manage teams and projects."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        }
+      ],
+      "purpose": "To give learners the opportunity to practise the skills required to coordinate HRM communications so as to enhance employment relations."
+    },
+    {
+      "component": "practical",
+      "code": "441601-001-00-PM-04",
+      "title": "Compile, Maintain and ensure the Safeguarding of all HRM Records",
+      "credits": 10,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "PS0401",
+          "title": "Act as custodian of HRM records",
+          "elements": [
+            {
+              "kind": "practical_activity",
+              "code": "PA0101",
+              "description": "Compile and maintain personal employee records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0102",
+              "description": "Control access to information in employee records."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0103",
+              "description": "Control and maintain an employee record archive."
+            },
+            {
+              "kind": "practical_activity",
+              "code": "PA0104",
+              "description": "Receive, respond to, and escalate requests for information from personal employee records."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0101",
+              "description": "Labour laws and regulations: Knowledge of relevant labour laws and regulations,."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0102",
+              "description": "Human resources information systems (HRIS): Knowledge of HRIS technology, including how to use the system to store and manage employee records, as well as how to extract and analyse data from the system."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0103",
+              "description": "Data privacy and security: Knowledge of data privacy and security best practices, including how to protect employee personal and sensitive information."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0104",
+              "description": "Record retention and destruction policies: Knowledge of record retention and destruction policies, including how long to keep different types of employee records, and when and how to destroy or archive records that are no longer needed."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0105",
+              "description": "Documentation standards: Knowledge of best practices for documenting employee information, including how to standardize and organize employee records, and how to ensure that the information is accurate, complete, and up to date."
+            },
+            {
+              "kind": "applied_knowledge",
+              "code": "AK0106",
+              "description": "Data entry and management: Knowledge of how to accurately enter and manage employee information, including personal information, job information, salary information, and performance information, and how to ensure that the information is updated in a timely and accurate manner."
+            }
+          ],
+          "criteria": [
+            {
+              "code": "IAC0101",
+              "description": "Observe and evaluate the extent to which learners comply with the processes and steps required to apply the skill."
+            },
+            {
+              "code": "IAC0102",
+              "description": "Evaluate the extent to which learners execute the tasks within the required time limits."
+            },
+            {
+              "code": "IAC0103",
+              "description": "Evaluate the level of competence in the application of the prescribed techniques."
+            },
+            {
+              "code": "IAC0104",
+              "description": "Observe and evaluate the ability to demonstrate the key attributes as set out in the applied knowledge section."
+            }
+          ]
+        }
+      ],
+      "purpose": "To give learners the opportunity to practise the skills required to compile, maintain and secure HRM records."
+    },
+    {
+      "component": "workplace",
+      "code": "441601-001-00-WM-01",
+      "title": "HRM Data Collection and Data Management Processes",
+      "credits": 8,
+      "nqfLevel": 5,
+      "purpose": "To apply HRM data collection and management skills in a real workplace, guided by a workplace coach who signs off the logbook.",
+      "topics": [
+        {
+          "code": "WE0101",
+          "title": "Use appropriate information technology to collect required HRM data",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0101",
+              "description": "Receive coaching, training and orientation on the operation and use of organisation specific HRM information systems."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0102",
+              "description": "Execute a range of organisation specific tasks relating to the collection of HRM data using the databases or hard copy files available in the organisation."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0103",
+              "description": "Access and extract data from external sources where appropriate."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Managers observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0102",
+          "title": "Process data and produce accurate reports (regular reports and in response to ad hoc requests)",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0201",
+              "description": "Verify the accuracy and completeness of the data being processed."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0202",
+              "description": "Enter data into the appropriate HRM systems or databases."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0203",
+              "description": "Maintain the security and confidentiality of the data being processed."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0204",
+              "description": "Perform quality control checks to identify and correct errors in the processed data."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0205",
+              "description": "Generate reports and analyses of the processed data to inform HRM decision-making."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Managers observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0103",
+          "title": "Prepare and present reports at meetings and to stakeholders when required",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0301",
+              "description": "Identify the target audience and their information needs relating to the specific report."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0302",
+              "description": "Select the appropriate format, content and visual aids to effectively communicate the information."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0303",
+              "description": "Organise the report in a clear, logical and easy to understand manner."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0304",
+              "description": "Provide a summary of the main findings and recommendations."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0305",
+              "description": "Answer any questions or provide further clarification as needed to ensure understanding and actionability of the report."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0306",
+              "description": "Follow up to check that there was correct understanding of the communication."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Managers observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0104",
+          "title": "Maintain appropriate databases of information and extract reports in response to specific authorised requests",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0401",
+              "description": "Access the HRM databases according to laid down procedures."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0402",
+              "description": "Update information of employees."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0403",
+              "description": "Extract data to meet specific information requests."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Managers observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed off logbook."
+            }
+          ],
+          "criteria": []
+        }
+      ]
+    },
+    {
+      "component": "workplace",
+      "code": "441601-001-00-WM-02",
+      "title": "Administrative Processes for Full Range of HRM Services and Processes",
+      "credits": 12,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "WE0201",
+          "title": "Provide administrative services for Workforce Planning",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0101",
+              "description": "Extract data relating to current workforce demographics."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0102",
+              "description": "Do basic website research relating to industry comparisons of employment demographics."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0103",
+              "description": "Respond to requests for HRM management for research and data collection relating to micro and macro environmental issues."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0104",
+              "description": "Extract historic employment trends and compare them with other organisation data where possible."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0202",
+          "title": "Provide administrative services for Staff Recruitment, Selection and Placement",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0201",
+              "description": "Compile internal and external vacancy adverts using approved media."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0202",
+              "description": "Receive applications and acknowledge receipt."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0203",
+              "description": "Compare applications with the job specifications and request omitted information."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0204",
+              "description": "Prepare a candidate long list and submit for approval."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0205",
+              "description": "Coordinate and arrange logistics for testing and interviews."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0206",
+              "description": "Respond to candidate queries."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0207",
+              "description": "Provide administrative services during the selection process."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0208",
+              "description": "Draft correspondence to successful and unsuccessful candidates."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0209",
+              "description": "Coordinate onboarding of successful candidates."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0210",
+              "description": "Coordinate induction of successful candidates."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0211",
+              "description": "Capture all required employee information on HRM system."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0212",
+              "description": "Update and maintain paper based and digital employee files."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0203",
+          "title": "Provide administrative services for Performance Management",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0301",
+              "description": "Coordinate performance review discussions."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0302",
+              "description": "Maintain KPA and KPI records."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0303",
+              "description": "Extract data as evidence of achievement or nonachievement of targets."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0304",
+              "description": "Update employee files relating to the outcomes of performance reviews."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0204",
+          "title": "Provide administrative services for employee Learning and Development",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0401",
+              "description": "Schedule and coordinate training sessions and workshops."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0402",
+              "description": "Maintain training records and documenting employee participation and progress."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0403",
+              "description": "Providing administrative support for learning and development activities, such as tracking budgets and expenditures."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0404",
+              "description": "Prepare internal and external reports on L&D activities."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0405",
+              "description": "Assist in compiling the WSP."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0406",
+              "description": "Assist in the controlling of and maintenance of training venues and resources."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0205",
+          "title": "Provide administrative services for Grievance and Discipline Handling",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0501",
+              "description": "Maintain disciplinary and grievance records and documenting incidents and outcomes."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0502",
+              "description": "Schedule and coordinate disciplinary and grievance meetings between employees and supervisors."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0503",
+              "description": "Provide administrative support for disciplinary and grievance hearings, such as arranging meeting rooms and recording minutes."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0504",
+              "description": "Generate reports and analyses of disciplinary and grievance data to identify trends and make recommendations for improvement."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0206",
+          "title": "Provide administrative services for Career Management",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0601",
+              "description": "Maintain employee career records and document career goals and aspirations."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0602",
+              "description": "Schedule and coordinating career development meetings between employees and supervisors."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0603",
+              "description": "Provide administrative support for career development activities, such as arranging mentoring and coaching sessions."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0604",
+              "description": "Evaluate the effectiveness of career development programs and making necessary improvements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0207",
+          "title": "Provide administrative services for Individual and Organisational Wellness initiatives",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0701",
+              "description": "Coordinate organisational wellness campaigns and events."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0702",
+              "description": "Extract and collect data on request to evaluate individual and organisational wellness."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0703",
+              "description": "Maintain employee records relating to wellness aspects."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0208",
+          "title": "Provide administrative services for all Staff Separations",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0801",
+              "description": "Capture and analyse exit interview information."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0802",
+              "description": "Facilitate the release of documents to employees or their mandated representatives."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0803",
+              "description": "Provide administrative support for resignations."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0804",
+              "description": "Provide administrative support for retirements."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0805",
+              "description": "Provide administrative support for incapacitations."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0806",
+              "description": "Provide administrative support for transfers."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0807",
+              "description": "Provide administrative support for deaths."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0808",
+              "description": "Provide administrative support for dismissals."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0809",
+              "description": "Provide administrative support for retrenchments."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        }
+      ],
+      "purpose": "To apply administrative skills across the full range of HRM services in a real workplace, exposed to the systems, stakeholders, policies and procedures actually in use, guided by a workplace coach who signs the logbook."
+    },
+    {
+      "component": "workplace",
+      "code": "441601-001-00-WM-03",
+      "title": "Organisational Communication Processes",
+      "credits": 8,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "WE0301",
+          "title": "Maintain updated filing system on all HRM policies, procedures, and legislative requirements",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0101",
+              "description": "Update policies, procedures, and legislation when changes are made."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0102",
+              "description": "Maintain files and ensure accessibility to the updated HRM policies, procedures, and legislation."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0103",
+              "description": "Inform management of changes in legislation so that they can consider the implications."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0104",
+              "description": "Coordinate policy review processes."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0302",
+          "title": "Collate approved guideline documents for the implementation and management of HRM policies and procedures",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0201",
+              "description": "Edit and collate guideline documents."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0202",
+              "description": "Distribute guideline documents."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0203",
+              "description": "Compile and report on feedback regarding guideline documents."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0204",
+              "description": "Maintain guideline documents."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0303",
+          "title": "Coordinate and maintain records of regular and ad hoc employee meetings and forums",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0301",
+              "description": "Prepare and send out agendas."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0302",
+              "description": "Capture minutes."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0303",
+              "description": "Keep record of attendance."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0304",
+              "description": "Coordinate required follow up."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0304",
+          "title": "Maintain a calendar of HRM activities and coordinate the scheduling of meetings and events",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0401",
+              "description": "Maintain and communicate calendar."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0305",
+          "title": "Receive and respond to employee queries and questions relating to policies and procedures",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0501",
+              "description": "Receive and record queries."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0502",
+              "description": "Prepare responses to queries."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0503",
+              "description": "Check and obtain approval for responses."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0504",
+              "description": "Provide responses."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0505",
+              "description": "Keep record of responses provided."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0506",
+              "description": "Follow up to check that the issue is resolved."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        }
+      ],
+      "purpose": "To apply organisational communication skills in a real workplace, guided by a workplace coach who signs the logbook."
+    },
+    {
+      "component": "workplace",
+      "code": "441601-001-00-WM-04",
+      "title": "Processes for Compiling, Maintaining, and Securing HRM Records",
+      "credits": 8,
+      "nqfLevel": 5,
+      "topics": [
+        {
+          "code": "WE0401",
+          "title": "Compile and maintain personal employee records",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0101",
+              "description": "Update personal employee records."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0102",
+              "description": "File information on hard copy files."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0103",
+              "description": "Extract information from files for authorised purposes."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0402",
+          "title": "Control access to information in employee records",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0201",
+              "description": "Receive and appropriately respond to requests for access to personal files."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0403",
+          "title": "Control and maintain an employee record archive",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0301",
+              "description": "File records in the archive."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0302",
+              "description": "Extract records from the library."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0303",
+              "description": "Update information on archived records."
+            },
+            {
+              "kind": "work_activity",
+              "code": "WA0304",
+              "description": "Maintain register of archived files."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed-off logbook."
+            }
+          ],
+          "criteria": []
+        },
+        {
+          "code": "WE0404",
+          "title": "Receive, respond to, and escalate requests for information from personal employee records",
+          "elements": [
+            {
+              "kind": "work_activity",
+              "code": "WA0401",
+              "description": "Receive and respond to requests for information from personal files."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK01",
+              "description": "Site specific policies."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK02",
+              "description": "Site specific procedures and SOPs."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK03",
+              "description": "Regulatory requirements."
+            },
+            {
+              "kind": "contextual_knowledge",
+              "code": "WK04",
+              "description": "Professional guidelines."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE01",
+              "description": "Performance reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE02",
+              "description": "Manager's observation reports."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE03",
+              "description": "Minutes of meetings."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE04",
+              "description": "Peer and customer feedback."
+            },
+            {
+              "kind": "supporting_evidence",
+              "code": "SE05",
+              "description": "Signed Off Logbook. 4.4 SECTION 4D: STATEMENT OF WORK EXPERIENCE Curriculum Number 441601-000-00-00: Curriculum Title."
+            }
+          ],
+          "criteria": []
+        }
+      ],
+      "purpose": "To apply the processes for compiling, maintaining and securing employee records in a real workplace, guided by a workplace coach who signs the logbook."
+    }
+  ],
+  "_sourceDiscrepancies": [
+    {
+      "where": "KM01 credits",
+      "source": "The module list says 4 credits; the detail heading says 12.",
+      "taken": "4. The qualification record says 4, and 4 is what makes the knowledge component add up to its stated 42."
+    },
+    {
+      "where": "KM02 / KM0202 criteria",
+      "source": "The criteria under the second topic are numbered IAC0101 to IAC0104, duplicating the first topic's.",
+      "taken": "IAC0201 to IAC0204, following the pattern every other topic uses."
+    },
+    {
+      "where": "KM04 topic codes",
+      "source": "The eight topics are listed as KM0401 to KM0408 but their guideline headings repeat the prefix KT.",
+      "taken": "KM0401 to KM0408, as listed."
+    },
+    {
+      "where": "KM05 topic codes",
+      "source": "The two topics are coded KT0501 and KT0502, which is the topic element prefix.",
+      "taken": "KM0501 and KM0502, following the pattern every other knowledge module uses."
+    },
+    {
+      "where": "PM01 / PS0104 and PM02 / PS0206, PS0207",
+      "source": "No applied knowledge is listed for these skills, yet each one's fourth criterion says to evaluate 'the key attributes as set out in the applied knowledge section'.",
+      "taken": "Transcribed as they stand. The criterion is unassessable as written and the provider must decide what applied knowledge it means."
+    },
+    {
+      "where": "PM02 / PS0204 activities",
+      "source": "The practical activities begin at PA0402. There is no PA0401.",
+      "taken": "As they stand. Comparison with PS0201, which is otherwise identical, suggests the missing activity is 'Prepare, analyse and present data'."
+    },
+    {
+      "where": "PM03 skill code",
+      "source": "The module's only practical skill is coded PM0101, which is a module prefix.",
+      "taken": "PS0301, following the pattern the other practical modules use."
+    },
+    {
+      "where": "PM04 skill code",
+      "source": "The guideline heading reads 'PM0101: PS0401'.",
+      "taken": "PS0401."
+    },
+    {
+      "where": "WM01 / WE0102 work activities",
+      "source": "All five work activities are coded WA0201.",
+      "taken": "WA0201 to WA0205, so that each can be signed off separately."
+    }
   ]
 }
