@@ -475,10 +475,13 @@ describe("what the marks imply", () => {
   });
 
   /**
-   * Not the average. A learner who wrote one excellent answer and one empty
-   * one has not demonstrated the criterion, and averaging hides exactly that.
+   * The average across the questions evidencing a criterion, not a demand that
+   * every one of them pass. The marks are not the whole picture — practical
+   * performance and workplace evidence never reach the platform — so a
+   * proposal that insisted on every question would be overridden constantly,
+   * and a proposal overridden constantly stops being read.
    */
-  it("holds a criterion back when any question evidencing it fell short", async () => {
+  it("averages across the questions evidencing a criterion", async () => {
     const { assessmentId, itemIds } = await buildPaper("summative");
     const submissionId = await sitAndSubmit(assessmentId);
 
@@ -487,14 +490,134 @@ describe("what the marks imply", () => {
 
     const proposals = await proposeCriterionOutcomes(assessor, submissionId);
 
-    // IAC0103 rests only on the strong answer.
-    expect(proposals.find((p) => p.code === "IAC0103")!.outcome).toBe(
-      "competent",
+    // IAC0103 rests on the strong answer alone: 10 of 10.
+    const first = proposals.find((p) => p.code === "IAC0103")!;
+    expect(first.percentage).toBe(100);
+    expect(first.outcome).toBe("competent");
+
+    // IAC0104 rests on both: 12 of 20, which is 60% and exactly the pass mark.
+    const second = proposals.find((p) => p.code === "IAC0104")!;
+    expect(second.percentage).toBe(60);
+    expect(second.outcome).toBe("competent");
+  });
+
+  it("proposes not yet competent when the average falls short", async () => {
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 10 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 0 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+    const second = proposals.find((p) => p.code === "IAC0104")!;
+
+    expect(second.percentage).toBe(50);
+    expect(second.outcome).toBe("not_yet_competent");
+  });
+});
+
+describe("the assessor's own call", () => {
+  /**
+   * The proposal is arithmetic; the decision is judgement. An assessor who has
+   * watched a learner perform the task may reach a different answer, and
+   * should — what the platform insists on is that the reason is written down.
+   */
+  it("accepts an override that says why", async () => {
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 5 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 5 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+    expect(proposals.every((p) => p.outcome === "not_yet_competent")).toBe(true);
+
+    const proposed = Object.fromEntries(
+      proposals.map((p) => [p.criterionId, p.outcome]),
     );
-    // IAC0104 rests on both, and one of them failed.
-    expect(proposals.find((p) => p.code === "IAC0104")!.outcome).toBe(
+
+    const result = await recordAssessorDecision(assessor, {
+      submissionId,
+      outcome: "competent",
+      criterionProposed: proposed,
+      criterionOutcomes: Object.fromEntries(
+        proposals.map((p) => [p.criterionId, "competent" as const]),
+      ),
+      criterionNotes: Object.fromEntries(
+        proposals.map((p) => [
+          p.criterionId,
+          "Demonstrated in the practical simulation on 14 March, observed directly.",
+        ]),
+      ),
+    });
+
+    expect(result.decision.id).toBeDefined();
+
+    const [stored] = await withTenant(organisationId, (tx) =>
+      tx
+        .select()
+        .from(assessmentDecisions)
+        .where(eq(assessmentDecisions.id, result.decision.id)),
+    );
+
+    // Both the arithmetic and the judgement survive, so a moderator can see
+    // where they parted and read why.
+    expect(Object.values(stored.criterionProposed!)).toEqual([
       "not_yet_competent",
+      "not_yet_competent",
+    ]);
+    expect(Object.values(stored.criterionOutcomes!)).toEqual([
+      "competent",
+      "competent",
+    ]);
+    expect(Object.values(stored.criterionNotes!)[0]).toContain(
+      "practical simulation",
     );
+  });
+
+  it("refuses an override that says nothing", async () => {
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 3 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 3 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+
+    await expect(
+      recordAssessorDecision(assessor, {
+        submissionId,
+        outcome: "competent",
+        criterionProposed: Object.fromEntries(
+          proposals.map((p) => [p.criterionId, p.outcome]),
+        ),
+        criterionOutcomes: Object.fromEntries(
+          proposals.map((p) => [p.criterionId, "competent" as const]),
+        ),
+      }),
+    ).rejects.toThrow(/Say why/);
+  });
+
+  it("does not ask for a reason where the assessor agrees", async () => {
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 9 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 9 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+    const outcomes = Object.fromEntries(
+      proposals.map((p) => [p.criterionId, p.outcome]),
+    );
+
+    await expect(
+      recordAssessorDecision(assessor, {
+        submissionId,
+        outcome: "competent",
+        criterionProposed: outcomes,
+        criterionOutcomes: outcomes,
+      }),
+    ).resolves.toBeDefined();
   });
 });
 

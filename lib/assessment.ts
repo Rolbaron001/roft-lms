@@ -836,6 +836,15 @@ export const decisionInput = z.object({
   criterionOutcomes: z
     .record(z.string(), z.enum(["competent", "not_yet_competent"]))
     .optional(),
+  /**
+   * Why, per criterion. Required wherever the assessor departs from what the
+   * marks proposed — see the refusal in `recordAssessorDecision`.
+   */
+  criterionNotes: z.record(z.string(), z.string().trim().max(2000)).optional(),
+  /** What the marks implied, carried in so it can be stored beside the call. */
+  criterionProposed: z
+    .record(z.string(), z.enum(["competent", "not_yet_competent"]))
+    .optional(),
 });
 
 export async function recordAssessorDecision(
@@ -884,6 +893,28 @@ export async function recordAssessorDecision(
       }
     }
 
+    // Departing from the arithmetic is expected and often right — the marks
+    // are not the whole picture. What is refused is departing from it in
+    // silence, because an unexplained override is indistinguishable at audit
+    // from a mistake.
+    if (parsed.criterionProposed && parsed.criterionOutcomes) {
+      const unexplained = Object.entries(parsed.criterionOutcomes)
+        .filter(([criterionId, outcome]) => {
+          const proposed = parsed.criterionProposed![criterionId];
+          if (!proposed || proposed === outcome) return false;
+          return !parsed.criterionNotes?.[criterionId]?.trim();
+        })
+        .map(([criterionId]) => criterionId);
+
+      if (unexplained.length > 0) {
+        throw new AssessmentError(
+          `You have changed ${unexplained.length === 1 ? "a criterion" : `${unexplained.length} criteria`} from what the marks proposed. ` +
+            `Say why — practical performance and workplace evidence do not reach the platform, and the reason has to.`,
+          "invalid_state",
+        );
+      }
+    }
+
     if (submission.status === "finalised") {
       throw new AssessmentError(
         "This submission has already been finalised.",
@@ -914,6 +945,8 @@ export async function recordAssessorDecision(
         assessorId: session.userId,
         outcome: parsed.outcome,
         criterionOutcomes: parsed.criterionOutcomes ?? null,
+        criterionProposed: parsed.criterionProposed ?? null,
+        criterionNotes: parsed.criterionNotes ?? null,
         score,
         comments: parsed.comments ?? null,
         signedAt: new Date(),

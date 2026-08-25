@@ -404,6 +404,26 @@ export const assessmentDecisions = pgTable(
     criterionOutcomes: jsonb("criterion_outcomes").$type<
       Record<string, "competent" | "not_yet_competent">
     >(),
+    /**
+     * What the marks implied at the time, before the assessor decided.
+     *
+     * Kept beside the decision so a moderator can see where the assessor
+     * departed from the arithmetic and read why. Without it, an override is
+     * invisible: the record would show only the judgement that survived.
+     */
+    criterionProposed: jsonb("criterion_proposed").$type<
+      Record<string, "competent" | "not_yet_competent">
+    >(),
+    /**
+     * The assessor's reasoning, per criterion.
+     *
+     * Marks are not the whole picture. Practical performance, workplace
+     * evidence and things seen in a simulation do not reach the platform, and
+     * the assessor weighs them before calling competence. This is where that
+     * reasoning is written down — which is the difference between a defensible
+     * judgement and an unexplained one.
+     */
+    criterionNotes: jsonb("criterion_notes").$type<Record<string, string>>(),
     score: numeric("score", { precision: 6, scale: 2 }),
     comments: text("comments"),
 

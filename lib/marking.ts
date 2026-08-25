@@ -372,6 +372,8 @@ export type CriterionProposal = {
   code: string;
   description: string;
   outcome: "competent" | "not_yet_competent";
+  /** The average across the questions evidencing it, as a percentage. */
+  percentage: number;
   /** The questions that evidence it, and how they were marked. */
   evidence: { stem: string; awarded: number; points: number }[];
 };
@@ -383,9 +385,15 @@ export type CriterionProposal = {
  * rather than retypes, and whatever they change is recorded as their judgement
  * — which is what the regulation actually requires and what an audit reads.
  *
- * A criterion is proposed competent when every question evidencing it reached
- * the pass mark. Not the average: a learner who wrote one excellent answer and
- * one empty one has not demonstrated the criterion, and averaging hides that.
+ * A criterion is proposed competent when the marks across the questions
+ * evidencing it average out at or above the pass mark.
+ *
+ * The average rather than every-question-must-pass, because the marks are not
+ * the whole picture. Practical performance, workplace evidence and what an
+ * assessor saw in a simulation never reach the platform, and they are weighed
+ * before competence is called. A proposal that demanded every question pass
+ * would be overridden constantly, and a proposal overridden constantly stops
+ * being read.
  */
 export async function proposeCriterionOutcomes(
   session: AuthenticatedSession,
@@ -421,20 +429,22 @@ export async function proposeCriterionOutcomes(
         item.criterionIds.includes(criterion.id),
       );
 
-      const allPassed = evidencing.every(
-        (item) =>
-          item.awarded !== null &&
-          item.points > 0 &&
-          (item.awarded / item.points) * 100 >= paper.passMark,
+      const available = evidencing.reduce((sum, item) => sum + item.points, 0);
+      const awarded = evidencing.reduce(
+        (sum, item) => sum + (item.awarded ?? 0),
+        0,
       );
+      const percentage = available === 0 ? 0 : (awarded / available) * 100;
 
       return {
         criterionId: criterion.id,
         code: criterion.code,
         description: criterion.description,
-        outcome: allPassed
-          ? ("competent" as const)
-          : ("not_yet_competent" as const),
+        percentage,
+        outcome:
+          percentage >= paper.passMark
+            ? ("competent" as const)
+            : ("not_yet_competent" as const),
         evidence: evidencing.map((item) => ({
           stem: item.stem,
           awarded: item.awarded ?? 0,

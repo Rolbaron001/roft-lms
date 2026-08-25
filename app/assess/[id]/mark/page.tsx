@@ -83,7 +83,7 @@ export default async function MarkPaperPage({
         <div className="mt-6">
           <Card
             title="What these marks imply"
-            description="A proposal, not a decision. Confirm or change each one on the decision screen — what you record there is your judgement, and an override is recorded as an override."
+            description="Arithmetic, not a judgement. The marks average out at this; practical performance and workplace evidence do not reach the platform, and you weigh those before deciding. Change any of these on the decision screen and say why — the reason is stored beside the proposal so a moderator can see where the two parted."
           >
             {!paper.fullyMarked ? (
               <p className="text-sm text-[var(--muted)]">
@@ -112,10 +112,10 @@ export default async function MarkPaperPage({
                           : "not yet competent"}
                       </span>
                       <span className="mt-1 block text-xs text-[var(--muted)]">
-                        On{" "}
+                        {Math.round(proposal.percentage)}% across{" "}
                         {proposal.evidence
                           .map((e) => `${e.awarded}/${e.points}`)
-                          .join(", ")}
+                          .join(" and ")}
                       </span>
                     </li>
                   ))}
