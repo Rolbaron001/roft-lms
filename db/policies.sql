@@ -264,3 +264,38 @@ alter table course_step_prerequisites
 alter table step_overrides drop constraint if exists step_overrides_reason_check;
 alter table step_overrides add constraint step_overrides_reason_check
   check (length(btrim(reason)) >= 10);
+
+-- ---------------------------------------------------------------------------
+-- A response holds one kind of answer, matching the item it answers.
+--
+-- Not enforceable against the item's type from here without a lookup, so what
+-- is checked is the weaker but still useful shape: a response that carries a
+-- selection and free text and a number at once is a row nothing can mark.
+alter table item_responses drop constraint if exists item_responses_one_answer_check;
+alter table item_responses add constraint item_responses_one_answer_check
+  check (
+    num_nonnulls(selected_option_ids, answer_text, answer_number) <= 1
+  );
+
+-- A section states what it is worth. Zero or a negative total is a mistake in
+-- the paper, not a section worth nothing.
+alter table assessment_sections drop constraint if exists assessment_sections_marks_check;
+alter table assessment_sections add constraint assessment_sections_marks_check
+  check (mark_total is null or mark_total > 0);
+
+-- A submission that has been handed in carries the declaration it was handed
+-- in under. Enforced here because the whole point of the declaration is that
+-- it cannot be skipped, and a route that forgets to ask for it would otherwise
+-- produce evidence nobody attested to.
+alter table assessment_submissions drop constraint if exists assessment_submissions_declaration_check;
+alter table assessment_submissions add constraint assessment_submissions_declaration_check
+  check (
+    status = 'draft'
+    or paper_id is null
+    or (
+      length(btrim(coalesce(declaration_text, ''))) > 0
+      -- Either the learner attested, or the clock closed it and the record
+      -- says so. What is refused is a handed-in paper carrying neither.
+      and (declaration_accepted_at is not null or closed_on_time)
+    )
+  );

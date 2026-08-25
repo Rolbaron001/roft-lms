@@ -74,6 +74,17 @@ export const assessmentInput = z.object({
   passMark: z.coerce.number().int().min(0).max(100).default(70),
   maxAttempts: z.coerce.number().int().min(1).max(20).optional(),
   /**
+   * How long a learner has once they start. Enforced on the server from the
+   * moment the attempt opened, so leaving the page open gains nobody time.
+   */
+  timeLimitMinutes: z.coerce.number().int().min(1).max(1440).optional(),
+  /** Which paper each attempt draws, where more than one exists. */
+  attemptPolicy: z.enum(["fixed", "rotate", "random"]).default("rotate"),
+  /** Whether a person opens the sitting. Almost never, and never implied. */
+  requiresInvigilator: z.boolean().default(false),
+  /** What the learner attests to on handing in. */
+  declarationText: z.string().trim().max(4000).optional(),
+  /**
    * Fraction of decisions routed to a moderator. 0.25 is a platform default,
    * not a prescribed figure: the provider's own moderation policy sets it.
    */
@@ -115,6 +126,10 @@ export async function createAssessment(
         purpose: parsed.purpose,
         passMark: parsed.passMark,
         maxAttempts: parsed.maxAttempts ?? null,
+        timeLimitMinutes: parsed.timeLimitMinutes ?? null,
+        attemptPolicy: parsed.attemptPolicy,
+        requiresInvigilator: parsed.requiresInvigilator,
+        declarationText: parsed.declarationText ?? null,
         moderationSampleRate: sampleRate.toFixed(3),
       })
       .returning();

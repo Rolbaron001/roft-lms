@@ -41,10 +41,29 @@ export const itemType = pgEnum("item_type", [
   "multiple_response",
   "true_false",
   "short_answer",
+  /** A structured response of several paragraphs, marked against a rubric. */
+  "long_answer",
+  "numeric",
   "scenario",
   "file_upload",
   "observation_checklist",
 ]);
+
+/**
+ * Which paper an attempt draws.
+ *
+ * Two written papers exist for the summative — V1 and V2 — so a re-sit is a
+ * different paper rather than the same one again. `fixed` gives every attempt
+ * the first paper, which is what an ordinary workbook wants.
+ */
+export const attemptPolicy = pgEnum("attempt_policy", [
+  "fixed",
+  "rotate",
+  "random",
+]);
+
+/** How a paper is taken. An oral paper has prompts for the assessor, not items. */
+export const paperMode = pgEnum("paper_mode", ["written", "oral"]);
 
 export const competencyOutcome = pgEnum("competency_outcome", [
   "competent",
@@ -90,6 +109,27 @@ export const assessments = pgTable(
     passMark: integer("pass_mark").notNull().default(70),
     maxAttempts: integer("max_attempts"),
     timeLimitMinutes: integer("time_limit_minutes"),
+
+    /** Which paper each attempt draws. See `assessmentPapers`. */
+    attemptPolicy: attemptPolicy("attempt_policy").notNull().default("rotate"),
+
+    /**
+     * Whether a person opens the sitting for the learner.
+     *
+     * Almost every sitting is online and unsupervised, and the platform should
+     * not imply otherwise. What it records is what it genuinely knows: when
+     * the attempt started, how long it took, and — where this is set — who
+     * opened it. None of that is proof of anything and none of it is shown as
+     * though it were.
+     */
+    requiresInvigilator: boolean("requires_invigilator").notNull().default(false),
+
+    /**
+     * What a learner attests to on handing in. Frozen into each submission, so
+     * a year later the record shows what was agreed rather than merely that
+     * something was.
+     */
+    declarationText: text("declaration_text"),
 
     /**
      * Proportion of this assessment's decisions routed to a moderator, as a
@@ -148,6 +188,16 @@ export const assessmentItems = pgTable(
     criterionId: uuid("criterion_id").references(() => assessmentCriteria.id, {
       onDelete: "set null",
     }),
+    /**
+     * The section of a paper this item sits in.
+     *
+     * Null for an item written straight onto an assessment, which is what a
+     * short quiz is and what every assessment authored before papers existed
+     * still is. An item with a section belongs to that section's paper.
+     */
+    sectionId: uuid("section_id").references(() => assessmentSections.id, {
+      onDelete: "cascade",
+    }),
 
     type: itemType("type").notNull().default("multiple_choice"),
     stem: text("stem").notNull(),
@@ -171,6 +221,7 @@ export const assessmentItems = pgTable(
     index("assessment_items_assessment_idx").on(t.assessmentId),
     index("assessment_items_org_idx").on(t.organisationId),
     index("assessment_items_criterion_idx").on(t.criterionId),
+    index("assessment_items_section_idx").on(t.sectionId),
   ],
 );
 
@@ -194,6 +245,46 @@ export const assessmentSubmissions = pgTable(
 
     attemptNumber: integer("attempt_number").notNull().default(1),
     status: submissionStatus("status").notNull().default("draft"),
+
+    /** Which paper this attempt drew. Null for a flat quiz with no papers. */
+    paperId: uuid("paper_id").references(() => assessmentPapers.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * The paper exactly as it was presented: stems, options, marks, sections.
+     *
+     * An author correcting a question next month must not change the paper a
+     * learner already sat. A moderator opening this in six months sees what
+     * the learner saw, not what the assessment has since become.
+     */
+    frozenPaper: jsonb("frozen_paper"),
+
+    /** When the learner started, which is what the clock runs from. */
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    /** Recorded only where a person actually opened the sitting. */
+    invigilatorId: uuid("invigilator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * The declaration of authenticity, and the moment it was accepted.
+     *
+     * The wording is copied in rather than referenced, because the assessment
+     * wording may change later. Submission is refused without this.
+     */
+    declarationText: text("declaration_text"),
+    declarationAcceptedAt: timestamp("declaration_accepted_at", {
+      withTimezone: true,
+    }),
+    /**
+     * Set when the clock ran out rather than the learner handing in.
+     *
+     * The work is kept — a dropped connection is not cheating — but nobody
+     * attested to it, and the record has to say which of the two happened
+     * rather than leaving an assessor to infer it from a missing timestamp.
+     */
+    closedOnTime: boolean("closed_on_time").notNull().default(false),
     /** Learner responses keyed by item id. Retained in full for audit. */
     responses: jsonb("responses").$type<Record<string, unknown>>(),
     autoScore: numeric("auto_score", { precision: 6, scale: 2 }),
@@ -694,5 +785,127 @@ export const statementsOfResults = pgTable(
     uniqueIndex("statements_of_results_body_idx").on(t.verificationBody),
     index("statements_of_results_org_idx").on(t.organisationId),
     index("statements_of_results_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * A parallel form of one assessment.
+ *
+ * The summative for Study Unit 1 exists as V1 and V2: same pass mark, same
+ * criteria, same moderation policy, different questions. Modelling them as two
+ * papers of one assessment rather than two assessments is what makes a re-sit
+ * a second attempt instead of an unrelated event, and what stops the two
+ * drifting apart, since everything that governs them is stated once.
+ *
+ * A third attempt is oral and carries no items of its own: the assessor works
+ * from the same sections and criteria and records what was asked and answered.
+ */
+export const assessmentPapers = pgTable(
+  "assessment_papers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    assessmentId: uuid("assessment_id")
+      .notNull()
+      .references(() => assessments.id, { onDelete: "cascade" }),
+
+    /** "V1", "V2". Shown to the assessor, never to the learner. */
+    code: text("code").notNull(),
+    mode: paperMode("mode").notNull().default("written"),
+    status: publishStatus("status").notNull().default("draft"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("assessment_papers_code_idx").on(t.assessmentId, t.code),
+    index("assessment_papers_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * A section of a paper, with its own mark allocation and its own stimulus.
+ *
+ * Workbook 1 runs Activity 1.1 at four marks, 1.2 at four and 1.3 at fifty.
+ * The summative runs Sections A, B and C at 15, 15 and 70, and Section C opens
+ * with a scenario that all four of its questions draw on. A stimulus belongs
+ * to the section rather than being repeated on each item, because that is what
+ * it is: one piece of context, on screen throughout.
+ */
+export const assessmentSections = pgTable(
+  "assessment_sections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    paperId: uuid("paper_id")
+      .notNull()
+      .references(() => assessmentPapers.id, { onDelete: "cascade" }),
+
+    title: text("title").notNull(),
+    /** "Select the most appropriate answer for each question." */
+    instruction: text("instruction"),
+    /** Shared context the items draw on. Stays on screen while answering. */
+    stimulus: text("stimulus"),
+    /**
+     * What the section is worth, as the paper states it. Checked against the
+     * marks on its items rather than derived from them, so a paper whose
+     * printed total does not match its questions is caught rather than
+     * silently corrected.
+     */
+    markTotal: integer("mark_total"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [
+    index("assessment_sections_paper_idx").on(t.paperId, t.sortOrder),
+    index("assessment_sections_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * One learner answer to one question.
+ *
+ * Replaces holding every answer in a single JSON blob on the submission. The
+ * blob is fine for a four-question quiz and wrong for a fifty-mark structured
+ * paper marked question by question, where an assessor awards seven of ten on
+ * C1 and refers C3 back. It is also what makes autosave per question rather
+ * than per paper, so a dropped connection costs one answer and not an
+ * afternoon.
+ */
+export const itemResponses = pgTable(
+  "item_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => assessmentItems.id, { onDelete: "cascade" }),
+
+    /** Option ids for a selected-response item. */
+    selectedOptionIds: jsonb("selected_option_ids").$type<string[]>(),
+    /** Written text for a short or long answer. */
+    answerText: text("answer_text"),
+    /** A number, where the item asks for one. */
+    answerNumber: numeric("answer_number", { precision: 14, scale: 4 }),
+
+    /** Awarded by the marking engine, where the item can be marked by one. */
+    autoMarks: numeric("auto_marks", { precision: 6, scale: 2 }),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("item_responses_unique_idx").on(t.submissionId, t.itemId),
+    index("item_responses_org_idx").on(t.organisationId),
   ],
 );

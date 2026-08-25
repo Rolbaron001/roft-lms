@@ -103,7 +103,11 @@ export function StepList({
                   {isOwn && step.open && step.state !== "done" ? (
                     step.kind === "assessment" ? (
                       <Link
-                        href={`/learn/${enrolmentId}/assessment/${step.targetId}`}
+                        href={
+                          step.hasPaper
+                            ? `/learn/${enrolmentId}/paper/${step.targetId}`
+                            : `/learn/${enrolmentId}/assessment/${step.targetId}`
+                        }
                         className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
                         style={{ background: "var(--brand-primary)" }}
                       >

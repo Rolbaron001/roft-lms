@@ -3,6 +3,7 @@ import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentDecisions,
   assessmentSubmissions,
+  assessmentPapers,
   assessments,
   courseStepPrerequisites,
   courseSteps,
@@ -83,6 +84,12 @@ export type StepView = {
   optional: boolean;
   sortOrder: number;
   targetId: string;
+  /**
+   * Whether an assessment step has a paper to sit, as against being a flat
+   * quiz. Decides which screen the learner is sent to, so the page they land
+   * on is the one that can actually present it.
+   */
+  hasPaper: boolean;
   /** True when this step's own gate is satisfied for this learner. */
   open: boolean;
   /** Why it is not, in words a learner can act on. Empty when open. */
@@ -360,6 +367,24 @@ async function computeSteps(
 
   const stepIds = steps.map((step) => step.id);
 
+  const assessmentIds = steps
+    .filter((step) => step.kind === "assessment" && step.assessmentId)
+    .map((step) => step.assessmentId!);
+
+  const paperedAssessments =
+    assessmentIds.length === 0
+      ? []
+      : await tx
+          .selectDistinct({ assessmentId: assessmentPapers.assessmentId })
+          .from(assessmentPapers)
+          .where(
+            and(
+              inArray(assessmentPapers.assessmentId, assessmentIds),
+              eq(assessmentPapers.status, "published"),
+            ),
+          );
+  const withPaper = new Set(paperedAssessments.map((row) => row.assessmentId));
+
   const [prerequisites, overrides, progress, titles] = await Promise.all([
     tx
       .select()
@@ -467,6 +492,7 @@ async function computeSteps(
         step.assessmentId ??
         step.programmeDocumentId ??
         step.curriculumModuleId!,
+      hasPaper: step.assessmentId ? withPaper.has(step.assessmentId) : false,
       open,
       blockedBy: open && override ? [] : blockedBy,
       overrideReason: override,
