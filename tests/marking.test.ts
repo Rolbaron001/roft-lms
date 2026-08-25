@@ -844,3 +844,188 @@ describe("from a marked question to readiness", () => {
     expect(after.achievedCriteria).toBe(2);
   });
 });
+
+/**
+ * The pack an accreditation visit asks for, and the record a learner keeps.
+ *
+ * Both are assembly rather than new information — every piece already existed
+ * somewhere. What is tested here is that the assembly does not quietly leave
+ * out the parts a moderator would ask for first.
+ */
+describe("the moderation pack", () => {
+  it("samples across the mark range rather than flatteringly", async () => {
+    const { assembleModerationPack } = await import("@/lib/moderation-pack");
+    const { assessmentId, itemIds } = await buildPaper("summative");
+
+    // Six learners, marked from top to bottom.
+    const marks = [20, 16, 12, 9, 5, 1];
+    for (const [index, total] of marks.entries()) {
+      const sitter = sessionFor(
+        ["learner"],
+        await createPerson(`sitter-${index}-${suffix()}@mark.test`, ["learner"]),
+      );
+      const sitting = await startAttempt(sitter, assessmentId);
+      await submitAttempt(sitter, {
+        submissionId: sitting.submissionId,
+        declarationAccepted: true,
+      });
+      await markItem(assessor, {
+        submissionId: sitting.submissionId,
+        itemId: itemIds[0],
+        marks: Math.min(10, total),
+      });
+      await markItem(assessor, {
+        submissionId: sitting.submissionId,
+        itemId: itemIds[1],
+        marks: Math.max(0, total - 10),
+      });
+    }
+
+    const moderator = sessionFor(
+      ["moderator"],
+      await createPerson(`mod-${suffix()}@mark.test`, ["moderator"]),
+    );
+    const pack = await assembleModerationPack(moderator, assessmentId, {
+      sampleSize: 4,
+    });
+
+    expect(pack.counts.submissions).toBe(6);
+    expect(pack.scripts).toHaveLength(4);
+
+    // The best and the worst are both in it, which a random four need not be.
+    const percentages = pack.scripts.map((script) => script.percentage);
+    expect(Math.max(...percentages)).toBe(100);
+    expect(Math.min(...percentages)).toBe(5);
+  });
+
+  it("carries the memorandum the marking was done against", async () => {
+    const { assembleModerationPack } = await import("@/lib/moderation-pack");
+    const { assessmentId } = await buildPaper("summative");
+
+    const moderator = sessionFor(
+      ["moderator"],
+      await createPerson(`mod-${suffix()}@mark.test`, ["moderator"]),
+    );
+    const pack = await assembleModerationPack(moderator, assessmentId);
+
+    expect(pack.memorandum).toHaveLength(2);
+    expect(pack.memorandum[0].markingGuide).toContain("rubric");
+    expect(pack.assessment.moderationSampleRate).toBe(1);
+  });
+
+  /** The part a pack is most tempted to omit. */
+  it("shows where an assessor departed from what the marks proposed", async () => {
+    const { assembleModerationPack } = await import("@/lib/moderation-pack");
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 4 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 4 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+    await recordAssessorDecision(assessor, {
+      submissionId,
+      outcome: "competent",
+      criterionProposed: Object.fromEntries(
+        proposals.map((p) => [p.criterionId, p.outcome]),
+      ),
+      criterionOutcomes: Object.fromEntries(
+        proposals.map((p) => [p.criterionId, "competent" as const]),
+      ),
+      criterionNotes: Object.fromEntries(
+        proposals.map((p) => [
+          p.criterionId,
+          "Observed performing the task in the workplace on 3 April.",
+        ]),
+      ),
+    });
+
+    const moderator = sessionFor(
+      ["moderator"],
+      await createPerson(`mod-${suffix()}@mark.test`, ["moderator"]),
+    );
+    const pack = await assembleModerationPack(moderator, assessmentId);
+
+    expect(pack.overturned.length).toBeGreaterThan(0);
+    const departure = pack.overturned[0].departures[0];
+    expect(departure.proposed).toBe("not_yet_competent");
+    expect(departure.decided).toBe("competent");
+    expect(departure.reason).toContain("workplace");
+  });
+
+  it("is not offered to somebody who cannot moderate", async () => {
+    const { assembleModerationPack } = await import("@/lib/moderation-pack");
+    const { assessmentId } = await buildPaper("summative");
+    await expect(
+      assembleModerationPack(learner, assessmentId),
+    ).rejects.toThrow();
+  });
+});
+
+describe("a learner's own record", () => {
+  it("holds the questions, the answers, the marks and who signed", async () => {
+    const { portfolioRecord } = await import("@/lib/moderation-pack");
+    const { assessmentId, itemIds } = await buildPaper("summative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    await markItem(assessor, {
+      submissionId,
+      itemId: itemIds[0],
+      marks: 8,
+      comment: "Well argued.",
+    });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 7 });
+
+    const proposals = await proposeCriterionOutcomes(assessor, submissionId);
+    await recordAssessorDecision(assessor, {
+      submissionId,
+      outcome: "competent",
+      comments: "Both criteria demonstrated.",
+      criterionProposed: Object.fromEntries(
+        proposals.map((p) => [p.criterionId, p.outcome]),
+      ),
+      criterionOutcomes: Object.fromEntries(
+        proposals.map((p) => [p.criterionId, p.outcome]),
+      ),
+    });
+
+    const record = await portfolioRecord(learner, submissionId);
+
+    expect(record.items).toHaveLength(2);
+    expect(record.items[0].awarded).toBe(8);
+    expect(record.items[0].comment).toBe("Well argued.");
+    expect(record.marksAwarded).toBe(15);
+    expect(record.marksAvailable).toBe(20);
+    expect(record.decision?.outcome).toBe("competent");
+    expect(record.decision?.assessor).toContain("Tester");
+    // The declaration is part of the record, not a step on the way to it.
+    expect(record.declarationText).toContain("my own work");
+    expect(record.declarationAcceptedAt).not.toBeNull();
+  });
+
+  it("says plainly where a question was left blank", async () => {
+    const { portfolioRecord } = await import("@/lib/moderation-pack");
+    const { assessmentId } = await buildPaper("formative");
+
+    const sitting = await startAttempt(learner, assessmentId);
+    await submitAttempt(learner, {
+      submissionId: sitting.submissionId,
+      declarationAccepted: true,
+    });
+
+    const record = await portfolioRecord(learner, sitting.submissionId);
+    expect(record.items[0].answer).toContain("left blank");
+  });
+
+  it("will not hand one learner another learner's record", async () => {
+    const { portfolioRecord } = await import("@/lib/moderation-pack");
+    const { assessmentId } = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(assessmentId);
+
+    const stranger = sessionFor(
+      ["learner"],
+      await createPerson(`stranger-${suffix()}@mark.test`, ["learner"]),
+    );
+    await expect(portfolioRecord(stranger, submissionId)).rejects.toThrow();
+  });
+});
