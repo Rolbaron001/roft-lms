@@ -321,3 +321,22 @@ alter table item_responses add constraint item_responses_awarded_check
 alter table formative_feedback drop constraint if exists formative_feedback_comments_check;
 alter table formative_feedback add constraint formative_feedback_comments_check
   check (length(btrim(comments)) >= 10);
+
+-- ---------------------------------------------------------------------------
+-- A cohort runs forwards, and a step is due after it opens rather than before.
+alter table cohorts drop constraint if exists cohorts_dates_check;
+alter table cohorts add constraint cohorts_dates_check
+  check (end_date is null or end_date >= start_date);
+
+alter table step_releases drop constraint if exists step_releases_order_check;
+alter table step_releases add constraint step_releases_order_check
+  check (
+    (opens_after_days is null or opens_after_days >= 0)
+    and (due_after_days is null or due_after_days >= 0)
+    and (closes_after_days is null or closes_after_days >= 0)
+    and (
+      opens_after_days is null
+      or due_after_days is null
+      or due_after_days >= opens_after_days
+    )
+  );

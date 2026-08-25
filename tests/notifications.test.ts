@@ -306,6 +306,9 @@ describe("the scheduled sweep", () => {
       overdue: 0,
       awaitingAssessor: 0,
       awaitingModerator: 0,
+      // A tenant with no cohorts has no schedule to raise anything from.
+      stepsOpened: 0,
+      stepsDue: 0,
     });
 
     await withPlatformScope("quiet teardown", (tx) =>

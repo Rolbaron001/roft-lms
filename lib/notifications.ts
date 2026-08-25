@@ -1,6 +1,11 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
+import { dayFrom } from "./schedule";
 import {
+  stepReleases,
+  courseSteps,
+  cohortMembers,
+  cohorts,
   assessmentSubmissions,
   courses,
   enrolments,
@@ -213,6 +218,9 @@ export type SweepResult = {
   overdue: number;
   awaitingAssessor: number;
   awaitingModerator: number;
+  /** Steps on a cohort schedule that opened today, or fell due today. */
+  stepsOpened: number;
+  stepsDue: number;
 };
 
 /**
@@ -230,6 +238,8 @@ export async function sweepTenant(
     overdue: 0,
     awaitingAssessor: 0,
     awaitingModerator: 0,
+    stepsOpened: 0,
+    stepsDue: 0,
   };
 
   await withTenant(organisationId, async (tx) => {
@@ -375,6 +385,70 @@ export async function sweepTenant(
           dedupeKey: `moderate_waiting:${moderatorId}:${week}`,
         });
         result.awaitingModerator += 1;
+      }
+    }
+
+    // --- cohort schedule: what opened today, and what is now due ----------
+    //
+    // A learner told nothing when a step opens has to keep checking, and one
+    // told nothing when it falls due finds out from a facilitator's chase.
+    // Both are what a schedule exists to prevent.
+    const scheduled = await tx
+      .select({
+        cohortName: cohorts.name,
+        startDate: cohorts.startDate,
+        stepId: stepReleases.stepId,
+        stepTitle: courseSteps.title,
+        opensAfterDays: stepReleases.opensAfterDays,
+        dueAfterDays: stepReleases.dueAfterDays,
+        userId: cohortMembers.userId,
+      })
+      .from(stepReleases)
+      .innerJoin(cohorts, eq(cohorts.id, stepReleases.cohortId))
+      .innerJoin(courseSteps, eq(courseSteps.id, stepReleases.stepId))
+      .innerJoin(cohortMembers, eq(cohortMembers.cohortId, cohorts.id))
+      .where(and(eq(cohorts.status, "running"), isNull(cohortMembers.leftAt)));
+
+    const today = now.toISOString().slice(0, 10);
+
+    for (const row of scheduled) {
+      const name = row.stepTitle ?? "The next step";
+
+      if (row.opensAfterDays !== null) {
+        const opensAt = dayFrom(row.startDate, row.opensAfterDays);
+        if (opensAt.toISOString().slice(0, 10) === today) {
+          await raise(tx, {
+            organisationId,
+            userId: row.userId,
+            kind: "programme.step_unlocked",
+            subject: `${name} is open`,
+            body: `${name} is now open on ${row.cohortName}.`,
+            linkPath: "/",
+            entityType: "course_step",
+            entityId: row.stepId,
+            dedupeKey: `step_open:${row.stepId}:${row.userId}`,
+          });
+          result.stepsOpened += 1;
+        }
+      }
+
+      if (row.dueAfterDays !== null) {
+        const dueAt = dayFrom(row.startDate, row.dueAfterDays);
+        if (dueAt.toISOString().slice(0, 10) === today) {
+          await raise(tx, {
+            organisationId,
+            userId: row.userId,
+            kind: "enrolment.due_soon",
+            subject: `${name} is due today`,
+            body: `${name} is due today on ${row.cohortName}.`,
+            linkPath: "/",
+            entityType: "course_step",
+            entityId: row.stepId,
+            dedupeKey: `step_due:${row.stepId}:${row.userId}`,
+            channels: ["in_app", "email"],
+          });
+          result.stepsDue += 1;
+        }
       }
     }
   });

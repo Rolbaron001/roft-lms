@@ -1,4 +1,5 @@
 import {
+  date,
   index,
   integer,
   jsonb,
@@ -313,5 +314,130 @@ export const captureJobs = pgTable(
   (t) => [
     index("capture_jobs_org_idx").on(t.organisationId),
     index("capture_jobs_sha_idx").on(t.paperSha256),
+  ],
+);
+
+/**
+ * A named group working through a programme together, on a schedule.
+ *
+ * Before this the platform enrolled individuals, and a facilitator setting
+ * dates set them learner by learner — which drifts the moment anything moves.
+ * A cohort has one start date, and every step's window is expressed as an
+ * offset from it. Moving the start by a week moves every date for everyone in
+ * the group, once.
+ */
+export const cohortStatus = pgEnum("cohort_status", [
+  "planned",
+  "running",
+  "finished",
+  "cancelled",
+]);
+
+export const cohorts = pgTable(
+  "cohorts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** The course this cohort walks. */
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+
+    /** "HRM Officer 2026 Intake 1". */
+    name: text("name").notNull(),
+    /** Short reference used on registers and returns. */
+    code: text("code"),
+
+    /**
+     * The date everything else is measured from. Held as a date rather than a
+     * timestamp: a cohort starts on a day, in the provider's own week, and
+     * pinning it to an instant only invites time-zone arguments.
+     */
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date"),
+
+    facilitatorId: uuid("facilitator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: cohortStatus("status").notNull().default("planned"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("cohorts_course_idx").on(t.courseId),
+    index("cohorts_org_idx").on(t.organisationId),
+  ],
+);
+
+export const cohortMembers = pgTable(
+  "cohort_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** Set rather than deleted, so a register a year old still reads true. */
+    leftAt: timestamp("left_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("cohort_members_unique_idx").on(t.cohortId, t.userId),
+    index("cohort_members_user_idx").on(t.userId),
+    index("cohort_members_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * When a step opens and when it is due, for one cohort.
+ *
+ * Expressed in days from the cohort's start rather than as dates. That is the
+ * whole point: a rollout schedule is written as "workbook 3 in week four", and
+ * holding it that way means a delayed intake is one edit rather than forty.
+ *
+ * A step with no row here is governed by whatever the course itself says,
+ * which for most steps is nothing at all.
+ */
+export const stepReleases = pgTable(
+  "step_releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    stepId: uuid("step_id")
+      .notNull()
+      .references(() => courseSteps.id, { onDelete: "cascade" }),
+
+    /** Days after the cohort starts before this opens. Null means at once. */
+    opensAfterDays: integer("opens_after_days"),
+    /** Days after the cohort starts by which it should be done. */
+    dueAfterDays: integer("due_after_days"),
+    /** Days after the due date before it shuts entirely. Null means never. */
+    closesAfterDays: integer("closes_after_days"),
+  },
+  (t) => [
+    uniqueIndex("step_releases_unique_idx").on(t.cohortId, t.stepId),
+    index("step_releases_cohort_idx").on(t.cohortId),
+    index("step_releases_org_idx").on(t.organisationId),
   ],
 );

@@ -22,6 +22,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { scheduleForLearner } from "./schedule";
 
 /**
  * The spine, and the gates on it.
@@ -96,6 +97,8 @@ export type StepView = {
   blockedBy: string[];
   /** Set when a person granted an exception rather than the gate opening. */
   overrideReason: string | null;
+  /** When this is due for this learner's cohort, if they are on one. */
+  dueAt: Date | null;
   progress: StepProgress;
   /** Where the learner is: done, in progress, or not started. */
   state: "not_started" | "in_progress" | "done";
@@ -385,6 +388,11 @@ async function computeSteps(
           );
   const withPaper = new Set(paperedAssessments.map((row) => row.assessmentId));
 
+  // A learner on a cohort takes their dates from it. One who is simply
+  // assigned a course takes whatever the course itself says, which for most
+  // steps is nothing.
+  const schedule = await scheduleForLearner(tx, courseId, userId);
+
   const [prerequisites, overrides, progress, titles] = await Promise.all([
     tx
       .select()
@@ -467,14 +475,18 @@ async function computeSteps(
       }
     }
 
-    if (step.availableFrom && step.availableFrom > now) {
+    const scheduled = schedule?.steps.get(step.id);
+    const opensAt = scheduled?.opensAt ?? step.availableFrom;
+    const closesAt = scheduled?.closesAt ?? step.availableUntil;
+
+    if (opensAt && opensAt > now) {
       blockedBy.push(
-        `it opens on ${step.availableFrom.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
+        `it opens on ${opensAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
       );
     }
-    if (step.availableUntil && step.availableUntil < now) {
+    if (closesAt && closesAt < now) {
       blockedBy.push(
-        `it closed on ${step.availableUntil.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
+        `it closed on ${closesAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
       );
     }
 
@@ -496,6 +508,7 @@ async function computeSteps(
       open,
       blockedBy: open && override ? [] : blockedBy,
       overrideReason: override,
+      dueAt: scheduled?.dueAt ?? null,
       progress: own,
       state: own.reviewed
         ? "done"
