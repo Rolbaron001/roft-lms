@@ -1,6 +1,7 @@
 import { verifyByReference } from "@/lib/certificates";
 import { verifyStatement } from "@/lib/statement-of-results";
 import { currentTenant } from "@/lib/request";
+import { referencePrefix } from "@/lib/platform";
 
 /**
  * Public certificate verification.
@@ -64,7 +65,7 @@ export default async function VerifyPage({
             <input
               name="reference"
               defaultValue={reference ?? ""}
-              placeholder="ROFT-XXXXX-XXXXX-XXXXX-XXXXX"
+              placeholder={`${referencePrefix()}-XXXXX-XXXXX-XXXXX-XXXXX`}
               className="w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 font-mono text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30"
             />
           </label>

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { referencePrefix } from "./platform";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentDecisions,
@@ -68,19 +69,42 @@ export function generateVerificationReference(): string {
   for (let index = 0; index < characters.length; index += 5) {
     groups.push(characters.slice(index, index + 5).join(""));
   }
-  return `ROFT-${groups.join("-")}`;
+  return `${referencePrefix()}-${groups.join("-")}`;
 }
 
-/** Accepts a reference however it was typed: spaced, lower case, unhyphenated. */
+/**
+ * Pulls the twenty random characters out of a reference, however it was typed
+ * and whichever operator issued it.
+ *
+ * The prefix is branding and the body is the secret, so this deliberately
+ * ignores the prefix entirely: a reference issued as `ROFT-…` still verifies
+ * on a platform now operating as something else, and a learner who types only
+ * the digits is not turned away. Returns null when the input is not a
+ * reference at all.
+ */
+export function referenceBody(input: string): string | null {
+  const cleaned = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  // Anything before the last twenty characters is the prefix, and prefixes are
+  // letters only — so a longer run of trailing alphanumerics is not a
+  // reference with a prefix, it is something else.
+  if (cleaned.length < 20) return null;
+  const body = cleaned.slice(-20);
+  const prefix = cleaned.slice(0, -20);
+  if (prefix && !/^[A-Z]{2,12}$/.test(prefix)) return null;
+  if (!new RegExp(`^[${ALPHABET}]{20}$`).test(body)) return null;
+  return body;
+}
+
+/**
+ * Accepts a reference however it was typed — spaced, lower case, unhyphenated,
+ * with or without a prefix — and returns it in the form this platform prints.
+ * Input it cannot read is returned trimmed and uppercased, so the caller can
+ * show the person what was actually understood.
+ */
 export function normaliseReference(input: string): string {
-  const cleaned = input
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .replace(/^ROFT/, "");
-
-  if (cleaned.length !== 20) return input.trim().toUpperCase();
-
-  return `ROFT-${cleaned.match(/.{1,5}/g)!.join("-")}`;
+  const body = referenceBody(input);
+  if (!body) return input.trim().toUpperCase();
+  return `${referencePrefix()}-${body.match(/.{1,5}/g)!.join("-")}`;
 }
 
 export type EligibilityResult = {
@@ -469,9 +493,9 @@ export type PublicVerification = {
 export async function verifyByReference(
   reference: string,
 ): Promise<PublicVerification> {
-  const normalised = normaliseReference(reference);
+  const body = referenceBody(reference);
 
-  if (!/^ROFT-[A-Z0-9-]{20,30}$/.test(normalised)) {
+  if (!body) {
     return { found: false, valid: false };
   }
 
@@ -495,7 +519,7 @@ export async function verifyByReference(
           organisations,
           eq(organisations.id, certificates.organisationId),
         )
-        .where(eq(certificates.verificationReference, normalised))
+        .where(eq(certificates.verificationBody, body))
         .limit(1);
 
       if (!row) {

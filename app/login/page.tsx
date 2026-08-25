@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { currentSession, currentTenant } from "@/lib/request";
 import { TenantLogo } from "@/components/tenant-logo";
 import { LoginForm } from "./login-form";
+import { platformName } from "@/lib/platform";
 
 export default async function LoginPage() {
   const tenant = await currentTenant();
@@ -42,7 +43,7 @@ export default async function LoginPage() {
             />
           )}
           <h1 className="text-xl font-semibold tracking-tight">
-            {tenant ? tenant.displayName : "ROFT Learning Management System"}
+            {tenant ? tenant.displayName : `${platformName()} Learning Management System`}
           </h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {tenant ? "Sign in to continue" : "Platform administration"}

@@ -39,12 +39,14 @@ import {
   certificateEligibility,
   CertificateError,
   generateVerificationReference,
+  referenceBody,
   issueCertificate,
   listMyCertificates,
   normaliseReference,
   revokeCertificate,
   verifyByReference,
 } from "@/lib/certificates";
+import { referencePrefix } from "@/lib/platform";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -211,8 +213,33 @@ afterAll(async () => {
 describe("verification references", () => {
   it("produces a reference of the documented shape", () => {
     expect(generateVerificationReference()).toMatch(
-      /^ROFT-[A-Z0-9]{5}(-[A-Z0-9]{5}){3}$/,
+      /^[A-Z]{2,12}-[A-Z0-9]{5}(-[A-Z0-9]{5}){3}$/,
     );
+  });
+
+  /**
+   * The prefix is branding and the body is the secret. An operator renaming
+   * the platform — or the same code deployed for a different operator — must
+   * not invalidate a certificate already in somebody's hand.
+   */
+  it("verifies a reference issued under a different prefix", () => {
+    const reference = generateVerificationReference();
+    const body = referenceBody(reference)!;
+
+    expect(referenceBody(`CURIOSA-${body.match(/.{1,5}/g)!.join("-")}`)).toBe(
+      body,
+    );
+    expect(referenceBody(body)).toBe(body);
+    expect(referenceBody(body.toLowerCase())).toBe(body);
+  });
+
+  it("reads nothing out of input that is not a reference", () => {
+    expect(referenceBody("")).toBeNull();
+    expect(referenceBody("not a reference")).toBeNull();
+    // Too short to be a body.
+    expect(referenceBody("ROFT-ABCDE")).toBeNull();
+    // A body containing characters the alphabet deliberately excludes.
+    expect(referenceBody("ROFT-IIIII-OOOOO-11111-00000")).toBeNull();
   });
 
   /** A guessable reference would let anyone enumerate every certificate. */
@@ -224,9 +251,12 @@ describe("verification references", () => {
   });
 
   it("excludes characters that are misread when handwritten", () => {
+    // Strip the prefix by position rather than by validating it, so this
+    // checks the generated body itself and not the checker.
+    const prefix = referencePrefix();
     const sample = Array.from({ length: 200 }, generateVerificationReference)
-      .join("")
-      .replace(/-|ROFT/g, "");
+      .map((reference) => reference.slice(prefix.length + 1).replace(/-/g, ""))
+      .join("");
     expect(sample).not.toMatch(/[ILOU01]/);
   });
 
@@ -405,7 +435,9 @@ describe("issuing", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.certificate.verificationReference).toMatch(/^ROFT-/);
+    expect(result.certificate.verificationReference).toMatch(
+      new RegExp(`^${referencePrefix()}-`),
+    );
     expect(result.certificate.competenciesAttested).toEqual([
       { code: "CRT-01", name: "Demonstrated capability" },
     ]);
@@ -478,7 +510,9 @@ describe("issuing automatically", () => {
     );
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].verificationReference).toMatch(/^ROFT-/);
+    expect(rows[0].verificationReference).toMatch(
+      new RegExp(`^${referencePrefix()}-`),
+    );
   });
 
   it("issues when moderation completes the chain", async () => {
@@ -646,7 +680,7 @@ describe("a learner's own certificates", () => {
 
     const mine = await listMyCertificates(learner);
     expect(mine.length).toBeGreaterThan(0);
-    expect(mine[0].reference).toMatch(/^ROFT-/);
+    expect(mine[0].reference).toMatch(new RegExp(`^${referencePrefix()}-`));
   });
 
   it("does not list anyone else's", async () => {

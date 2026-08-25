@@ -79,7 +79,16 @@ export const organisations = pgTable(
 
     // White-labelling. Injected as CSS custom properties at request time so a
     // tenant's own identity renders without a separate build or deployment.
+    //
+    // A logo arrives one of two ways and `logoUrl` is what gets rendered
+    // either way: an address somewhere else on the web, or — the usual case —
+    // a file uploaded here, in which case the storage key and type below are
+    // set and `logoUrl` points at this platform's own serving route. Holding
+    // both means a tenant can change their logo whenever their brand changes
+    // without needing anywhere to host the image first.
     logoUrl: text("logo_url"),
+    logoStorageKey: text("logo_storage_key"),
+    logoMimeType: text("logo_mime_type"),
     primaryColour: text("primary_colour").notNull().default("#0D1E32"),
     accentColour: text("accent_colour").notNull().default("#B9975B"),
     customDomain: text("custom_domain"),

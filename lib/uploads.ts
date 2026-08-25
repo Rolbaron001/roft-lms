@@ -8,6 +8,7 @@ import {
   workplaceLogbookEntries,
   workplaceLogbooks,
   lessons,
+  organisations,
 } from "@/db/schema";
 import { readDocxText, OfficeReadError } from "./office";
 import { recordAudit } from "./audit";
@@ -536,4 +537,126 @@ export async function removeLessonMedia(
       })
       .where(and(eq(lessons.id, lessonId)));
   });
+}
+
+/**
+ * A tenant's logo, uploaded rather than linked.
+ *
+ * Branding changes. A logo held as an address somewhere else on the web means
+ * changing it requires somewhere to host the new one first, and it breaks
+ * silently the day that host goes away — so the usual path is to upload the
+ * file here and let the platform serve it.
+ *
+ * Images only, and small ones: a logo sits in a 36-pixel-high header, and a
+ * tenant uploading a 10 MB photograph of their signage has made a mistake
+ * worth telling them about rather than quietly accepting.
+ */
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+export async function uploadTenantLogo(
+  session: AuthenticatedSession,
+  file: { filename: string; bytes: Uint8Array },
+): Promise<{ logoUrl: string; label: string; sizeBytes: number }> {
+  assertSessionCan(session, "tenant:manage_branding");
+
+  const detected = detectMedia(file.bytes, file.filename);
+  if (!detected.ok) {
+    throw new UploadError(detected.reason, "rejected");
+  }
+  if (detected.kind !== "image") {
+    throw new UploadError(
+      `A logo has to be an image. That file is ${detected.label.toLowerCase()}.`,
+      "rejected",
+    );
+  }
+  if (file.bytes.byteLength > LOGO_MAX_BYTES) {
+    throw new UploadError(
+      `That image is ${describeSize(file.bytes.byteLength)}. A logo is displayed small, so the limit is ${describeSize(LOGO_MAX_BYTES)}. A PNG with a transparent background works best.`,
+      "too_large",
+    );
+  }
+
+  const key = buildStorageKey(session.organisationId, "branding", file.filename);
+  const stored = await putObject(key, file.bytes);
+
+  // The served address carries the file's own hash, so a browser holding the
+  // previous logo fetches the new one immediately rather than showing the old
+  // one until its cache expires.
+  const logoUrl = `/api/branding/logo?v=${stored.sha256.slice(0, 12)}`;
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({
+        logoUrl: organisations.logoUrl,
+        logoStorageKey: organisations.logoStorageKey,
+      })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+
+    await tx
+      .update(organisations)
+      .set({
+        logoUrl,
+        logoStorageKey: stored.storageKey,
+        logoMimeType: detected.mimeType,
+        updatedAt: new Date(),
+      })
+      .where(eq(organisations.id, session.organisationId));
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.logo_uploaded",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { logoUrl: before?.logoUrl ?? null },
+      after: { logoUrl, filename: file.filename, sha256: stored.sha256 },
+    });
+  });
+
+  return { logoUrl, label: detected.label, sizeBytes: stored.sizeBytes };
+}
+
+/**
+ * Serves a logo to anyone at all, including a browser that has not signed in —
+ * the sign-in page itself carries the tenant's branding.
+ *
+ * That is safe only because the tenant is not named by the caller: it comes
+ * from the hostname the request arrived on, resolved before this is called. So
+ * there is no id to guess and nothing to enumerate, and the only thing on
+ * offer is a logo its owner chose to display on a public page.
+ */
+export async function readTenantLogo(
+  organisationId: string,
+): Promise<ServableFile> {
+  const org = await withTenant(organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        storageKey: organisations.logoStorageKey,
+        mimeType: organisations.logoMimeType,
+      })
+      .from(organisations)
+      .where(eq(organisations.id, organisationId));
+    return row;
+  });
+
+  if (!org?.storageKey) {
+    throw new UploadError("No logo here.", "not_found");
+  }
+
+  const bytes = await getObject(org.storageKey);
+  const detected = detectMedia(bytes, "logo");
+
+  // Re-checked on the way out, and refused unless it is still an image. A
+  // stored file that was somehow swapped cannot be served as something else.
+  if (!detected.ok || detected.kind !== "image") {
+    throw new UploadError("No logo here.", "not_found");
+  }
+
+  return {
+    bytes,
+    mimeType: detected.mimeType,
+    filename: "logo",
+    safeToEmbed: detected.safeToEmbed,
+  };
 }

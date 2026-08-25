@@ -6,7 +6,7 @@ import type { DefinedBy, DictionaryEntry } from "@/lib/dictionary";
 
 const SOURCE_LABEL: Record<DefinedBy, string> = {
   authority: "Set by an authority",
-  platform: "ROFT's own term",
+  platform: "This platform's term",
   practice: "Common practice",
 };
 
@@ -92,7 +92,7 @@ export function DictionaryBrowser({
             >
               <option value="">Anyone</option>
               <option value="authority">Set by an authority</option>
-              <option value="platform">ROFT&rsquo;s own term</option>
+              <option value="platform">This platform&rsquo;s term</option>
               <option value="practice">Common practice</option>
             </select>
           </label>

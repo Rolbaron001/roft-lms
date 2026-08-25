@@ -12,7 +12,8 @@
  *
  *   authority  A body defines the term. Changing the meaning puts a submission
  *              or an accreditation at risk. The body is named.
- *   platform   ROFT chose the word. Ours to change; no regulator is watching.
+ *   platform   The platform chose the word. Ours to change; no regulator is
+ *              watching.
  *   practice   Widely used in the sector with no single owner. Useful, but
  *              never to be cited as a requirement.
  *
@@ -65,7 +66,7 @@ export const DEFINED_BY_MEANING: Record<DefinedBy, string> = {
   authority:
     "Defined by an authority. Use it as they do — changing the meaning puts a submission at risk.",
   platform:
-    "ROFT's own word for this. Ours to change; no authority prescribes it.",
+    "This platform's own word for it. Ours to change; no authority prescribes it.",
   practice:
     "Common usage across the sector, with no single owner. Do not cite it as a requirement.",
 };

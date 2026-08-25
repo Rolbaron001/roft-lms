@@ -42,6 +42,7 @@ import {
 import { mailIsConfigured, renderEmail } from "@/lib/mail";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
+import { referencePrefix } from "@/lib/platform";
 
 let organisationId: string;
 let competencyId: string;
@@ -220,7 +221,7 @@ describe("being told about your own training", () => {
     const certificate = mine.find((row) => row.kind === "certificate.issued");
 
     expect(certificate).toBeDefined();
-    expect(certificate!.body).toContain("ROFT-");
+    expect(certificate!.body).toContain(`${referencePrefix()}-`);
   });
 });
 

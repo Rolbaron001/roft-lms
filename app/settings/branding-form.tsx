@@ -26,6 +26,8 @@ export function BrandingForm({
   const [primary, setPrimary] = useState(defaults.primaryColour);
   const [accent, setAccent] = useState(defaults.accentColour);
   const [logo, setLogo] = useState(defaults.logoUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -126,25 +128,86 @@ export function BrandingForm({
           </label>
         </div>
 
-        <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">
-            Logo address{" "}
-            <span className="font-normal text-[var(--muted)]">(optional)</span>
-          </span>
-          <input
-            name="logoUrl"
-            value={logo}
-            onChange={(event) => setLogo(event.target.value)}
-            placeholder="https://…"
-            className={inputClass}
-          />
-          <span className="block text-xs text-[var(--muted)]">
-            A web address for the image. It appears in the header, on the sign-in
-            page and on every certificate. A transparent PNG or an SVG sits best
-            on the header colour. Uploading a file directly comes with the
-            document and video work.
-          </span>
-        </label>
+        <div className="space-y-2 rounded-md border border-[var(--border)] p-4">
+          <span className="block text-sm font-medium">Logo</span>
+          <p className="text-xs text-[var(--muted)]">
+            Appears in the header, on the sign-in page and on every certificate.
+            A PNG with a transparent background sits best on the header colour.
+            Under 2 MB.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <label className="cursor-pointer rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--brand-accent)]/10">
+              {uploading ? "Uploading…" : "Choose an image"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                className="sr-only"
+                disabled={uploading}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+
+                  setUploading(true);
+                  setLogoError(null);
+                  try {
+                    const body = new FormData();
+                    body.append("file", file);
+                    const response = await fetch("/api/branding/logo", {
+                      method: "POST",
+                      body,
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                      setLogoError(result.error ?? "That image was not accepted.");
+                      return;
+                    }
+                    // Saved already — the upload writes it. Reflecting it in the
+                    // field means saving the form afterwards keeps it rather
+                    // than overwriting it with what was there before.
+                    setLogo(result.logoUrl);
+                  } catch {
+                    setLogoError(
+                      "The upload did not finish. Check the connection and try again.",
+                    );
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </label>
+
+            {logo ? (
+              <button
+                type="button"
+                onClick={() => setLogo("")}
+                className="text-xs underline underline-offset-2 text-[var(--muted)]"
+              >
+                Remove, and show the name instead
+              </button>
+            ) : null}
+          </div>
+
+          {logoError ? (
+            <p role="alert" className="text-xs text-[var(--danger)]">
+              {logoError}
+            </p>
+          ) : null}
+
+          <label className="block space-y-1.5 pt-2">
+            <span className="block text-xs font-medium text-[var(--muted)]">
+              Or an address, if the image is already hosted elsewhere
+            </span>
+            <input
+              name="logoUrl"
+              value={logo}
+              onChange={(event) => setLogo(event.target.value)}
+              placeholder="https://…"
+              className={inputClass}
+            />
+          </label>
+        </div>
 
         <button
           type="submit"

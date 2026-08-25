@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -406,6 +407,17 @@ export const certificates = pgTable(
 
     /** Public reference used to verify the certificate without logging in. */
     verificationReference: text("verification_reference").notNull(),
+    /**
+     * The twenty random characters of the reference, without the operator's
+     * prefix or the grouping hyphens. Verification matches on this rather than
+     * on the printed reference, so a platform that changes its name — or is
+     * rebranded for a different operator — cannot invalidate certificates it
+     * has already issued. Derived by the database, so it can never drift from
+     * the reference it belongs to.
+     */
+    verificationBody: text("verification_body").generatedAlwaysAs(
+      sql`right(replace(verification_reference, '-', ''), 20)`,
+    ),
     title: text("title").notNull(),
     /** The specific competencies this certificate attests to, frozen at issue. */
     competenciesAttested: jsonb("competencies_attested")
@@ -422,6 +434,7 @@ export const certificates = pgTable(
   },
   (t) => [
     uniqueIndex("certificates_verification_ref_idx").on(t.verificationReference),
+    uniqueIndex("certificates_verification_body_idx").on(t.verificationBody),
     index("certificates_org_idx").on(t.organisationId),
     index("certificates_user_idx").on(t.userId),
   ],
@@ -624,6 +637,10 @@ export const statementsOfResults = pgTable(
 
     /** Checkable by an assessment centre without signing in. */
     verificationReference: text("verification_reference").notNull(),
+    /** The reference without its operator prefix. See `certificates`. */
+    verificationBody: text("verification_body").generatedAlwaysAs(
+      sql`right(replace(verification_reference, '-', ''), 20)`,
+    ),
 
     /**
      * The whole statement as issued: learner, qualification, provider, and
@@ -674,6 +691,7 @@ export const statementsOfResults = pgTable(
     uniqueIndex("statements_of_results_reference_idx").on(
       t.verificationReference,
     ),
+    uniqueIndex("statements_of_results_body_idx").on(t.verificationBody),
     index("statements_of_results_org_idx").on(t.organisationId),
     index("statements_of_results_user_idx").on(t.userId),
   ],

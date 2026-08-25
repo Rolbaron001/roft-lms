@@ -7,7 +7,7 @@ import {
   users,
 } from "@/db/schema";
 import { qualificationReadiness } from "./eisa";
-import { generateVerificationReference, normaliseReference } from "./certificates";
+import { generateVerificationReference, referenceBody } from "./certificates";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -348,7 +348,8 @@ export type StatementVerification = {
 export async function verifyStatement(
   reference: string,
 ): Promise<StatementVerification> {
-  const normalised = normaliseReference(reference);
+  const body = referenceBody(reference);
+  if (!body) return { found: false, valid: false };
 
   const rows = await withPlatformScope(
     "verifying a Statement of Results reference presented at an assessment centre",
@@ -361,7 +362,7 @@ export async function verifyStatement(
           revokedReason: statementsOfResults.revokedReason,
         })
         .from(statementsOfResults)
-        .where(eq(statementsOfResults.verificationReference, normalised)),
+        .where(eq(statementsOfResults.verificationBody, body)),
   );
 
   const found = rows[0];
