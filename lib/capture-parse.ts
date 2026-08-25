@@ -1,0 +1,561 @@
+/**
+ * Reading a workbook and its answer guide out of Word.
+ *
+ * Pure text in, a proposed paper out. No database, no session — so it can be
+ * tested against the real documents directly, which is the only way to know
+ * whether it works.
+ *
+ * Nothing here commits anything. What it produces is a *proposal*, and the
+ * point of the whole design is that a person confirms it. A parser that gets
+ * question three's correct answer wrong produces confidently wrong marking,
+ * and nobody finds out until a moderator does — or until a learner appeals. So
+ * the parser is built to report what it could not work out rather than to fill
+ * the gap with a guess.
+ */
+
+export type ParsedItem = {
+  /** The number as printed, which is how the memorandum refers back to it. */
+  number: string;
+  type: "multiple_choice" | "true_false" | "long_answer" | "short_answer";
+  stem: string;
+  options: string[];
+  /** Index into `options`, once the memorandum has been read. */
+  correctIndex: number | null;
+  points: number | null;
+  /** Criterion codes, from the question itself or from the memorandum. */
+  criterionCodes: string[];
+  markingGuide: string | null;
+};
+
+export type ParsedSection = {
+  title: string;
+  instruction: string | null;
+  /** As the paper prints it, which is checked against the items. */
+  markTotal: number | null;
+  items: ParsedItem[];
+};
+
+export type ParsedPaper = {
+  title: string | null;
+  /** Criteria the workbook says it covers, from its scope table. */
+  declaredCriteria: string[];
+  sections: ParsedSection[];
+  /** What the parser could not work out, in words an author can act on. */
+  problems: string[];
+};
+
+const SECTION_HEADING =
+  /^(?:(Activity\s+[\d.]+)|(SECTION\s+[A-Z])|(PART\s+\d+))\s*[::]\s*(.+)$/i;
+const NUMBERED = /^(\d+)\.\s+(.+)$/;
+const OPTION = /^([A-H])\.\s+(.+)$/;
+const TRUE_FALSE = /\[\s*True\s*\/\s*False\s*\]\s*$/i;
+const MARKS_IN_HEADING = /\((\d+)\s*Marks?\b/i;
+const CRITERIA_TRAILING = /\(((?:IAC|AC)\d{3,6}(?:\s*,\s*(?:IAC|AC)\d{3,6})*)\)\s*$/i;
+const CRITERIA_ANY = /\b(?:IAC|AC)\d{3,6}\b/gi;
+const SCOPE_LINE = /^Internal Assessment Criteria\s*[::]\s*(.+)$/i;
+
+const STATEMENT = /^Statement\s+(\d+)\s*[::]\s*(.+)$/i;
+const ANSWER_BLANK = /^\[?\s*Answer(\s+Chosen)?\s*[::]/i;
+
+const NOT_A_QUESTION = [
+  /^select\b[^.]*\banswer\b/i,
+  /^answer the following/i,
+  /^write the chosen letter/i,
+  /^indicate whether/i,
+  /^state whether/i,
+  /^complete the following/i,
+];
+
+function codesIn(text: string): string[] {
+  return [...new Set((text.match(CRITERIA_ANY) ?? []).map((c) => c.toUpperCase()))];
+}
+
+/**
+ * Reads the learner's copy: sections, questions, options.
+ *
+ * Marks and correct answers are not in this document, so they come back null
+ * and the answer guide supplies them.
+ */
+export function parseWorkbook(text: string): ParsedPaper {
+  const lines = text.split("\n").map((line) => line.replace(/\t/g, " ").trim());
+  const problems: string[] = [];
+
+  const titleLine = lines.find((line) =>
+    /^(WORKBOOK|SUMMATIVE ASSESSMENT|ASSESSMENT)\b/i.test(line),
+  );
+
+  const scopeLine = lines.find((line) => SCOPE_LINE.test(line));
+  const declaredCriteria = scopeLine ? codesIn(scopeLine) : [];
+
+  // A paper often prints its own mark distribution in a summary table near the
+  // front: a section name in one cell and its marks in the next. Those cells
+  // look exactly like section headings, so they are harvested for their marks
+  // and the empty sections they produce are dropped below.
+  const markHints = new Map<string, number>();
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const heading = SECTION_HEADING.exec(lines[index]);
+    if (!heading) continue;
+    const next = lines[index + 1];
+    if (/^\d+$/.test(next)) {
+      markHints.set(normalise(lines[index]), Number(next));
+    }
+  }
+
+  const sections: ParsedSection[] = [];
+  let current: ParsedSection | null = null;
+  let pending: ParsedItem | null = null;
+
+  const closeItem = () => {
+    if (current && pending) current.items.push(pending);
+    pending = null;
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) continue;
+
+    const heading = SECTION_HEADING.exec(line);
+    if (heading) {
+      closeItem();
+      const label = (heading[1] ?? heading[2] ?? heading[3]).trim();
+      const rest = heading[4].trim();
+      const marks = MARKS_IN_HEADING.exec(rest);
+
+      current = {
+        title: `${label}: ${rest.replace(/\s*\([^)]*\)\s*$/, "").trim()}`,
+        instruction: null,
+        markTotal: marks ? Number(marks[1]) : null,
+        items: [],
+      };
+      sections.push(current);
+      continue;
+    }
+
+    if (!current) continue;
+
+    // An option belongs to the question above it.
+    const option = OPTION.exec(line);
+    if (option && pending) {
+      pending.options.push(option[2].trim());
+      continue;
+    }
+
+    const numbered = NUMBERED.exec(line);
+    if (numbered) {
+      closeItem();
+      pending = {
+        number: numbered[1],
+        // Assumed multiple choice until the following lines say otherwise;
+        // corrected below if no options arrive.
+        type: "multiple_choice",
+        stem: stripCriteria(numbered[2]),
+        options: [],
+        correctIndex: null,
+        points: null,
+        criterionCodes: criteriaOf(numbered[2]),
+        markingGuide: null,
+      };
+      continue;
+    }
+
+    // "Answer: ____" is where the learner writes, not a question.
+    if (ANSWER_BLANK.test(line)) {
+      closeItem();
+      continue;
+    }
+
+    const statement = STATEMENT.exec(line);
+    if (statement) {
+      closeItem();
+      // The statement is sometimes numbered twice: "Statement 1: 1. …".
+      const stem = statement[2].replace(/^\d+\.\s*/, "").trim();
+      current.items.push({
+        number: statement[1],
+        type: "true_false",
+        stem: stripCriteria(stem),
+        options: ["True", "False"],
+        correctIndex: null,
+        points: null,
+        criterionCodes: criteriaOf(stem),
+        markingGuide: null,
+      });
+      continue;
+    }
+
+    if (TRUE_FALSE.test(line)) {
+      closeItem();
+      const stem = line.replace(TRUE_FALSE, "").trim();
+      current.items.push({
+        number: String(current.items.length + 1),
+        type: "true_false",
+        stem: stripCriteria(stem),
+        options: ["True", "False"],
+        correctIndex: null,
+        points: null,
+        criterionCodes: criteriaOf(stem),
+        markingGuide: null,
+      });
+      continue;
+    }
+
+    // The first ordinary line under a heading is the instruction, not a
+    // question — "Select the most appropriate answer for each question."
+    if (!current.instruction && current.items.length === 0 && !pending) {
+      if (NOT_A_QUESTION.some((pattern) => pattern.test(line))) {
+        current.instruction = line;
+        continue;
+      }
+    }
+
+    // A bare sentence inside a structured activity is a question in its own
+    // right. Recognised by carrying criteria, or by being long enough that it
+    // cannot be a stray label.
+    if (!pending && (CRITERIA_TRAILING.test(line) || line.length > 60)) {
+      current.items.push({
+        number: String(current.items.length + 1),
+        type: "long_answer",
+        stem: stripCriteria(line),
+        options: [],
+        correctIndex: null,
+        points: null,
+        criterionCodes: criteriaOf(line),
+        markingGuide: null,
+      });
+      continue;
+    }
+
+    // A continuation of the question above.
+    if (pending && pending.options.length === 0) {
+      pending.stem = `${pending.stem} ${stripCriteria(line)}`.trim();
+      pending.criterionCodes = [
+        ...new Set([...pending.criterionCodes, ...criteriaOf(line)]),
+      ];
+    }
+  }
+
+  closeItem();
+
+  // A heading that gathered no questions was a table cell or a contents line,
+  // not a section. Dropped rather than reported: the paper is not at fault.
+  const real = sections.filter((section) => section.items.length > 0);
+  for (const section of real) {
+    if (section.markTotal === null) {
+      const hint = markHints.get(normalise(section.title));
+      if (hint !== undefined) section.markTotal = hint;
+    }
+  }
+  sections.length = 0;
+  sections.push(...real);
+
+  // A question that never collected options is not multiple choice.
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.type === "multiple_choice" && item.options.length === 0) {
+        item.type = "short_answer";
+      }
+      if (item.type === "multiple_choice" && item.options.length < 2) {
+        problems.push(
+          `"${short(item.stem)}" looks like a multiple-choice question but only one option was found.`,
+        );
+      }
+    }
+  }
+
+  if (sections.length === 0) {
+    problems.push(
+      "No activities or sections were recognised. Check that headings read like “Activity 1.1: …” or “SECTION A: …”.",
+    );
+  }
+
+  return {
+    title: titleLine ?? null,
+    declaredCriteria,
+    sections,
+    problems,
+  };
+}
+
+function criteriaOf(text: string): string[] {
+  const trailing = CRITERIA_TRAILING.exec(text);
+  return trailing ? codesIn(trailing[1]) : [];
+}
+
+function stripCriteria(text: string): string {
+  return text.replace(CRITERIA_TRAILING, "").trim();
+}
+
+/** Titles are matched loosely, because a table cell repeats them imperfectly. */
+function normalise(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function short(text: string): string {
+  return text.length > 60 ? `${text.slice(0, 60)}…` : text;
+}
+
+// ---------------------------------------------------------------------------
+// The memorandum
+// ---------------------------------------------------------------------------
+
+export type MemoAnswer = {
+  /** The question number the guide refers to. */
+  number: string;
+  /** "B", for a selected-response question. */
+  correctLetter: string | null;
+  /** TRUE or FALSE, for a true/false statement. */
+  trueFalse: "TRUE" | "FALSE" | null;
+  modelAnswer: string | null;
+  criterionCodes: string[];
+};
+
+export type ParsedMemo = {
+  /** Marks per section title, from the mark distribution table. */
+  sectionMarks: Record<string, number>;
+  /** Marks per question, from headings like "Question 1.3.1: … (10 Marks)". */
+  questionMarks: Record<string, number>;
+  answers: MemoAnswer[];
+  total: number | null;
+  problems: string[];
+};
+
+const MEMO_ACTIVITY =
+  /^(Activity\s+[\d.]+|SECTION\s+[A-Z])\s*[::]\s*(.+?)\s*\((\d+)\s*Marks?/i;
+const MEMO_QUESTION =
+  /^Question\s+([\d.]+)\s*[::]\s*(.+?)\s*\((\d+)\s*Marks?\)/i;
+const LETTER_ONLY = /^([A-H])$/;
+const TRUE_FALSE_ONLY = /^(TRUE|FALSE)$/i;
+const NUMBER_ONLY = /^(\d+)$/;
+
+/**
+ * Reads the answer guide.
+ *
+ * Word tables arrive one cell per line, so the memorandum tables read as a
+ * repeating cycle: a question number, a correct letter, an explanation, a
+ * criterion reference. The cycle is found by looking for the number and letter
+ * together rather than by counting cells, because a table with a merged or
+ * missing cell would otherwise silently shift every answer by one — which is
+ * exactly the failure that makes a parser dangerous.
+ */
+export function parseMemorandum(text: string): ParsedMemo {
+  const lines = text.split("\n").map((line) => line.replace(/\t/g, " ").trim());
+
+  const sectionMarks: Record<string, number> = {};
+  const questionMarks: Record<string, number> = {};
+  const answers: MemoAnswer[] = [];
+  const problems: string[] = [];
+  let total: number | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const activity = MEMO_ACTIVITY.exec(line);
+    if (activity) {
+      const label = activity[1].trim();
+      const rest = activity[2].replace(/\s*\([^)]*\)\s*$/, "").trim();
+      sectionMarks[`${label}: ${rest}`] = Number(activity[3]);
+      continue;
+    }
+
+    const question = MEMO_QUESTION.exec(line);
+    if (question) {
+      questionMarks[question[1]] = Number(question[3]);
+      continue;
+    }
+
+    // The total is often a row of a table, so the word and the number arrive
+    // as separate cells a few lines apart rather than on one line.
+    if (/^TOTALS?\s*$|^TOTALS?[^A-Za-z]/i.test(line)) {
+      for (let ahead = 0; ahead <= 4; ahead += 1) {
+        const candidate = /^(\d+)(?:\s*Marks?)?$/i.exec(lines[index + ahead] ?? "");
+        if (candidate && Number(candidate[1]) > 0) {
+          total = Number(candidate[1]);
+          break;
+        }
+      }
+    }
+  }
+
+  // The selected-response tables: number, letter, explanation, criteria.
+  for (let index = 0; index < lines.length; index += 1) {
+    const number = NUMBER_ONLY.exec(lines[index]);
+    if (!number) continue;
+
+    const letter = LETTER_ONLY.exec(lines[index + 1] ?? "");
+    if (!letter) continue;
+
+    const explanation = lines[index + 2] ?? "";
+    const criteria = codesIn(`${lines[index + 3] ?? ""} ${explanation}`);
+
+    answers.push({
+      number: number[1],
+      correctLetter: letter[1],
+      trueFalse: null,
+      modelAnswer: explanation || null,
+      criterionCodes: criteria,
+    });
+    index += 3;
+  }
+
+  // The true/false table: statement, TRUE or FALSE, rationale, criteria.
+  for (let index = 0; index < lines.length; index += 1) {
+    const verdict = TRUE_FALSE_ONLY.exec(lines[index]);
+    if (!verdict) continue;
+
+    const statement = lines[index - 1] ?? "";
+    // The header row is "Answer"; a statement is a sentence.
+    if (statement.length < 20) continue;
+
+    answers.push({
+      number: "",
+      correctLetter: null,
+      trueFalse: verdict[1].toUpperCase() as "TRUE" | "FALSE",
+      modelAnswer: lines[index + 1] || null,
+      criterionCodes: codesIn(
+        `${lines[index + 1] ?? ""} ${lines[index + 2] ?? ""}`,
+      ),
+      // Kept so the merge can match it back to the statement it belongs to.
+      ...({ statement } as object),
+    } as MemoAnswer & { statement: string });
+  }
+
+  if (answers.length === 0) {
+    problems.push(
+      "No answers were found in the guide. Check that it carries a table of question numbers and correct options.",
+    );
+  }
+
+  return { sectionMarks, questionMarks, answers, total, problems };
+}
+
+// ---------------------------------------------------------------------------
+// Putting the two together
+// ---------------------------------------------------------------------------
+
+/**
+ * Merges the guide into the paper, and says what it could not reconcile.
+ *
+ * The refusals matter more than the merges. A question with no answer in the
+ * guide, a correct option naming a letter the question does not have, a
+ * section whose printed total disagrees with its questions — each of those is
+ * reported against the thing that caused it rather than quietly resolved,
+ * because only the author knows which of the two is right.
+ */
+export function mergeMemorandum(
+  paper: ParsedPaper,
+  memo: ParsedMemo,
+): ParsedPaper {
+  const problems = [...paper.problems, ...memo.problems];
+
+  const byNumber = new Map(
+    memo.answers.filter((a) => a.number).map((a) => [a.number, a]),
+  );
+  const trueFalseAnswers = memo.answers.filter((a) => a.trueFalse);
+  let trueFalseIndex = 0;
+
+  const sections = paper.sections.map((section) => {
+    const printedMarks =
+      section.markTotal ?? memo.sectionMarks[section.title] ?? null;
+
+    const items = section.items.map((item) => {
+      const merged: ParsedItem = { ...item };
+
+      if (item.type === "multiple_choice") {
+        const answer = byNumber.get(item.number);
+        if (!answer?.correctLetter) {
+          problems.push(
+            `Question ${item.number} of "${section.title}" has no correct answer in the guide.`,
+          );
+        } else {
+          const position = answer.correctLetter.charCodeAt(0) - 65;
+          if (position < 0 || position >= item.options.length) {
+            problems.push(
+              `The guide gives ${answer.correctLetter} for question ${item.number} of "${section.title}", but that question has ${item.options.length} options.`,
+            );
+          } else {
+            merged.correctIndex = position;
+          }
+          merged.markingGuide = answer.modelAnswer;
+          merged.criterionCodes = [
+            ...new Set([...merged.criterionCodes, ...answer.criterionCodes]),
+          ];
+        }
+      }
+
+      if (item.type === "true_false") {
+        const answer = trueFalseAnswers[trueFalseIndex];
+        trueFalseIndex += 1;
+        if (!answer) {
+          problems.push(
+            `"${short(item.stem)}" has no TRUE or FALSE in the guide.`,
+          );
+        } else {
+          merged.correctIndex = answer.trueFalse === "TRUE" ? 0 : 1;
+          merged.markingGuide = answer.modelAnswer;
+          merged.criterionCodes = [
+            ...new Set([...merged.criterionCodes, ...answer.criterionCodes]),
+          ];
+        }
+      }
+
+      if (item.type === "long_answer" || item.type === "short_answer") {
+        // Structured questions are numbered 1.3.1, 1.3.2 in the guide; the
+        // workbook numbers them within the activity.
+        const key = Object.keys(memo.questionMarks).find((number) =>
+          number.endsWith(`.${item.number}`),
+        );
+        if (key) merged.points = memo.questionMarks[key];
+      }
+
+      return merged;
+    });
+
+    // Selected-response questions carry one mark each unless the guide says
+    // otherwise; that is what "1 Mark Each" in every heading means.
+    const unmarked = items.filter((item) => item.points === null);
+    if (printedMarks !== null && unmarked.length > 0) {
+      const accounted = items.reduce((sum, item) => sum + (item.points ?? 0), 0);
+      const each = (printedMarks - accounted) / unmarked.length;
+      if (Number.isInteger(each) && each > 0) {
+        for (const item of unmarked) item.points = each;
+      }
+    }
+
+    const computed = items.reduce((sum, item) => sum + (item.points ?? 0), 0);
+    if (printedMarks !== null && computed !== printedMarks) {
+      problems.push(
+        `"${section.title}" is printed as ${printedMarks} marks, but its questions add up to ${computed}.`,
+      );
+    }
+
+    return { ...section, markTotal: printedMarks, items };
+  });
+
+  // Every criterion the workbook claims to cover should be tested by something.
+  const tested = new Set(
+    sections.flatMap((section) =>
+      section.items.flatMap((item) => item.criterionCodes),
+    ),
+  );
+  for (const code of paper.declaredCriteria) {
+    if (!tested.has(code)) {
+      problems.push(
+        `${code} is listed in the workbook's scope but no question is tagged to it.`,
+      );
+    }
+  }
+
+  const grandTotal = sections.reduce(
+    (sum, section) => sum + (section.markTotal ?? 0),
+    0,
+  );
+  if (memo.total !== null && grandTotal !== memo.total) {
+    problems.push(
+      `The guide gives a total of ${memo.total} marks; the sections add up to ${grandTotal}.`,
+    );
+  }
+
+  return { ...paper, sections, problems };
+}

@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -253,5 +254,64 @@ export const stepProgress = pgTable(
   (t) => [
     uniqueIndex("step_progress_unique_idx").on(t.stepId, t.userId),
     index("step_progress_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * An uploaded document waiting for a person to confirm what was read out of it.
+ *
+ * The pipeline never commits what it parses. A parser that gets question
+ * three's correct answer wrong produces confidently wrong marking, and nobody
+ * finds out until a moderator does — or until a learner appeals. So the parse
+ * lands here as a proposal, with everything it could not work out listed
+ * beside it, and somebody holding `assessment:author` accepts responsibility
+ * for it before any of it becomes an assessment.
+ *
+ * The source files are kept and hashed even after a successful commit, so a
+ * dispute about what a question said is settled against the file the author
+ * wrote rather than against the platform's reading of it.
+ */
+export const captureJobs = pgTable(
+  "capture_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** The learner's copy, and the answer guide beside it. */
+    paperFilename: text("paper_filename").notNull(),
+    paperStorageKey: text("paper_storage_key").notNull(),
+    paperSha256: text("paper_sha256").notNull(),
+    guideFilename: text("guide_filename"),
+    guideStorageKey: text("guide_storage_key"),
+    guideSha256: text("guide_sha256"),
+
+    /** What the filename said, under this tenant's own naming convention. */
+    classified: jsonb("classified").$type<Record<string, string | null>>(),
+
+    /** The parsed structure, exactly as proposed. */
+    proposal: jsonb("proposal").notNull(),
+    /** Everything the parser could not work out, for the review screen. */
+    problems: jsonb("problems").$type<string[]>().notNull(),
+
+    uploadedById: uuid("uploaded_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    /** Who took responsibility for it, and when. Null until confirmed. */
+    committedById: uuid("committed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    committedAt: timestamp("committed_at", { withTimezone: true }),
+    /** The paper this became, once committed. */
+    paperId: uuid("paper_id"),
+  },
+  (t) => [
+    index("capture_jobs_org_idx").on(t.organisationId),
+    index("capture_jobs_sha_idx").on(t.paperSha256),
   ],
 );

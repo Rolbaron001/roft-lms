@@ -94,6 +94,24 @@ export const organisations = pgTable(
     customDomain: text("custom_domain"),
 
     /**
+     * How this tenant names its material files.
+     *
+     * "CA 121151 SU1 WB1 AG.docx" tells the classifier the provider, the
+     * qualification, the study unit, the artefact and that this one is the
+     * memorandum. Curiosa files that way; another tenant drafting its own
+     * material will not, and a pattern built into the code would be a pattern
+     * they have to work around.
+     *
+     * Null means no convention: the reviewer fills the details in by hand,
+     * which is slower but never blocked.
+     */
+    namingConvention: jsonb("naming_convention").$type<{
+      pattern: string;
+      artefactCodes: Record<string, string>;
+      memorandumMarker: string;
+    }>(),
+
+    /**
      * Which modules this tenant sees. An internal corporate client gets the
      * training modules only; an accredited Skills Development Provider also
      * gets the portfolio-of-evidence and statutory reporting modules.
