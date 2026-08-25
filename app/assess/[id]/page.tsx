@@ -27,6 +27,12 @@ export default async function AssessSubmissionPage({
 
   const isOwnWork = detail.submission.userId === session.userId;
 
+  // A paper is marked question by question on its own screen; this one records
+  // the judgement. Answers for a paper live in item_responses rather than in
+  // the submission's own responses column, so sending the assessor there is
+  // not a convenience — it is where the work actually is.
+  const isPaper = detail.submission.paperId !== null;
+
   // Answers are shown beside the questions, which is what makes a judgement
   // possible without leaving the page.
   const responses = (detail.submission.responses ?? {}) as Record<
@@ -46,6 +52,19 @@ export default async function AssessSubmissionPage({
         <h1 className="mt-2 text-xl font-semibold">
           {detail.learner.firstName} {detail.learner.lastName}
         </h1>
+        {isPaper ? (
+          <p className="mt-3 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">
+            This was answered on screen.{" "}
+            <Link
+              href={`/assess/${id}/mark`}
+              className="font-semibold underline underline-offset-2"
+            >
+              Mark it question by question
+            </Link>{" "}
+            — the answers, the marking guidance and the matrix are together
+            there, and the criteria are worked out for you once it is marked.
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-[var(--muted)]">
           {detail.assessment.title} · attempt{" "}
           {detail.submission.attemptNumber}

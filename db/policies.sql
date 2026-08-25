@@ -299,3 +299,25 @@ alter table assessment_submissions add constraint assessment_submissions_declara
       and (declaration_accepted_at is not null or closed_on_time)
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- A rubric level covers a real band of the marks, in order.
+alter table rubric_levels drop constraint if exists rubric_levels_band_check;
+alter table rubric_levels add constraint rubric_levels_band_check
+  check (
+    min_percent >= 0 and max_percent <= 100 and min_percent <= max_percent
+  );
+
+-- Marks awarded cannot exceed what the question is worth, and cannot be
+-- negative. Enforced here because a mark out of range corrupts every total
+-- computed from it, and the arithmetic is done in several places.
+alter table item_responses drop constraint if exists item_responses_awarded_check;
+alter table item_responses add constraint item_responses_awarded_check
+  check (awarded_marks is null or awarded_marks >= 0);
+
+-- Feedback on a workbook says something. Returning an empty comment tells the
+-- learner nothing and looks, on the record, exactly like feedback that was
+-- given.
+alter table formative_feedback drop constraint if exists formative_feedback_comments_check;
+alter table formative_feedback add constraint formative_feedback_comments_check
+  check (length(btrim(comments)) >= 10);

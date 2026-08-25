@@ -3,6 +3,7 @@ import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentDecisions,
+  assessments,
   assessmentSubmissions,
   curriculumModules,
   curriculumTopicElements,
@@ -264,9 +265,16 @@ async function achievedCriteriaFor(
       moderationRecords,
       eq(moderationRecords.decisionId, assessmentDecisions.id),
     )
+    // Summative only. A workbook is developmental: it prepares a learner for
+    // the summative and does not measure them, so nothing it produces may
+    // count towards eligibility. Filtered here as well as refused at the point
+    // of writing, because a rule this consequential should not depend on every
+    // future write path remembering it.
+    .innerJoin(assessments, eq(assessments.id, assessmentSubmissions.assessmentId))
     .where(
       and(
         eq(assessmentSubmissions.userId, userId),
+        eq(assessments.purpose, "summative"),
         inArray(assessmentSubmissions.status, ["moderated", "finalised"]),
       ),
     );

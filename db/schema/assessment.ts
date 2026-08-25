@@ -23,6 +23,7 @@ import {
   qualifications,
 } from "./curriculum";
 import { enrolments } from "./learning";
+import { rubrics } from "./rubrics";
 
 export const assessmentType = pgEnum("assessment_type", [
   "quiz",
@@ -207,6 +208,15 @@ export const assessmentItems = pgTable(
     correctOptionIds: jsonb("correct_option_ids").$type<string[]>(),
     /** Marking guidance for a human-marked item. */
     markingGuide: text("marking_guide"),
+    /**
+     * The matrix an assessor marks this against, where it is marked by a
+     * person. Prose guidance says what a good answer looks like; a rubric says
+     * what each grade of answer looks like, which is what makes two assessors
+     * agree.
+     */
+    rubricId: uuid("rubric_id").references(() => rubrics.id, {
+      onDelete: "set null",
+    }),
     points: integer("points").notNull().default(1),
     feedbackCorrect: text("feedback_correct"),
     feedbackIncorrect: text("feedback_incorrect"),
@@ -900,6 +910,23 @@ export const itemResponses = pgTable(
     /** Awarded by the marking engine, where the item can be marked by one. */
     autoMarks: numeric("auto_marks", { precision: 6, scale: 2 }),
 
+    /**
+     * What an assessor actually gave, which is the number that counts.
+     *
+     * An auto-marked item proposes; a person disposes. Keeping both means a
+     * moderator can see where an assessor departed from the engine and why,
+     * rather than seeing only the figure that survived.
+     */
+    awardedMarks: numeric("awarded_marks", { precision: 6, scale: 2 }),
+    /** Chosen level per rubric dimension: { dimensionId: levelId }. */
+    rubricLevels: jsonb("rubric_levels").$type<Record<string, string>>(),
+    /** What the learner is told about this answer. */
+    assessorComment: text("assessor_comment"),
+    markedById: uuid("marked_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    markedAt: timestamp("marked_at", { withTimezone: true }),
+
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -907,5 +934,85 @@ export const itemResponses = pgTable(
   (t) => [
     uniqueIndex("item_responses_unique_idx").on(t.submissionId, t.itemId),
     index("item_responses_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Which criteria a question evidences.
+ *
+ * Replaces the single `criterion_id` on an item, which could only ever hold
+ * one. Question 1.3.3 of Workbook 1 is tagged IAC0103 and IAC0104, and an item
+ * that can claim only one of them makes the alignment matrix under-report
+ * coverage — which is what a moderator writes up. The old column stays for
+ * now and is read as a fallback, so nothing authored before this loses its
+ * tag.
+ */
+export const assessmentItemCriteria = pgTable(
+  "assessment_item_criteria",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => assessmentItems.id, { onDelete: "cascade" }),
+    criterionId: uuid("criterion_id")
+      .notNull()
+      .references(() => assessmentCriteria.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("assessment_item_criteria_unique_idx").on(
+      t.itemId,
+      t.criterionId,
+    ),
+    index("assessment_item_criteria_item_idx").on(t.itemId),
+    index("assessment_item_criteria_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * A facilitator returning a marked workbook.
+ *
+ * Deliberately its own table rather than a flag on `assessment_decisions`.
+ * A workbook is developmental: it prepares a learner for the summative and is
+ * not a measurement of competence, so what comes back from one is feedback and
+ * never a decision. Keeping the two in separate tables makes that wall
+ * structural rather than a condition somebody has to remember to write — there
+ * is no path from here to the criterion ledger, because there is no row here
+ * that readiness reads.
+ *
+ * `criteriaOfConcern` is the useful part: which criteria the weak answers
+ * cluster around, so the learner knows what to re-read before the summative.
+ * It is a diagnosis, not a judgement.
+ */
+export const formativeFeedback = pgTable(
+  "formative_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    facilitatorId: uuid("facilitator_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    comments: text("comments").notNull(),
+    /** Criterion ids the answers suggest are not yet secure. */
+    criteriaOfConcern: jsonb("criteria_of_concern").$type<string[]>(),
+    /** Marks out of the paper total, for the learner's own information. */
+    marksAwarded: numeric("marks_awarded", { precision: 6, scale: 2 }),
+    marksAvailable: numeric("marks_available", { precision: 6, scale: 2 }),
+
+    returnedAt: timestamp("returned_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("formative_feedback_submission_idx").on(t.submissionId),
+    index("formative_feedback_org_idx").on(t.organisationId),
   ],
 );

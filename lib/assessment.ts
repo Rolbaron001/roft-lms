@@ -864,6 +864,26 @@ export async function recordAssessorDecision(
       );
     }
 
+    // The wall between developmental and summative work. A workbook produces
+    // no competence decision, so per-criterion judgements recorded against one
+    // would reach the criterion ledger and carry a learner towards eligibility
+    // on practice exercises. Refused rather than ignored: an ignored write
+    // looks, to whoever made it, exactly like one that worked.
+    if (parsed.criterionOutcomes && submission.assessmentId) {
+      const [assessment] = await tx
+        .select({ purpose: assessments.purpose, title: assessments.title })
+        .from(assessments)
+        .where(eq(assessments.id, submission.assessmentId));
+
+      if (assessment?.purpose === "formative") {
+        throw new AssessmentError(
+          `"${assessment.title}" is developmental, so it cannot record competence against criteria. ` +
+            `Return feedback on it instead.`,
+          "not_permitted",
+        );
+      }
+    }
+
     if (submission.status === "finalised") {
       throw new AssessmentError(
         "This submission has already been finalised.",
