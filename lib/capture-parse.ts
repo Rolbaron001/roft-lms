@@ -25,6 +25,17 @@ export type ParsedItem = {
   /** Criterion codes, from the question itself or from the memorandum. */
   criterionCodes: string[];
   markingGuide: string | null;
+  /**
+   * Who marks it.
+   *
+   * "app" is only for a question with one unambiguous right answer the
+   * platform can check — a multiple choice, or a bare true/false. Everything
+   * else is "assessor", including a statement that asks for a justification:
+   * the verdict may be true or false, but the marks are for the reasoning, and
+   * no engine can judge that. Getting this wrong in either direction is worse
+   * than leaving it open, so anything uncertain lands on the assessor.
+   */
+  markedBy: "app" | "assessor";
 };
 
 export type ParsedSection = {
@@ -40,8 +51,17 @@ export type ParsedPaper = {
   /** Criteria the workbook says it covers, from its scope table. */
   declaredCriteria: string[];
   sections: ParsedSection[];
-  /** What the parser could not work out, in words an author can act on. */
+  /**
+   * What the parser could not work out, in words an author can act on. These
+   * are faults: something is missing or does not reconcile.
+   */
   problems: string[];
+  /**
+   * What the reader should simply know. Not faults — a paper where every
+   * question is marked by an assessor is perfectly normal, and reporting that
+   * as a problem would train whoever reviews it to skim past the real ones.
+   */
+  notes: string[];
 };
 
 const SECTION_HEADING =
@@ -54,6 +74,9 @@ const CRITERIA_TRAILING = /\(((?:IAC|AC)\d{3,6}(?:\s*,\s*(?:IAC|AC)\d{3,6})*)\)\
 const CRITERIA_ANY = /\b(?:IAC|AC)\d{3,6}\b/gi;
 const SCOPE_LINE = /^Internal Assessment Criteria\s*[::]\s*(.+)$/i;
 
+const ITEM_HEADING =
+  /^Question\s+([A-Z]?[0-9]+(?:[.][0-9]+)*)\s*[::]\s*(.+)$/i;
+const BRACKET_CRITERIA = /[[]([^\]]*(?:IAC|AC|PS|PM|KM)[^\]]*)[]]/i;
 const STATEMENT = /^Statement\s+(\d+)\s*[::]\s*(.+)$/i;
 const ANSWER_BLANK = /^\[?\s*Answer(\s+Chosen)?\s*[::]/i;
 
@@ -154,6 +177,35 @@ export function parseWorkbook(text: string): ParsedPaper {
         points: null,
         criterionCodes: criteriaOf(numbered[2]),
         markingGuide: null,
+        markedBy: "app",
+      };
+      continue;
+    }
+
+    // "Question C1: Work Profiling (20 Marks) [PM-01, PS0101]" opens a
+    // question in its own right, and the lines under it are its context
+    // rather than more questions.
+    const itemHeading = ITEM_HEADING.exec(line);
+    if (itemHeading) {
+      closeItem();
+      const rest = itemHeading[2];
+      const marks = MARKS_IN_HEADING.exec(rest);
+      const bracket = BRACKET_CRITERIA.exec(rest);
+
+      pending = {
+        number: itemHeading[1],
+        type: "long_answer",
+        stem: rest
+          .replace(MARKS_IN_HEADING, "")
+          .replace(BRACKET_CRITERIA, "")
+          .replace(/[()]\s*$/, "")
+          .trim(),
+        options: [],
+        correctIndex: null,
+        points: marks ? Number(marks[1]) : null,
+        criterionCodes: bracket ? codesIn(bracket[1]) : criteriaOf(rest),
+        markingGuide: null,
+        markedBy: "assessor",
       };
       continue;
     }
@@ -167,17 +219,23 @@ export function parseWorkbook(text: string): ParsedPaper {
     const statement = STATEMENT.exec(line);
     if (statement) {
       closeItem();
-      // The statement is sometimes numbered twice: "Statement 1: 1. …".
-      const stem = statement[2].replace(/^\d+\.\s*/, "").trim();
+      // "Statement 1: 1. …" is numbered twice in some papers.
+      const stem = statement[2].replace(/^[0-9]+[.]\s*/, "").trim();
+      // A statement standing on its own, with a space to write in underneath,
+      // asks for a verdict *and* a justification. The verdict might be
+      // checkable; the marks are for the reasoning, and no engine can judge
+      // that. So it goes to an assessor rather than being marked as a
+      // true/false that happens to have no answer in the guide.
       current.items.push({
         number: statement[1],
-        type: "true_false",
+        type: "short_answer",
         stem: stripCriteria(stem),
-        options: ["True", "False"],
+        options: [],
         correctIndex: null,
         points: null,
         criterionCodes: criteriaOf(stem),
         markingGuide: null,
+        markedBy: "assessor",
       });
       continue;
     }
@@ -194,6 +252,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         points: null,
         criterionCodes: criteriaOf(stem),
         markingGuide: null,
+        markedBy: "app",
       });
       continue;
     }
@@ -220,6 +279,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         points: null,
         criterionCodes: criteriaOf(line),
         markingGuide: null,
+        markedBy: "assessor",
       });
       continue;
     }
@@ -251,7 +311,10 @@ export function parseWorkbook(text: string): ParsedPaper {
   for (const section of sections) {
     for (const item of section.items) {
       if (item.type === "multiple_choice" && item.options.length === 0) {
+        // A numbered line that never collected options is a written task, not
+        // a choice — and nothing can mark it but a person.
         item.type = "short_answer";
+        item.markedBy = "assessor";
       }
       if (item.type === "multiple_choice" && item.options.length < 2) {
         problems.push(
@@ -267,11 +330,23 @@ export function parseWorkbook(text: string): ParsedPaper {
     );
   }
 
+  const notes: string[] = [];
+  const byAssessor = sections
+    .flatMap((section) => section.items)
+    .filter((item) => item.markedBy === "assessor").length;
+
+  if (byAssessor > 0) {
+    notes.push(
+      `${byAssessor} ${byAssessor === 1 ? "question is" : "questions are"} marked by an assessor rather than by the App. That includes every statement that asks for a justification: the verdict may be checkable, but the marks are for the reasoning.`,
+    );
+  }
+
   return {
     title: titleLine ?? null,
     declaredCriteria,
     sections,
     problems,
+    notes,
   };
 }
 
@@ -448,6 +523,7 @@ export function mergeMemorandum(
   memo: ParsedMemo,
 ): ParsedPaper {
   const problems = [...paper.problems, ...memo.problems];
+  const notes = [...paper.notes];
 
   const byNumber = new Map(
     memo.answers.filter((a) => a.number).map((a) => [a.number, a]),
@@ -461,6 +537,16 @@ export function mergeMemorandum(
 
     const items = section.items.map((item) => {
       const merged: ParsedItem = { ...item };
+
+      // Nothing in the guide can key a question a person marks, and saying so
+      // as a problem would bury the real ones.
+      if (item.markedBy === "assessor") {
+        const key = Object.keys(memo.questionMarks).find(
+          (number) => number === item.number || number.endsWith(`.${item.number}`),
+        );
+        if (key) merged.points = memo.questionMarks[key];
+        return merged;
+      }
 
       if (item.type === "multiple_choice") {
         const answer = byNumber.get(item.number);
@@ -547,6 +633,20 @@ export function mergeMemorandum(
     }
   }
 
+  // The invariant that matters most: a question the App is meant to mark and
+  // cannot is a silently wrong mark waiting to happen. Either the guide is
+  // missing an answer, or the question belongs to an assessor after all — and
+  // only the author knows which.
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.markedBy !== "app") continue;
+      if (item.correctIndex !== null) continue;
+      problems.push(
+        `"${short(item.stem)}" in "${section.title}" is set to be marked by the App, but no correct answer was found for it. Give it one, or mark it as assessor-marked.`,
+      );
+    }
+  }
+
   const grandTotal = sections.reduce(
     (sum, section) => sum + (section.markTotal ?? 0),
     0,
@@ -557,5 +657,5 @@ export function mergeMemorandum(
     );
   }
 
-  return { ...paper, sections, problems };
+  return { ...paper, sections, problems, notes };
 }

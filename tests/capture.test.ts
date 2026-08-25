@@ -127,6 +127,50 @@ describe("reading the learner's copy", () => {
     expect(item.type).toBe("true_false");
     expect(item.stem).not.toContain("[True");
     expect(item.options).toEqual(["True", "False"]);
+    // A bare true/false has one right answer, so the App can mark it.
+    expect(item.markedBy).toBe("app");
+  });
+
+  /**
+   * The distinction that decides whether a question can be marked at all. A
+   * statement with a space to write in asks for a verdict *and* a
+   * justification: the verdict might be checkable, but the marks are for the
+   * reasoning, and no engine can judge that.
+   */
+  it("sends a statement with an answer space to an assessor", () => {
+    const withSpace = parseWorkbook(
+      [
+        "SECTION B: TRUE / FALSE STATEMENTS (15 Marks)",
+        "Indicate whether each statement is TRUE or FALSE. Provide a justification.",
+        "Statement 1: 1. Micro-economic principles focus exclusively on national inflation rates.",
+        "Answer: ____________",
+        "Statement 2: 2. High absenteeism directly increases operational cost per unit.",
+        "Answer: ____________",
+      ].join("\n"),
+    );
+
+    const items = withSpace.sections[0].items;
+    expect(items).toHaveLength(2);
+    expect(items[0].markedBy).toBe("assessor");
+    expect(items[0].type).toBe("short_answer");
+    expect(items[0].stem).toContain("Micro-economic");
+    // And the blank line the learner writes on is not a question.
+    expect(items.some((item) => /^Answer/i.test(item.stem))).toBe(false);
+  });
+
+  it("sends a numbered task with no options to an assessor", () => {
+    const tasks = parseWorkbook(
+      [
+        "SECTION C: PRACTICAL QUESTIONS (20 Marks)",
+        "1. Draft the Job Description profile including Job Purpose and key result areas.",
+        "2. Formulate the Employee Specification detailing formal NQF qualifications.",
+      ].join("\n"),
+    );
+
+    const items = tasks.sections[0].items;
+    expect(items).toHaveLength(2);
+    expect(items.every((item) => item.markedBy === "assessor")).toBe(true);
+    expect(items.every((item) => item.type === "short_answer")).toBe(true);
   });
 
   it("takes criteria straight off a structured question", () => {
@@ -253,6 +297,40 @@ describe("what it refuses to guess", () => {
     expect(
       merged.problems.some((problem) => /printed as 7 marks/.test(problem)),
     ).toBe(true);
+  });
+
+  /**
+   * The invariant that matters most. A question the App is set to mark and
+   * cannot is a silently wrong mark waiting to happen.
+   */
+  it("refuses to leave an App-marked question without an answer", () => {
+    const paper = parseWorkbook(WORKBOOK);
+    const merged = mergeMemorandum(paper, {
+      sectionMarks: {},
+      questionMarks: {},
+      answers: [],
+      total: null,
+      problems: [],
+    });
+
+    const unanswerable = merged.problems.filter((problem) =>
+      /marked by the App, but no correct answer/.test(problem),
+    );
+    expect(unanswerable.length).toBeGreaterThan(0);
+  });
+
+  it("counts what an assessor will have to mark, as a note not a fault", () => {
+    const merged = mergeMemorandum(
+      parseWorkbook(WORKBOOK),
+      parseMemorandum(GUIDE),
+    );
+    expect(merged.notes.some((note) => /marked by an assessor/.test(note))).toBe(
+      true,
+    );
+    // And it is not counted among the things needing correction.
+    expect(
+      merged.problems.some((problem) => /marked by an assessor/.test(problem)),
+    ).toBe(false);
   });
 
   it("says so plainly when the document is not a paper at all", () => {

@@ -298,6 +298,36 @@ export async function listCaptureJobs(session: AuthenticatedSession) {
  * what the parser originally proposed. The job records who confirmed it, and
  * their name stays on the assessment afterwards.
  */
+/**
+ * The checks that must hold at the moment of commit.
+ *
+ * Deliberately fewer than the parser's: the reviewer has had the full list and
+ * these are the ones that would make a paper actively wrong rather than merely
+ * incomplete.
+ */
+function recheck(confirmed: ParsedPaper): string[] {
+  const outstanding: string[] = [];
+
+  for (const section of confirmed.sections) {
+    for (const item of section.items) {
+      if (item.markedBy === "app" && item.correctIndex === null) {
+        outstanding.push(
+          `"${item.stem.slice(0, 50)}…" is marked by the App but has no correct answer.`,
+        );
+      }
+    }
+
+    const marks = section.items.reduce((sum, item) => sum + (item.points ?? 0), 0);
+    if (section.markTotal !== null && section.markTotal !== marks) {
+      outstanding.push(
+        `"${section.title}" is printed as ${section.markTotal} marks but its questions add up to ${marks}.`,
+      );
+    }
+  }
+
+  return outstanding;
+}
+
 export async function commitCapture(
   session: AuthenticatedSession,
   input: {
@@ -308,6 +338,14 @@ export async function commitCapture(
     confirmed: ParsedPaper;
     /** Criterion code to criterion id, resolved on the review screen. */
     criterionIds: Record<string, string>;
+    /**
+     * Set when the reviewer has read the findings and chosen to go on anyway.
+     *
+     * Required whenever anything is outstanding. The platform's job is to put
+     * what it found in front of the person and wait — not to decide for them,
+     * and not to let the findings scroll past unread.
+     */
+    acknowledgedProblems?: boolean;
   },
 ) {
   assertSessionCan(session, "assessment:author");
@@ -323,6 +361,19 @@ export async function commitCapture(
   if (input.confirmed.sections.length === 0) {
     throw new CaptureError(
       "There is nothing to commit: the confirmed paper has no sections.",
+      "invalid",
+    );
+  }
+
+  // Re-checked against what the reviewer confirmed rather than against the
+  // original parse: they may have fixed some and introduced others, and it is
+  // the state they are committing that has to be accounted for.
+  const outstanding = recheck(input.confirmed);
+  if (outstanding.length > 0 && !input.acknowledgedProblems) {
+    throw new CaptureError(
+      `${outstanding.length === 1 ? "One thing is" : `${outstanding.length} things are`} still outstanding on this paper. ` +
+        `Correct them, or say explicitly that you have read them and want to go on: ` +
+        outstanding.slice(0, 3).join(" "),
       "invalid",
     );
   }
@@ -385,6 +436,9 @@ export async function commitCapture(
         // What the reviewer changed is worth recording: it is the measure of
         // how far the parser can be trusted next time.
         sections: input.confirmed.sections.length,
+        // And what they chose to go ahead despite, which is what an audit of a
+        // disputed question would want to see first.
+        outstandingAtCommit: outstanding,
       },
     });
   });
