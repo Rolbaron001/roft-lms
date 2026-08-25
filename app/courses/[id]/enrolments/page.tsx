@@ -5,6 +5,7 @@ import { AuthoringError, getCourse } from "@/lib/authoring";
 import { listCourseEnrolments, listEnrollableUsers } from "@/lib/enrolment";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { EnrolmentPanel } from "./enrolment-panel";
+import { blockedLearners } from "@/lib/spine";
 
 export default async function CourseEnrolmentsPage({
   params,
@@ -25,11 +26,12 @@ export default async function CourseEnrolmentsPage({
     throw error;
   }
 
-  const [enrolled, people] = await Promise.all([
+  const [enrolled, people, blocked] = await Promise.all([
     listCourseEnrolments(session, id),
     session.permissions.includes("user:read")
       ? listEnrollableUsers(session)
       : Promise.resolve([]),
+    blockedLearners(session, id),
   ]);
 
   const canManage = session.permissions.includes("enrolment:manage");
@@ -57,6 +59,35 @@ export default async function CourseEnrolmentsPage({
         </Card>
       ) : (
         <div className="space-y-6">
+          {blocked.length > 0 ? (
+            <Card
+              title={`Waiting on something (${blocked.length})`}
+              description="Each learner appears once, at the earliest step they cannot open. Being held up at step three is the fact worth acting on; also being held up at steps four to ten is noise."
+            >
+              <ul className="space-y-2">
+                {blocked.map((row) => (
+                  <li
+                    key={row.userId}
+                    className="rounded-md border border-[var(--border)] px-4 py-3"
+                  >
+                    <p className="text-sm font-medium">
+                      {row.firstName} {row.lastName}
+                      <span className="ml-2 font-normal text-[var(--muted)]">
+                        {row.email}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm">
+                      Stuck at <strong>{row.stepTitle}</strong>
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">
+                      Opens when {row.blockedBy.join("; and when ")}.
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           <Card title={`Enrolled (${enrolled.length})`}>
             {enrolled.length === 0 ? (
               <p className="text-sm text-[var(--muted)]">

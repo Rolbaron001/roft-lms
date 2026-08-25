@@ -231,3 +231,36 @@ alter table qualifications add constraint qualifications_weights_check
 alter table evidence_artifacts drop constraint if exists evidence_artifacts_sha256_check;
 alter table evidence_artifacts add constraint evidence_artifacts_sha256_check
   check (sha256 ~ '^[0-9a-f]{64}$');
+
+-- ---------------------------------------------------------------------------
+-- A step on the spine points at exactly one thing.
+--
+-- `kind` says which, and the target column has to agree with it. Enforced here
+-- rather than in the application because a step that claims to be two things,
+-- or claims to be a lesson while naming an assessment, is a row nothing
+-- downstream can reason about — the gate evaluator would have to guess, and a
+-- gate that guesses is not a gate.
+alter table course_steps drop constraint if exists course_steps_one_target_check;
+alter table course_steps add constraint course_steps_one_target_check
+  check (
+    num_nonnulls(lesson_id, assessment_id, programme_document_id, curriculum_module_id) = 1
+    and (kind <> 'lesson'     or lesson_id is not null)
+    and (kind <> 'assessment' or assessment_id is not null)
+    and (kind <> 'document'   or programme_document_id is not null)
+    and (kind <> 'workplace'  or curriculum_module_id is not null)
+  );
+
+-- A step cannot be its own prerequisite. Longer cycles are caught in the
+-- application, where the whole spine is in hand and the offending pair can be
+-- named; this catches the one case a single row can express.
+alter table course_step_prerequisites
+  drop constraint if exists course_step_prerequisites_not_self_check;
+alter table course_step_prerequisites
+  add constraint course_step_prerequisites_not_self_check
+  check (step_id <> required_step_id);
+
+-- An override without a reason is not an override, it is a hole in the gate
+-- that nobody has to account for.
+alter table step_overrides drop constraint if exists step_overrides_reason_check;
+alter table step_overrides add constraint step_overrides_reason_check
+  check (length(btrim(reason)) >= 10);

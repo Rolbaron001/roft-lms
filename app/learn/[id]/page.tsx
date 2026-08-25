@@ -5,6 +5,8 @@ import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { listCourseAssessments } from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
 import { CoursePlayer } from "./course-player";
+import { StepList } from "./step-list";
+import { stepsForLearner } from "@/lib/spine";
 
 export default async function LearnPage({
   params,
@@ -28,11 +30,24 @@ export default async function LearnPage({
     throw error;
   }
 
+  // A course with a spine is walked in order. One without is not gated at
+  // all, and is listed the way it always was — gating is something a course
+  // opts into by having a spine, not something imposed on every course that
+  // existed before it.
+  const steps = await stepsForLearner(
+    session,
+    delivery.course.id,
+    delivery.enrolment.userId,
+  );
+
   // Only published assessments are offered; a draft is unfinished by
   // definition and its questions may still change.
-  const assessments = (
-    await listCourseAssessments(session, delivery.course.id)
-  ).filter((assessment) => assessment.status === "published");
+  const assessments =
+    steps.length > 0
+      ? []
+      : (await listCourseAssessments(session, delivery.course.id)).filter(
+          (assessment) => assessment.status === "published",
+        );
 
   const percentage =
     delivery.totalLessons === 0
@@ -59,6 +74,14 @@ export default async function LearnPage({
           </p>
         ) : null}
       </div>
+
+      {steps.length > 0 ? (
+        <StepList
+          steps={steps}
+          enrolmentId={id}
+          isOwn={delivery.isOwn}
+        />
+      ) : null}
 
       {assessments.length > 0 ? (
         <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">

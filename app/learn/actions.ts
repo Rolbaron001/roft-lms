@@ -1,5 +1,6 @@
 "use server";
 
+import { recordStepOpened, SpineError } from "@/lib/spine";
 import { revalidatePath } from "next/cache";
 import { requestContext, requireSession } from "@/lib/request";
 import { EnrolmentError, markLessonComplete } from "@/lib/enrolment";
@@ -76,7 +77,7 @@ export async function markLessonCompleteAction(
   try {
     await markLessonComplete(session, enrolmentId, lessonId);
   } catch (error) {
-    if (error instanceof EnrolmentError) {
+    if (error instanceof EnrolmentError || error instanceof SpineError) {
       return { error: error.message };
     }
     console.error(error);
@@ -85,5 +86,34 @@ export async function markLessonCompleteAction(
 
   revalidatePath(`/learn/${enrolmentId}`);
   revalidatePath("/");
+  return {};
+}
+
+/**
+ * Records that a learner opened a step.
+ *
+ * The guard runs inside `recordStepOpened`, so a learner asking to open a
+ * locked step is refused here as well as in the page that would have hidden
+ * it.
+ */
+export async function openStepAction(
+  _previous: LearnState,
+  formData: FormData,
+): Promise<LearnState> {
+  const session = await requireSession();
+  const stepId = String(formData.get("stepId") ?? "");
+  const enrolmentId = String(formData.get("enrolmentId") ?? "");
+
+  try {
+    await recordStepOpened(session, stepId);
+  } catch (error) {
+    if (error instanceof SpineError) {
+      return { error: error.message };
+    }
+    console.error(error);
+    return { error: "That could not be opened. Please try again." };
+  }
+
+  revalidatePath(`/learn/${enrolmentId}`);
   return {};
 }

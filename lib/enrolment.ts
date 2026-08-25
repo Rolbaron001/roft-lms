@@ -9,6 +9,7 @@ import {
   progressRecords,
   users,
 } from "@/db/schema";
+import { assertLessonStepOpen } from "./spine";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
@@ -406,6 +407,13 @@ export async function markLessonComplete(
   enrolmentId: string,
   lessonId: string,
 ) {
+  // Checked before the transaction opens rather than inside it: the guard runs
+  // its own tenant-scoped read, and nesting one transaction inside another
+  // takes a second connection that does not carry this one's tenant setting.
+  //
+  // A course with no spine is not gated, so this is a no-op there.
+  await assertLessonStepOpen(session, lessonId);
+
   return withTenant(session.organisationId, async (tx) => {
     const [enrolment] = await tx
       .select()

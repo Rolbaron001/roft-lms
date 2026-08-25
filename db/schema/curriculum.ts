@@ -310,6 +310,17 @@ export const courses = pgTable(
       () => curriculumModules.id,
       { onDelete: "set null" },
     ),
+    /**
+     * The study unit this course delivers, where it delivers one.
+     *
+     * A curriculum publishes modules; a provider teaches study units. This is
+     * what gives a study unit somewhere to live: its lessons, its workbooks
+     * and its summative assessment become one ordered spine on one course.
+     * Null for ordinary training that answers to no qualification.
+     */
+    studyUnitId: uuid("study_unit_id").references(() => studyUnits.id, {
+      onDelete: "set null",
+    }),
     title: text("title").notNull(),
     description: text("description"),
     /**

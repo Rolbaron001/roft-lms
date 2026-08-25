@@ -464,6 +464,12 @@ export const courseInput = z.object({
   title: z.string().trim().min(3).max(300),
   description: z.string().trim().max(4000).optional(),
   curriculumModuleId: z.string().uuid().optional().nullable(),
+  /**
+   * The study unit this course delivers. A curriculum publishes modules; a
+   * provider teaches study units, and this is what gives one somewhere to
+   * live — its guide, its workbooks and its summative become one spine here.
+   */
+  studyUnitId: z.string().uuid().optional().nullable(),
   estimatedMinutes: z.coerce.number().int().min(0).max(100_000).optional(),
 });
 
@@ -479,6 +485,7 @@ export async function createCourse(
       .insert(courses)
       .values({
         organisationId: session.organisationId,
+        studyUnitId: parsed.studyUnitId ?? null,
         title: parsed.title,
         description: parsed.description ?? null,
         curriculumModuleId: parsed.curriculumModuleId || null,
