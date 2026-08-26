@@ -10,7 +10,12 @@ import {
 } from "@/db/schema";
 import { detectMedia, describeSize, SIZE_LIMITS } from "./media";
 import { buildStorageKey, getObject, putObject } from "./storage";
-import { readDocxText, readXlsxSheets, OfficeReadError } from "./office";
+import {
+  readDocxText,
+  readPdfText,
+  readXlsxSheets,
+  OfficeReadError,
+} from "./office";
 import { importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
@@ -110,39 +115,68 @@ export const documentInput = z.object({
 export type DocumentInput = z.input<typeof documentInput>;
 
 /**
- * Pulls readable text out of a file so it can be searched later.
+ * Pulls readable text out of a file so it can be searched later, and so a
+ * curriculum can be transcribed from the document rather than from a printout
+ * beside the keyboard.
  *
- * Word and Excel only. A PDF needs a parser an order of magnitude larger than
- * everything here, and a scanned one needs OCR — so PDFs are stored whole and
- * honestly recorded as having no extracted text, rather than half-read.
+ * Word, Excel and PDF. A file that cannot be read is still worth keeping: the
+ * upload succeeds and the text is null, which is the truth. What it must not
+ * do is be quiet about it — a scanned PDF files perfectly and then helps with
+ * nothing, and the person who uploaded it is the only one who can go and find
+ * a digital copy.
  */
-function extractText(bytes: Uint8Array, mimeType: string): string | null {
+async function extractText(
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<{ text: string | null; notice?: string }> {
   try {
     if (mimeType.includes("wordprocessingml")) {
-      return readDocxText(bytes).slice(0, 500_000);
+      return { text: readDocxText(bytes).slice(0, 500_000) };
     }
+
     if (mimeType.includes("spreadsheetml")) {
-      return readXlsxSheets(bytes)
-        .map(
-          (sheet) =>
-            `${sheet.name}\n${sheet.rows.map((row) => row.join("\t")).join("\n")}`,
-        )
-        .join("\n\n")
-        .slice(0, 500_000);
+      return {
+        text: readXlsxSheets(bytes)
+          .map(
+            (sheet) =>
+              `${sheet.name}\n${sheet.rows.map((row) => row.join("\t")).join("\n")}`,
+          )
+          .join("\n\n")
+          .slice(0, 500_000),
+      };
+    }
+
+    if (mimeType.includes("pdf")) {
+      const pdf = await readPdfText(bytes);
+
+      if (pdf.looksScanned) {
+        return {
+          text: pdf.text.length > 0 ? pdf.text.slice(0, 500_000) : null,
+          notice:
+            `This looks like a scan: ${pdf.pages} pages with almost no text in them. ` +
+            "The file is stored and can be downloaded, but the platform cannot read it, " +
+            "so it cannot help you build the curriculum from it. If there is a digital " +
+            "copy of this document, upload that instead.",
+        };
+      }
+
+      return { text: pdf.text.slice(0, 500_000) };
     }
   } catch (error) {
-    // A file that cannot be read is still worth keeping. The upload succeeds
-    // and the text is null, which is the truth.
     if (!(error instanceof OfficeReadError)) throw error;
+    // The reader's own words: they say which file and why, which a caller
+    // cannot reconstruct from a null.
+    return { text: null, notice: error.message };
   }
-  return null;
+
+  return { text: null };
 }
 
 export async function uploadProgrammeDocument(
   session: AuthenticatedSession,
   input: DocumentInput,
   file: { filename: string; bytes: Uint8Array },
-): Promise<{ id: string; matrix?: MatrixImportSummary }> {
+): Promise<{ id: string; matrix?: MatrixImportSummary; notice?: string }> {
   assertSessionCan(session, "qualification:manage");
   const parsed = documentInput.parse(input);
 
@@ -174,7 +208,10 @@ export async function uploadProgrammeDocument(
 
   // Read before storing. An alignment matrix that cannot be understood should
   // fail the upload rather than land in the library looking imported.
-  const extractedText = extractText(file.bytes, detected.mimeType);
+  const { text: extractedText, notice } = await extractText(
+    file.bytes,
+    detected.mimeType,
+  );
 
   const key = buildStorageKey(
     session.organisationId,
@@ -277,7 +314,7 @@ export async function uploadProgrammeDocument(
     }
   }
 
-  return { id, matrix };
+  return { id, matrix, notice };
 }
 
 export async function listProgrammeDocuments(

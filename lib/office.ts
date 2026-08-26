@@ -200,3 +200,134 @@ export function readXlsxSheets(bytes: Uint8Array): Sheet[] {
 
   return sheets;
 }
+
+// ---------------------------------------------------------------------------
+// PDF
+// ---------------------------------------------------------------------------
+
+/**
+ * A curriculum document runs to 85 pages. This is far above anything real and
+ * exists only so that a deliberately enormous file cannot occupy a worker
+ * indefinitely.
+ */
+const MAX_PDF_PAGES = 1500;
+
+export type PdfText = {
+  text: string;
+  pages: number;
+  /**
+   * True when the file parsed but held almost no text — the signature of a
+   * scan. Worth surfacing rather than hiding: a scanned curriculum uploads
+   * cleanly and then silently helps with nothing, and the person who uploaded
+   * it is the only one who can go and find a digital copy.
+   */
+  looksScanned: boolean;
+};
+
+/**
+ * Pulls the text out of a PDF.
+ *
+ * Unlike the Word and Excel readers above, this leans on Mozilla's pdf.js
+ * rather than being written here. A .docx is a zip of XML and yields to a
+ * hundred lines; a PDF is a graphics format that happens to carry text, and
+ * recovering characters means resolving cross-reference streams, object
+ * streams and per-font encoding tables. Written by hand it would work on most
+ * documents and quietly produce mojibake on the rest — and this text is what
+ * somebody transcribes a curriculum from, so quietly-wrong is the one outcome
+ * worth paying to avoid.
+ *
+ * The import is dynamic because pdf.js is large and most uploads are not PDFs.
+ */
+export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+
+  let document;
+  try {
+    document = await pdfjs.getDocument({
+      // pdf.js takes ownership of the buffer, so it is handed a copy: the
+      // caller still needs these bytes to hash and store the file.
+      data: new Uint8Array(bytes),
+      standardFontDataUrl: standardFontsPath(),
+      // This runs on a file a stranger uploaded, so it is kept to reading what
+      // is in the file: no substituting fonts off this machine, and no
+      // fetching anything the document points at. Extracting text never runs
+      // the JavaScript a PDF may carry — only a viewer does that.
+      useSystemFonts: false,
+      useWorkerFetch: false,
+    }).promise;
+  } catch (error) {
+    const reason =
+      error && typeof error === "object" && "name" in error
+        ? String((error as { name: unknown }).name)
+        : "";
+
+    if (reason === "PasswordException") {
+      throw new OfficeReadError(
+        "This PDF is password protected, so its text cannot be read. Upload an unprotected copy.",
+      );
+    }
+    throw new OfficeReadError("This PDF could not be read.");
+  }
+
+  const pages = document.numPages;
+  if (pages > MAX_PDF_PAGES) {
+    throw new OfficeReadError(
+      `This PDF has ${pages} pages, which is beyond what the platform reads.`,
+    );
+  }
+
+  const parts: string[] = [];
+
+  try {
+    for (let number = 1; number <= pages; number++) {
+      const page = await document.getPage(number);
+      const content = await page.getTextContent();
+
+      // hasEOL is pdf.js telling us the item ended a line in the original
+      // layout. Honouring it keeps a table row on one line and a heading off
+      // the end of the paragraph above it, which is the difference between
+      // text somebody can read down and one continuous smear.
+      parts.push(
+        content.items
+          .map((item) =>
+            "str" in item ? item.str + (item.hasEOL ? "\n" : "") : "",
+          )
+          .join(""),
+      );
+
+      // Released as we go. Holding 85 pages of glyph data at once is the
+      // difference between a modest process and one the container kills.
+      page.cleanup();
+    }
+  } finally {
+    await document.destroy();
+  }
+
+  const text = parts.join("\n\n").replace(/\u0000/g, "").trim();
+
+  return {
+    text,
+    pages,
+    // Roughly a short paragraph a page. A text PDF clears this by an order of
+    // magnitude; a scan produces almost nothing at all.
+    looksScanned: text.length < pages * 200,
+  };
+}
+
+/**
+ * Where pdf.js keeps the metrics for the fourteen fonts a PDF is allowed to
+ * assume rather than embed. Without them those fonts extract poorly.
+ *
+ * Resolved rather than hardcoded so it survives the standalone build, and
+ * tolerated when missing: no font data degrades a minority of documents, while
+ * throwing here would fail every upload.
+ */
+function standardFontsPath(): string | undefined {
+  try {
+    return require
+      .resolve("pdfjs-dist/package.json")
+      .replace(/package\.json$/, "standard_fonts/");
+  } catch {
+    return undefined;
+  }
+}

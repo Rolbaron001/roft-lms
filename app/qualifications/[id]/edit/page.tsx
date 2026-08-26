@@ -63,6 +63,12 @@ export default async function EditCurriculumPage({
           same order — so the two can be read side by side. Every line saves as
           you enter it.
         </p>
+        <Link
+          href={`/qualifications/${id}/edit/from-document`}
+          className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
+        >
+          Start from the curriculum document
+        </Link>
       </div>
 
       {readiness.ready ? (

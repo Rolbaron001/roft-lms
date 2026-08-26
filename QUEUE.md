@@ -62,10 +62,22 @@ curriculum from it.
 the curriculum editor can start from the real document rather than a blank
 form.
 
-- [ ] 3.1 PDF text extraction in `lib/office.ts`
-- [ ] 3.2 Wired into programme document upload, stored in `extractedText`
-- [ ] 3.3 Offered to the curriculum editor as a starting point
-- [ ] 3.4 Tests against the real 121150 and 121151 documents
+- [x] 3.1 PDF text extraction in `lib/office.ts`, on Mozilla's pdf.js
+- [x] 3.2 Wired into programme document upload, stored in `extractedText` —
+      and a scan is reported to whoever uploaded it rather than filed silently
+- [x] 3.3 `lib/curriculum-parse.ts` reads the document into a proposal, and
+      `/qualifications/[id]/edit/from-document` offers it a module at a time
+- [x] 3.4 Tests against the real 121150 and 121151 documents
+
+**Done.** 121150 reads to all 13 modules and 121151 to all 15, despite the two
+using different code conventions and disagreeing about what a PS code means.
+Nothing is written until somebody accepts a module, and every line goes in
+through the same guards as the hand editor.
+
+Two faults in the 121150 document itself surfaced on the way, and are reported
+before anything is accepted: KM02 restarts its criteria at IAC0101 in a second
+topic, and WM01 numbers five different work activities WA0201. Only the first
+of each can be stored, so those lines need renumbering in the document.
 
 ---
 

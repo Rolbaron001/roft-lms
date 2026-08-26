@@ -408,6 +408,12 @@ export async function curriculumOutline(
 
 export const criterionInput = z.object({
   curriculumModuleId: z.string().uuid(),
+  /**
+   * Which topic the criterion belongs to. Optional: a tenant outside the
+   * occupational system has criteria that sit directly on a module, and
+   * readiness treats those as one implicit topic.
+   */
+  topicId: z.string().uuid().optional(),
   code: z.string().trim().min(1).max(50),
   description: z.string().trim().min(3).max(2000),
 });
@@ -443,6 +449,25 @@ export async function addAssessmentCriterion(
       );
     }
 
+    if (parsed.topicId) {
+      const [topic] = await tx
+        .select({ id: curriculumTopics.id })
+        .from(curriculumTopics)
+        .where(
+          and(
+            eq(curriculumTopics.id, parsed.topicId),
+            eq(curriculumTopics.curriculumModuleId, parsed.curriculumModuleId),
+          ),
+        );
+
+      if (!topic) {
+        throw new AuthoringError(
+          "That topic is not in this module.",
+          "invalid_state",
+        );
+      }
+    }
+
     const [clash] = await tx
       .select({ id: assessmentCriteria.id })
       .from(assessmentCriteria)
@@ -472,6 +497,7 @@ export async function addAssessmentCriterion(
       .values({
         organisationId: session.organisationId,
         curriculumModuleId: parsed.curriculumModuleId,
+        topicId: parsed.topicId ?? null,
         code: parsed.code,
         description: parsed.description,
         sortOrder: existing,
