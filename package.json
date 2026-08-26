@@ -16,7 +16,7 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -25,6 +25,7 @@
     "mailparser": "^3.9.15",
     "next": "16.3.0",
     "nodemailer": "^9.0.5",
+    "pdfjs-dist": "^5.7.284",
     "postgres": "^3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",

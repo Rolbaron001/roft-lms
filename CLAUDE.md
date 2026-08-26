@@ -91,7 +91,13 @@ them; raise it with him if one looks wrong.
 
 ## Working notes
 
-- Run `npm run check` (typecheck, lint, test) before every commit.
+- Run `npm run check` (typecheck, lint, test, build) before every commit. The
+  build is in there deliberately: typecheck and tests both pass on code that
+  will not bundle. The usual cause is a client component importing from a
+  module that reaches into the database, which drags the Postgres driver into
+  the browser bundle and fails with "can't resolve 'net'". Keep constants a
+  form needs in a file that imports nothing, the way `lib/curriculum-shape.ts`
+  does.
 - `tests/tenant-isolation.test.ts` is not optional and not to be weakened. If a
   change makes it fail, the change is wrong.
 - Roland's account is `Rolbaron001`. Do not create GitHub repositories,

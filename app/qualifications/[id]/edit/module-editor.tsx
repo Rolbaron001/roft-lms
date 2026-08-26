@@ -15,7 +15,7 @@ import {
   updateTopicAction,
   type EditorState,
 } from "./actions";
-import { ELEMENT_KINDS_BY_COMPONENT } from "@/lib/curriculum-editor";
+import { ELEMENT_KINDS_BY_COMPONENT } from "@/lib/curriculum-shape";
 
 const input =
   "rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm";

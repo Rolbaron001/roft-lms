@@ -1,4 +1,8 @@
 import { and, asc, count, eq, ne, inArray } from "drizzle-orm";
+import {
+  ELEMENT_KINDS_BY_COMPONENT,
+  type ElementKind,
+} from "./curriculum-shape";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
@@ -345,21 +349,10 @@ export async function removeTopic(
 // Topic elements — the lines that say what must actually be taught
 // ---------------------------------------------------------------------------
 
-export type ElementKind =
-  | "knowledge_topic"
-  | "practical_activity"
-  | "applied_knowledge"
-  | "work_activity"
-  | "contextual_knowledge"
-  | "supporting_evidence";
-
-/** Which kinds belong in which component, so the form offers the right ones. */
-export const ELEMENT_KINDS_BY_COMPONENT: Record<string, ElementKind[]> = {
-  knowledge: ["knowledge_topic"],
-  practical: ["practical_activity", "applied_knowledge"],
-  workplace: ["work_activity", "contextual_knowledge", "supporting_evidence"],
-  general: ["knowledge_topic"],
-};
+export {
+  ELEMENT_KINDS_BY_COMPONENT,
+  type ElementKind,
+} from "./curriculum-shape";
 
 export async function addTopicElement(
   session: AuthenticatedSession,
