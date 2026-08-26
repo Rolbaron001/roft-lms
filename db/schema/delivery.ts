@@ -11,7 +11,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { organisations, users } from "./tenancy";
-import { courses, curriculumModules, lessons, programmeDocuments } from "./curriculum";
+import {
+  courses,
+  curriculumModules,
+  lessons,
+  programmeDocuments,
+  qualifications,
+} from "./curriculum";
 import { assessments } from "./assessment";
 
 /**
@@ -287,6 +293,18 @@ export const captureJobs = pgTable(
     guideFilename: text("guide_filename"),
     guideStorageKey: text("guide_storage_key"),
     guideSha256: text("guide_sha256"),
+
+    /**
+     * The qualification this material belongs to, chosen at upload.
+     *
+     * Named rather than guessed from the filename: the criteria a question
+     * evidences are looked up against this qualification's curriculum, and
+     * getting it from a filename would mean a typo silently tagging questions
+     * to the wrong programme.
+     */
+    qualificationId: uuid("qualification_id").references(() => qualifications.id, {
+      onDelete: "cascade",
+    }),
 
     /** What the filename said, under this tenant's own naming convention. */
     classified: jsonb("classified").$type<Record<string, string | null>>(),

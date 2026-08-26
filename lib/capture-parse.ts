@@ -647,6 +647,88 @@ export function mergeMemorandum(
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Faults in the material itself.
+  //
+  // These are not parsing failures — the document was read perfectly well. They
+  // are things wrong with the paper, and the person uploading it is the one
+  // who can fix them. Silence here means the fault reaches learners.
+  // ---------------------------------------------------------------------
+
+  for (const section of sections) {
+    // Every correct answer in the same position. Real: all four multiple
+    // choice questions in Curiosa's Workbook 1 key to B. A learner who spots
+    // it scores full marks on the section without reading a question.
+    const keyed = section.items.filter(
+      (item) => item.markedBy === "app" && item.correctIndex !== null,
+    );
+    if (keyed.length >= 3) {
+      const positions = new Set(keyed.map((item) => item.correctIndex));
+      if (positions.size === 1) {
+        const letter = String.fromCharCode(65 + keyed[0].correctIndex!);
+        problems.push(
+          `Every one of the ${keyed.length} answered questions in "${section.title}" has ${letter} as the correct answer. A learner who notices scores full marks without reading them. Shuffle the options.`,
+        );
+      }
+    }
+
+    // The same question twice, usually a copy-and-paste that was never edited.
+    const seen = new Map<string, number>();
+    for (const item of section.items) {
+      const key = item.stem.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      if (!key) continue;
+      const count = (seen.get(key) ?? 0) + 1;
+      seen.set(key, count);
+      if (count === 2) {
+        problems.push(
+          `"${short(item.stem)}" appears twice in "${section.title}". One of them is probably a copy that was never edited.`,
+        );
+      }
+    }
+
+    // A section that prints itself as worth nothing. Every question in it then
+    // has nothing to share out, so they all come back unmarked.
+    if (section.markTotal === 0) {
+      problems.push(
+        `"${section.title}" is printed as worth 0 marks, so none of its ${section.items.length} questions can carry any. Give the section a mark total.`,
+      );
+    }
+
+    for (const item of section.items) {
+      if (item.points !== null && item.points === 0) {
+        problems.push(
+          `"${short(item.stem)}" is worth no marks. Either give it some or take it out — a question worth nothing still costs a learner time.`,
+        );
+      }
+
+      // Two options saying the same thing means the question has two right
+      // answers or two wrong ones, and either way it does not discriminate.
+      const options = item.options.map((option) =>
+        option.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(),
+      );
+      const unique = new Set(options.filter(Boolean));
+      if (options.length > 0 && unique.size < options.filter(Boolean).length) {
+        problems.push(
+          `"${short(item.stem)}" has two options that say the same thing.`,
+        );
+      }
+
+      // An option far longer than the others is the classic tell: examiners
+      // qualify the right answer and leave the wrong ones bare.
+      if (item.markedBy === "app" && item.correctIndex !== null && item.options.length >= 3) {
+        const lengths = item.options.map((option) => option.length);
+        const correct = lengths[item.correctIndex];
+        const others = lengths.filter((_, index) => index !== item.correctIndex);
+        const longest = Math.max(...others);
+        if (correct > longest * 1.8 && correct > 40) {
+          notes.push(
+            `In "${short(item.stem)}" the correct answer is much longer than the others, which is a well-known giveaway. Worth evening them up.`,
+          );
+        }
+      }
+    }
+  }
+
   const grandTotal = sections.reduce(
     (sum, section) => sum + (section.markTotal ?? 0),
     0,

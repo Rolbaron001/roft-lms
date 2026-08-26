@@ -392,3 +392,153 @@ describe("what the filename says", () => {
     expect(classifyFilename("ACME 654321 SU3 WB2.docx", convention).artefact).toBeNull();
   });
 });
+
+describe("faults in the material rather than the parse", () => {
+  const paperWith = (lines: string[]) => parseWorkbook(lines.join("\n"));
+
+  const keyed = (letters: string[]) =>
+    parseMemorandum(
+      [
+        "Activity 1.1: Multiple Choice Questions (3 Marks | 1 Mark Each)",
+        "Q#",
+        "Correct Option",
+        "Model Answer",
+        "IAC Alignment",
+        ...letters.flatMap((letter, index) => [
+          String(index + 1),
+          letter,
+          "Because of the reason given.",
+          "IAC0101",
+        ]),
+      ].join("\n"),
+    );
+
+  const threeQuestions = [
+    "Activity 1.1: Multiple Choice Questions (3 Marks)",
+    "1. First question about organisational structure and its effects?",
+    "A. First option",
+    "B. Second option",
+    "C. Third option",
+    "2. Second question about the HRM value chain and leadership?",
+    "A. First option",
+    "B. Second option",
+    "C. Third option",
+    "3. Third question about labour economics and workforce planning?",
+    "A. First option",
+    "B. Second option",
+    "C. Third option",
+  ];
+
+  /**
+   * A real finding in Curiosa's Workbook 1: all four multiple choice answers
+   * are B. A learner who notices scores the section without reading it.
+   */
+  it("shouts when every correct answer is in the same position", () => {
+    const merged = mergeMemorandum(
+      paperWith(threeQuestions),
+      keyed(["B", "B", "B"]),
+    );
+
+    expect(
+      merged.problems.some((problem) =>
+        /has B as the correct answer/.test(problem),
+      ),
+    ).toBe(true);
+  });
+
+  it("says nothing when the answers are spread", () => {
+    const merged = mergeMemorandum(
+      paperWith(threeQuestions),
+      keyed(["A", "B", "C"]),
+    );
+
+    expect(
+      merged.problems.some((problem) => /correct answer/.test(problem)),
+    ).toBe(false);
+  });
+
+  it("spots the same question asked twice", () => {
+    const merged = mergeMemorandum(
+      paperWith([
+        "Activity 2.1: Structured Questions (20 Marks)",
+        "Discuss how organisational structure affects HR architecture in practice. (IAC0101)",
+        "Discuss how organisational structure affects HR architecture in practice. (IAC0102)",
+      ]),
+      parseMemorandum(""),
+    );
+
+    expect(
+      merged.problems.some((problem) => /appears twice/.test(problem)),
+    ).toBe(true);
+  });
+
+  it("spots two options that say the same thing", () => {
+    const merged = mergeMemorandum(
+      paperWith([
+        "Activity 1.1: Multiple Choice Questions (1 Mark)",
+        "1. Which structure has employees reporting to more than one manager?",
+        "A. A matrix organisation",
+        "B. A matrix organisation",
+        "C. A flat organisation",
+      ]),
+      keyed(["A"]),
+    );
+
+    expect(
+      merged.problems.some((problem) =>
+        /two options that say the same thing/.test(problem),
+      ),
+    ).toBe(true);
+  });
+
+  /** A giveaway, not a fault — so it is a note rather than a problem. */
+  it("notes a correct answer far longer than its distractors", () => {
+    const merged = mergeMemorandum(
+      paperWith([
+        "Activity 1.1: Multiple Choice Questions (1 Mark)",
+        "1. What does a Service Level Agreement attached to a contract define?",
+        "A. Performance metrics, quality standards, review cycles and the remedies available where the standard is not met",
+        "B. The tax rate",
+        "C. Office hours",
+      ]),
+      keyed(["A"]),
+    );
+
+    expect(
+      merged.notes.some((note) => /much longer than the others/.test(note)),
+    ).toBe(true);
+    expect(
+      merged.problems.some((problem) => /much longer/.test(problem)),
+    ).toBe(false);
+  });
+
+  it("spots a section printed as worth nothing", () => {
+    const merged = mergeMemorandum(
+      paperWith([
+        "Activity 1.1: Multiple Choice Questions (0 Marks)",
+        "1. Which structure has employees reporting to more than one manager?",
+        "A. Matrix",
+        "B. Flat",
+      ]),
+      parseMemorandum(
+        [
+          "Activity 1.1: Multiple Choice Questions (0 Marks)",
+          "Q#",
+          "Correct Option",
+          "Model",
+          "IAC",
+          "1",
+          "A",
+          "Because of the reason.",
+          "IAC0101",
+        ].join("\n"),
+      ),
+    );
+
+    expect(
+      merged.problems.some((problem) =>
+        /printed as worth 0 marks/.test(problem),
+      ),
+    ).toBe(true);
+  });
+});

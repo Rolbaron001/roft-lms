@@ -13,6 +13,7 @@ import {
 } from "./capture-parse";
 import { addPaper, addSection, addSectionItem, publishPaper } from "./papers";
 import { tagItemCriteria } from "./marking";
+import { assertProgrammeReady } from "./programme-readiness";
 
 /**
  * Capturing a Word document as a paper the App can present.
@@ -166,11 +167,20 @@ export type CaptureProposal = {
 export async function proposeCapture(
   session: AuthenticatedSession,
   input: {
+    /** Which qualification this material belongs to. */
+    qualificationId: string;
     paper: { filename: string; bytes: Uint8Array };
     guide?: { filename: string; bytes: Uint8Array };
   },
 ): Promise<CaptureProposal> {
   assertSessionCan(session, "assessment:author");
+
+  // The order matters and this is what enforces it. Material captured before
+  // the curriculum is in cannot have its criteria linked, so its questions
+  // evidence nothing and the alignment matrix under-reports — discovered at an
+  // audit, and fixed by re-tagging every question by hand. Refused up front
+  // instead, with what is missing named.
+  await assertProgrammeReady(session, input.qualificationId);
 
   let paperText: string;
   try {
@@ -225,6 +235,7 @@ export async function proposeCapture(
         guideFilename: input.guide?.filename ?? null,
         guideStorageKey: guideStored?.storageKey ?? null,
         guideSha256: guideStored?.sha256 ?? null,
+        qualificationId: input.qualificationId,
         classified: classified as unknown as Record<string, string | null>,
         proposal: parsed,
         problems: parsed.problems,

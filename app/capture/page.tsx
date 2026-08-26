@@ -1,27 +1,31 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCaptureJobs } from "@/lib/capture";
+import { listProgrammeReadiness } from "@/lib/programme-readiness";
 import { AppShell, Card } from "@/components/app-shell";
 import { UploadForm } from "./upload-form";
 
 export default async function CapturePage() {
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
-  const jobs = await listCaptureJobs(session);
+  const [jobs, programmes] = await Promise.all([
+    listCaptureJobs(session),
+    listProgrammeReadiness(session),
+  ]);
 
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Capture a paper</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Upload a workbook or an assessment with its answer guide. The App
-          reads what it can, shows you what it made of it and what it could not
-          work out, and waits. Nothing becomes an assessment until you confirm
-          it.
+          Choose the qualification, then upload a workbook or an assessment
+          with its answer guide. The App reads what it can, shows you what it
+          made of it and what it could not work out, and waits. Nothing becomes
+          an assessment until you confirm it.
         </p>
       </div>
 
-      <UploadForm />
+      <UploadForm programmes={programmes} />
 
       <div className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
