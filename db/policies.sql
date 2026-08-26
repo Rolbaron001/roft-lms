@@ -340,3 +340,41 @@ alter table step_releases add constraint step_releases_order_check
       or due_after_days >= opens_after_days
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- A third attempt has to be explained. "Authorised" with an empty rationale is
+-- indistinguishable at audit from nobody having thought about it.
+alter table reassessment_authorisations
+  drop constraint if exists reassessment_authorisations_rationale_check;
+alter table reassessment_authorisations
+  add constraint reassessment_authorisations_rationale_check
+  check (length(btrim(rationale)) >= 10);
+
+-- An employer who was consulted has a name. This is the exact claim an
+-- external verifier tests, and an unnamed employer is not evidence of a
+-- consultation having happened.
+alter table reassessment_authorisations
+  drop constraint if exists reassessment_authorisations_employer_check;
+alter table reassessment_authorisations
+  add constraint reassessment_authorisations_employer_check
+  check (
+    employer_consulted is false
+    or length(btrim(coalesce(employer_representative, ''))) > 0
+  );
+
+-- Only an authorisation for an oral reassessment can carry an attempt. The
+-- other two outcomes end the matter; a submission hanging off one of them
+-- would mean a third attempt was sat under a decision that did not permit it.
+alter table reassessment_authorisations
+  drop constraint if exists reassessment_authorisations_submission_outcome_check;
+alter table reassessment_authorisations
+  add constraint reassessment_authorisations_submission_outcome_check
+  check (submission_id is null or outcome = 'oral_reassessment');
+
+-- An oral assessment that recorded no exchange recorded nothing. The whole
+-- purpose of the record is that an oral attempt leaves no evidence of its own.
+alter table oral_assessment_records
+  drop constraint if exists oral_assessment_records_exchanges_check;
+alter table oral_assessment_records
+  add constraint oral_assessment_records_exchanges_check
+  check (jsonb_array_length(exchanges) > 0);

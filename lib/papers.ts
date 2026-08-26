@@ -5,6 +5,7 @@ import {
   assessmentItems,
   assessmentPapers,
   assessmentSections,
+  assessmentDecisions,
   assessmentSubmissions,
   assessments,
   courseSteps,
@@ -13,6 +14,8 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { assertStepOpen, SpineError } from "./spine";
+// The rule lives beside the review it triggers, so there is one definition.
+import { ATTEMPTS_BEFORE_REVIEW } from "./reassessment";
 
 /**
  * Sitting a paper.
@@ -440,6 +443,52 @@ export async function startAttempt(
 
       const inProgress = attempts.find((a) => a.status === "draft");
       if (inProgress) return inProgress.id;
+
+      // Held, not failed.
+      //
+      // After two not-yet-competent results on a summative the learner does not
+      // simply run out of attempts. A programme review is convened with their
+      // employer, and only that review can open a third attempt — which is
+      // conducted orally, by an assessor, not sat here.
+      //
+      // The distinction matters at the point it is read: "you have used all
+      // your attempts" tells somebody their programme is over, and it is not.
+      if (assessment.purpose === "summative" && attempts.length > 0) {
+        const decisions = await tx
+          .select({
+            submissionId: assessmentDecisions.submissionId,
+            outcome: assessmentDecisions.outcome,
+          })
+          .from(assessmentDecisions)
+          .where(
+            inArray(
+              assessmentDecisions.submissionId,
+              attempts.map((attempt) => attempt.id),
+            ),
+          );
+
+        // The latest decision on each attempt: a referral back can produce a
+        // second decision on one attempt, and only the surviving one counts.
+        const latest = new Map<string, string>();
+        for (const decision of decisions) {
+          latest.set(decision.submissionId, decision.outcome);
+        }
+
+        const outcomes = [...latest.values()];
+        const failures = outcomes.filter(
+          (outcome) => outcome === "not_yet_competent",
+        ).length;
+
+        if (
+          !outcomes.includes("competent") &&
+          failures >= ATTEMPTS_BEFORE_REVIEW
+        ) {
+          throw new PaperError(
+            "This assessment is held while your progress is reviewed. Your facilitator will arrange a discussion with your employer, and any further attempt is arranged from there rather than started here.",
+            "no_attempts_left",
+          );
+        }
+      }
 
       if (
         assessment.maxAttempts !== null &&

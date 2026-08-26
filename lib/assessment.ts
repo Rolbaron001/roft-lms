@@ -21,6 +21,7 @@ import { buildStorageKey, putObject } from "./storage";
 import { detectMedia } from "./media";
 import { issueCertificateAutomatically } from "./certificates";
 import { raise, usersWithRole } from "./notifications";
+import { assertOralRecorded } from "./reassessment";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -872,6 +873,11 @@ export async function recordAssessorDecision(
         "not_permitted",
       );
     }
+
+    // An oral third attempt leaves no evidence of its own. Refused here rather
+    // than only on the screen, because the screen is not the only way in and
+    // this is what makes an oral pass defensible at verification.
+    await assertOralRecorded(session, parsed.submissionId);
 
     // The wall between developmental and summative work. A workbook produces
     // no competence decision, so per-criterion judgements recorded against one

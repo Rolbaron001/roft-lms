@@ -56,6 +56,14 @@ const NAV: NavItem[] = [
     anyPermission: ["report:team", "report:tenant"],
   },
   { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+  // Learners held after a second not-yet-competent result. Work waiting to be
+  // done rather than a register to browse, so it sits with the other screens
+  // somebody opens to find out what needs their attention today.
+  {
+    href: "/reassessments",
+    label: "Held for review",
+    permission: "enrolment:read_all",
+  },
   // A reference, not a record. Every signed-in person can read it, learners
   // included — it exists so that everybody uses the same words.
   { href: "/dictionary", label: "Dictionary", permission: "report:own" },

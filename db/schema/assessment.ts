@@ -1036,3 +1036,154 @@ export const formativeFeedback = pgTable(
     index("formative_feedback_org_idx").on(t.organisationId),
   ],
 );
+
+/**
+ * What a programme review decided after a second not-yet-competent result.
+ *
+ * The rule this exists for: a learner who has been found not yet competent
+ * twice is not failed. The step is held, and a programme review is convened
+ * with the employer before anything else happens — because by this point the
+ * question is rarely "does this person know it" and usually "what has been
+ * going on", and the employer is the only party who can answer that.
+ *
+ * Three outcomes, and only one of them opens an oral attempt. The other two
+ * are recorded here just as deliberately: a decision to put somebody back
+ * through further learning, or to withdraw them, is the kind of thing that
+ * gets agreed in a room and then remembered differently a year later.
+ */
+export const reassessmentOutcome = pgEnum("reassessment_outcome", [
+  "oral_reassessment",
+  "further_learning",
+  "withdrawn",
+]);
+
+export const reassessmentAuthorisations = pgTable(
+  "reassessment_authorisations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    assessmentId: uuid("assessment_id")
+      .notNull()
+      .references(() => assessments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** Who convened the review. Never the learner, never the assessor of record. */
+    reviewedById: uuid("reviewed_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    /**
+     * Whether the employer was actually consulted, and who by name.
+     *
+     * Held as a flag and a name rather than assumed from the record existing,
+     * because "we discussed it with the employer" is exactly the claim an
+     * external verifier will test, and an unnamed employer is not evidence.
+     */
+    employerConsulted: boolean("employer_consulted").notNull().default(false),
+    employerRepresentative: text("employer_representative"),
+    employerComments: text("employer_comments"),
+
+    outcome: reassessmentOutcome("outcome").notNull(),
+    /** Why. Required, because an unexplained third attempt is indefensible. */
+    rationale: text("rationale").notNull(),
+
+    /**
+     * The oral attempt this authorisation opened, once it has been started.
+     *
+     * Set here rather than inferred, so that one authorisation can open one
+     * attempt and no more. A third attempt granted twice is not a third
+     * attempt.
+     */
+    submissionId: uuid("submission_id").references(
+      () => assessmentSubmissions.id,
+      { onDelete: "set null" },
+    ),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("reassessment_authorisations_subject_idx").on(
+      t.assessmentId,
+      t.userId,
+    ),
+    uniqueIndex("reassessment_authorisations_submission_idx").on(t.submissionId),
+    index("reassessment_authorisations_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What was asked and what was answered in an oral assessment.
+ *
+ * A written attempt leaves its own evidence: the paper, the answers, the
+ * marks. An oral attempt leaves nothing unless somebody writes it down, and
+ * "the learner was found competent orally" with no record of the exchange is
+ * not evidence of anything.
+ *
+ * The decision itself is not here. It goes through the ordinary assessor
+ * decision, against the ordinary criteria, and reaches the criterion ledger by
+ * the same route as any other — which is the whole point. This record is the
+ * evidence behind that decision, not a parallel route around it.
+ */
+export const oralAssessmentRecords = pgTable(
+  "oral_assessment_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    authorisationId: uuid("authorisation_id")
+      .notNull()
+      .references(() => reassessmentAuthorisations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    assessorId: uuid("assessor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    conductedAt: timestamp("conducted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** In person, or the video call it was held on. */
+    medium: text("medium"),
+    /**
+     * Who else was in the room.
+     *
+     * Not required by the platform, because sometimes there genuinely is
+     * nobody. Recorded because an oral assessment with no witness is harder to
+     * defend at moderation, and the moderator should be able to see which kind
+     * this was.
+     */
+    witnessName: text("witness_name"),
+
+    /** Each question put, the answer given, and which criterion it went to. */
+    exchanges: jsonb("exchanges")
+      .$type<
+        {
+          criterionId?: string;
+          question: string;
+          response: string;
+          note?: string;
+        }[]
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("oral_assessment_records_submission_idx").on(t.submissionId),
+    index("oral_assessment_records_org_idx").on(t.organisationId),
+  ],
+);

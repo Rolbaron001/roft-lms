@@ -116,10 +116,27 @@ than failed*, a programme review records the employer consultation and its
 outcome, and an authorised oral attempt can be conducted and marked — reaching
 the ledger exactly as a written attempt does.
 
-- [ ] 5.1 `reassessment_authorisations` and `oral_assessment_records`
-- [ ] 5.2 The held state, and the authorisation that lifts it
-- [ ] 5.3 The assessor's oral screen
-- [ ] 5.4 Tests, including that an oral pass moves readiness
+- [x] 5.1 `reassessment_authorisations` and `oral_assessment_records`
+- [x] 5.2 The held state, and the authorisation that lifts it
+- [x] 5.3 The assessor's oral screen, at `/reassessments`
+- [x] 5.4 Tests, including that an oral pass moves readiness
+
+**Done.** A second not-yet-competent result now holds the assessment instead of
+failing it, and the learner is told so in those words. `/reassessments` shows
+everybody held, so somebody can convene the review rather than the learner
+simply being stuck.
+
+Three things the build settled that the design had left open:
+
+- **Held is derived, not stored.** A stored flag is a second source of truth
+  about something the decisions already say, and a decision corrected after a
+  referral back would leave the flag behind.
+- **The reviewer cannot conduct the oral.** Whoever decides a learner deserves
+  another attempt does not then judge it — the same separation the platform
+  keeps between assessing and moderating.
+- **No decision without a record.** An oral attempt leaves no evidence of its
+  own, so recording an outcome is refused until what was asked and answered is
+  written down. Refused in the library, not just on the screen.
 
 ---
 
