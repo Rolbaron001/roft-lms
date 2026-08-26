@@ -190,6 +190,119 @@ describe("reading the learner's copy", () => {
   });
 });
 
+/**
+ * The other template.
+ *
+ * Curiosa's later workbooks drop numbered activities for a case study followed
+ * by a handful of tasks. Read with the activity rules alone they parse to
+ * nothing at all — no sections, no questions — which is the worst outcome
+ * available: an empty proposal is indistinguishable from a clean one.
+ *
+ * The fixture is the shape of the real Workbook 4 and Workbook 5.
+ */
+describe("a case study with tasks, rather than numbered activities", () => {
+  const TASKS = [
+    "WORKBOOK 4: KM-01 Integrated Knowledge Portfolio",
+    "WORKBOOK SCOPE & IAC COVERAGE",
+    "Internal Assessment Criteria: Final verification of IAC0101 through IAC0603 across integrated scenarios.",
+    "Integrated Case Study Scenario: Sono Logistics Solutions",
+    "SCENARIO:",
+    "Sono Logistics, a freight forwarder with 450 employees, is undergoing digital transformation and organised labour has objected.",
+    "Formative Tasks:",
+    "Task 1: Strategic Architecture (IAC0101, IAC0105) — Explain how the strategic intent to digitise affects the HR architecture.",
+    "Task 2: Job Analysis and Redesign (IAC0201) — Formulate a job redesign procedure for warehouse workers.",
+  ].join("\n");
+
+  const parsed = parseWorkbook(TASKS);
+
+  it("finds the tasks that the activity rules cannot see", () => {
+    expect(parsed.sections).toHaveLength(1);
+    expect(parsed.sections[0].items).toHaveLength(2);
+  });
+
+  it("takes the criteria off the task line", () => {
+    const [first, second] = parsed.sections[0].items;
+
+    expect(first.criterionCodes).toEqual(["IAC0101", "IAC0105"]);
+    expect(second.criterionCodes).toEqual(["IAC0201"]);
+    expect(first.stem).not.toContain("IAC");
+  });
+
+  /**
+   * There is no key for a piece of written work produced against a case study,
+   * and nothing here may ever be marked by the App.
+   */
+  it("sends every task to an assessor", () => {
+    expect(
+      parsed.sections[0].items.every((item) => item.markedBy === "assessor"),
+    ).toBe(true);
+    expect(
+      parsed.sections[0].items.every((item) => item.type === "long_answer"),
+    ).toBe(true);
+  });
+
+  /**
+   * The tasks are unanswerable without the scenario, and it is stated once
+   * above them rather than repeated on each.
+   */
+  it("keeps the scenario as the section's stimulus", () => {
+    expect(parsed.sections[0].instruction).toContain("Sono Logistics");
+  });
+
+  /**
+   * "IAC0101 through IAC0603" names two ends and means everything between.
+   * Read as two individual criteria it produces two false reports of an
+   * untested criterion while the tasks covering them sit in the document.
+   */
+  it("does not read a range of criteria as two criteria", () => {
+    expect(parsed.declaredCriteria).toEqual([]);
+  });
+
+  it("does not treat a paper with no answer key as faulty", () => {
+    const merged = mergeMemorandum(parsed, parseMemorandum(""));
+
+    expect(
+      merged.problems.some((problem) => /No answers were found/.test(problem)),
+    ).toBe(false);
+    expect(
+      merged.notes.some((note) => /no answer key/i.test(note)),
+    ).toBe(true);
+  });
+
+  /**
+   * A workbook whose scope is written in one code scheme and whose tasks are
+   * tagged in another. Reported as four forgotten tags it sends an author
+   * looking for tags that are already there; the fault is that the two halves
+   * of the document disagree about which codes they use.
+   */
+  it("says when the scope and the tasks use different code schemes", () => {
+    const mismatched = parseWorkbook(
+      [
+        "WORKBOOK 5",
+        "Internal Assessment Criteria: IAC0101, IAC0102.",
+        "Dataset 1: InnovateTech Solutions",
+        "InnovateTech is expanding its cloud infrastructure team and needs three roles profiled.",
+        "Practical Execution Tasks:",
+        "Task 1: Develop Job Description (PS0101)",
+        "Task 2: Develop Employee Specification (PS0102)",
+      ].join("\n"),
+    );
+
+    const merged = mergeMemorandum(mismatched, parseMemorandum(""));
+    const mismatch = merged.problems.find((problem) =>
+      /different|scope lists/i.test(problem),
+    );
+
+    expect(mismatch).toBeDefined();
+    expect(mismatch).toContain("IAC");
+    expect(mismatch).toContain("PS");
+    // And not four separate reports of a forgotten tag.
+    expect(
+      merged.problems.filter((problem) => /no question is tagged/.test(problem)),
+    ).toEqual([]);
+  });
+});
+
 describe("reading the answer guide", () => {
   const memo = parseMemorandum(GUIDE);
 

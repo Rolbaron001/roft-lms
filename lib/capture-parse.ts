@@ -76,6 +76,55 @@ const SCOPE_LINE = /^Internal Assessment Criteria\s*[::]\s*(.+)$/i;
 
 const ITEM_HEADING =
   /^Question\s+([A-Z]?[0-9]+(?:[.][0-9]+)*)\s*[::]\s*(.+)$/i;
+
+/**
+ * The other template.
+ *
+ * Curiosa's later workbooks abandon numbered activities for a single case
+ * study followed by a handful of tasks. There is no "Activity 1.1", no
+ * options, and nothing the App can mark — every task is a piece of written
+ * work an assessor reads. Read with the activity rules alone these documents
+ * parse to nothing at all, which is the worst possible outcome: an empty
+ * proposal looks like a clean one.
+ */
+const TASK_SECTION =
+  /^((?:Formative|Summative|Practical Execution|Integrated|Assessment)?\s*Tasks?)\s*[::]\s*$/i;
+
+/**
+ * "Task 1: Job Analysis (IAC0201, IAC0202) — Formulate a procedure…"
+ *
+ * The criteria and the em dash are both optional: one variant puts the
+ * description on the same line after a dash, the other on the lines beneath.
+ */
+const TASK_ITEM =
+  /^Task\s+(\d+)\s*[::]\s*(.+)$/i;
+
+/** The case study or dataset a set of tasks all draw on. */
+const STIMULUS_HEADING =
+  /^((?:Integrated\s+)?Case Study[^::]*|SCENARIO|Dataset\s+\d+[^::]*)\s*[::]?\s*$/i;
+
+/**
+ * A scope written as a range: "IAC0101 through IAC0603".
+ *
+ * The platform cannot expand it — the codes are not a simple sequence, they
+ * restart per topic — and reading the two ends as two individual criteria is
+ * worse than reading nothing, because it then reports both as untested when
+ * the tasks in between cover them.
+ */
+/**
+ * Criteria in brackets partway along a task line, before the dash that
+ * introduces the description.
+ *
+ * The ordinary criteria matcher only looks at the end of a line, which is
+ * where an activity puts them. A task puts them in the middle, so read with
+ * the ordinary rule every task parses with no criteria at all — and a task
+ * tagged to nothing evidences nothing, which is the one outcome this whole
+ * pipeline exists to prevent.
+ */
+const TASK_CRITERIA = /[(]([^)]*(?:IAC|AC|PS|AK|KM|PM|WA)\d{2,6}[^)]*)[)]/i;
+
+const CRITERIA_RANGE =
+  /\b((?:IAC|AC)\d{3,6})\s+(?:through|to|-|–)\s+((?:IAC|AC)\d{3,6})\b/i;
 const BRACKET_CRITERIA = /[[]([^\]]*(?:IAC|AC|PS|PM|KM)[^\]]*)[]]/i;
 const STATEMENT = /^Statement\s+(\d+)\s*[::]\s*(.+)$/i;
 const ANSWER_BLANK = /^\[?\s*Answer(\s+Chosen)?\s*[::]/i;
@@ -108,7 +157,13 @@ export function parseWorkbook(text: string): ParsedPaper {
   );
 
   const scopeLine = lines.find((line) => SCOPE_LINE.test(line));
-  const declaredCriteria = scopeLine ? codesIn(scopeLine) : [];
+  const scopeRange = scopeLine ? CRITERIA_RANGE.exec(scopeLine) : null;
+
+  // A range names its two ends and means everything between. Reading those two
+  // as the whole scope would report both as untested while the tasks covering
+  // them sit in the document — so the range is set aside and said out loud.
+  const declaredCriteria =
+    scopeLine && !scopeRange ? codesIn(scopeLine) : [];
 
   // A paper often prints its own mark distribution in a summary table near the
   // front: a section name in one cell and its marks in the next. Those cells
@@ -136,6 +191,36 @@ export function parseWorkbook(text: string): ParsedPaper {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     if (!line) continue;
+
+    // A set of tasks under a case study. The stimulus is the lines between the
+    // scenario heading above and this one: the tasks are meaningless without
+    // it, and it is stated once rather than repeated on each.
+    const taskSection = TASK_SECTION.exec(line);
+    if (taskSection) {
+      closeItem();
+
+      let stimulus: string | null = null;
+      for (let back = index - 1; back >= 0 && index - back < 40; back -= 1) {
+        if (STIMULUS_HEADING.test(lines[back])) {
+          stimulus =
+            lines
+              .slice(back, index)
+              .filter((entry) => entry.length > 0)
+              .join(" ")
+              .trim() || null;
+          break;
+        }
+      }
+
+      current = {
+        title: taskSection[1].replace(/\s+/g, " ").trim(),
+        instruction: stimulus,
+        markTotal: null,
+        items: [],
+      };
+      sections.push(current);
+      continue;
+    }
 
     const heading = SECTION_HEADING.exec(line);
     if (heading) {
@@ -178,6 +263,44 @@ export function parseWorkbook(text: string): ParsedPaper {
         criterionCodes: criteriaOf(numbered[2]),
         markingGuide: null,
         markedBy: "app",
+      };
+      continue;
+    }
+
+    // "Task 2: Job Analysis (IAC0201, IAC0202) — Formulate a procedure…"
+    const task = TASK_ITEM.exec(line);
+    if (task && current) {
+      closeItem();
+      const rest = task[2];
+      const marks = MARKS_IN_HEADING.exec(rest);
+
+      const bracketed = TASK_CRITERIA.exec(rest);
+      const taskCriteria = bracketed ? codesIn(bracketed[1]) : [];
+
+      // The bracket is removed from the question only when the platform
+      // actually understood it. A tag it does not recognise — a practical
+      // skill code on a knowledge workbook, say — stays visible, because
+      // deleting a tag nobody could read is how the mismatch stops being
+      // findable.
+      const withoutTag =
+        taskCriteria.length > 0 ? rest.replace(TASK_CRITERIA, "") : rest;
+
+      pending = {
+        number: task[1],
+        // Never anything the App can mark: a task is a piece of written work
+        // produced against a case study, and there is no key for that.
+        type: "long_answer",
+        stem: stripCriteria(withoutTag.replace(MARKS_IN_HEADING, ""))
+          .replace(/^[\s—–-]+/, "")
+          .replace(/\s{2,}/g, " ")
+          .trim(),
+        options: [],
+        correctIndex: null,
+        points: marks ? Number(marks[1]) : null,
+        criterionCodes:
+          taskCriteria.length > 0 ? taskCriteria : criteriaOf(rest),
+        markingGuide: null,
+        markedBy: "assessor",
       };
       continue;
     }
@@ -522,8 +645,32 @@ export function mergeMemorandum(
   paper: ParsedPaper,
   memo: ParsedMemo,
 ): ParsedPaper {
-  const problems = [...paper.problems, ...memo.problems];
+  const everyItemIsAssessorMarked =
+    paper.sections.flatMap((section) => section.items).length > 0 &&
+    paper.sections
+      .flatMap((section) => section.items)
+      .every((item) => item.markedBy === "assessor");
+
+  // A case-study paper has no answer key because there is nothing to key: each
+  // task is a piece of written work. Reported as a problem it is a false alarm
+  // on every paper of that kind, and false alarms are how somebody learns to
+  // scroll past the real ones.
+  const noAnswerKey =
+    "No answers were found in the guide. Check that it carries a table of question numbers and correct options.";
+
+  const problems = [
+    ...paper.problems,
+    ...memo.problems.filter(
+      (problem) => !(everyItemIsAssessorMarked && problem === noAnswerKey),
+    ),
+  ];
   const notes = [...paper.notes];
+
+  if (everyItemIsAssessorMarked && memo.problems.includes(noAnswerKey)) {
+    notes.push(
+      "The guide carries no answer key, which is right for this paper: every task is written work an assessor reads.",
+    );
+  }
 
   const byNumber = new Map(
     memo.answers.filter((a) => a.number).map((a) => [a.number, a]),
@@ -625,8 +772,46 @@ export function mergeMemorandum(
       section.items.flatMap((item) => item.criterionCodes),
     ),
   );
-  for (const code of paper.declaredCriteria) {
-    if (!tested.has(code)) {
+  const untested = paper.declaredCriteria.filter((code) => !tested.has(code));
+
+  // Scope written in one scheme and questions tagged in another. Saying "no
+  // question is tagged to IAC0101" reads as a forgotten tag and sends an
+  // author looking for one; the actual fault is that the two halves of the
+  // document disagree about which codes they are using.
+  // Codes from the other schemes — practical skills, applied knowledge, module
+  // codes — which a task may carry instead of an internal assessment
+  // criterion. Read from the stems because they are not criteria as far as the
+  // platform is concerned, and are not stripped out with them.
+  const otherScheme = new Set(
+    sections
+      .flatMap((section) => section.items)
+      .flatMap(
+        (item) =>
+          item.stem.match(/\b(?:PS|AK|KM|PM|WA|WK|SE)\d{2,6}\b/gi) ?? [],
+      )
+      .map((code) => code.toUpperCase()),
+  );
+
+  const taggedFamilies = new Set(
+    [...tested, ...otherScheme].map((code) => code.replace(/[0-9].*$/, "")),
+  );
+  const declaredFamilies = new Set(
+    paper.declaredCriteria.map((code) => code.replace(/[0-9].*$/, "")),
+  );
+  const familiesDiffer =
+    // A paper with no scope line declares nothing, and nothing cannot
+    // disagree with anything.
+    paper.declaredCriteria.length > 0 &&
+    untested.length === paper.declaredCriteria.length &&
+    taggedFamilies.size > 0 &&
+    [...declaredFamilies].every((family) => !taggedFamilies.has(family));
+
+  if (familiesDiffer) {
+    problems.push(
+      `The scope lists ${[...declaredFamilies].join(" and ")} codes (${paper.declaredCriteria.join(", ")}), but the tasks are tagged to ${[...taggedFamilies].join(" and ")} codes (${[...otherScheme, ...tested].sort().join(", ")}). One of the two is wrong, and until they agree nothing in this workbook evidences anything.`,
+    );
+  } else {
+    for (const code of untested) {
       problems.push(
         `${code} is listed in the workbook's scope but no question is tagged to it.`,
       );
@@ -733,7 +918,16 @@ export function mergeMemorandum(
     (sum, section) => sum + (section.markTotal ?? 0),
     0,
   );
-  if (memo.total !== null && grandTotal !== memo.total) {
+  const printsNoMarks = sections.every((section) => section.markTotal === null);
+
+  if (memo.total !== null && printsNoMarks) {
+    // Nothing to reconcile against: the workbook prints no marks anywhere, so
+    // the two figures do not disagree — one of them simply is not there. Saying
+    // "the sections add up to 0" invites somebody to look for the missing 100.
+    problems.push(
+      `The guide gives a total of ${memo.total} marks, but the workbook prints no marks against any of its ${sections.reduce((n, section) => n + section.items.length, 0)} tasks. Put the mark for each task on the task, or the App cannot share the total out.`,
+    );
+  } else if (memo.total !== null && grandTotal !== memo.total) {
     problems.push(
       `The guide gives a total of ${memo.total} marks; the sections add up to ${grandTotal}.`,
     );

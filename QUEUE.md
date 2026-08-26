@@ -168,10 +168,38 @@ names that case explicitly.
 
 ## 7. Summative template convergence
 
-Least urgent — the parse is clean now. Revisit only if Curiosa's summative
-format changes or a new provider's material parses badly.
+The condition was met: run against all eight papers in Study Unit 1 rather than
+the three that had been checked, Workbooks 4, 5 and 6 parsed to **nothing at
+all** — no sections, no questions. They use a second template: one case study
+followed by a handful of tasks, with no numbered activities anywhere.
 
-- [ ] 7.1 Reviewed against any new material
+An empty parse is the worst available outcome, because an empty proposal is
+indistinguishable from a clean one.
+
+- [x] 7.1 Reviewed against all of Study Unit 1's material
+
+**Done.** The parser now reads both templates. Four things it was getting
+wrong, each of which sent the reader somewhere unhelpful:
+
+- Task criteria sit mid-line, before the dash. The ordinary matcher only looks
+  at the end of a line, so every task parsed with no criteria — and a task
+  tagged to nothing evidences nothing.
+- A scope written as a range ("IAC0101 through IAC0603") was read as its two
+  ends, then both reported as untested while the tasks covering them sat in the
+  document.
+- A case-study paper has no answer key because there is nothing to key. That
+  was reported as a fault on every paper of the kind.
+- A workbook whose scope is in IAC codes and whose tasks are tagged in PS codes
+  was reported as four forgotten tags. The fault is that the two halves of the
+  document disagree, and it is now said that way.
+
+**Findings in the material itself**, for Curiosa rather than for the platform:
+
+- WB4, WB5, WB6 print no marks against any task while their guides declare 100.
+- WB5 and WB6 declare IAC criteria in scope and tag every task to PS codes.
+  Until those agree, nothing in either workbook evidences anything.
+- WB1, WB2, WB3 each have an MCQ activity where every correct answer is B.
+- WB1 and WB3 list criteria in scope that no question tests.
 
 ---
 
