@@ -24,6 +24,8 @@ export type TenantIdentity = {
   slug: string;
   displayName: string;
   logoUrl: string | null;
+  signInGraphicUrl: string | null;
+  strapline: string | null;
   primaryColour: string;
   accentColour: string;
   status: (typeof organisations.$inferSelect)["status"];
@@ -160,6 +162,8 @@ export async function resolveTenant(
           slug: organisations.slug,
           displayName: organisations.displayName,
           logoUrl: organisations.logoUrl,
+          signInGraphicUrl: organisations.signInGraphicUrl,
+          strapline: organisations.strapline,
           primaryColour: organisations.primaryColour,
           accentColour: organisations.accentColour,
           status: organisations.status,

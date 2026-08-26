@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCohorts } from "@/lib/cohorts";
+import { EmptyState } from "@/components/empty-state";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 
 /**
@@ -26,11 +27,11 @@ export default async function CohortsPage() {
       </div>
 
       {cohorts.length === 0 ? (
-        <Card>
-          <p className="text-sm text-[var(--muted)]">
-            No cohorts yet. One is created against a published course.
-          </p>
-        </Card>
+        <EmptyState title="No cohorts yet">
+          A cohort is a group working through a published course together, on
+          one schedule. Create one against a course and every deadline is
+          measured from its start date.
+        </EmptyState>
       ) : (
         <ul className="space-y-2">
           {cohorts.map((cohort) => (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCaptureJobs } from "@/lib/capture";
 import { listProgrammeReadiness } from "@/lib/programme-readiness";
+import { EmptyState } from "@/components/empty-state";
 import { AppShell, Card } from "@/components/app-shell";
 import { UploadForm } from "./upload-form";
 
@@ -32,9 +33,11 @@ export default async function CapturePage() {
           Uploaded
         </h2>
         {jobs.length === 0 ? (
-          <Card>
-            <p className="text-sm text-[var(--muted)]">Nothing uploaded yet.</p>
-          </Card>
+          <EmptyState title="Nothing uploaded yet">
+            Choose a qualification above and upload a workbook with its answer
+            guide. What the App reads is shown to you before any of it becomes
+            an assessment.
+          </EmptyState>
         ) : (
           <ul className="space-y-2">
             {jobs.map((job) => (

@@ -45,3 +45,15 @@ export function referencePrefix(): string {
   if (configured && /^[A-Z]{2,12}$/.test(configured)) return configured;
   return "ROFT";
 }
+
+/**
+ * A small illustration for empty screens, or null for none.
+ *
+ * Configuration rather than a file named in a component: the same codebase is
+ * deployed for more than one operator, and one of them having a mascot must
+ * not put that mascot in the other's product.
+ */
+export function platformIllustration(): string | null {
+  const configured = process.env.PLATFORM_ILLUSTRATION?.trim();
+  return configured && configured.startsWith("/") ? configured : null;
+}

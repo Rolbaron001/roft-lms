@@ -89,6 +89,17 @@ export const organisations = pgTable(
     logoUrl: text("logo_url"),
     logoStorageKey: text("logo_storage_key"),
     logoMimeType: text("logo_mime_type"),
+    /**
+     * A graphic for the sign-in page, and a line under it.
+     *
+     * Optional, and absent by default: the page falls back to the tenant's name
+     * on their own colour. A client with artwork worth showing gets a page that
+     * looks like theirs; one without still gets something composed rather than
+     * a bare form on white.
+     */
+    signInGraphicUrl: text("sign_in_graphic_url"),
+    strapline: text("strapline"),
+
     primaryColour: text("primary_colour").notNull().default("#0D1E32"),
     accentColour: text("accent_colour").notNull().default("#B9975B"),
     customDomain: text("custom_domain"),
