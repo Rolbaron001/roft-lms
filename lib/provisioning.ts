@@ -522,6 +522,9 @@ export const brandingInput = z.object({
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #B9975B."),
   logoUrl: logoAddress,
+  /** A graphic for the sign-in page, and a line under it. Both optional. */
+  signInGraphicUrl: logoAddress,
+  strapline: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
 export async function updateOwnBranding(
@@ -544,6 +547,8 @@ export async function updateOwnBranding(
         primaryColour: parsed.primaryColour,
         accentColour: parsed.accentColour,
         logoUrl: parsed.logoUrl || null,
+        signInGraphicUrl: parsed.signInGraphicUrl || null,
+        strapline: parsed.strapline || null,
         updatedAt: new Date(),
       })
       .where(eq(organisations.id, session.organisationId))

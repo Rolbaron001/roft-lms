@@ -22,6 +22,8 @@ export default async function SettingsPage() {
           primaryColour: tenant.primaryColour,
           accentColour: tenant.accentColour,
           logoUrl: tenant.logoUrl,
+          signInGraphicUrl: tenant.signInGraphicUrl,
+          strapline: tenant.strapline,
         }}
       />
     </AppShell>

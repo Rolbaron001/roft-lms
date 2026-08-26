@@ -19,6 +19,9 @@ export async function updateBrandingAction(
       primaryColour: String(formData.get("primaryColour") ?? ""),
       accentColour: String(formData.get("accentColour") ?? ""),
       logoUrl: String(formData.get("logoUrl") ?? "") || undefined,
+      signInGraphicUrl:
+        String(formData.get("signInGraphicUrl") ?? "") || undefined,
+      strapline: String(formData.get("strapline") ?? "") || undefined,
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {

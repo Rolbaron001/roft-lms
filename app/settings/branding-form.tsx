@@ -15,6 +15,8 @@ export function BrandingForm({
     primaryColour: string;
     accentColour: string;
     logoUrl: string | null;
+    signInGraphicUrl: string | null;
+    strapline: string | null;
   };
 }) {
   const [state, action, pending] = useActionState<BrandingState, FormData>(
@@ -28,6 +30,8 @@ export function BrandingForm({
   const [logo, setLogo] = useState(defaults.logoUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [graphic, setGraphic] = useState(defaults.signInGraphicUrl ?? "");
+  const [strapline, setStrapline] = useState(defaults.strapline ?? "");
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -204,6 +208,42 @@ export function BrandingForm({
               value={logo}
               onChange={(event) => setLogo(event.target.value)}
               placeholder="https://…"
+              className={inputClass}
+            />
+          </label>
+        </div>
+
+        <div className="space-y-3 rounded-md border border-[var(--border)] p-4">
+          <span className="block text-sm font-medium">The sign-in page</span>
+          <p className="text-xs text-[var(--muted)]">
+            Optional. With nothing here the page shows your name on your own
+            colour, which is tidy but plain. A graphic that says something true
+            about what you do is worth more than a decorative one.
+          </p>
+
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-medium text-[var(--muted)]">
+              Graphic address
+            </span>
+            <input
+              name="signInGraphicUrl"
+              value={graphic}
+              onChange={(event) => setGraphic(event.target.value)}
+              placeholder="https://…"
+              className={inputClass}
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-medium text-[var(--muted)]">
+              A line under it
+            </span>
+            <input
+              name="strapline"
+              value={strapline}
+              onChange={(event) => setStrapline(event.target.value)}
+              maxLength={120}
+              placeholder="Lifelong curiosity"
               className={inputClass}
             />
           </label>

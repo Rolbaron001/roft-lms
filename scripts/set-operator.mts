@@ -2,7 +2,9 @@
  * Sets the organisation that operates this deployment.
  *
  *   npx tsx scripts/set-operator.mts --slug curiosa --name "Curiosa Academy" \
- *     --primary "#402850" --accent "#B06088"
+ *     --primary "#42244E" --accent "#AE608A" \
+ *     --logo /curiosa-mark.png --graphic /curiosa-tree.png \
+ *     --strapline "Lifelong curiosity"
  *
  * The platform is deployed more than once — ROFT runs an instance for its own
  * clients, Curiosa Academy runs another for theirs — from one codebase. What
@@ -19,8 +21,10 @@
  *   PLATFORM_NAME               the name, for pages rendered before sign-in
  *   PLATFORM_REFERENCE_PREFIX   printed before certificate references
  *
- * The logo is not set here. It is uploaded through Appearance, by whoever runs
- * the deployment, and can be replaced whenever the brand changes.
+ * A logo, sign-in graphic and strapline may be given here as paths into
+ * /public, which is what an operator's own deployment wants: they ship with the
+ * image and need nowhere to be hosted. A tenant sets theirs through Appearance
+ * instead, and can change them whenever their brand does.
  */
 import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
@@ -40,6 +44,9 @@ const slug = arg("slug");
 const name = arg("name");
 const primary = arg("primary");
 const accent = arg("accent");
+const logo = arg("logo");
+const graphic = arg("graphic");
+const strapline = arg("strapline");
 const create = process.argv.includes("--create");
 const currentSlug = process.env.PLATFORM_ORG_SLUG?.trim() || "roft";
 
@@ -106,6 +113,9 @@ await withPlatformScope("naming the organisation that operates this deployment",
         deploymentMode: "shared_cloud",
         ...(primary ? { primaryColour: primary } : {}),
         ...(accent ? { accentColour: accent } : {}),
+        ...(logo ? { logoUrl: logo, logoStorageKey: null, logoMimeType: null } : {}),
+        ...(graphic ? { signInGraphicUrl: graphic } : {}),
+        ...(strapline ? { strapline } : {}),
       })
       .returning();
 
@@ -121,6 +131,12 @@ await withPlatformScope("naming the organisation that operates this deployment",
       legalName: name,
       ...(primary ? { primaryColour: primary } : {}),
       ...(accent ? { accentColour: accent } : {}),
+      // A logo given here is a path into /public, shipped with the image. A
+      // tenant uploading one through Appearance sets the storage key instead,
+      // so setting this clears that rather than leaving two answers.
+      ...(logo ? { logoUrl: logo, logoStorageKey: null, logoMimeType: null } : {}),
+      ...(graphic ? { signInGraphicUrl: graphic } : {}),
+      ...(strapline ? { strapline } : {}),
       updatedAt: new Date(),
     })
     .where(eq(organisations.id, existing.id))
@@ -140,6 +156,12 @@ console.log("\nNow set these in this deployment's .env and restart:");
 console.log(`  PLATFORM_ORG_SLUG="${slug}"`);
 console.log(`  PLATFORM_NAME="${name}"`);
 console.log(`  PLATFORM_REFERENCE_PREFIX="${slug.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12)}"`);
-console.log("\nThe logo is uploaded through Appearance, not set here.");
+console.log(
+  '  PLATFORM_ILLUSTRATION="/your-illustration.png"   (optional)',
+);
+console.log(
+  "\nAnything not given here — logo, sign-in graphic, strapline — is set " +
+    "through Appearance, like any tenant's.",
+);
 
 process.exit(0);
