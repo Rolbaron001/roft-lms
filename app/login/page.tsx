@@ -76,19 +76,23 @@ export default async function LoginPage() {
         <section className="mx-auto w-full max-w-sm">
           <div className="mb-8">
             {tenant?.logoUrl ? (
-              <div className="mb-6 flex lg:hidden">
+              // Shown at every width. The logo is the identity; the panel
+              // graphic beside it is decoration, and a sign-in page carrying
+              // only the decoration is a page that has not said who it is.
+              <div className="mb-5 flex">
                 <TenantLogo
                   logoUrl={tenant.logoUrl}
                   displayName={tenant.displayName}
-                  height={64}
+                  height={72}
                 />
               </div>
-            ) : null}
+            ) : (
+              <div
+                className="mb-4 h-1 w-12 rounded-full"
+                style={{ background: "var(--brand-accent)" }}
+              />
+            )}
 
-            <div
-              className="mb-4 h-1 w-12 rounded-full"
-              style={{ background: "var(--brand-accent)" }}
-            />
             <h1 className="text-2xl font-semibold tracking-tight">
               {tenant
                 ? tenant.displayName
