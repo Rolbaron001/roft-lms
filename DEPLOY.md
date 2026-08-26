@@ -308,7 +308,42 @@ worse than one who was never sent it.
 
 ## Everyday operations
 
-**Deploy a change:**
+### Automatic deploys
+
+`scripts/auto-deploy.sh` deploys whatever is on `main`, if it has moved. Run it
+from cron; it does nothing when the remote has not changed, so it is cheap to
+run often.
+
+```cron
+# Every two minutes: deploy main if it has moved
+*/2 * * * * cd $HOME/roft-lms && ./scripts/auto-deploy.sh >> /var/log/roft-deploy.log 2>&1
+```
+
+It takes a local database copy first, pulls, rebuilds **both** images, applies
+the schema and the policies, and then checks the site actually came back. If it
+does not, the log says so in a line you cannot miss.
+
+**Polling rather than a GitHub Action or a webhook.** An Action that deploys has
+to hold this server's SSH key, which means GitHub — and anyone who compromises
+the repository — can reach a machine holding learner records. A webhook needs an
+inbound endpoint that has to be defended. Polling needs neither: nothing new is
+exposed, no private key leaves the machine, and the deploy key stays read-only.
+The cost is a delay of up to two minutes.
+
+**What this means in practice.** Every commit on `main` goes to production
+within two minutes. That is the point, and it is also the risk: there is no
+longer a human between a mistake and the live site. What stands in its place is
+the test suite, the pre-deploy database copy, and the health check. If you would
+rather promote deliberately, set `DEPLOY_BRANCH=production` in the cron line and
+merge to that branch when you are ready.
+
+```bash
+./scripts/auto-deploy.sh --dry-run   # what would it do
+./scripts/auto-deploy.sh --force     # deploy even if nothing changed
+tail -f /var/log/roft-deploy.log     # watch it
+```
+
+**Deploy a change by hand:**
 
 ```bash
 cd roft-lms && git pull
