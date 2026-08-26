@@ -180,6 +180,26 @@ export async function addCurriculumModule(
       throw new AuthoringError("Qualification not found.", "not_found");
     }
 
+    // A code is identity: KM-01 appears in the curriculum document, on every
+    // workbook that covers it and on the Statement of Results. Two modules
+    // sharing one makes every reference ambiguous.
+    const [clash] = await tx
+      .select({ id: curriculumModules.id, title: curriculumModules.title })
+      .from(curriculumModules)
+      .where(
+        and(
+          eq(curriculumModules.qualificationId, parsed.qualificationId),
+          eq(curriculumModules.code, parsed.code),
+        ),
+      );
+
+    if (clash) {
+      throw new AuthoringError(
+        `This qualification already has a module ${parsed.code}: "${clash.title}".`,
+        "invalid_state",
+      );
+    }
+
     const [{ existing }] = await tx
       .select({ existing: count() })
       .from(curriculumModules)
@@ -400,6 +420,46 @@ export async function addAssessmentCriterion(
   const parsed = criterionInput.parse(input);
 
   return withTenant(session.organisationId, async (tx) => {
+    const [module] = await tx
+      .select({
+        component: curriculumModules.component,
+        code: curriculumModules.code,
+      })
+      .from(curriculumModules)
+      .where(eq(curriculumModules.id, parsed.curriculumModuleId));
+
+    if (!module) {
+      throw new AuthoringError("Curriculum module not found.", "not_found");
+    }
+
+    // A work experience module carries no assessment criteria. It is evidenced
+    // by a logbook the coach signs and an assessor accepts, and a criterion on
+    // one is a requirement nothing can ever satisfy — the module would sit
+    // permanently incomplete and hold up every learner on the qualification.
+    if (module.component === "workplace") {
+      throw new AuthoringError(
+        `${module.code} is a work experience module, so it is evidenced by a signed logbook rather than by assessment criteria. Add its work activities as topic elements instead.`,
+        "invalid_state",
+      );
+    }
+
+    const [clash] = await tx
+      .select({ id: assessmentCriteria.id })
+      .from(assessmentCriteria)
+      .where(
+        and(
+          eq(assessmentCriteria.curriculumModuleId, parsed.curriculumModuleId),
+          eq(assessmentCriteria.code, parsed.code),
+        ),
+      );
+
+    if (clash) {
+      throw new AuthoringError(
+        `${module.code} already has a criterion ${parsed.code}.`,
+        "invalid_state",
+      );
+    }
+
     const [{ existing }] = await tx
       .select({ existing: count() })
       .from(assessmentCriteria)

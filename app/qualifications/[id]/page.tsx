@@ -94,6 +94,14 @@ export default async function QualificationPage({
             ? `weighted ${Math.round(qualification.componentWeights.knowledge * 100)}/${Math.round(qualification.componentWeights.practical * 100)}/${Math.round(qualification.componentWeights.workplace * 100)} as stated in the document`
             : "no component weighting stated — readiness derives it from credits"}
         </p>
+        {session.permissions.includes("qualification:manage") ? (
+          <Link
+            href={`/qualifications/${qualification.id}/edit`}
+            className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
+          >
+            Build the curriculum
+          </Link>
+        ) : null}
       </div>
 
       {notCaptured.length > 0 ? (

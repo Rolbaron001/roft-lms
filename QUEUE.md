@@ -37,11 +37,17 @@ partly theoretical: "import the curriculum" is not something they can do.
 qualification, add modules, topics, topic elements and assessment criteria, and
 edit them, entirely in the App — and the readiness gate goes green as a result.
 
-- [ ] 2.1 Module, topic, element and criterion authoring in `lib/authoring.ts`
-- [ ] 2.2 Guards: codes unique within scope, percentages that must total 100,
+- [x] 2.1 Module, topic, element and criterion authoring — `lib/curriculum-editor.ts`
+- [x] 2.2 Guards: codes unique within scope, percentages that must total 100,
       a work experience module that must not carry criteria
-- [ ] 2.3 Screens under `/qualifications/[id]`
-- [ ] 2.4 Tests, including that a hand-built curriculum satisfies the gate
+- [x] 2.3 Screens at `/qualifications/[id]/edit`
+- [x] 2.4 Tests, including that a hand-built curriculum satisfies the gate
+
+**Done.** A qualification can now be built line by line in the App, and the
+readiness gate goes green off the result. Deleting is guarded rather than
+cascading: a criterion a question already evidences, a lesson already teaches,
+or an assessor has already judged against will not delete, and the refusal says
+which of the three it is.
 
 ---
 
