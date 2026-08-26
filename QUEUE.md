@@ -149,10 +149,20 @@ acts on.
 which criteria are not yet evidenced anywhere, and first-attempt pass rates per
 question.
 
-- [ ] 6.1 Criterion coverage: what nothing tests
-- [ ] 6.2 First-attempt pass rate per question, which finds badly written items
-- [ ] 6.3 Time on each step
-- [ ] 6.4 Tests
+- [x] 6.1 Criterion coverage: what nothing tests
+- [x] 6.2 First-attempt pass rate per question, which finds badly written items
+- [x] 6.3 Time on each step, on the cohort's own screen
+- [x] 6.4 Tests
+
+**Done.** The first two are at `/reports/programme`; the third is on the cohort
+page, beside the schedule it is measured against.
+
+The finding that justified 6.1 on its own: a criterion tested **only in a
+workbook**. A workbook is developmental, so its answers never reach the
+criterion ledger — but the criterion looks assessed on every list of questions
+in the platform. Counting questions without looking at their purpose would have
+confirmed a gap was closed when it was not, so the report separates the two and
+names that case explicitly.
 
 ---
 

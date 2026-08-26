@@ -4,6 +4,7 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
 import { listPeople } from "@/lib/people";
+import { stepTimings } from "@/lib/programme-reports";
 import { AppShell, Card } from "@/components/app-shell";
 import {
   AddMember,
@@ -39,6 +40,13 @@ export default async function CohortPage({
   const active = detail.members.filter((member) => member.leftAt === null);
 
   const canManage = session.permissions.includes("enrolment:manage");
+
+  const timings = await stepTimings(
+    session,
+    detail.cohort.id,
+    detail.cohort.courseId,
+  );
+  const stalled = timings.filter((row) => row.inProgress > 0);
 
   // Only somebody who can change the register needs the list of who could join
   // it, and listPeople asks for a permission a read-only viewer may not hold.
@@ -103,6 +111,64 @@ export default async function CohortPage({
             ))}
           </ul>
         </Card>
+      ) : null}
+
+      {timings.some((row) => row.opened > 0) ? (
+        <div className="mt-6">
+          <Card
+            title="Where the cohort has got to"
+            description="Opened and finished per step, and how long it took those who finished. The median rather than the average, so one learner who disappeared for a term does not hide where everybody else is."
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                    <th className="pb-2">Step</th>
+                    <th className="pb-2">Opened</th>
+                    <th className="pb-2">Finished</th>
+                    <th className="pb-2">Still on it</th>
+                    <th className="pb-2">Median days</th>
+                    <th className="pb-2">Longest</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timings.map((row) => (
+                    <tr
+                      key={row.stepId}
+                      className="border-t border-[var(--border)]"
+                    >
+                      <td className="py-2 pr-3">{row.title}</td>
+                      <td className="py-2 pr-3 tabular-nums">{row.opened}</td>
+                      <td className="py-2 pr-3 tabular-nums">{row.completed}</td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.inProgress > 0 ? (
+                          <strong>{row.inProgress}</strong>
+                        ) : (
+                          row.inProgress
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.medianDays === null ? "—" : row.medianDays}
+                      </td>
+                      <td className="py-2 tabular-nums">
+                        {row.longestDays === null ? "—" : row.longestDays}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {stalled.length > 0 ? (
+              <p className="mt-3 text-sm text-[var(--muted)]">
+                {stalled.length === 1
+                  ? "One step has people sitting on it"
+                  : `${stalled.length} steps have people sitting on them`}
+                : {stalled.map((row) => row.title).join(", ")}.
+              </p>
+            ) : null}
+          </Card>
+        </div>
       ) : null}
 
       <div className="mt-6">

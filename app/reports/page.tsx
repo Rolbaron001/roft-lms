@@ -78,6 +78,16 @@ export default async function ReportsPage({
               ? "Your direct reports."
               : "Your own record."}
         </p>
+
+        {scope.kind === "tenant" ? (
+          <Link
+            href="/reports/programme"
+            className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
+          >
+            The programme itself — what nothing tests, which questions are not
+            working
+          </Link>
+        ) : null}
       </div>
 
       {options.teams.length > 0 || options.sites.length > 0 ? (
