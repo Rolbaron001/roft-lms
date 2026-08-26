@@ -219,7 +219,7 @@ export async function uploadProgrammeDocument(
     file.filename,
     "programme",
   );
-  const stored = await putObject(key, file.bytes);
+  const stored = await putObject(key, file.bytes, detected.mimeType);
 
   const id = await withTenant(session.organisationId, async (tx) => {
     // Resolving the owning qualification for a study unit or module, so the

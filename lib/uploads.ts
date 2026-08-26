@@ -84,7 +84,7 @@ async function acceptFile(
   }
 
   const key = buildStorageKey(organisationId, scope, file.filename);
-  const stored = await putObject(key, file.bytes);
+  const stored = await putObject(key, file.bytes, detected.mimeType);
 
   return {
     ...detected,
@@ -577,7 +577,7 @@ export async function uploadTenantLogo(
   }
 
   const key = buildStorageKey(session.organisationId, "branding", file.filename);
-  const stored = await putObject(key, file.bytes);
+  const stored = await putObject(key, file.bytes, detected.mimeType);
 
   // The served address carries the file's own hash, so a browser holding the
   // previous logo fetches the new one immediately rather than showing the old

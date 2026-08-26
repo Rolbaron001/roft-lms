@@ -624,7 +624,7 @@ export async function submitEvidence(
       submissionId,
       file.filename,
     );
-    const object = await putObject(key, file.bytes);
+    const object = await putObject(key, file.bytes, detected.mimeType);
     stored.push({
       file: { filename: file.filename, mimeType: detected.mimeType },
       object,

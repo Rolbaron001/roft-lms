@@ -213,14 +213,22 @@ export async function proposeCapture(
   const convention = await namingConventionFor(session);
   const classified = classifyFilename(input.paper.filename, convention);
 
+  // Capture only ever accepts Word files, so the type is known rather than
+  // detected. Stored with it so the bucket hands the file back as a document
+  // rather than as a stream of bytes the browser offers to save blindly.
+  const WORD =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
   const paperStored = await putObject(
     buildStorageKey(session.organisationId, "capture", input.paper.filename),
     input.paper.bytes,
+    WORD,
   );
   const guideStored = input.guide
     ? await putObject(
         buildStorageKey(session.organisationId, "capture", input.guide.filename),
         input.guide.bytes,
+        WORD,
       )
     : null;
 

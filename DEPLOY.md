@@ -433,6 +433,57 @@ want thrown away.
 
 ---
 
+## Moving evidence off this server
+
+Evidence — learner uploads, portfolios, signed logbooks — is written to this
+server's disk by default. That is fine while the system is small, and becomes
+the wrong shape once video evidence arrives: the nightly backup copies every
+file every night, and the whole portfolio depends on one machine.
+
+The application can write to any S3-compatible bucket instead. Oracle Object
+Storage, Backblaze B2, MinIO and Hostinger all work; the only differences are
+the endpoint and whether the bucket name sits in the host or the path.
+
+Add to `.env` on the server:
+
+```
+STORAGE_DRIVER=s3
+S3_ENDPOINT=https://your-provider-endpoint
+S3_REGION=af-johannesburg-1
+S3_BUCKET=roft-lms-evidence
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_FORCE_PATH_STYLE=true
+```
+
+Then `docker compose -f docker-compose.production.yml up -d app tools`.
+
+**Three things follow, and each has caught somebody out.**
+
+**Files already on disk are not moved for you.** Every record in the database
+points at a storage key, and after the switch those keys are looked for in the
+bucket. Copy the existing files across before flipping the driver, keeping the
+same paths:
+
+```bash
+docker compose -f docker-compose.production.yml run --rm tools   aws s3 sync /app/storage "s3://roft-lms-evidence/" --endpoint-url "$S3_ENDPOINT"
+```
+
+**The nightly backup then covers the database only.** There is nothing left on
+this server to archive, and `backup.sh` says so in the log rather than
+producing an empty archive and reporting success. The bucket needs its own
+protection at the provider — **versioning**, so an overwrite can be undone, and
+**replication**, so losing one region is not losing the evidence. A database
+restored without its evidence says evidence existed and cannot produce it,
+which is worse than having no record at all.
+
+**Test it with one upload before trusting it.** Sign in, attach a file to
+anything, and confirm the object appears in the bucket. A wrong key or endpoint
+fails loudly with a 403 or 404 naming the cause — but it fails at the moment a
+learner submits, which is not when you want to find out.
+
+---
+
 ## If you are on Oracle Cloud Always Free
 
 Two things specific to it, both of which have cost people their servers:

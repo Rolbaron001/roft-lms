@@ -2,13 +2,21 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import {
+  getObjectS3,
+  putObjectS3,
+  s3ConfigFromEnv,
+  type S3Config,
+} from "./storage-s3";
 
 /**
  * Where uploaded evidence lives.
  *
- * Local disk in development, S3-compatible object storage in deployment. The
- * interface is the same in both, which is what lets one set of containers run
- * as a shared cloud tenant or inside a client's own network.
+ * Local disk in development, S3-compatible object storage in deployment,
+ * chosen by STORAGE_DRIVER. The interface is the same in both, which is what
+ * lets one set of containers run as a shared cloud tenant or inside a client's
+ * own network — and what makes moving evidence off the application server a
+ * change of configuration rather than a change of code.
  *
  * Every stored object is hashed with SHA-256 on the way in. The hash is what
  * makes a Portfolio of Evidence defensible: if a stored file is ever altered,
@@ -18,6 +26,29 @@ import { randomUUID } from "node:crypto";
  */
 
 const STORAGE_ROOT = resolve(process.env.STORAGE_LOCAL_ROOT ?? "storage");
+
+/**
+ * Read once, on first use, rather than at import.
+ *
+ * Reading at import would make every command that touches this module — a
+ * migration, a backup, a test — fail at startup on a machine with no bucket
+ * configured, including the local ones that will never need it.
+ */
+let cachedS3: S3Config | null = null;
+
+function usingS3(): boolean {
+  return (process.env.STORAGE_DRIVER ?? "local") === "s3";
+}
+
+function s3(): S3Config {
+  cachedS3 ??= s3ConfigFromEnv();
+  return cachedS3;
+}
+
+/** Test seam: forget the cached configuration. */
+export function resetStorageConfig(): void {
+  cachedS3 = null;
+}
 
 export type StoredObject = {
   storageKey: string;
@@ -51,25 +82,27 @@ export function buildStorageKey(
 export async function putObject(
   storageKey: string,
   bytes: Uint8Array,
+  contentType?: string,
 ): Promise<StoredObject> {
-  if ((process.env.STORAGE_DRIVER ?? "local") !== "local") {
-    throw new Error(
-      "Only the local storage driver is implemented. S3 is configured at deployment.",
-    );
+  // Hashed before it is sent, and the same hash is what signs the request.
+  // One value, computed once: a file whose recorded hash and whose transmitted
+  // hash could differ is exactly the doubt the hash exists to remove.
+  const sha256 = hashBytes(bytes);
+
+  if (usingS3()) {
+    await putObjectS3(s3(), storageKey, bytes, contentType);
+  } else {
+    const path = join(STORAGE_ROOT, storageKey);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, bytes);
   }
 
-  const path = join(STORAGE_ROOT, storageKey);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, bytes);
-
-  return {
-    storageKey,
-    sha256: hashBytes(bytes),
-    sizeBytes: bytes.byteLength,
-  };
+  return { storageKey, sha256, sizeBytes: bytes.byteLength };
 }
 
 export async function getObject(storageKey: string): Promise<Uint8Array> {
+  if (usingS3()) return getObjectS3(s3(), storageKey);
+
   const path = join(STORAGE_ROOT, storageKey);
   return new Uint8Array(await readFile(path));
 }

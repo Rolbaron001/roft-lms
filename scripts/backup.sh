@@ -114,33 +114,58 @@ log "Encrypted: ${ENCRYPTED}"
 # archive can be restored by one person under pressure, which is the only
 # condition under which it will ever actually be restored.
 
-if [[ ! -d "$STORAGE_ROOT" ]]; then
-  log "Storage root ${STORAGE_ROOT} does not exist. Refusing: evidence would be silently skipped."
-  exit 1
+STORAGE_DRIVER="${STORAGE_DRIVER:-local}"
+
+if [[ "$STORAGE_DRIVER" != "local" ]]; then
+  # Evidence is in a bucket, not on this disk. The storage directory still
+  # exists and is empty, so archiving it would produce a tidy encrypted file
+  # containing nothing and report success — which is the failure this whole
+  # script is written to avoid.
+  EVIDENCE_ENC=""
+  log ""
+  log "STORAGE_DRIVER is \"${STORAGE_DRIVER}\": evidence is in object storage, not"
+  log "on this server. There is nothing here to archive, so THIS BACKUP COVERS"
+  log "THE DATABASE ONLY."
+  log ""
+  log "The evidence bucket needs its own protection at the provider:"
+  log "versioning, so an overwrite can be undone, and replication, so the loss"
+  log "of one region is not the loss of the evidence. A database restored"
+  log "without its evidence says evidence existed and cannot produce it, which"
+  log "is worse than having no record at all."
+  log ""
+else
+  if [[ ! -d "$STORAGE_ROOT" ]]; then
+    log "Storage root ${STORAGE_ROOT} does not exist. Refusing: evidence would be silently skipped."
+    exit 1
+  fi
+
+  log "Archiving evidence from ${STORAGE_ROOT}..."
+  FILE_COUNT=$(find "$STORAGE_ROOT" -type f | wc -l | tr -d ' ')
+
+  if (( FILE_COUNT == 0 )); then
+    log "WARNING: no evidence files were found. That is expected on a new"
+    log "install and worth looking into on one that is in use."
+  fi
+
+  # `tar -C` so the archive holds paths relative to the storage root, which are
+  # exactly the storage keys recorded in the database. That is what lets the
+  # restore check compare the two directly.
+  tar -czf "$EVIDENCE_TAR" -C "$STORAGE_ROOT" .
+
+  EV_BYTES=$(stat -c%s "$EVIDENCE_TAR" 2>/dev/null || stat -f%z "$EVIDENCE_TAR")
+  log "Evidence archived: ${FILE_COUNT} files, $((EV_BYTES / 1024)) KB"
+
+  log "Encrypting evidence archive..."
+  openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt     -in "$EVIDENCE_TAR" -out "$EVIDENCE_ENC" -pass env:BACKUP_PASSPHRASE
+  rm -f "$EVIDENCE_TAR"
+
+  log "Encrypted: ${EVIDENCE_ENC}"
 fi
-
-log "Archiving evidence from ${STORAGE_ROOT}..."
-FILE_COUNT=$(find "$STORAGE_ROOT" -type f | wc -l | tr -d ' ')
-
-# `tar -C` so the archive holds paths relative to the storage root, which are
-# exactly the storage keys recorded in the database. That is what lets the
-# restore check compare the two directly.
-tar -czf "$EVIDENCE_TAR" -C "$STORAGE_ROOT" .
-
-EV_BYTES=$(stat -c%s "$EVIDENCE_TAR" 2>/dev/null || stat -f%z "$EVIDENCE_TAR")
-log "Evidence archived: ${FILE_COUNT} files, $((EV_BYTES / 1024)) KB"
-
-log "Encrypting evidence archive..."
-openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
-  -in "$EVIDENCE_TAR" -out "$EVIDENCE_ENC" -pass env:BACKUP_PASSPHRASE
-rm -f "$EVIDENCE_TAR"
-
-log "Encrypted: ${EVIDENCE_ENC}"
 
 # A full archive every night is right while the evidence is small and wrong
 # once it is large — video evidence makes that turn quickly. Say so before it
 # becomes a three-hour nightly job nobody noticed growing.
-if (( EV_BYTES > 2000000000 )); then
+if [[ "$STORAGE_DRIVER" == "local" ]] && (( EV_BYTES > 2000000000 )); then
   log ""
   log "NOTE: the evidence archive has passed 2 GB."
   log "A full copy every night is no longer the right shape. Move evidence to"
@@ -156,7 +181,7 @@ else
   require BACKUP_BUCKET
   require BACKUP_S3_ENDPOINT
 
-  for FILE in "$ENCRYPTED" "$EVIDENCE_ENC"; do
+  for FILE in "$ENCRYPTED" ${EVIDENCE_ENC:+"$EVIDENCE_ENC"}; do
     log "Uploading $(basename "$FILE")..."
     aws s3 cp "$FILE" "${BACKUP_BUCKET}/" \
       --endpoint-url "$BACKUP_S3_ENDPOINT" \
@@ -171,7 +196,7 @@ else
     fi
   done
 
-  log "Both uploads confirmed."
+  log "Uploads confirmed."
 fi
 
 # --------------------------------------------------------------------- prune

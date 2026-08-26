@@ -203,6 +203,44 @@ wrong, each of which sent the reader somewhere unhelpful:
 
 ---
 
+## Built after the queue
+
+**S3-compatible object storage.** Evidence was written only to the application
+server's disk; `putObject` had the branch for a bucket and threw. It now
+writes to any S3-compatible provider, chosen by `STORAGE_DRIVER`, so moving
+evidence off this server is a configuration change rather than a build.
+
+Signed with Signature Version 4 written against the spec rather than the AWS
+SDK: three operations do not justify fifteen megabytes of dependencies on a
+small VPS, and going direct keeps it working with Oracle, Backblaze, MinIO or
+Hostinger rather than AWS alone.
+
+Two consequences handled with it:
+
+- `backup.sh` now knows which driver is in use. It would otherwise have tarred
+  an empty directory and reported a successful evidence backup.
+- Uploads pass their detected MIME type through, so files come back from the
+  bucket as documents rather than as anonymous bytes.
+
+---
+
+## Deliberately not built
+
+Two things from the original design document, both defined by somebody else's
+system rather than by this one:
+
+- **SAML / OAuth single sign-on.** Cannot be tested without a real identity
+  provider, and its shape depends on which one, whether accounts auto-create,
+  and how the provider's groups map to the nine roles. Untested auth code that
+  looks finished is a liability rather than an asset. Build when a client names
+  their provider.
+- **xAPI / Learning Record Store.** The valuable half already exists: the audit
+  log records 72 distinct actions including every assessment event. What is
+  missing is a translation into xAPI statements, and its vocabulary is set by
+  whichever LRS it feeds. Nothing is lost by waiting.
+
+---
+
 ## Not in this queue
 
 Network infrastructure, all of it waiting on InspireTec: the mail relay

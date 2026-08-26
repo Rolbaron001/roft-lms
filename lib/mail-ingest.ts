@@ -136,7 +136,7 @@ export async function ingestMessage(
       attachment.filename,
       "programme",
     );
-    const object = await putObject(key, attachment.bytes);
+    const object = await putObject(key, attachment.bytes, detected.mimeType);
 
     stored.push({
       filename: attachment.filename,
