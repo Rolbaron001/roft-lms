@@ -396,6 +396,16 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
           sortOrder: step.sortOrder,
           opensAfterDays: release?.opensAfterDays ?? null,
           dueAfterDays: release?.dueAfterDays ?? null,
+          /**
+           * A grace period counted from the due date, not from the start.
+           *
+           * Returned because setSchedule replaces a cohort's whole schedule
+           * rather than merging into it: an editor that cannot read this back
+           * would post the schedule without it and silently drop every
+           * closing time, which nobody would notice until a step that should
+           * have closed did not.
+           */
+          closesAfterDays: release?.closesAfterDays ?? null,
           opensAt:
             release?.opensAfterDays != null
               ? dayFrom(cohort.startDate, release.opensAfterDays)
@@ -403,6 +413,13 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
           dueAt:
             release?.dueAfterDays != null
               ? dayFrom(cohort.startDate, release.dueAfterDays)
+              : null,
+          closesAt:
+            release?.dueAfterDays != null && release?.closesAfterDays != null
+              ? dayFrom(
+                  cohort.startDate,
+                  release.dueAfterDays + release.closesAfterDays,
+                )
               : null,
         };
       }),

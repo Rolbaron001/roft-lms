@@ -396,6 +396,125 @@ describe("the schedule", () => {
   });
 });
 
+/**
+ * What the cohort screen reads, edits and writes back.
+ *
+ * setSchedule replaces a cohort's whole schedule rather than merging into it,
+ * so a screen that cannot read a field back will silently delete it on the
+ * next save. That is the failure these cover: not an exception, but a closing
+ * time that quietly stops existing and is noticed weeks later by a step that
+ * should have closed and did not.
+ */
+describe("editing a schedule through the screen", () => {
+  it("reads back the closing grace period, not only opens and due", async () => {
+    const { courseId, stepIds } = await buildCourse();
+    const cohort = await createCohort(admin, {
+      courseId,
+      name: "Round trip",
+      startDate: "2026-02-02",
+    });
+
+    await setSchedule(admin, cohort.id, [
+      {
+        stepId: stepIds[0],
+        opensAfterDays: 0,
+        dueAfterDays: 7,
+        closesAfterDays: 3,
+      },
+    ]);
+
+    const detail = await getCohort(admin, cohort.id);
+    const step = detail.steps.find((entry) => entry.id === stepIds[0]);
+
+    expect(step?.closesAfterDays).toBe(3);
+    // Closing is counted from the due date, so day 7 plus 3 is day 10.
+    expect(step?.closesAt?.toISOString().slice(0, 10)).toBe("2026-02-12");
+  });
+
+  it("preserves the whole schedule when the screen saves it back unchanged", async () => {
+    const { courseId, stepIds } = await buildCourse();
+    const cohort = await createCohort(admin, {
+      courseId,
+      name: "Saved again",
+      startDate: "2026-02-02",
+    });
+
+    await setSchedule(admin, cohort.id, [
+      {
+        stepId: stepIds[0],
+        opensAfterDays: 0,
+        dueAfterDays: 7,
+        closesAfterDays: 3,
+      },
+      { stepId: stepIds[1], opensAfterDays: 7, dueAfterDays: 14 },
+    ]);
+
+    // Exactly what the screen posts: every step it was given, straight back.
+    const before = await getCohort(admin, cohort.id);
+    await setSchedule(
+      admin,
+      cohort.id,
+      before.steps
+        .filter(
+          (step) =>
+            step.opensAfterDays !== null ||
+            step.dueAfterDays !== null ||
+            step.closesAfterDays !== null,
+        )
+        .map((step) => ({
+          stepId: step.id,
+          opensAfterDays: step.opensAfterDays,
+          dueAfterDays: step.dueAfterDays,
+          closesAfterDays: step.closesAfterDays,
+        })),
+    );
+
+    const after = await getCohort(admin, cohort.id);
+
+    expect(
+      after.steps.map((step) => [
+        step.opensAfterDays,
+        step.dueAfterDays,
+        step.closesAfterDays,
+      ]),
+    ).toEqual(
+      before.steps.map((step) => [
+        step.opensAfterDays,
+        step.dueAfterDays,
+        step.closesAfterDays,
+      ]),
+    );
+  });
+
+  /**
+   * A cleared row means no dates at all, which is not the same as day zero:
+   * day zero opens on the start date, no dates opens as soon as whatever
+   * comes before it is done.
+   */
+  it("clears a step's dates when its row is emptied", async () => {
+    const { courseId, stepIds } = await buildCourse();
+    const cohort = await createCohort(admin, {
+      courseId,
+      name: "Cleared",
+      startDate: "2026-02-02",
+    });
+
+    await setSchedule(admin, cohort.id, [
+      { stepId: stepIds[0], opensAfterDays: 0 },
+      { stepId: stepIds[1], opensAfterDays: 7 },
+    ]);
+    await setSchedule(admin, cohort.id, [
+      { stepId: stepIds[0], opensAfterDays: 0 },
+    ]);
+
+    const detail = await getCohort(admin, cohort.id);
+    const cleared = detail.steps.find((step) => step.id === stepIds[1]);
+
+    expect(cleared?.opensAfterDays).toBeNull();
+    expect(cleared?.opensAt).toBeNull();
+  });
+});
+
 describe("dates", () => {
   it("counts days from the start without drifting", () => {
     expect(dayFrom("2026-03-02", 0).toISOString().slice(0, 10)).toBe(

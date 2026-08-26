@@ -3,7 +3,14 @@ import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
+import { listPeople } from "@/lib/people";
 import { AppShell, Card } from "@/components/app-shell";
+import {
+  AddMember,
+  RemoveMember,
+  Reschedule,
+  ScheduleEditor,
+} from "./cohort-controls";
 
 /**
  * One cohort: who is on it, what the schedule says, and who is stuck.
@@ -31,6 +38,20 @@ export default async function CohortPage({
   const blocked = await blockedLearners(session, detail.cohort.courseId);
   const active = detail.members.filter((member) => member.leftAt === null);
 
+  const canManage = session.permissions.includes("enrolment:manage");
+
+  // Only somebody who can change the register needs the list of who could join
+  // it, and listPeople asks for a permission a read-only viewer may not hold.
+  const onCohort = new Set(active.map((member) => member.userId));
+  const candidates = canManage
+    ? (await listPeople(session)).filter(
+        (person) =>
+          person.status === "active" &&
+          person.roles.includes("learner") &&
+          !onCohort.has(person.id),
+      )
+    : [];
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
@@ -43,6 +64,20 @@ export default async function CohortPage({
           {active.length === 1 ? "learner" : "learners"}
         </p>
       </div>
+
+      {canManage ? (
+        <div className="mb-6">
+          <Card
+            title="Move the start"
+            description="Every date below is held as a number of days from this one, so changing it moves the whole rollout for everybody on the cohort."
+          >
+            <Reschedule
+              cohortId={detail.cohort.id}
+              startDate={detail.cohort.startDate}
+            />
+          </Card>
+        </div>
+      ) : null}
 
       {blocked.length > 0 ? (
         <Card
@@ -75,7 +110,20 @@ export default async function CohortPage({
           title="The schedule"
           description="Held as days from the start. Change the start date and every one of these moves with it."
         >
-          {detail.steps.length === 0 ? (
+          {canManage ? (
+            <ScheduleEditor
+              cohortId={detail.cohort.id}
+              startDate={detail.cohort.startDate}
+              steps={detail.steps.map((step) => ({
+                id: step.id,
+                title: step.title,
+                kind: step.kind,
+                opensAfterDays: step.opensAfterDays,
+                dueAfterDays: step.dueAfterDays,
+                closesAfterDays: step.closesAfterDays,
+              }))}
+            />
+          ) : detail.steps.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
               This cohort&rsquo;s course has no steps yet.
             </p>
@@ -123,23 +171,57 @@ export default async function CohortPage({
       </div>
 
       <div className="mt-6">
-        <Card title={`On this cohort (${active.length})`}>
-          <ul className="space-y-1 text-sm">
-            {detail.members.map((member) => (
-              <li
-                key={member.userId}
-                className={member.leftAt ? "opacity-60" : ""}
-              >
-                {member.firstName} {member.lastName}
-                <span className="ml-2 text-xs text-[var(--muted)]">
-                  {member.email}
-                  {member.leftAt
-                    ? ` · left ${member.leftAt.toISOString().slice(0, 10)}`
-                    : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <Card
+          title={`On this cohort (${active.length})`}
+          description="Adding somebody here also enrols them on the course. A name on a register who cannot open anything is the half-state this avoids."
+        >
+          {detail.members.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              Nobody has been added yet.
+            </p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {detail.members.map((member) => (
+                <li
+                  key={member.userId}
+                  className={`flex flex-wrap items-center justify-between gap-2 ${
+                    member.leftAt ? "opacity-60" : ""
+                  }`}
+                >
+                  <span>
+                    {member.firstName} {member.lastName}
+                    <span className="ml-2 text-xs text-[var(--muted)]">
+                      {member.email}
+                      {member.leftAt
+                        ? ` · left ${member.leftAt.toISOString().slice(0, 10)}`
+                        : ""}
+                    </span>
+                  </span>
+                  {canManage && !member.leftAt ? (
+                    <RemoveMember
+                      cohortId={detail.cohort.id}
+                      userId={member.userId}
+                      name={`${member.firstName} ${member.lastName}`}
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {canManage ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <AddMember
+                cohortId={detail.cohort.id}
+                candidates={candidates.map((person) => ({
+                  id: person.id,
+                  firstName: person.firstName,
+                  lastName: person.lastName,
+                  email: person.email,
+                }))}
+              />
+            </div>
+          ) : null}
         </Card>
       </div>
     </AppShell>

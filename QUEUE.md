@@ -89,10 +89,20 @@ The library is complete and tested; a cohort can only be created from code.
 the rollout schedule and move the start date, without anybody touching a
 terminal.
 
-- [ ] 4.1 Create and reschedule
-- [ ] 4.2 Add and remove members
-- [ ] 4.3 Edit the schedule as days from the start
-- [ ] 4.4 Tests
+- [x] 4.1 Create and reschedule
+- [x] 4.2 Add and remove members
+- [x] 4.3 Edit the schedule as days from the start
+- [x] 4.4 Tests
+
+**Done.** A cohort is created against a published course from `/cohorts`, and
+everything else is on the cohort's own screen: move the start, edit the
+rollout, add and remove learners.
+
+One thing had to be fixed underneath. `setSchedule` replaces a cohort's whole
+schedule rather than merging into it, but `getCohort` did not return
+`closesAfterDays` — so the editor would have read a schedule, saved it back,
+and silently dropped every closing time. It is returned now, and a test saves
+a schedule back unchanged and checks it survives.
 
 ---
 

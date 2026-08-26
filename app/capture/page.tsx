@@ -3,7 +3,7 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { listCaptureJobs } from "@/lib/capture";
 import { listProgrammeReadiness } from "@/lib/programme-readiness";
 import { EmptyState } from "@/components/empty-state";
-import { AppShell, Card } from "@/components/app-shell";
+import { AppShell } from "@/components/app-shell";
 import { UploadForm } from "./upload-form";
 
 export default async function CapturePage() {

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCohorts } from "@/lib/cohorts";
+import { listCourses } from "@/lib/authoring";
 import { EmptyState } from "@/components/empty-state";
-import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { AppShell, StatusBadge } from "@/components/app-shell";
+import { NewCohort } from "./new-cohort";
 
 /**
  * The cohorts a provider is running.
@@ -15,6 +17,11 @@ export default async function CohortsPage() {
   const session = await requirePermission("enrolment:read_all");
   const cohorts = await listCohorts(session);
 
+  // Only fetched for somebody who can actually start one: listCourses asks for
+  // a permission a read-only viewer of this page does not necessarily hold.
+  const canManage = session.permissions.includes("enrolment:manage");
+  const courses = canManage ? await listCourses(session) : [];
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
@@ -25,6 +32,19 @@ export default async function CohortsPage() {
           intake moves every date for everyone in it at once.
         </p>
       </div>
+
+      {canManage ? (
+        <div className="mb-6">
+          <NewCohort
+            courses={courses.map((course) => ({
+              id: course.id,
+              title: course.title,
+              status: course.status,
+              version: course.version,
+            }))}
+          />
+        </div>
+      ) : null}
 
       {cohorts.length === 0 ? (
         <EmptyState title="No cohorts yet">
