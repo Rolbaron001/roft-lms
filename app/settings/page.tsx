@@ -1,18 +1,30 @@
 import { requirePermission, requireTenant } from "@/lib/request";
+import { namingConventionFor } from "@/lib/capture";
 import { AppShell } from "@/components/app-shell";
 import { BrandingForm } from "./branding-form";
+import { NamingForm } from "./naming-form";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("tenant:manage_branding");
 
+  // Filename reading is a separate permission from branding. Somebody who can
+  // change the logo does not necessarily decide how documents are filed.
+  const canManageSettings = session.permissions.includes(
+    "tenant:manage_settings",
+  );
+  const convention = canManageSettings
+    ? await namingConventionFor(session)
+    : null;
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Appearance</h1>
+        <h1 className="text-xl font-semibold">Settings</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          How {tenant.displayName} looks to your people. Changes apply
-          everywhere immediately — there is nothing to rebuild or redeploy.
+          How {tenant.displayName} looks to your people, and how the App reads
+          the documents they upload. Changes apply everywhere immediately —
+          there is nothing to rebuild or redeploy.
         </p>
       </div>
 
@@ -26,6 +38,12 @@ export default async function SettingsPage() {
           strapline: tenant.strapline,
         }}
       />
+
+      {convention ? (
+        <div className="mt-6">
+          <NamingForm current={convention} />
+        </div>
+      ) : null}
     </AppShell>
   );
 }

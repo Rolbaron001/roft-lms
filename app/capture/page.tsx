@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { listCaptureJobs } from "@/lib/capture";
+import { listCaptureJobs, namingConventionFor } from "@/lib/capture";
 import { listProgrammeReadiness } from "@/lib/programme-readiness";
 import { EmptyState } from "@/components/empty-state";
 import { AppShell } from "@/components/app-shell";
@@ -9,9 +9,10 @@ import { UploadForm } from "./upload-form";
 export default async function CapturePage() {
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
-  const [jobs, programmes] = await Promise.all([
+  const [jobs, programmes, convention] = await Promise.all([
     listCaptureJobs(session),
     listProgrammeReadiness(session),
+    namingConventionFor(session),
   ]);
 
   return (
@@ -24,6 +25,31 @@ export default async function CapturePage() {
           made of it and what it could not work out, and waits. Nothing becomes
           an assessment until you confirm it.
         </p>
+      </div>
+
+      {/* The house rule, shown where the file is chosen rather than buried in
+          settings. A filename the App can read saves whoever uploads it from
+          retyping what the document already says. */}
+      <div className="mb-4 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+          How to name the file
+        </p>
+        <p className="mt-1 font-mono text-sm">{convention.pattern}</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          {Object.entries(convention.artefactCodes)
+            .map(([code, meaning]) => `${code} = ${meaning.replace(/_/g, " ")}`)
+            .join(" · ")}
+          {" · "}
+          {convention.memorandumMarker} marks an answer guide.
+        </p>
+        {session.permissions.includes("tenant:manage_settings") ? (
+          <Link
+            href="/settings"
+            className="mt-2 inline-block text-xs underline underline-offset-2"
+          >
+            Change how filenames are read
+          </Link>
+        ) : null}
       </div>
 
       <UploadForm programmes={programmes} />

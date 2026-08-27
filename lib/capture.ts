@@ -36,102 +36,20 @@ export class CaptureError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// What the filename says
-// ---------------------------------------------------------------------------
+import {
+  classifyFilename,
+  DEFAULT_CONVENTION,
+  type Classified,
+  type NamingConvention,
+} from "./naming-convention";
 
-export type NamingConvention = {
-  /** "{provider} {qualification} {studyUnit} {artefact}{number} [{memo}]" */
-  pattern: string;
-  /** { WB: "workbook", SA: "summative_assessment", WEM: "workplace_signoff" } */
-  artefactCodes: Record<string, string>;
-  /** "AG" */
-  memorandumMarker: string;
+// Re-exported so every existing caller keeps importing from here.
+export {
+  classifyFilename,
+  DEFAULT_CONVENTION,
+  type Classified,
+  type NamingConvention,
 };
-
-export const DEFAULT_CONVENTION: NamingConvention = {
-  pattern: "{provider} {qualification} {studyUnit} {artefact}{number} [{memo}]",
-  artefactCodes: {
-    WB: "workbook",
-    SA: "summative_assessment",
-    WEM: "workplace_signoff",
-  },
-  memorandumMarker: "AG",
-};
-
-export type Classified = {
-  provider: string | null;
-  qualification: string | null;
-  studyUnit: string | null;
-  artefact: string | null;
-  number: string | null;
-  isMemorandum: boolean;
-  /** What could not be read, so the reviewer knows to fill it in. */
-  unread: string[];
-};
-
-/**
- * Reads a filename under a tenant's own convention.
- *
- * Nothing here refuses. A tenant that files inconsistently gets a blank form
- * to fill in rather than a filled one to check — a slower path, not a closed
- * one — so the classifier reports what it could not read instead of rejecting
- * the upload.
- */
-export function classifyFilename(
-  filename: string,
-  convention: NamingConvention = DEFAULT_CONVENTION,
-): Classified {
-  const stem = filename
-    .replace(/\.[a-z0-9]+$/i, "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const tokens = stem.split(" ");
-  const artefactCodes = Object.keys(convention.artefactCodes);
-  const memo = convention.memorandumMarker.toUpperCase();
-
-  const isMemorandum = tokens.some(
-    (token) => token.toUpperCase() === memo,
-  );
-
-  let artefact: string | null = null;
-  let number: string | null = null;
-  for (const token of tokens) {
-    const match = new RegExp(`^(${artefactCodes.join("|")})(\\d*)$`, "i").exec(
-      token,
-    );
-    if (match) {
-      artefact = convention.artefactCodes[match[1].toUpperCase()] ?? null;
-      number = match[2] || null;
-      break;
-    }
-  }
-
-  const qualification = tokens.find((token) => /^\d{5,6}$/.test(token)) ?? null;
-  const studyUnit = tokens.find((token) => /^SU\d+$/i.test(token)) ?? null;
-  // The provider code is the leading token, where it is not one of the others.
-  const first = tokens[0] ?? "";
-  const provider =
-    first && first !== qualification && !/^SU\d+$/i.test(first) ? first : null;
-
-  const unread: string[] = [];
-  if (!provider) unread.push("provider");
-  if (!qualification) unread.push("qualification");
-  if (!studyUnit) unread.push("study unit");
-  if (!artefact) unread.push("artefact");
-
-  return {
-    provider,
-    qualification,
-    studyUnit,
-    artefact,
-    number,
-    isMemorandum,
-    unread,
-  };
-}
 
 export async function namingConventionFor(
   session: AuthenticatedSession,
@@ -143,6 +61,91 @@ export async function namingConventionFor(
       .where(eq(organisations.id, session.organisationId));
 
     return organisation?.namingConvention ?? DEFAULT_CONVENTION;
+  });
+}
+
+/**
+ * Changes how this tenant's filenames are read.
+ *
+ * The codes are what the classifier actually matches on, so getting them wrong
+ * is not cosmetic: an upload whose artefact code is unrecognised arrives as a
+ * blank form for somebody to fill in by hand rather than a filled one to
+ * check. Slower, never wrong — but slow enough that it is worth setting this
+ * once rather than living with it.
+ */
+export async function setNamingConvention(
+  session: AuthenticatedSession,
+  convention: NamingConvention,
+): Promise<NamingConvention> {
+  assertSessionCan(session, "tenant:manage_settings");
+
+  const codes = Object.entries(convention.artefactCodes)
+    .map(([code, meaning]) => [code.trim().toUpperCase(), meaning.trim()])
+    .filter(([code, meaning]) => code.length > 0 && meaning.length > 0);
+
+  if (codes.length === 0) {
+    throw new CaptureError(
+      "Keep at least one artefact code. With none, no upload can be recognised at all.",
+      "invalid",
+    );
+  }
+
+  for (const [code] of codes) {
+    if (!/^[A-Z0-9]{1,10}$/.test(code)) {
+      throw new CaptureError(
+        `"${code}" cannot be an artefact code. Use letters and digits only, up to ten of them — it has to be readable as one word in a filename.`,
+        "invalid",
+      );
+    }
+  }
+
+  const marker = convention.memorandumMarker.trim().toUpperCase();
+  if (!/^[A-Z0-9]{1,10}$/.test(marker)) {
+    throw new CaptureError(
+      "The memorandum marker has to be letters and digits, up to ten of them.",
+      "invalid",
+    );
+  }
+
+  // A marker that is also an artefact code makes every memorandum ambiguous:
+  // the same token would say both "this is a workbook" and "this is the answer
+  // guide", and the classifier would have to guess.
+  if (codes.some(([code]) => code === marker)) {
+    throw new CaptureError(
+      `"${marker}" is both the memorandum marker and an artefact code. One filename token cannot mean both.`,
+      "invalid",
+    );
+  }
+
+  const next: NamingConvention = {
+    pattern: convention.pattern.trim() || DEFAULT_CONVENTION.pattern,
+    artefactCodes: Object.fromEntries(codes),
+    memorandumMarker: marker,
+  };
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({ namingConvention: organisations.namingConvention })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+
+    await tx
+      .update(organisations)
+      .set({ namingConvention: next })
+      .where(eq(organisations.id, session.organisationId));
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      actorRole: session.roles[0],
+      action: "tenant.naming_convention_set",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: before?.namingConvention ?? DEFAULT_CONVENTION,
+      after: next,
+    });
+
+    return next;
   });
 }
 
