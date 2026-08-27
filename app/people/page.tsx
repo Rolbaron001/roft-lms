@@ -37,6 +37,7 @@ export default async function PeoplePage({
     (person) =>
       person.status === "active" && person.missingForStatutory.length > 0,
   );
+  const awaiting = people.filter((person) => person.awaitingEnrolment);
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -47,6 +48,19 @@ export default async function PeoplePage({
           record carries what a statutory return needs.
         </p>
       </div>
+
+      {awaiting.length > 0 ? (
+        <p className="mb-4 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3 text-sm">
+          <span className="font-medium">
+            {awaiting.length}{" "}
+            {awaiting.length === 1 ? "learner is" : "learners are"} not enrolled
+            on anything.
+          </span>{" "}
+          Being a learner grants no access on its own, so they sign in to an
+          empty screen. Enrol them on a course, add them to a cohort, or assign
+          a programme.
+        </p>
+      ) : null}
 
       {incomplete.length > 0 ? (
         <p className="mb-6 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3 text-sm">
@@ -111,6 +125,11 @@ export default async function PeoplePage({
                     <span className="block text-xs text-[var(--muted)]">
                       {person.email}
                     </span>
+                    {person.awaitingEnrolment ? (
+                      <span className="mt-0.5 block text-xs text-[var(--brand-accent)]">
+                        Not enrolled on anything
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-2.5 pr-4">
                     <span className="text-xs">

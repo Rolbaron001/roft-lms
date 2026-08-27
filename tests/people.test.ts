@@ -219,6 +219,85 @@ describe("inviting somebody", () => {
   });
 });
 
+/**
+ * A learner registered and then forgotten.
+ *
+ * Not a security matter — being a learner grants no access on its own, and an
+ * unenrolled one sees an empty screen rather than somebody else's material.
+ * The problem is that nothing else in the platform would ever mention them,
+ * so they sit there wondering what to do while everybody assumes they are
+ * getting on with it.
+ */
+describe("learners nobody enrolled", () => {
+  it("flags a learner with nothing assigned", async () => {
+    const { userId } = await invitePerson(admin, {
+      email: `stranded-${suffix()}@people.test`,
+      firstName: "Stranded",
+      lastName: "Learner",
+      roles: ["learner"],
+    });
+
+    const listed = (await listPeople(admin)).find((row) => row.id === userId)!;
+
+    expect(listed.awaitingEnrolment).toBe(true);
+  });
+
+  it("stops flagging them once they are enrolled", async () => {
+    const { userId } = await invitePerson(admin, {
+      email: `enrolled-${suffix()}@people.test`,
+      firstName: "Properly",
+      lastName: "Enrolled",
+      roles: ["learner"],
+    });
+
+    const course = await createCourse(admin, { title: `Course ${suffix()}` });
+    const section = await addSection(admin, {
+      courseId: course.id,
+      title: "Section",
+    });
+    await addLesson(admin, { sectionId: section.id, title: "Lesson" });
+    await tagCourseCompetency(admin, course.id, competencyId);
+    const published = await publishCourse(admin, course.id);
+    if (!published.ok) throw new Error(published.reasons.join(" "));
+
+    await enrolUser(admin, { userId, courseId: course.id });
+
+    const listed = (await listPeople(admin)).find((row) => row.id === userId)!;
+    expect(listed.awaitingEnrolment).toBe(false);
+  });
+
+  /**
+   * An assessor or a moderator is never enrolled on anything, and flagging
+   * them would train whoever reads this list to ignore it.
+   */
+  it("says nothing about somebody who is not a learner", async () => {
+    const { userId } = await invitePerson(admin, {
+      email: `assessor-${suffix()}@people.test`,
+      firstName: "An",
+      lastName: "Assessor",
+      roles: ["assessor"],
+    });
+
+    const listed = (await listPeople(admin)).find((row) => row.id === userId)!;
+
+    expect(listed.awaitingEnrolment).toBe(false);
+  });
+
+  it("says nothing about a suspended learner, who is not waiting for anything", async () => {
+    const { userId } = await invitePerson(admin, {
+      email: `suspended-${suffix()}@people.test`,
+      firstName: "Suspended",
+      lastName: "Learner",
+      roles: ["learner"],
+    });
+    await setPersonStatus(admin, userId, "suspended");
+
+    const listed = (await listPeople(admin)).find((row) => row.id === userId)!;
+
+    expect(listed.awaitingEnrolment).toBe(false);
+  });
+});
+
 describe("identity numbers", () => {
   /** Catching this while the document is in front of you is the whole point. */
   it("refuses a mistyped identity number on invite", async () => {

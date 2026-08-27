@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { and, asc, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   withPlatformScope,
@@ -140,6 +140,15 @@ export async function listPeople(
         equityCode: users.equityCode,
         ofoCode: users.ofoCode,
         lastLoginAt: users.lastLoginAt,
+        /**
+         * Counted here rather than fetched per person, because the list is the
+         * only place a learner nobody enrolled will ever be noticed. Covers
+         * all three routes onto a course — direct, cohort and learning path —
+         * because every one of them writes an enrolment row.
+         */
+        enrolmentCount: sql<number>`(
+          select count(*)::int from enrolments e where e.user_id = users.id
+        )`,
       })
       .from(users)
       .orderBy(asc(users.lastName), asc(users.firstName));
@@ -160,18 +169,35 @@ export async function listPeople(
               .includes(search)
           : true,
       )
-      .map((row) => ({
-        ...row,
-        roles: roles
+      .map((row) => {
+        const held = roles
           .filter((entry) => entry.userId === row.id)
-          .map((entry) => entry.role),
+          .map((entry) => entry.role);
+
+        return {
+        ...row,
+        roles: held,
+        /**
+         * A learner registered and then forgotten.
+         *
+         * Being a learner grants no access on its own, so this is not a
+         * security matter — it is somebody sitting in front of an empty
+         * screen wondering what to do, and nothing else in the platform
+         * would ever mention them. Only active accounts: a suspended learner
+         * with no enrolment is not waiting for anything.
+         */
+        awaitingEnrolment:
+          held.includes("learner") &&
+          row.status === "active" &&
+          row.enrolmentCount === 0,
         /** Fields the statutory return needs but does not yet have. */
         missingForStatutory: [
           row.nationalId ? null : "identity number",
           row.equityCode ? null : "equity code",
           row.ofoCode ? null : "OFO code",
         ].filter(Boolean) as string[],
-      }));
+        };
+      });
   });
 }
 
