@@ -117,6 +117,23 @@ fi
 git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
   || fail "pull was not a fast-forward. Somebody has committed on the server."
 
+# The pull may have just replaced this script while bash is part-way through
+# reading it. Until this re-exec existed, a change to the deploy process took
+# effect one deploy late: the run that delivered it still ran the old script.
+# That is not a theoretical problem — it shipped a release whose code expected
+# a renamed column alongside a script that never ran the rename, so the schema
+# push stopped on an interactive prompt while the health check still passed,
+# because the site was serving the previous build.
+#
+# So hand over to the version just pulled. DEPLOY_RELOADED guards the obvious
+# hazard: without it a script that re-execs every run never reaches the deploy.
+
+if [ -z "${DEPLOY_RELOADED:-}" ]; then
+  export DEPLOY_RELOADED=1
+  log "Reloading the deploy script at $(git -C "$REPO" rev-parse --short HEAD)."
+  exec "$REPO/scripts/auto-deploy.sh" --force
+fi
+
 # Both images. The tools image copies the source in at build time, so without
 # rebuilding it the migration below runs the code as it was at the last build —
 # which looks exactly like the change having no effect.
