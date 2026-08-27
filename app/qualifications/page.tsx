@@ -2,6 +2,7 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { listCurriculumModules, listQualifications } from "@/lib/authoring";
 import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
+import { FromDocument } from "./from-document";
 
 export default async function QualificationsPage() {
   const tenant = await requireTenant();
@@ -26,6 +27,12 @@ export default async function QualificationsPage() {
           course content covers every one of them before a course can be
           published.
         </p>
+      </div>
+
+      {/* The documents come first: everything below is built on them, and the
+          App can read most of what the form would otherwise ask for. */}
+      <div className="mb-6">
+        <FromDocument />
       </div>
 
       <QualificationsManager qualifications={withModules} />

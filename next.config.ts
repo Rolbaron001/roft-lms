@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   /**
+   * pdf.js is loaded at run time rather than bundled. Bundling it rewrites the
+   * dynamic imports it uses to reach its own worker and font data, and the
+   * reader then fails to construct — which surfaces as every PDF being
+   * unreadable rather than as a build error.
+   */
+  serverExternalPackages: ["pdfjs-dist"],
+
+  /**
    * The application sits behind a reverse proxy that terminates TLS. These
    * headers are set there as well; setting them here too means they survive a
    * proxy being reconfigured or replaced.

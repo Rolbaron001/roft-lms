@@ -1,7 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { redirect } from "next/navigation";
+import {
+  createQualificationFromDocuments,
+  QualificationImportError,
+  readQualificationSources,
+  type DocumentReading,
+  type SourceDocuments,
+} from "@/lib/qualification-from-document";
+import { requirePermission, requireSession } from "@/lib/request";
 import {
   addAssessmentCriterion,
   addCurriculumModule,
@@ -97,4 +105,108 @@ export async function addCriterionAction(
 
   revalidatePath("/qualifications");
   return { notice: "Assessment criterion added." };
+}
+
+export type ReadingState = {
+  error?: string;
+  reading?: DocumentReading;
+};
+
+/**
+ * Reads an uploaded curriculum document and hands back what it found.
+ *
+ * Writes nothing. The file goes back up again on the confirm step rather than
+ * being parked somewhere between the two — a half-finished import sitting in a
+ * table waiting for somebody to come back to it is a state worth not having.
+ */
+/**
+ * Pulls the three documents off the form.
+ *
+ * Only the curriculum is required. The other two are how the SAQA ID, the Exit
+ * Level Outcomes and the assessment specification get in, so a reading without
+ * them says so rather than quietly producing less.
+ */
+async function sourcesFrom(
+  formData: FormData,
+): Promise<SourceDocuments | { error: string }> {
+  async function take(name: string) {
+    const file = formData.get(name);
+    if (!(file instanceof File) || file.size === 0) return null;
+    return {
+      filename: file.name,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    };
+  }
+
+  const curriculum = await take("curriculum");
+  if (!curriculum) {
+    return { error: "Choose the Curriculum Document — it is the one that states the modules." };
+  }
+
+  return {
+    curriculum,
+    qualification: await take("qualification"),
+    assessmentSpecification: await take("assessmentSpecification"),
+  };
+}
+
+export async function readCurriculumAction(
+  _previous: ReadingState,
+  formData: FormData,
+): Promise<ReadingState> {
+  const session = await requirePermission("qualification:manage");
+
+  const sources = await sourcesFrom(formData);
+  if ("error" in sources) return { error: sources.error };
+
+  try {
+    return { reading: await readQualificationSources(session, sources) };
+  } catch (error) {
+    if (error instanceof QualificationImportError) {
+      return { error: error.message };
+    }
+    return { error: describe(error) };
+  }
+}
+
+export type CreateFromDocumentState = {
+  error?: string;
+  warnings?: string[];
+};
+
+export async function createFromDocumentAction(
+  _previous: CreateFromDocumentState,
+  formData: FormData,
+): Promise<CreateFromDocumentState> {
+  const session = await requirePermission("qualification:manage");
+
+  const sources = await sourcesFrom(formData);
+  if ("error" in sources) {
+    return { error: "The documents were not sent with the form. Choose them again." };
+  }
+
+  let created: { qualificationId: string };
+
+  try {
+    created = await createQualificationFromDocuments(session, sources, {
+      title: String(formData.get("title") ?? ""),
+      qctoCode: String(formData.get("qctoCode") ?? "") || undefined,
+      saqaId: String(formData.get("saqaId") ?? "") || undefined,
+      nqfLevel: formData.get("nqfLevel")
+        ? Number(formData.get("nqfLevel"))
+        : undefined,
+      totalCredits: formData.get("totalCredits")
+        ? Number(formData.get("totalCredits"))
+        : undefined,
+    });
+  } catch (error) {
+    if (error instanceof QualificationImportError) {
+      return { error: error.message };
+    }
+    return { error: describe(error) };
+  }
+
+  revalidatePath("/qualifications");
+  // Straight to the qualification, which is what there is to check.
+  redirect(`/qualifications/${created.qualificationId}`);
 }

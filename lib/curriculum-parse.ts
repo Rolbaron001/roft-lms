@@ -59,7 +59,29 @@ export type ParsedModule = {
   topics: ParsedTopic[];
 };
 
+/**
+ * What the front matter of a curriculum document says about the qualification
+ * itself, as opposed to about its modules.
+ *
+ * Every field is optional. A document that states none of them is still worth
+ * reading for its modules, and a blank field on the confirmation screen is a
+ * box somebody types into — which is exactly what they would have done anyway.
+ */
+export type ParsedQualification = {
+  title: string | null;
+  /** The curriculum code the document prints, e.g. 441601-001-00-00. */
+  qctoCode: string | null;
+  nqfLevel: number | null;
+  totalCredits: number | null;
+};
+
 export type ParsedCurriculum = {
+  /**
+   * Never guessed at from the modules. A qualification created with a title
+   * inferred from its first module would be wrong in a way nobody would think
+   * to check.
+   */
+  qualification: ParsedQualification;
   modules: ParsedModule[];
   /**
    * Things worth a person's eye. Never fatal: a document that parses partly is
@@ -87,6 +109,26 @@ const COMPONENT_BY_PREFIX: Record<string, Component> = {
  */
 const MODULE_HEADER =
   /^(?:.{0,40}?[\s:\-])?(KM|PM|WM)-?(\d{2})[,.:]?\s+(.+?)[,.]?\s*NQF\s+Level\s+(\d+)[,.]?\s*Credits?\s+(\d+)/i;
+
+/**
+ * The front-matter table every curriculum document opens with:
+ *
+ *   Curriculum Code | Qualification Title | NQF Level
+ *   441601-001-00-00  Higher Occupational Certificate:
+ *                     Human Resource Management
+ *                     Administrator
+ *   5
+ *
+ * The cells arrive as separate lines because that is how a table extracts, so
+ * the code line starts the title and the bare digit ends it.
+ */
+const FRONT_MATTER_HEADER = /Curriculum Code/i;
+const QUALIFICATION_CODE = /^([0-9]{5,6}-[0-9]{3}-[0-9]{2}(?:-[0-9]{2})?)[:.]?\s*(.*)$/;
+const BARE_LEVEL = /^([1-9]|10)$/;
+const QUALIFICATION_CREDITS =
+  /Total number of credits for the qualification[:\s]+([0-9]{1,4})/i;
+const COMPONENT_CREDITS =
+  /Total number of credits for [^:]*Modules[:\s]+([0-9]{1,4})/gi;
 
 /** The running header repeated on every page, e.g. `441601-001-00-00-00 HRM Administrator 12`. */
 const PAGE_HEADER = /^[\d-]{10,}:?\s+.*\s+\d{1,4}$/;
@@ -170,6 +212,73 @@ const PLANS: Record<
 const SECTION_END =
   /^(Provider Programme Approval Requirements|Physical Requirements|Human Resource Requirements|Legal Requirements|Purpose of the|Knowledge Topics|Skills included in the Module|List of Experiences|Total number of credits)/i;
 
+/**
+ * Reads the qualification's own details out of the front matter.
+ *
+ * Deliberately conservative. The curriculum document does not carry a SAQA ID
+ * at all — only the qualification document does — so that field is never
+ * offered here rather than being filled with something that looks like one.
+ */
+export function parseQualificationDetails(lines: string[]): ParsedQualification {
+  const result: ParsedQualification = {
+    title: null,
+    qctoCode: null,
+    nqfLevel: null,
+    totalCredits: null,
+  };
+
+  // The table sits at the very top; looking further risks picking up a module
+  // code from the summary list and calling it the qualification.
+  const headerAt = lines
+    .slice(0, 20)
+    .findIndex((line) => FRONT_MATTER_HEADER.test(line));
+
+  if (headerAt !== -1) {
+    for (let index = headerAt; index < Math.min(headerAt + 12, lines.length); index++) {
+      const match = QUALIFICATION_CODE.exec(lines[index]);
+      if (!match) continue;
+
+      result.qctoCode = match[1];
+
+      // The title runs from the rest of that line until a line that is just
+      // the NQF level. Anything else on the way is a wrapped part of it.
+      const parts = match[2] ? [match[2]] : [];
+      for (let next = index + 1; next < Math.min(index + 8, lines.length); next++) {
+        const level = BARE_LEVEL.exec(lines[next]);
+        if (level) {
+          result.nqfLevel = Number(level[1]);
+          break;
+        }
+        parts.push(lines[next]);
+      }
+
+      const title = parts.join(" ").replace(/\s{2,}/g, " ").trim();
+      if (title.length >= 3) result.title = title;
+      break;
+    }
+  }
+
+  const stated = QUALIFICATION_CREDITS.exec(lines.join("\n"));
+  if (stated) {
+    result.totalCredits = Number(stated[1]);
+  } else {
+    // Not every document prints a qualification total, but all of them print
+    // one per component. Adding those up is the document's own arithmetic
+    // rather than an assumption of ours.
+    const joined = lines.join("\n");
+    COMPONENT_CREDITS.lastIndex = 0;
+    let total = 0;
+    let found = 0;
+    for (const match of joined.matchAll(COMPONENT_CREDITS)) {
+      total += Number(match[1]);
+      found += 1;
+    }
+    if (found > 0) result.totalCredits = total;
+  }
+
+  return result;
+}
+
 export function parseCurriculumText(text: string): ParsedCurriculum {
   const lines = text
     .split("\n")
@@ -186,6 +295,7 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
 
   if (candidates.length === 0) {
     return {
+      qualification: parseQualificationDetails(lines),
       modules: [],
       notes: [
         "No module headers were found. Either this is not a curriculum document, or its text could not be read — if it is a scan, the platform cannot read it.",
@@ -221,7 +331,7 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
 
   notes.push(...review(modules));
 
-  return { modules, notes };
+  return { qualification: parseQualificationDetails(lines), modules, notes };
 }
 
 /** How much content a reading of a module found, for choosing between readings. */

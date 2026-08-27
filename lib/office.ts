@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { unzipSync } from "fflate";
 
 /**
@@ -266,7 +268,11 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
         "This PDF is password protected, so its text cannot be read. Upload an unprotected copy.",
       );
     }
-    throw new OfficeReadError("This PDF could not be read.");
+    // The cause is carried through rather than flattened. "This PDF could not
+    // be read" is the same message for a corrupt file and for a runtime that
+    // failed to load the reader at all, and those need very different fixes.
+    const detail = error instanceof Error ? `: ${error.message}` : "";
+    throw new OfficeReadError(`This PDF could not be read${detail}`);
   }
 
   const pages = document.numPages;
@@ -322,12 +328,48 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
  * tolerated when missing: no font data degrades a minority of documents, while
  * throwing here would fail every upload.
  */
+/**
+ * pdf.js treats this as a URL, not a path: it checks for a trailing "/" and
+ * refuses anything else with "must include trailing slash". On Windows a
+ * native path ends in a backslash and is rejected, so separators are
+ * normalised and the slash is guaranteed.
+ */
+function asFactoryUrl(directory: string): string {
+  const normalised = directory.split(String.fromCharCode(92)).join("/");
+  return normalised.endsWith("/") ? normalised : `${normalised}/`;
+}
+
 function standardFontsPath(): string | undefined {
+  const candidates: string[] = [];
+
+  // Under a bundler, require.resolve hands back a virtual path such as
+  // "[externals]/pdfjs-dist/package.json [external] (…)" rather than a real
+  // one. Handed to pdf.js that produces "Invalid factory url", and *every*
+  // PDF becomes unreadable — so a candidate is only used if it looks like an
+  // absolute filesystem path and actually exists.
   try {
-    return require
-      .resolve("pdfjs-dist/package.json")
-      .replace(/package\.json$/, "standard_fonts/");
+    const resolved = require.resolve("pdfjs-dist/package.json");
+    if (!resolved.includes("[") && isAbsolute(resolved)) {
+      candidates.push(resolved.replace(/package\.json$/, "standard_fonts"));
+    }
   } catch {
-    return undefined;
+    // Nothing to add; the cwd candidate below still applies.
   }
+
+  candidates.push(
+    join(process.cwd(), "node_modules", "pdfjs-dist", "standard_fonts"),
+  );
+
+  for (const candidate of candidates) {
+    try {
+      if (existsSync(candidate)) return asFactoryUrl(candidate);
+    } catch {
+      // Unreadable path, try the next.
+    }
+  }
+
+  // None found. The standard fourteen fonts extract less well without their
+  // metrics, which degrades a minority of documents — where a bad path would
+  // break all of them.
+  return undefined;
 }
