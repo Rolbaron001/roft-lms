@@ -32,6 +32,7 @@ import {
   publishCourse,
   tagCourseCompetency,
 } from "@/lib/authoring";
+import { importCurriculum, type CurriculumFileInput } from "@/lib/curriculum-import";
 import { PermissionDeniedError } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 import { permissionsFor, type Role } from "@/lib/rbac";
@@ -177,6 +178,153 @@ describe("permissions on authoring", () => {
     await expect(
       createQualification(learner, { title: "Unauthorised qualification" }),
     ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+});
+
+/**
+ * A course that answers to a qualification is where two independent, optional
+ * links meet: which Curriculum Module it teaches, and which Study Unit it
+ * belongs to. Neither implies the other, so nothing stopped the two from
+ * naming different parts of the curriculum — a course that claims to teach
+ * a module its own study unit does not actually deliver. createCourse now
+ * checks the two agree whenever both are given.
+ */
+describe("a course's module and its study unit have to agree", () => {
+  function suffix() {
+    return Math.random().toString(36).slice(2, 8);
+  }
+
+  function curriculumWithStudyUnit(code: string): CurriculumFileInput {
+    return {
+      title: `Cross-check ${code}`,
+      qctoCode: code,
+      modules: [
+        {
+          component: "knowledge" as const,
+          code: `${code}-KM-01`,
+          title: "Module the study unit actually delivers",
+          topics: [
+            {
+              code: "KM0101",
+              title: "Topic",
+              elements: [
+                { kind: "knowledge_topic" as const, code: "KT0101", description: "Teach this." },
+              ],
+              criteria: [{ code: "IAC0101", description: "Criterion." }],
+            },
+          ],
+        },
+        {
+          component: "knowledge" as const,
+          code: `${code}-KM-02`,
+          title: "A module from elsewhere in the same qualification",
+          topics: [
+            {
+              code: "KM0201",
+              title: "Topic",
+              elements: [
+                { kind: "knowledge_topic" as const, code: "KT0101", description: "Teach this." },
+              ],
+              criteria: [{ code: "IAC0101", description: "Criterion." }],
+            },
+          ],
+        },
+      ],
+      studyUnits: [
+        {
+          code: "SU1",
+          title: "Study Unit 1",
+          modules: [`${code}-KM-01`],
+        },
+      ],
+    };
+  }
+
+  async function importFixture(code: string) {
+    const summary = await importCurriculum(author, curriculumWithStudyUnit(code));
+
+    const { curriculumModules, studyUnits } = await import("@/db/schema");
+    return withTenant(organisationId, async (tx) => {
+      const modules = await tx
+        .select({ id: curriculumModules.id, code: curriculumModules.code })
+        .from(curriculumModules)
+        .where(eq(curriculumModules.qualificationId, summary.qualificationId));
+      const [unit] = await tx
+        .select({ id: studyUnits.id })
+        .from(studyUnits)
+        .where(eq(studyUnits.qualificationId, summary.qualificationId));
+
+      return {
+        studyUnitId: unit.id,
+        deliveredModuleId: modules.find((m) => m.code === `${code}-KM-01`)!.id,
+        otherModuleId: modules.find((m) => m.code === `${code}-KM-02`)!.id,
+      };
+    });
+  }
+
+  it("allows a module the study unit actually delivers", async () => {
+    const code = `X${suffix()}`;
+    const { studyUnitId, deliveredModuleId } = await importFixture(code);
+
+    const course = await createCourse(author, {
+      title: "Agrees with its study unit",
+      studyUnitId,
+      curriculumModuleId: deliveredModuleId,
+    });
+
+    expect(course.studyUnitId).toBe(studyUnitId);
+    expect(course.curriculumModuleId).toBe(deliveredModuleId);
+  });
+
+  it("refuses a module the study unit does not deliver", async () => {
+    const code = `Y${suffix()}`;
+    const { studyUnitId, otherModuleId } = await importFixture(code);
+
+    await expect(
+      createCourse(author, {
+        title: "Disagrees with its study unit",
+        studyUnitId,
+        curriculumModuleId: otherModuleId,
+      }),
+    ).rejects.toThrow(/not one of the modules/);
+
+    await expect(
+      createCourse(author, {
+        title: "Disagrees with its study unit",
+        studyUnitId,
+        curriculumModuleId: otherModuleId,
+      }),
+    ).rejects.toThrow(AuthoringError);
+  });
+
+  it("does not create the course when the check fails", async () => {
+    const code = `Z${suffix()}`;
+    const { studyUnitId, otherModuleId } = await importFixture(code);
+    const title = `Should not exist ${code}`;
+
+    await expect(
+      createCourse(author, { title, studyUnitId, curriculumModuleId: otherModuleId }),
+    ).rejects.toThrow(AuthoringError);
+
+    const found = (await listCourses(author)).find((c) => c.title === title);
+    expect(found).toBeUndefined();
+  });
+
+  it("still allows either link on its own, with nothing to disagree with", async () => {
+    const code = `W${suffix()}`;
+    const { studyUnitId, deliveredModuleId } = await importFixture(code);
+
+    const moduleOnly = await createCourse(author, {
+      title: "Module only",
+      curriculumModuleId: deliveredModuleId,
+    });
+    expect(moduleOnly.studyUnitId).toBeNull();
+
+    const unitOnly = await createCourse(author, {
+      title: "Study unit only",
+      studyUnitId,
+    });
+    expect(unitOnly.curriculumModuleId).toBeNull();
   });
 });
 

@@ -565,16 +565,52 @@ export async function createCourse(
 ) {
   assertSessionCan(session, "course:author");
   const parsed = courseInput.parse(input);
+  const studyUnitId = parsed.studyUnitId ?? null;
+  const curriculumModuleId = parsed.curriculumModuleId || null;
 
   return withTenant(session.organisationId, async (tx) => {
+    // Both links are optional and set independently, which is right — a
+    // course answering to no qualification sets neither. What is not right is
+    // setting both to a module and a study unit that disagree: the course
+    // would claim to deliver a module that nothing in its own study unit
+    // actually covers, and the readiness figures downstream would be
+    // computed from a link that never made sense.
+    if (studyUnitId && curriculumModuleId) {
+      const [link] = await tx
+        .select({ id: studyUnitModules.id })
+        .from(studyUnitModules)
+        .where(
+          and(
+            eq(studyUnitModules.studyUnitId, studyUnitId),
+            eq(studyUnitModules.curriculumModuleId, curriculumModuleId),
+          ),
+        );
+
+      if (!link) {
+        const [module] = await tx
+          .select({ code: curriculumModules.code })
+          .from(curriculumModules)
+          .where(eq(curriculumModules.id, curriculumModuleId));
+        const [unit] = await tx
+          .select({ code: studyUnits.code })
+          .from(studyUnits)
+          .where(eq(studyUnits.id, studyUnitId));
+
+        throw new AuthoringError(
+          `${module?.code ?? "That module"} is not one of the modules ${unit?.code ?? "this study unit"} delivers. Add it to the study unit first, or choose a different module.`,
+          "invalid_state",
+        );
+      }
+    }
+
     const [created] = await tx
       .insert(courses)
       .values({
         organisationId: session.organisationId,
-        studyUnitId: parsed.studyUnitId ?? null,
+        studyUnitId,
         title: parsed.title,
         description: parsed.description ?? null,
-        curriculumModuleId: parsed.curriculumModuleId || null,
+        curriculumModuleId,
         estimatedMinutes: parsed.estimatedMinutes ?? null,
         ownerId: session.userId,
       })
