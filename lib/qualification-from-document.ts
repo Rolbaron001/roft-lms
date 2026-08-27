@@ -161,7 +161,7 @@ export async function readQualificationSources(
   const details = {
     saqaId: registration?.saqaId ?? null,
     title: registration?.title ?? curriculum.qualification.title,
-    qctoCode: curriculum.qualification.qctoCode,
+    curriculumCode: curriculum.qualification.curriculumCode,
     nqfLevel: registration?.nqfLevel ?? curriculum.qualification.nqfLevel,
     totalCredits:
       registration?.totalCredits ?? curriculum.qualification.totalCredits,
@@ -180,12 +180,12 @@ export async function readQualificationSources(
     );
   }
 
-  const existing = details.qctoCode
+  const existing = details.curriculumCode
     ? await withTenant(session.organisationId, async (tx) => {
         const [row] = await tx
           .select({ id: qualifications.id, title: qualifications.title })
           .from(qualifications)
-          .where(eq(qualifications.qctoCode, details.qctoCode!));
+          .where(eq(qualifications.curriculumCode, details.curriculumCode!));
         return row ?? null;
       })
     : null;
@@ -240,7 +240,7 @@ function totalsOf(parsed: ParsedCurriculum) {
 
 export type ConfirmedDetails = {
   title: string;
-  qctoCode?: string;
+  curriculumCode?: string;
   saqaId?: string;
   nqfLevel?: number;
   totalCredits?: number;
@@ -269,7 +269,7 @@ export async function createQualificationFromDocuments(
 
   if (reading.existing) {
     throw new QualificationImportError(
-      `"${reading.existing.title}" already carries the code ${reading.details.qctoCode}. Importing again here would replace its whole curriculum, and anything tagged to a criterion would go with it. Open that qualification instead.`,
+      `"${reading.existing.title}" already carries the code ${reading.details.curriculumCode}. Importing again here would replace its whole curriculum, and anything tagged to a criterion would go with it. Open that qualification instead.`,
       "already_exists",
     );
   }
@@ -282,7 +282,7 @@ export async function createQualificationFromDocuments(
 
   const curriculumFile: CurriculumFileInput = {
     title: confirmed.title,
-    qctoCode: confirmed.qctoCode || undefined,
+    curriculumCode: confirmed.curriculumCode || undefined,
     saqaId: confirmed.saqaId || undefined,
     nqfLevel: confirmed.nqfLevel,
     totalCredits: confirmed.totalCredits,

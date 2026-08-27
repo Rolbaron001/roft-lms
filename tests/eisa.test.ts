@@ -125,7 +125,7 @@ function suffix() {
 function curriculumFile(code: string): CurriculumFileInput {
   return {
     title: `Test Qualification ${code}`,
-    qctoCode: code,
+    curriculumCode: code,
     totalCredits: 30,
     componentWeights: { knowledge: 60, practical: 40, workplace: 0 },
     modules: [
@@ -449,7 +449,7 @@ describe("readiness", () => {
     const file = curriculumFile(`rd-${suffix()}`);
     file.modules.push({
       component: "workplace" as const,
-      code: `${file.qctoCode}-WM-01`,
+      code: `${file.curriculumCode}-WM-01`,
       title: "Not yet transcribed",
       credits: 10,
       topics: [],
@@ -463,7 +463,7 @@ describe("readiness", () => {
     );
 
     expect(readiness.curriculumComplete).toBe(false);
-    expect(readiness.modulesWithoutCriteria).toContain(`${file.qctoCode}-WM-01`);
+    expect(readiness.modulesWithoutCriteria).toContain(`${file.curriculumCode}-WM-01`);
     expect(readiness.eisaEligible).toBe(false);
   });
 
@@ -682,7 +682,7 @@ describe("work experience modules", () => {
   function withWorkExperience(code: string): CurriculumFileInput {
     return {
       title: `Qualification with work experience ${code}`,
-      qctoCode: code,
+      curriculumCode: code,
       modules: [
         {
           component: "knowledge",
@@ -859,7 +859,7 @@ describe("the Statement of Results", () => {
   function finishable(code: string): CurriculumFileInput {
     return {
       title: `Finishable Qualification ${code}`,
-      qctoCode: code,
+      curriculumCode: code,
       saqaId: `SAQA-${code}`,
       nqfLevel: 5,
       totalCredits: 10,
@@ -907,7 +907,7 @@ describe("the Statement of Results", () => {
     const file = finishable(`sor-${suffix()}`);
     file.modules.push({
       component: "practical",
-      code: `${file.qctoCode}-PM-01`,
+      code: `${file.curriculumCode}-PM-01`,
       title: "Not transcribed",
       credits: 10,
       topics: [],

@@ -72,7 +72,7 @@ export const qualifications = pgTable(
 
     // Statutory identifiers. Null for a non-accredited internal programme.
     saqaId: text("saqa_id"),
-    qctoCode: text("qcto_code"),
+    curriculumCode: text("curriculum_code"),
     ofoCode: text("ofo_code"),
     nqfLevel: integer("nqf_level"),
     totalCredits: integer("total_credits"),
@@ -113,9 +113,9 @@ export const qualifications = pgTable(
   },
   (t) => [
     index("qualifications_org_idx").on(t.organisationId),
-    uniqueIndex("qualifications_org_qcto_code_idx").on(
+    uniqueIndex("qualifications_org_curriculum_code_idx").on(
       t.organisationId,
-      t.qctoCode,
+      t.curriculumCode,
     ),
   ],
 );

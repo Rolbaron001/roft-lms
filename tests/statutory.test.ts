@@ -409,7 +409,7 @@ describe("what belongs in the return", () => {
   async function accreditedCourse(options: { saqaId?: string } = {}) {
     const qualification = await createQualification(admin, {
       title: `Occupational Certificate ${suffix()}`,
-      qctoCode: `QC-${suffix()}`,
+      curriculumCode: `QC-${suffix()}`,
       saqaId: options.saqaId,
       nqfLevel: 4,
       totalCredits: 120,

@@ -123,9 +123,13 @@ git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
 log "Building."
 $COMPOSE up -d --build app tools || fail "the build did not finish"
 
-log "Applying schema and policies."
+# pre-migrate first, and the order is not cosmetic: it performs column renames
+# that drizzle-kit cannot infer. Left to itself, push sees a column vanish and
+# another appear, drops the first and creates the second empty — losing every
+# value in it, quietly, on a deploy that then reports success.
+log "Applying renames, schema and policies."
 $COMPOSE run --rm tools sh -c \
-  'npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts' \
+  'npx tsx scripts/pre-migrate.ts && npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts' \
   || fail "the schema change did not apply. The new code is running against the old schema — tell whoever made the change."
 
 # --- did it come back? ------------------------------------------------------

@@ -91,7 +91,7 @@ export default async function StatementPage({
             ["Identity number", learner.nationalId ?? "—"],
             ["Qualification", qualification.title],
             ["SAQA identifier", qualification.saqaId ?? "—"],
-            ["Curriculum code", qualification.qctoCode ?? "—"],
+            ["Curriculum code", qualification.curriculumCode ?? "—"],
             ["NQF level", qualification.nqfLevel ? String(qualification.nqfLevel) : "—"],
             ["Total credits", qualification.totalCredits ? String(qualification.totalCredits) : "—"],
             ["Assessment Quality Partner", qualification.assessmentQualityPartner ?? "—"],

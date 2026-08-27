@@ -68,7 +68,7 @@ const elementCount = file.modules.reduce(
 
 console.log(`
   ${file.title}
-  SAQA ${file.saqaId ?? "—"} · QCTO ${file.qctoCode ?? "—"} · NQF ${file.nqfLevel ?? "—"}
+  SAQA ${file.saqaId ?? "—"} · QCTO ${file.curriculumCode ?? "—"} · NQF ${file.nqfLevel ?? "—"}
 
   ${moduleCount} modules, ${topicCount} topics, ${elementCount} things to teach, ${criterionCount} criteria to assess
 `);

@@ -46,7 +46,7 @@ export async function createQualificationAction(
   try {
     await createQualification(session, {
       title: String(formData.get("title") ?? ""),
-      qctoCode: String(formData.get("qctoCode") ?? "") || undefined,
+      curriculumCode: String(formData.get("curriculumCode") ?? "") || undefined,
       saqaId: String(formData.get("saqaId") ?? "") || undefined,
       nqfLevel: formData.get("nqfLevel")
         ? Number(formData.get("nqfLevel"))
@@ -190,7 +190,7 @@ export async function createFromDocumentAction(
   try {
     created = await createQualificationFromDocuments(session, sources, {
       title: String(formData.get("title") ?? ""),
-      qctoCode: String(formData.get("qctoCode") ?? "") || undefined,
+      curriculumCode: String(formData.get("curriculumCode") ?? "") || undefined,
       saqaId: String(formData.get("saqaId") ?? "") || undefined,
       nqfLevel: formData.get("nqfLevel")
         ? Number(formData.get("nqfLevel"))

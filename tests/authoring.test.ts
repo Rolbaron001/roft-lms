@@ -132,7 +132,7 @@ afterAll(async () => {
 async function buildQualification() {
   const qualification = await createQualification(author, {
     title: `Occupational Certificate ${Math.random().toString(36).slice(2, 8)}`,
-    qctoCode: `QC-${Math.random().toString(36).slice(2, 8)}`,
+    curriculumCode: `QC-${Math.random().toString(36).slice(2, 8)}`,
     nqfLevel: 4,
     totalCredits: 120,
   });
@@ -197,7 +197,7 @@ describe("a course's module and its study unit have to agree", () => {
   function curriculumWithStudyUnit(code: string): CurriculumFileInput {
     return {
       title: `Cross-check ${code}`,
-      qctoCode: code,
+      curriculumCode: code,
       modules: [
         {
           component: "knowledge" as const,

@@ -70,7 +70,7 @@ export type ParsedModule = {
 export type ParsedQualification = {
   title: string | null;
   /** The curriculum code the document prints, e.g. 441601-001-00-00. */
-  qctoCode: string | null;
+  curriculumCode: string | null;
   nqfLevel: number | null;
   totalCredits: number | null;
 };
@@ -222,7 +222,7 @@ const SECTION_END =
 export function parseQualificationDetails(lines: string[]): ParsedQualification {
   const result: ParsedQualification = {
     title: null,
-    qctoCode: null,
+    curriculumCode: null,
     nqfLevel: null,
     totalCredits: null,
   };
@@ -238,7 +238,7 @@ export function parseQualificationDetails(lines: string[]): ParsedQualification 
       const match = QUALIFICATION_CODE.exec(lines[index]);
       if (!match) continue;
 
-      result.qctoCode = match[1];
+      result.curriculumCode = match[1];
 
       // The title runs from the rest of that line until a line that is just
       // the NQF level. Anything else on the way is a wrapped part of it.

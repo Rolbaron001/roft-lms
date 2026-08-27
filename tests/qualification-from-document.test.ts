@@ -124,7 +124,7 @@ describe("reading the documents", () => {
     expect(reading.details.title).toBe(
       "Advanced Occupational Certificate: Human Resource Management Officer",
     );
-    expect(reading.details.qctoCode).toBe("242303-001-00-00");
+    expect(reading.details.curriculumCode).toBe("242303-001-00-00");
     expect(reading.details.nqfLevel).toBe(6);
     expect(reading.details.totalCredits).toBe(134);
 
@@ -233,7 +233,7 @@ describe("creating it", () => {
       {
         title:
           "Advanced Occupational Certificate: Human Resource Management Officer",
-        qctoCode: "242303-001-00-00",
+        curriculumCode: "242303-001-00-00",
         saqaId: "121151",
         nqfLevel: 6,
         totalCredits: 134,
@@ -288,7 +288,7 @@ describe("creating it", () => {
       },
       {
         title: "Higher Occupational Certificate: HRM Administrator",
-        qctoCode: "441601-001-00-00",
+        curriculumCode: "441601-001-00-00",
         nqfLevel: 5,
         totalCredits: 120,
       },
@@ -336,7 +336,7 @@ describe("creating it", () => {
         { curriculum: fixture("121150-curriculum.pdf") },
         {
           title: "Higher Occupational Certificate: HRM Administrator",
-          qctoCode: "441601-001-00-00",
+          curriculumCode: "441601-001-00-00",
           nqfLevel: 5,
         },
       ),

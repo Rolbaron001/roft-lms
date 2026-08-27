@@ -627,7 +627,7 @@ async function main() {
         title: "Occupational Certificate: Mine Plant Operator",
         description:
           "Occupational qualification for plant operators working on surface mining operations.",
-        qctoCode: "QCTO-2026-0451",
+        curriculumCode: "QCTO-2026-0451",
         saqaId: "118742",
         ofoCode: "2026-81121",
         nqfLevel: 4,

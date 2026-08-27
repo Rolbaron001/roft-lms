@@ -139,7 +139,7 @@ export async function issueStatementOfResults(
       .select({
         title: qualifications.title,
         saqaId: qualifications.saqaId,
-        qctoCode: qualifications.qctoCode,
+        curriculumCode: qualifications.curriculumCode,
         nqfLevel: qualifications.nqfLevel,
         totalCredits: qualifications.totalCredits,
         assessmentQualityPartner: qualifications.assessmentQualityPartner,
@@ -191,7 +191,7 @@ export async function issueStatementOfResults(
           qualification: {
             title: qualification.title,
             saqaId: qualification.saqaId,
-            qctoCode: qualification.qctoCode,
+            curriculumCode: qualification.curriculumCode,
             nqfLevel: qualification.nqfLevel,
             totalCredits: qualification.totalCredits,
             assessmentQualityPartner: qualification.assessmentQualityPartner,

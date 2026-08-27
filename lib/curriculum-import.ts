@@ -73,7 +73,7 @@ const moduleSchema = z.object({
 export const curriculumFileSchema = z.object({
   title: z.string().trim().min(3).max(300),
   saqaId: z.string().trim().max(50).optional(),
-  qctoCode: z.string().trim().max(50).optional(),
+  curriculumCode: z.string().trim().max(50).optional(),
   ofoCode: z.string().trim().max(50).optional(),
   nqfLevel: z.number().int().min(1).max(10).optional(),
   totalCredits: z.number().int().min(0).max(10_000).optional(),
@@ -259,11 +259,11 @@ export async function importCurriculum(
   return withTenant(session.organisationId, async (tx) => {
     // Matched on the QCTO code, which is the qualification's identity in the
     // national system. Titles get reworded between revisions; the code does not.
-    const [existing] = file.qctoCode
+    const [existing] = file.curriculumCode
       ? await tx
           .select({ id: qualifications.id })
           .from(qualifications)
-          .where(eq(qualifications.qctoCode, file.qctoCode))
+          .where(eq(qualifications.curriculumCode, file.curriculumCode))
       : [];
 
     const weights = file.componentWeights
@@ -278,7 +278,7 @@ export async function importCurriculum(
       organisationId: session.organisationId,
       title: file.title,
       saqaId: file.saqaId ?? null,
-      qctoCode: file.qctoCode ?? null,
+      curriculumCode: file.curriculumCode ?? null,
       ofoCode: file.ofoCode ?? null,
       nqfLevel: file.nqfLevel ?? null,
       totalCredits: file.totalCredits ?? null,
@@ -457,7 +457,7 @@ export async function importCurriculum(
       entityId: qualificationId,
       after: {
         title: file.title,
-        qctoCode: file.qctoCode,
+        curriculumCode: file.curriculumCode,
         modules: file.modules.length,
         topics: topicCount,
         elements: elementCount,

@@ -778,7 +778,7 @@ export const statementsOfResults = pgTable(
         qualification: {
           title: string;
           saqaId: string | null;
-          qctoCode: string | null;
+          curriculumCode: string | null;
           nqfLevel: number | null;
           totalCredits: number | null;
           assessmentQualityPartner: string | null;

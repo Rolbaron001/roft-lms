@@ -31,7 +31,7 @@ type Module = {
 type Qualification = {
   id: string;
   title: string;
-  qctoCode: string | null;
+  curriculumCode: string | null;
   saqaId: string | null;
   nqfLevel: number | null;
   totalCredits: number | null;
@@ -126,9 +126,9 @@ export function QualificationsManager({
               </h2>
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {[
-                  qualification.qctoCode
+                  qualification.curriculumCode
                     ? // What the curriculum document itself calls it.
-                      `Curriculum ${qualification.qctoCode}`
+                      `Curriculum ${qualification.curriculumCode}`
                     : null,
                   qualification.saqaId ? `SAQA ${qualification.saqaId}` : null,
                   qualification.nqfLevel
@@ -327,7 +327,7 @@ export function QualificationsManager({
               Curriculum code{" "}
               <span className="font-normal text-[var(--muted)]">(optional)</span>
             </span>
-            <input name="qctoCode" className={inputClass} />
+            <input name="curriculumCode" className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">

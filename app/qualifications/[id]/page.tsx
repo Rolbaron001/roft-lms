@@ -77,7 +77,7 @@ export default async function QualificationPage({
         <p className="mt-1 text-sm text-[var(--muted)]">
           {[
             qualification.saqaId ? `SAQA ${qualification.saqaId}` : null,
-            qualification.qctoCode,
+            qualification.curriculumCode,
             qualification.nqfLevel ? `NQF ${qualification.nqfLevel}` : null,
             qualification.totalCredits
               ? `${qualification.totalCredits} credits`

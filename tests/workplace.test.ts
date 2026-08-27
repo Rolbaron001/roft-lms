@@ -86,7 +86,7 @@ async function workExperienceModule() {
   const code = `wpl-${suffix()}`;
   const imported = await importCurriculum(admin, {
     title: `Workplace Qualification ${code}`,
-    qctoCode: code,
+    curriculumCode: code,
     modules: [
       {
         component: "workplace",
@@ -255,7 +255,7 @@ describe("the logbook", () => {
     const code = `knw-${suffix()}`;
     const imported = await importCurriculum(admin, {
       title: `Knowledge Only ${code}`,
-      qctoCode: code,
+      curriculumCode: code,
       modules: [
         {
           component: "knowledge",
