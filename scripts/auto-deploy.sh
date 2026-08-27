@@ -62,7 +62,13 @@ fail() {
 # needs no utility that might not be installed. The cost is that a crashed run
 # leaves the directory behind, so a stale one is taken over rather than
 # blocking every deploy from then on.
-if ! mkdir "$LOCKDIR" 2>/dev/null; then
+#
+# A reloaded run already holds the lock — it is the same process, having
+# exec'd itself after pulling a new copy of this script. Without this branch
+# it queues behind itself, stands down, and the deploy never happens.
+if [ -n "${DEPLOY_RELOADED:-}" ]; then
+  log "Continuing under the lock already held."
+elif ! mkdir "$LOCKDIR" 2>/dev/null; then
   if [ -n "$(find "$LOCKDIR" -maxdepth 0 -mmin +$STALE_MINUTES 2>/dev/null)" ]; then
     log "Found a lock older than $STALE_MINUTES minutes. Assuming a crashed run and taking over."
     rm -rf "$LOCKDIR"
