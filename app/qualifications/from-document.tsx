@@ -243,7 +243,7 @@ export function FromDocument() {
               </label>
 
               <label className="block space-y-1.5">
-                <span className="block text-sm font-medium">QCTO code</span>
+                <span className="block text-sm font-medium">Curriculum code</span>
                 <input
                   name="qctoCode"
                   defaultValue={found.details.qctoCode ?? ""}

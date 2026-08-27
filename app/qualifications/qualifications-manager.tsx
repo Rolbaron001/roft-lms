@@ -127,7 +127,8 @@ export function QualificationsManager({
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {[
                   qualification.qctoCode
-                    ? `QCTO ${qualification.qctoCode}`
+                    ? // What the curriculum document itself calls it.
+                      `Curriculum ${qualification.qctoCode}`
                     : null,
                   qualification.saqaId ? `SAQA ${qualification.saqaId}` : null,
                   qualification.nqfLevel
@@ -323,7 +324,7 @@ export function QualificationsManager({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              QCTO code{" "}
+              Curriculum code{" "}
               <span className="font-normal text-[var(--muted)]">(optional)</span>
             </span>
             <input name="qctoCode" className={inputClass} />
