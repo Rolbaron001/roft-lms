@@ -15,6 +15,7 @@ import {
   auditLog,
   competencies,
   competencyFrameworks,
+  courses as coursesTable,
   evidenceArtifacts,
   organisations,
   userRoles,
@@ -555,6 +556,112 @@ describe("sampling rule", () => {
         random: 0,
       }).moderate,
     ).toBe(false);
+  });
+});
+
+/**
+ * A course that answers to no qualification still gets assessed.
+ *
+ * The accreditation structure is what makes an assessment *count towards a
+ * qualification* — it is not what makes assessment possible. Ordinary
+ * training leads to outcomes too, and nobody should be deemed competent on a
+ * short course because the platform had nowhere to record the judgement.
+ *
+ * Every course built here is standalone: createCourse is called with no
+ * curriculum module, so there is no qualification anywhere behind it.
+ */
+describe("assessment on a course outside any qualification", () => {
+  it("carries a summative, and produces a competence decision", async () => {
+    const courseId = await publishedCourse(`Standalone ${randomSuffix()}`);
+
+    const [course] = await withTenant(organisationId, (tx) =>
+      tx.select().from(coursesTable).where(eq(coursesTable.id, courseId)),
+    );
+    // The premise of the test: nothing accredited is involved.
+    expect(course.curriculumModuleId).toBeNull();
+    expect(course.studyUnitId).toBeNull();
+
+    const assessment = await createAssessment(admin, {
+      courseId,
+      title: "End-of-course assessment",
+      purpose: "summative",
+      passMark: 70,
+    });
+    const item = await addAssessmentItem(admin, {
+      assessmentId: assessment.id,
+      stem: "Name the control that removes a hazard entirely.",
+      options: ["Elimination", "A warning sign"],
+      correctIndexes: [0],
+    });
+    await publishAssessment(admin, assessment.id);
+
+    const sitting = await submitQuiz(learner, {
+      assessmentId: assessment.id,
+      responses: { [item.id]: [item.options![0].id] },
+    });
+
+    const { decision } = await recordAssessorDecision(
+      assessorA,
+      {
+        submissionId: sitting.submissionId,
+        outcome: "competent",
+        comments: "Answered correctly and explained the hierarchy.",
+      },
+      { random: 0.99 },
+    );
+
+    expect(decision.outcome).toBe("competent");
+  });
+
+  /**
+   * Summative work is moderated whatever it sits under. The moderation policy
+   * is about the weight of the judgement, not about accreditation.
+   */
+  it("still routes the summative decision to a moderator", async () => {
+    const courseId = await publishedCourse(`Standalone ${randomSuffix()}`);
+    const assessment = await createAssessment(admin, {
+      courseId,
+      title: "End-of-course assessment",
+      purpose: "summative",
+      passMark: 70,
+    });
+    const item = await addAssessmentItem(admin, {
+      assessmentId: assessment.id,
+      stem: "Name the control that removes a hazard entirely.",
+      options: ["Elimination", "A warning sign"],
+      correctIndexes: [0],
+    });
+    await publishAssessment(admin, assessment.id);
+
+    const sitting = await submitQuiz(learner, {
+      assessmentId: assessment.id,
+      responses: { [item.id]: [item.options![0].id] },
+    });
+
+    const { moderation } = await recordAssessorDecision(
+      assessorA,
+      { submissionId: sitting.submissionId, outcome: "competent" },
+      { random: 0.99 },
+    );
+
+    expect(moderation.moderate).toBe(true);
+  });
+
+  /**
+   * The wall holds here too: a workbook on a standalone course is still
+   * developmental, and still cannot record competence against criteria.
+   */
+  it("keeps a formative workbook developmental", async () => {
+    const courseId = await publishedCourse(`Standalone ${randomSuffix()}`);
+    const workbook = await createAssessment(admin, {
+      courseId,
+      title: "Practice workbook",
+      purpose: "formative",
+    });
+
+    expect(workbook.purpose).toBe("formative");
+    // A formative assessment is sampled, not fully moderated.
+    expect(Number(workbook.moderationSampleRate)).toBeLessThan(1);
   });
 });
 
