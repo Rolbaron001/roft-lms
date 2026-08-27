@@ -167,7 +167,17 @@ export async function AppShell({
           </div>
         </div>
 
-        <nav className="mx-auto flex max-w-5xl gap-1 px-4">
+        {/*
+          Wraps rather than overflowing. There are fifteen links and the list
+          grows; at 1440px they already ran 361px past the container, which put
+          the last two off the right edge of the window entirely — invisible and
+          unclickable, with no scrollbar to hint they were there.
+
+          px-6 matches the header above and the main column below, so the first
+          link lines up with the logo and the page content rather than sitting
+          8px to their left.
+        */}
+        <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-6 pb-1">
           {links.map((item) => (
             <Link
               key={item.href}
