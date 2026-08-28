@@ -69,21 +69,28 @@ COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 
-# pdf.js needs @napi-rs/canvas, and the standalone output does not bring it.
+# The PDF reader, copied whole rather than as file tracing leaves it.
 #
-# It is an optional dependency, reached through a require that Next's file
-# tracing cannot follow, so tracing copies pdfjs-dist and leaves this behind.
-# The consequence is not a missing feature but a module that will not load at
-# all: the legacy build evaluates `new DOMMatrix()` at the top level, and
-# DOMMatrix comes from this package, so importing pdf.js throws ReferenceError
-# before any document is opened. Every PDF then reports as unreadable — in
-# production only, because a development tree has the package sitting in
-# node_modules where the import finds it.
+# pdf.js reaches its worker and its optional canvas dependency through dynamic
+# imports that Next's tracing cannot follow. What arrives in the standalone
+# output is a single file — legacy/build/pdf.mjs — out of the whole package,
+# with no worker beside it and no @napi-rs/canvas anywhere. Neither absence is
+# a missing feature; both stop the reader loading at all, so every PDF reports
+# as unreadable while every test, every build and every development run passes,
+# because a development tree has the files sitting where the import finds them.
 #
-# Copied explicitly rather than polyfilled. A hand-written DOMMatrix would
-# satisfy the import and then be wrong in some way nobody notices, which is a
-# worse failure than the one being fixed.
+# Two separate faults, one behind the other: DOMMatrix comes from the canvas
+# package and is evaluated at the top level of pdf.mjs, and the worker is
+# loaded when the first document is opened. Fixing only the first moves the
+# failure rather than removing it.
+#
+# So both are copied from the install rather than trusted to tracing, and
+# neither is polyfilled or stubbed: a hand-written DOMMatrix would satisfy the
+# import and then be wrong somewhere nobody looks, which is worse than the
+# failure it replaces. scripts/smoke-pdf.mjs proves the result on the running
+# image, because this is not something a build error would ever reveal.
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@napi-rs ./node_modules/@napi-rs
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 
 # The check that proves the above actually worked, on the image that serves.
 COPY --chown=nextjs:nodejs scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
