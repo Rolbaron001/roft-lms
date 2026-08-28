@@ -14,8 +14,8 @@ import { unzipSync } from "fflate";
  */
 
 export class OfficeReadError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "OfficeReadError";
   }
 }
@@ -241,7 +241,23 @@ export type PdfText = {
  * The import is dynamic because pdf.js is large and most uploads are not PDFs.
  */
 export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // Loading the reader is a separate failure from failing to read a document,
+  // and it was previously outside the guard below — so when the module threw
+  // on import the error escaped as a bare ReferenceError, was caught by a
+  // generic handler several layers up, and reached the user as the name of
+  // their file and nothing else. Whatever goes wrong here is the platform's
+  // fault, not the document's, and it says so.
+  let pdfjs;
+  try {
+    pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  } catch (error) {
+    throw new OfficeReadError(
+      "The PDF reader could not be loaded, so no PDF can be read on this server. " +
+        "This is a fault in the installation, not in the document: " +
+        (error instanceof Error ? error.message : String(error)),
+      { cause: error },
+    );
+  }
 
   let document;
   try {

@@ -184,4 +184,24 @@ else
   fi
 fi
 
+# --- can it still read a PDF? -----------------------------------------------
+#
+# A health check answers "is the site up", which is not the same question as
+# "does the site work". Reading the three qualification documents is the way a
+# qualification gets built, and it depends on a package that Next's file
+# tracing does not copy into the production image — so it can break with every
+# test passing, every build clean, and the health check green. It did.
+#
+# Checked here, on the image that is actually serving, because that is the
+# only place the answer is worth having.
+
+if $COMPOSE exec -T app node scripts/smoke-pdf.mjs >/dev/null 2>&1; then
+  log "PDF reading works."
+else
+  log "*** PDF READING IS BROKEN on this deploy. Qualification documents ***"
+  log "*** cannot be read. The site is otherwise up, so this will not    ***"
+  log "*** show anywhere else. Run: docker compose -f                    ***"
+  log "*** docker-compose.production.yml exec app node scripts/smoke-pdf.mjs ***"
+fi
+
 log "Deployed ${REMOTE:0:7}."

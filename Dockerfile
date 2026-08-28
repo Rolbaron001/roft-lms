@@ -69,6 +69,25 @@ COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 
+# pdf.js needs @napi-rs/canvas, and the standalone output does not bring it.
+#
+# It is an optional dependency, reached through a require that Next's file
+# tracing cannot follow, so tracing copies pdfjs-dist and leaves this behind.
+# The consequence is not a missing feature but a module that will not load at
+# all: the legacy build evaluates `new DOMMatrix()` at the top level, and
+# DOMMatrix comes from this package, so importing pdf.js throws ReferenceError
+# before any document is opened. Every PDF then reports as unreadable — in
+# production only, because a development tree has the package sitting in
+# node_modules where the import finds it.
+#
+# Copied explicitly rather than polyfilled. A hand-written DOMMatrix would
+# satisfy the import and then be wrong in some way nobody notices, which is a
+# worse failure than the one being fixed.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@napi-rs ./node_modules/@napi-rs
+
+# The check that proves the above actually worked, on the image that serves.
+COPY --chown=nextjs:nodejs scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
+
 # Evidence uploads live here; the compose file mounts a volume over it so they
 # survive a redeploy.
 RUN mkdir -p /app/storage && chown nextjs:nodejs /app/storage
