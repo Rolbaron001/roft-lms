@@ -108,7 +108,27 @@ const COMPONENT_BY_PREFIX: Record<string, Component> = {
  * documents put a bullet, a repeated code, or nothing at all there.
  */
 const MODULE_HEADER =
-  /^(?:.{0,40}?[\s:\-])?(KM|PM|WM)-?(\d{2})[,.:]?\s+(.+?)[,.]?\s*NQF\s+Level\s+(\d+)[,.]?\s*Credits?\s+(\d+)/i;
+  /^(?:[\d\-.:()\s]{0,40})?(KM|PM|WM)[\s\-]?(\d{2})(?!\d)[,.:]?\s+(.+)$/i;
+
+/**
+ * Level and credits are read separately from the header line rather than being
+ * required by it.
+ *
+ * They used to be part of the pattern above, which meant a document that wrote
+ * "Credit Value 12" instead of "Credits 12", or carried the credits in a table
+ * column that extracts onto its own line, matched nothing at all — not a
+ * module with a missing field, but no modules whatsoever, and therefore no
+ * topics and no assessment criteria either. One word of house style decided
+ * whether the whole curriculum could be read.
+ *
+ * They are optional here. What a module is missing is reported for the
+ * reviewer to fill in; it is not grounds for pretending the module is absent.
+ */
+const LEVEL_ANYWHERE = /\bNQF\s*Level[:\s\-]*(\d{1,2})\b/i;
+const CREDITS_ANYWHERE = /\bCredits?(?:\s*Value)?[:\s\-]*(\d{1,3})\b/i;
+
+/** Where a title stops and the header's other fields begin. */
+const TITLE_ENDS_AT = /[,.]?\s*(?:NQF\s*Level|Credits?(?:\s*Value)?)\b/i;
 
 /**
  * The front-matter table every curriculum document opens with:
@@ -143,6 +163,26 @@ const CONTENTS_LINE = /\.{4,}\s*\d{1,4}\s*$/;
 const CODED_LINE = /^([A-Z]{2,3}\d{2,4})[:.]?\s+(.*)$/;
 
 /**
+ * The heading above the assessment criteria, whatever the document calls it.
+ *
+ * This one is worth naming on its own because getting it wrong is silent. The
+ * pattern used to demand the word "Internal", and a document heading the same
+ * column "Assessment Criteria" still yielded every module and every topic —
+ * and not one criterion. A reader that finds nothing announces itself; a
+ * reader that finds everything except the thing competence is judged against
+ * looks like it worked.
+ */
+const CRITERIA_HEADING =
+  /^(?:internal\s+|formative\s+)?assessment\s+criteri(?:a|on)\b/i;
+
+/**
+ * Numbering a document puts in front of its headings — "3.2 Applied
+ * knowledge". Stripped before a heading is matched, so a house style that
+ * numbers its sections reads the same as one that does not.
+ */
+const HEADING_NUMBER = /^\d+(?:\.\d+)*[.)]?\s+/;
+
+/**
  * How each component is laid out. Keeping this as data rather than as branches
  * is what makes the three readable side by side — and what makes it obvious
  * that the workplace plan has no criteria entry, which is the domain rule
@@ -162,43 +202,48 @@ const PLANS: Record<
   }
 > = {
   knowledge: {
-    guidelines: /^GUIDELINES FOR TOPICS/i,
+    guidelines: /^guidelines?\s+for\s+(?:the\s+)?topics?/i,
     // A knowledge topic is distinguished by the percentage of the module it
     // carries. Its prefix is not reliable: KM01 numbers its topics KM0101 and
     // KM05 numbers its topics KT0501, which is also an element prefix.
+    //
+    // The percentage is no longer required, only preferred: a document that
+    // omits it used to lose two thirds of its topics and two thirds of its
+    // criteria without saying so. When this pattern finds nothing, the module
+    // is read again the way the other two components are read, by taking the
+    // topic prefix from the module itself.
     topic: /^([A-Z]{2}\d{4})[:.]?\s+(.+?)\s*\((\d{1,3})\s*%\)\s*$/,
     sections: [
-      { heading: /^Topic Elements\b/i, collect: "knowledge_topic" },
-      { heading: /^Internal Assessment Criteria\b/i, collect: "criteria" },
+      { heading: /^topic\s+elements?\b/i, collect: "knowledge_topic" },
+      { heading: CRITERIA_HEADING, collect: "criteria" },
     ],
   },
   practical: {
-    guidelines: /^GUIDELINES FOR PRACTICAL SKILLS/i,
+    guidelines: /^guidelines?\s+for\s+practical\s+skills?/i,
     // The two documents disagree about what PS means: in 121150 a PS code is
     // the skill itself, in 121151 it is an activity inside one. So the prefix
     // that means "topic" is read from each module rather than fixed here.
     topicFromFirstCode: true,
     sections: [
-      { heading: /^Required Performance\b/i, collect: "practical_activity" },
       {
-        heading: /^Skills activities that must be mastered/i,
+        heading: /^(?:required\s+performance|(?:skills?\s+)?activities\s+that\s+must\s+be\s+mastered|practical\s+skills?\s+required)\b/i,
         collect: "practical_activity",
       },
-      { heading: /^Applied knowledge\b/i, collect: "applied_knowledge" },
-      { heading: /^Internal Assessment Criteria\b/i, collect: "criteria" },
+      { heading: /^applied\s+knowledge\b/i, collect: "applied_knowledge" },
+      { heading: CRITERIA_HEADING, collect: "criteria" },
     ],
   },
   workplace: {
-    guidelines: /^GUIDELINES FOR WORK EXPERIENCE/i,
+    guidelines: /^guidelines?\s+for\s+work(?:place)?\s+experience/i,
     topicFromFirstCode: true,
     sections: [
-      { heading: /^Work activities\b/i, collect: "work_activity" },
+      { heading: /^work\s+activities\b/i, collect: "work_activity" },
       {
-        heading: /^Contextual Workplace Knowledge that must be tested/i,
+        heading: /^contextual\s+workplace\s+knowledge\b/i,
         collect: "contextual_knowledge",
       },
       {
-        heading: /^Supporting Evidence that must be collected/i,
+        heading: /^supporting\s+evidence\b/i,
         collect: "supporting_evidence",
       },
     ],
@@ -317,14 +362,54 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
     const to =
       position + 1 < boundaries.length ? boundaries[position + 1] : lines.length;
 
-    const topics = parseTopics(lines.slice(from, to), candidate.entry.component);
+    const topics = parseTopics(
+      lines.slice(from, to),
+      candidate.entry.component,
+      candidate.entry.code.slice(2),
+    );
     const parsed = { ...candidate.entry, topics };
     const existing = byCode.get(parsed.code);
 
-    if (!existing || weight(parsed) > weight(existing)) {
+    if (!existing) {
       byCode.set(parsed.code, parsed);
+      return;
     }
+
+    // The occurrences of a module carry different things. The one in the
+    // contents states its credits and level and has no content beneath it;
+    // the one in the body has every topic and often repeats neither. Choosing
+    // one reading whole therefore threw away whatever the other one knew —
+    // which is why a document could yield fifteen complete modules and three
+    // sets of credits. Each field is taken from whichever reading has it.
+    const richer = weight(parsed) > weight(existing) ? parsed : existing;
+
+    byCode.set(parsed.code, {
+      ...richer,
+      credits: existing.credits || parsed.credits,
+      nqfLevel: existing.nqfLevel || parsed.nqfLevel,
+      // A title truncated by a line break is a shorter title, not a better one.
+      title:
+        parsed.title.length > existing.title.length
+          ? parsed.title
+          : existing.title,
+    });
   });
+
+  // Matching a module code no longer requires the header to state a level and
+  // credits, which is what lets an unfamiliar house style still be read. The
+  // price is that a bare mention of a code could otherwise become a module
+  // with nothing in it, so a candidate has to show something for itself:
+  // either one of the header fields, or actual content underneath. A real
+  // module always has one or the other; a stray reference has neither.
+  for (const entry of byCode.values()) {
+    if (
+      entry.credits === 0 &&
+      entry.nqfLevel === 0 &&
+      entry.topics.length === 0
+    ) {
+      byCode.delete(entry.code);
+    }
+  }
 
   modules.push(...byCode.values());
   modules.sort((a, b) => a.code.localeCompare(b.code));
@@ -354,34 +439,74 @@ function findModuleHeaders(lines: string[]) {
       `${line} ${lines[index + 1] ?? ""} ${lines[index + 2] ?? ""}`,
     ];
 
+    // The shortest candidate that matches is not the most informative one.
+    // A header's code and title sit on the first line and its level and
+    // credits wrap onto the next, so stopping at the first structural match
+    // reads the module and misses both figures. Every candidate is tried, and
+    // the first one that also carries a figure wins; the bare match is kept
+    // only as what to fall back on.
+    let best: {
+      prefix: string;
+      number: string;
+      rawTitle: string;
+      candidate: string;
+      score: number;
+    } | null = null;
+
     for (const candidate of candidates) {
       const match = MODULE_HEADER.exec(candidate);
       if (!match) continue;
 
-      const [, prefix, number, rawTitle, level, credits] = match;
+      const [, prefix, number, rawTitle] = match;
 
-      found.push({
-        index,
-        entry: {
-          code: `${prefix.toUpperCase()}${number}`,
-          component: COMPONENT_BY_PREFIX[prefix.toUpperCase()],
-          title: cleanTitle(rawTitle),
-          credits: Number(credits),
-          nqfLevel: Number(level),
-          topics: [],
-        },
-      });
-      return;
+      // Scored rather than taken on the first field found: these headers wrap
+      // wherever the margin falls, and "NQF Level 6," at the end of one line
+      // with "Credits 8." at the start of the next is ordinary. Stopping as
+      // soon as either appeared read the level and lost the credits.
+      const score =
+        (LEVEL_ANYWHERE.test(candidate) ? 1 : 0) +
+        (CREDITS_ANYWHERE.test(candidate) ? 1 : 0);
+
+      if (!best || score > best.score) {
+        best = { prefix, number, rawTitle, candidate, score };
+      }
+      if (score === 2) break;
     }
+
+    if (!best) return;
+
+    const level = LEVEL_ANYWHERE.exec(best.candidate);
+    const credits = CREDITS_ANYWHERE.exec(best.candidate);
+
+    // The title runs until the first of the other fields, whichever that is.
+    const end = best.rawTitle.search(TITLE_ENDS_AT);
+    const title = cleanTitle(
+      end === -1 ? best.rawTitle : best.rawTitle.slice(0, end),
+    );
+
+    found.push({
+      index,
+      entry: {
+        code: `${best.prefix.toUpperCase()}${best.number}`,
+        component: COMPONENT_BY_PREFIX[best.prefix.toUpperCase()],
+        title,
+        credits: credits ? Number(credits[1]) : 0,
+        nqfLevel: level ? Number(level[1]) : 0,
+        topics: [],
+      },
+    });
   });
 
   return found;
 }
 
 /** Topics, elements and criteria within one module's slice of the document. */
-function parseTopics(lines: string[], component: Component): ParsedTopic[] {
+function parseTopics(
+  lines: string[],
+  component: Component,
+  moduleNumber: string,
+): ParsedTopic[] {
   const plan = PLANS[component];
-  const allowed = ELEMENT_KINDS_BY_COMPONENT[component] ?? [];
 
   // Everything before the guidelines heading is the module's purpose and a
   // summary list that repeats what the guidelines then set out in full.
@@ -390,11 +515,123 @@ function parseTopics(lines: string[], component: Component): ParsedTopic[] {
   const begin = lines.findIndex((line) => plan.guidelines.test(line));
   const body = begin === -1 ? lines : lines.slice(begin + 1);
 
-  const pattern = plan.topic ?? topicPatternFor(body);
+  // The preferred pattern first. Where a component has one, it is the more
+  // precise of the two — but precision that finds nothing is not precision,
+  // so a module it cannot read is read again by taking the topic prefix from
+  // the module's own first coded line. That fallback is how the practical and
+  // workplace components have always worked; knowledge now shares it instead
+  // of depending on every topic carrying a percentage.
+  // A topic's code carries its module's number: KM04 numbers its topics
+  // KM0401, and where a document switches letters it keeps the number, so
+  // KM05's topics are KT0501. That number is the module's own answer to which
+  // topics are its own, and it is the one thing these documents are
+  // consistent about.
+  //
+  // Anchoring to it is what stops a topic being read into the wrong module.
+  // Matching on shape alone — any two letters and four digits with a
+  // percentage — let KM03's topics be collected under KM04, whose percentages
+  // then came to 200%. Nothing about that reads as an error; it reads as a
+  // module with nine topics.
+  const ownNumber = new RegExp(
+    `^([A-Z]{2}${moduleNumber}\\d{2})[:.]?\\s+(.+?)(?:\\s*\\((\\d{1,3})\\s*%\\))?\\s*$`,
+  );
+
+  // Two places to look, in order. Everything after the guidelines heading is
+  // the module set out in full, and reading only that avoids taking the
+  // summary list above it as a second set of topics.
+  //
+  // But a module with a single topic declares it above the heading and puts
+  // its elements and criteria below — so looking only below found no topic at
+  // all, and then attached that module's elements to whatever code came first,
+  // which belonged to another module entirely. When the detail section yields
+  // no topic, the whole module is searched instead.
+  const regions = begin === -1 ? [lines] : [body, lines];
+
+  // Whether a topic code has to carry this module's number is decided by the
+  // document, not assumed. 121151 numbers KM04's topics KM0401 and up, so a
+  // KT0301 found under KM04 is a neighbour's topic read across a boundary and
+  // is dropped. 121150 numbers its practical topics in one sequence for the
+  // whole qualification, so PM03's only topic is coded PM0101 — and dropping
+  // that would empty the module on the strength of a house rule it never
+  // agreed to.
+  //
+  // So the requirement is tried first and abandoned if it finds nothing
+  // anywhere. Where the numbering is per-module it is a strong filter; where
+  // it is not, it costs nothing.
+  for (const requireOwnNumber of [true, false]) {
+    for (const region of regions) {
+      // Most specific first. The percentage marks a knowledge topic exactly;
+      // the module's own first coded line names the one prefix its topics
+      // use; only when neither applies is the module number used alone, which
+      // is loosest because a module's elements carry its number too — KM01's
+      // topics are KM0101 and its elements KT0101, and only the prefix
+      // separates them.
+      const attempts = [plan.topic, topicPatternFor(region), ownNumber].filter(
+        (pattern): pattern is RegExp => Boolean(pattern),
+      );
+
+      for (const pattern of attempts) {
+        const found = collectTopics(region, component, pattern, moduleNumber);
+        const topics = requireOwnNumber
+          ? found.filter((topic) => belongsHere(topic.code, moduleNumber))
+          : found;
+        if (topics.length > 0) return topics;
+      }
+    }
+  }
 
   // Without a first coded line there is nothing to anchor to, and guessing a
   // prefix here is how one document's activities become another's topics.
-  if (!pattern) return [];
+  return [];
+}
+
+/**
+ * Whether a topic code can belong to this module.
+ *
+ * A four-digit code carries its module's number in the middle two: KM0501 and
+ * KT0501 are both KM05's, and KT0101 is not. Anything shaped differently is
+ * accepted, because a document that numbers its topics some other way is not
+ * thereby wrong — but a code that says plainly it belongs to module 01 is not
+ * read into module 05 on the grounds that nothing better turned up.
+ */
+function belongsHere(code: string, moduleNumber: string): boolean {
+  const parts = /^[A-Z]{2}(\d{2})\d{2}$/.exec(code);
+  return !parts || parts[1] === moduleNumber;
+}
+
+/**
+ * The code a topic line is really about.
+ *
+ * Detail headers get copied and half-edited: PM04's second topic is headed
+ * "PM0101: PM0401 Coordinate the implementation of..." in a published QCTO
+ * curriculum, where PM0101 is left over from another module and PM0401 is the
+ * topic. Taking the first code drops the topic entirely once it is checked
+ * against the module it sits in — so where the leading code belongs elsewhere
+ * and the next one belongs here, the document's own second answer is used.
+ */
+function codeFor(
+  code: string,
+  title: string,
+  moduleNumber: string,
+): { code: string; title: string } {
+  if (belongsHere(code, moduleNumber)) return { code, title };
+
+  const next = /^([A-Z]{2}\d{4})[:.]?\s+(.*)$/.exec(title);
+  if (next && belongsHere(next[1], moduleNumber)) {
+    return { code: next[1], title: next[2] };
+  }
+
+  return { code, title };
+}
+
+function collectTopics(
+  body: string[],
+  component: Component,
+  pattern: RegExp,
+  moduleNumber: string,
+): ParsedTopic[] {
+  const plan = PLANS[component];
+  const allowed = ELEMENT_KINDS_BY_COMPONENT[component] ?? [];
 
   const topics: ParsedTopic[] = [];
   let current: ParsedTopic | null = null;
@@ -423,9 +660,11 @@ function parseTopics(lines: string[], component: Component): ParsedTopic[] {
     }
 
     if (topic) {
+      const resolved = codeFor(topic[1], topic[2], moduleNumber);
+
       current = {
-        code: topic[1],
-        title: cleanTitle(stripRepeatedCode(topic[2], topic[1])),
+        code: resolved.code,
+        title: cleanTitle(stripRepeatedCode(resolved.title, resolved.code)),
         weightPercent: topic[3] ? Number(topic[3]) : null,
         elements: [],
         criteria: [],
@@ -438,7 +677,8 @@ function parseTopics(lines: string[], component: Component): ParsedTopic[] {
 
     if (!current) continue;
 
-    const section = plan.sections.find((entry) => entry.heading.test(line));
+    const heading = line.replace(HEADING_NUMBER, "");
+    const section = plan.sections.find((entry) => entry.heading.test(heading));
     if (section) {
       collecting = section.collect;
       continue;

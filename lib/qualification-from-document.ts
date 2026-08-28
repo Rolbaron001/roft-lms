@@ -138,9 +138,26 @@ export async function readQualificationSources(
     await readOrExplain(documents.curriculum),
   );
 
-  if (curriculum.modules.length === 0) {
+  // Judged on content rather than on headings. The registration document names
+  // the same fifteen modules the curriculum does — that is what it is for — so
+  // "did any module header appear" cannot tell the two apart, and once the
+  // reader stopped requiring an exact header format it stopped trying to.
+  //
+  // What separates them is that a curriculum document says what is inside a
+  // module. Fifteen module names with nothing under any of them is the wrong
+  // file, whatever it calls itself.
+  const withContent = curriculum.modules.filter(
+    (entry) => entry.topics.length > 0,
+  );
+
+  if (withContent.length === 0) {
+    const named = curriculum.modules.length;
     throw new QualificationImportError(
-      `No curriculum modules were found in "${documents.curriculum.filename}". Check it is the Curriculum Document rather than the Qualification Document or the Assessment Specification.`,
+      `No curriculum modules were found in "${documents.curriculum.filename}". ` +
+        (named > 0
+          ? `It names ${named} module${named === 1 ? "" : "s"} but sets out no topics or assessment criteria for any of them, which is what the Qualification Document looks like. `
+          : "") +
+        "Check it is the Curriculum Document rather than the Qualification Document or the Assessment Specification.",
       "not_a_curriculum",
     );
   }

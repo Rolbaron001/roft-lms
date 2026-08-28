@@ -247,7 +247,13 @@ describe("taking a module from the document", () => {
 
     const summary = await acceptProposedModule(author, qualification.id, "WM01");
 
-    expect(summary.elements).toBe(48);
+    // 49 rather than 48 since the reader stopped losing the last line of the
+    // last topic. WM01's four work experiences each carry fourteen lines; the
+    // reader used to return thirteen for WE0104, dropping "SE05 Signed Off
+    // Logbook" — the signed logbook being, for a work experience module, the
+    // whole of the evidence. The old number recorded that gap rather than the
+    // document.
+    expect(summary.elements).toBe(49);
     expect(summary.refused.length).toBe(4);
     for (const reason of summary.refused) {
       expect(reason).toMatch(/WA0201/);
