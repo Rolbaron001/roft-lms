@@ -131,20 +131,57 @@ that is the entire point of them.
 
 ---
 
-## 4. Start it
+## 4. Sign in to the image registry
+
+The server does not compile the application. GitHub Actions builds both images
+on every push to `main` and publishes them to the GitHub Container Registry;
+this machine pulls the finished pair.
+
+That is not a preference. `next build` wants roughly 2 GB of working memory. On
+a server with less, it does not fail cleanly — it exhausts memory, consumes the
+whole of swap, and then grinds indefinitely at a load average many times the
+core count without finishing, starving the running site alongside it. A deploy
+that never returns is harder to notice than one that stops.
+
+The images are private, so the server needs a token to pull them. Create a
+**classic personal access token** on GitHub with the single scope
+`read:packages`, then, on the server:
 
 ```bash
-docker compose -f docker-compose.production.yml up -d --build
-docker compose -f docker-compose.production.yml logs -f app
+# Paste the token when prompted. It is stored in ~/.docker/config.json,
+# readable only by this user.
+echo "PASTE_TOKEN_HERE" | docker login ghcr.io -u Rolbaron001 --password-stdin
 ```
 
-The first build takes a few minutes. Caddy will fetch a certificate as soon as
-DNS resolves to this machine; if it fails, DNS has not propagated yet — wait
-and check again rather than changing anything.
+Give the token an expiry you will actually remember, and put a reminder in the
+diary. When it lapses, deploys stop with `the images ... never appeared` in the
+log — the site keeps running, but nothing new reaches it, which is a quiet
+failure worth being able to recognise.
 
 ---
 
-## 5. Create the schema
+## 5. Start it
+
+```bash
+docker compose -f docker-compose.production.yml pull
+docker compose -f docker-compose.production.yml up -d --no-build
+docker compose -f docker-compose.production.yml logs -f app
+```
+
+`--no-build` matters. Without it, a missing image sends compose straight into
+the local build this arrangement exists to avoid.
+
+Caddy will fetch a certificate as soon as DNS resolves to this machine; if it
+fails, DNS has not propagated yet — wait and check again rather than changing
+anything.
+
+To run a specific commit rather than the newest, set `IMAGE_TAG` to the full
+commit SHA. That is also how a rollback works: set it to the previous commit
+and start again.
+
+---
+
+## 6. Create the schema
 
 ```bash
 docker compose -f docker-compose.production.yml run --rm tools sh -c '
@@ -162,7 +199,7 @@ That line is the tenant separation everything else depends on.
 
 ---
 
-## 6. Create the first tenant and administrator
+## 7. Create the first tenant and administrator
 
 There is no sign-up page by design — tenants are provisioned, not
 self-created. Do it once from the server:
@@ -190,7 +227,7 @@ You want `{"status":"ok",...}`.
 
 ---
 
-## 7. Set up backups — do not skip this
+## 8. Set up backups — do not skip this
 
 This is the step that separates a system from a liability. Self-hosted
 Postgres without tested backups is the one arrangement not worth running.
@@ -270,7 +307,7 @@ job rather than a project.
 
 ---
 
-## 8. Notifications
+## 9. Notifications
 
 In-app notifications work immediately with no setup. Email needs a mail
 server, and until one is configured the messages queue rather than being lost.

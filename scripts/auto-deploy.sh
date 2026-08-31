@@ -103,22 +103,7 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
-# --- take a copy of the database before touching anything -------------------
-#
-# Cheap insurance, and the moment it matters is a schema change that turns out
-# to be wrong. --local-only keeps it on this machine: this is a rollback point
-# for the next ten minutes, not the nightly backup, and waiting on an upload
-# would make every deploy slower for no benefit.
-
-if [ -n "${BACKUP_PASSPHRASE:-}" ] || grep -q '^BACKUP_PASSPHRASE=' "$REPO/.env" 2>/dev/null; then
-  log "Taking a database copy first."
-  $COMPOSE run --rm tools ./scripts/backup.sh --local-only >/dev/null 2>&1 \
-    || log "WARNING: the pre-deploy backup failed. Continuing — the nightly backup is unaffected."
-else
-  log "No BACKUP_PASSPHRASE set, so no pre-deploy copy. Set one."
-fi
-
-# --- pull, build, migrate ---------------------------------------------------
+# --- pull the code, fetch the images, migrate ---------------------------------------------------
 
 git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
   || fail "pull was not a fast-forward. Somebody has committed on the server."
@@ -140,18 +125,75 @@ if [ -z "${DEPLOY_RELOADED:-}" ]; then
   exec "$REPO/scripts/auto-deploy.sh" --force
 fi
 
-# Both images. The tools image copies the source in at build time, so without
-# rebuilding it the migration below runs the code as it was at the last build —
-# which looks exactly like the change having no effect.
-log "Building."
-$COMPOSE up -d --build app tools || fail "the build did not finish"
+# --- fetch the images, rather than building them -----------------------------
+#
+# This server does not compile the application. `next build` wants around 2 GB
+# of working memory and this machine has under 1 GB: building here does not
+# fail, it exhausts memory and then grinds at a load average of ten without
+# finishing, which is a worse outcome than an error because nothing reports it
+# and the running site is starved alongside it.
+#
+# GitHub Actions builds both images on every push to main and publishes them
+# tagged with the commit. The deploy's job is to fetch the pair matching the
+# commit it just pulled and start them.
+#
+# Pinning to the commit rather than to "latest" is what makes the two halves
+# agree. The tools image carries the migration scripts and the app image the
+# code that expects the migrated schema, so a deploy that took "latest" twice
+# could pair a fresh app with a stale set of migrations if a build were still
+# in flight -- which is precisely the pairing that applies the wrong schema.
+
+export IMAGE_TAG
+IMAGE_TAG="$(git -C "$REPO" rev-parse HEAD)"
+
+# The images are published by a workflow that starts when the commit is pushed,
+# so on a fast deploy this can arrive before the build has finished. Waiting is
+# correct; guessing is not. Roughly fifteen minutes, which is comfortably longer
+# than the build takes and short enough to fail the same working day.
+log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
+
+WAITED=0
+until $COMPOSE pull --quiet app tools mail 2>/dev/null; do
+  if [ "$WAITED" -ge 900 ]; then
+    fail "the images for ${IMAGE_TAG:0:7} never appeared. Check the Actions tab: the build may have failed, or the registry sign-in on this server may have expired."
+  fi
+  sleep 30
+  WAITED=$((WAITED + 30))
+done
+
+log "Images fetched after ${WAITED}s."
+
+# --- take a copy of the database before changing it -------------------------
+#
+# Cheap insurance, and the moment it matters is a schema change that turns out
+# to be wrong. --local-only keeps it on this machine: this is a rollback point
+# for the next ten minutes, not the nightly backup, and waiting on an upload
+# would make every deploy slower for no benefit.
+#
+# This sits after the image fetch rather than before it, because the backup
+# runs *in* the tools image. Taken any earlier it would be asking for an
+# image that has not been fetched yet, and compose would answer by building
+# it, which is the one thing this server must never do.
+
+if [ -n "${BACKUP_PASSPHRASE:-}" ] || grep -q '^BACKUP_PASSPHRASE=' "$REPO/.env" 2>/dev/null; then
+  log "Taking a database copy first."
+  $COMPOSE run --rm --no-build tools ./scripts/backup.sh --local-only >/dev/null 2>&1 \
+    || log "WARNING: the pre-deploy backup failed. Continuing — the nightly backup is unaffected."
+else
+  log "No BACKUP_PASSPHRASE set, so no pre-deploy copy. Set one."
+fi
+
+log "Starting."
+# --no-build is not belt and braces: without it, a missing image sends compose
+# straight into the local build this whole arrangement exists to avoid.
+$COMPOSE up -d --no-build || fail "the application did not start"
 
 # pre-migrate first, and the order is not cosmetic: it performs column renames
 # that drizzle-kit cannot infer. Left to itself, push sees a column vanish and
 # another appear, drops the first and creates the second empty — losing every
 # value in it, quietly, on a deploy that then reports success.
 log "Applying renames, schema and policies."
-$COMPOSE run --rm tools sh -c \
+$COMPOSE run --rm --no-build tools sh -c \
   'npx tsx scripts/pre-migrate.ts && npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts' \
   || fail "the schema change did not apply. The new code is running against the old schema — tell whoever made the change."
 

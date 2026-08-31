@@ -2,6 +2,14 @@
 #
 #   docker compose -f docker-compose.production.yml up -d
 #
+# The application images are built by GitHub Actions and pulled from the
+# registry, not compiled here. `next build` needs roughly 2 GB of working
+# memory and the production host has under 1 GB, so a deploy that builds on the
+# server exhausts memory and stalls indefinitely rather than failing. The
+# services carry both an `image:` and a `build:`: the image is what production
+# runs, the build block is what makes this file still usable on a machine with
+# the memory for it. IMAGE_TAG pins the commit; unset, it means latest.
+#
 # Only Caddy is exposed to the internet. The application and the database are
 # on an internal network with no published ports — a Postgres reachable from
 # the internet is the single most common way a small deployment is lost.
@@ -30,6 +38,11 @@ services:
       - edge
 
   app:
+    # Published by .github/workflows/build-images.yml. The build block below is
+    # kept so this file still works on a machine with the memory to compile,
+    # but the production deploy never uses it: scripts/auto-deploy.sh pulls
+    # this tag and starts with --no-build. See the note at the top of the file.
+    image: ghcr.io/rolbaron001/roft-lms-app:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -82,6 +95,7 @@ services:
   # It exists because the application image deliberately contains only the
   # built app: no source, no dev dependencies, no scripts directory.
   tools:
+    image: ghcr.io/rolbaron001/roft-lms-tools:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -145,6 +159,7 @@ services:
   # Port 25 inbound is unaffected by Oracle's outbound block: that stops this
   # machine connecting *out* on 25, not other servers connecting *in*.
   mail:
+    image: ghcr.io/rolbaron001/roft-lms-tools:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
