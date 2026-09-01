@@ -177,25 +177,46 @@ log "Images fetched after ${WAITED}s."
 
 if [ -n "${BACKUP_PASSPHRASE:-}" ] || grep -q '^BACKUP_PASSPHRASE=' "$REPO/.env" 2>/dev/null; then
   log "Taking a database copy first."
-  $COMPOSE run --rm --no-build tools ./scripts/backup.sh --local-only >/dev/null 2>&1 \
+  $COMPOSE run --rm tools ./scripts/backup.sh --local-only >/dev/null 2>&1 \
     || log "WARNING: the pre-deploy backup failed. Continuing — the nightly backup is unaffected."
 else
   log "No BACKUP_PASSPHRASE set, so no pre-deploy copy. Set one."
 fi
 
-log "Starting."
-# --no-build is not belt and braces: without it, a missing image sends compose
-# straight into the local build this whole arrangement exists to avoid.
-$COMPOSE up -d --no-build || fail "the application did not start"
+# --- migrate, then start ----------------------------------------------------
+#
+# The schema goes first and the application second, which is the opposite of
+# what this script used to do. Starting the app first meant a migration that
+# failed for any reason left the new code running against the old schema, with
+# the site up and the health check green: the worst of both, because nothing
+# looked wrong. Migrating first means a failure here leaves the *previous*
+# release running against the schema it was built for, which is a safe place
+# to stop.
+#
+# The tools container needs only the database, which is already up, so nothing
+# here depends on the new application image having started.
 
 # pre-migrate first, and the order is not cosmetic: it performs column renames
 # that drizzle-kit cannot infer. Left to itself, push sees a column vanish and
 # another appear, drops the first and creates the second empty — losing every
 # value in it, quietly, on a deploy that then reports success.
 log "Applying renames, schema and policies."
-$COMPOSE run --rm --no-build tools sh -c \
+$COMPOSE run --rm tools sh -c \
   'npx tsx scripts/pre-migrate.ts && npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts' \
-  || fail "the schema change did not apply. The new code is running against the old schema — tell whoever made the change."
+  || fail "the schema change did not apply. The previous release is still running against the schema it was built for — tell whoever made the change."
+
+log "Starting."
+# --no-build is not belt and braces: without it, a missing image sends compose
+# straight into the local build this whole arrangement exists to avoid.
+#
+# It belongs on `up` and only on `up`. `docker compose run` rejects it as an
+# unknown flag, which is not a warning: it fails the command outright. Putting
+# it on the tools invocations took out both the pre-deploy backup and the
+# schema migration on the first deploy that used them, and left the new code
+# running against the old schema. The tools runs are safe without it because
+# the pull above has already fetched the image they need, and fails the deploy
+# if it could not.
+$COMPOSE up -d --no-build || fail "the application did not start"
 
 # --- did it come back? ------------------------------------------------------
 
