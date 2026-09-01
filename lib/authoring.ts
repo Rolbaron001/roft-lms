@@ -68,6 +68,12 @@ export const qualificationInput = z.object({
   nqfLevel: z.coerce.number().int().min(1).max(10).optional(),
   totalCredits: z.coerce.number().int().min(0).max(10_000).optional(),
   assessmentQualityPartner: z.string().trim().max(300).optional(),
+  /**
+   * The accreditation number this qualification is offered under. Distinct
+   * from the provider's: one accreditation letter covers several
+   * qualifications, and a provider holds more than one letter.
+   */
+  accreditationNumber: z.string().trim().max(100).optional(),
   componentWeights: z
     .object({
       knowledge: z.number().min(0).max(1),
@@ -106,6 +112,7 @@ export async function createQualification(
         nqfLevel: parsed.nqfLevel ?? null,
         totalCredits: parsed.totalCredits ?? null,
         assessmentQualityPartner: parsed.assessmentQualityPartner ?? null,
+        accreditationNumber: parsed.accreditationNumber ?? null,
         ...(parsed.componentWeights
           ? { componentWeights: parsed.componentWeights }
           : {}),

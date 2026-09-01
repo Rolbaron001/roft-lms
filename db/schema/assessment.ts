@@ -21,6 +21,7 @@ import {
   curriculumTopicElements,
   publishStatus,
   qualifications,
+  studyUnits,
 } from "./curriculum";
 import { enrolments } from "./learning";
 import { rubrics } from "./rubrics";
@@ -755,6 +756,23 @@ export const statementsOfResults = pgTable(
     qualificationId: uuid("qualification_id")
       .notNull()
       .references(() => qualifications.id, { onDelete: "cascade" }),
+    /**
+     * The study unit this statement covers, or null for the whole
+     * qualification.
+     *
+     * Curiosa issues a Statement of Results after *each* study unit, not only
+     * at the end of a programme. That was raised against them at a monitoring
+     * visit and their own procedures were amended accordingly, so a platform
+     * that can only issue at the end cannot follow the procedure it is meant
+     * to support.
+     *
+     * Null is the whole-qualification statement, which is what every statement
+     * issued before this column existed was, and what the EISA still needs.
+     * Both remain valid and both verify.
+     */
+    studyUnitId: uuid("study_unit_id").references(() => studyUnits.id, {
+      onDelete: "cascade",
+    }),
 
     /** Checkable by an assessment centre without signing in. */
     verificationReference: text("verification_reference").notNull(),
@@ -782,7 +800,18 @@ export const statementsOfResults = pgTable(
           nqfLevel: number | null;
           totalCredits: number | null;
           assessmentQualityPartner: string | null;
+          /**
+           * The qualification's own accreditation number as it stood when the
+           * statement was issued. Copied rather than looked up, so a statement
+           * still says what it was issued under after the number changes.
+           */
+          accreditationNumber?: string | null;
         };
+        /** Present when the statement covers one study unit rather than all. */
+        studyUnit?: {
+          code: string;
+          title: string;
+        } | null;
         provider: {
           legalName: string;
           accreditationNumber: string | null;

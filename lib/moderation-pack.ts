@@ -1,6 +1,11 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
+  accreditationFor,
+  qualificationForModule,
+  type Accreditation,
+} from "./accreditation";
+import {
   assessmentDecisions,
   assessmentItems,
   assessmentPapers,
@@ -59,6 +64,13 @@ export type PackScript = {
 
 export type ModerationPack = {
   provider: { name: string; accreditationNumber: string | null };
+  /**
+   * The accreditation this assessment is offered under. The qualification's
+   * own number where it has one, the provider's where it does not, and which
+   * of the two it is, because a moderator checks this against an accreditation
+   * letter and one letter covers several qualifications.
+   */
+  accreditation: Accreditation;
   assessment: {
     id: string;
     title: string;
@@ -162,6 +174,12 @@ async function build(
   if (!assessment) {
     throw new Error("No such assessment.");
   }
+
+  const accreditation = await accreditationFor(
+    tx,
+    organisationId,
+    await qualificationForModule(tx, assessment.curriculumModuleId),
+  );
 
   // --- the instrument -------------------------------------------------------
   const papers = await tx
@@ -332,6 +350,7 @@ async function build(
       name: organisation?.name ?? "",
       accreditationNumber: organisation?.accreditationNumber ?? null,
     },
+    accreditation,
     assessment: {
       id: assessment.id,
       title: assessment.title,

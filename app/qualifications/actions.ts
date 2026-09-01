@@ -54,6 +54,8 @@ export async function createQualificationAction(
       totalCredits: formData.get("totalCredits")
         ? Number(formData.get("totalCredits"))
         : undefined,
+      accreditationNumber:
+        String(formData.get("accreditationNumber") ?? "") || undefined,
     });
   } catch (error) {
     return { error: describe(error) };

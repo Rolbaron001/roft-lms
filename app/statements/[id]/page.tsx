@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { getStatementOfResults, StatementError } from "@/lib/statement-of-results";
+import { describeAccreditation } from "@/lib/accreditation";
 
 const COMPONENT_LABEL: Record<string, string> = {
   knowledge: "Knowledge",
@@ -47,7 +48,8 @@ export default async function StatementPage({
     throw error;
   }
 
-  const { learner, qualification, provider, modules } = record.statement;
+  const { learner, qualification, provider, modules, studyUnit } =
+    record.statement;
 
   const byComponent = ["knowledge", "practical", "workplace", "general"]
     .map((component) => ({
@@ -79,8 +81,9 @@ export default async function StatementPage({
         </p>
         <h1 className="mt-1 text-lg font-bold">Statement of Results</h1>
         <p className="mt-1 text-xs">
-          Issued in respect of admission to the External Integrated Summative
-          Assessment
+          {studyUnit
+            ? `Issued in respect of ${studyUnit.code}: ${studyUnit.title}`
+            : "Issued in respect of admission to the External Integrated Summative Assessment"}
         </p>
       </header>
 
@@ -90,13 +93,22 @@ export default async function StatementPage({
             ["Learner", `${learner.firstName} ${learner.lastName}`],
             ["Identity number", learner.nationalId ?? "—"],
             ["Qualification", qualification.title],
+            ...(studyUnit
+              ? [["Study unit", `${studyUnit.code}: ${studyUnit.title}`]]
+              : []),
             ["SAQA identifier", qualification.saqaId ?? "—"],
             ["Curriculum code", qualification.curriculumCode ?? "—"],
             ["NQF level", qualification.nqfLevel ? String(qualification.nqfLevel) : "—"],
             ["Total credits", qualification.totalCredits ? String(qualification.totalCredits) : "—"],
             ["Assessment Quality Partner", qualification.assessmentQualityPartner ?? "—"],
             ["Skills Development Provider", provider.legalName || tenant.displayName],
-            ["Provider accreditation", provider.accreditationNumber ?? "—"],
+            [
+              "Accreditation number",
+              describeAccreditation(
+                qualification.accreditationNumber,
+                provider.accreditationNumber,
+              ).label,
+            ],
           ].map(([label, value]) => (
             <tr key={label} className="border-b border-neutral-300">
               <th className="w-64 py-1.5 pr-4 align-top font-semibold">{label}</th>

@@ -78,6 +78,20 @@ export const qualifications = pgTable(
     totalCredits: integer("total_credits"),
     /** The Assessment Quality Partner that administers the final EISA. */
     assessmentQualityPartner: text("assessment_quality_partner"),
+    /**
+     * The accreditation number under which this qualification is offered.
+     *
+     * Held here rather than only on the provider because an accreditation
+     * letter groups several qualifications under one number, and a provider
+     * offers qualifications from more than one letter. Showing the provider's
+     * number against a qualification it does not cover is worse than showing
+     * none: it is confidently wrong in front of the body that issued it.
+     *
+     * Null when the qualification is not accredited, which is the ordinary
+     * case for an internal programme. Reports fall back to the provider's
+     * number and say which one they used.
+     */
+    accreditationNumber: text("accreditation_number"),
     registrationStartDate: timestamp("registration_start_date", {
       withTimezone: false,
     }),

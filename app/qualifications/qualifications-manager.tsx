@@ -338,6 +338,21 @@ export function QualificationsManager({
             <input name="saqaId" className={inputClass} />
           </label>
 
+          <label className="block space-y-1.5 sm:col-span-2">
+            <span className="block text-sm font-medium">
+              Accreditation number{" "}
+              <span className="font-normal text-[var(--muted)]">(optional)</span>
+            </span>
+            <input name="accreditationNumber" className={inputClass} />
+            <span className="block text-xs text-[var(--muted)]">
+              The number this qualification is accredited under. One
+              accreditation letter usually covers several qualifications, so
+              this is not always the same as the provider&rsquo;s own number.
+              Leave it blank and reports fall back to the provider&rsquo;s and
+              say so.
+            </span>
+          </label>
+
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">NQF level</span>
             <input

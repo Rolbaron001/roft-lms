@@ -41,11 +41,8 @@ export default async function ModerationPackPage({
       <header className="mb-6 border-b border-[var(--border)] pb-4">
         <h1 className="text-xl font-semibold">{pack.assessment.title}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {pack.provider.name}
-          {pack.provider.accreditationNumber
-            ? ` · ${pack.provider.accreditationNumber}`
-            : ""}{" "}
-          · pass mark {pack.assessment.passMark}% · moderation rate{" "}
+          {pack.provider.name} · {pack.accreditation.label} · pass mark{" "}
+          {pack.assessment.passMark}% · moderation rate{" "}
           {Math.round(pack.assessment.moderationSampleRate * 100)}%
         </p>
         <p className="mt-1 text-sm tabular-nums">

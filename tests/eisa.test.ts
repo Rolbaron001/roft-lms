@@ -15,6 +15,7 @@ import {
   competencies,
   competencyFrameworks,
   organisations,
+  studyUnits,
   userRoles,
   users,
 } from "@/db/schema";
@@ -1038,5 +1039,210 @@ describe("the Statement of Results", () => {
     await expect(
       issueStatementOfResults(learner, imported.qualificationId, learner.userId),
     ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  /**
+   * Two modules taught as two study units, so a statement for one can be
+   * checked against the other. A single-module fixture cannot show the thing
+   * that matters, which is the boundary.
+   */
+  function twoUnits(code: string): CurriculumFileInput {
+    return {
+      title: `Two Unit Qualification ${code}`,
+      curriculumCode: code,
+      saqaId: `SAQA-${code}`,
+      nqfLevel: 5,
+      totalCredits: 20,
+      assessmentQualityPartner: "SERVICES SETA",
+      modules: [
+        {
+          component: "knowledge",
+          code: `${code}-KM-01`,
+          title: "First module",
+          credits: 10,
+          topics: [
+            {
+              code: "KM0101",
+              title: "A topic",
+              elements: [
+                { kind: "knowledge_topic", code: "KT0101", description: "Teach." },
+              ],
+              criteria: [{ code: "IAC0101", description: "Achieve one." }],
+            },
+          ],
+        },
+        {
+          component: "knowledge",
+          code: `${code}-KM-02`,
+          title: "Second module",
+          credits: 10,
+          topics: [
+            {
+              code: "KM0201",
+              title: "Another topic",
+              elements: [
+                { kind: "knowledge_topic", code: "KT0201", description: "Teach." },
+              ],
+              criteria: [{ code: "IAC0201", description: "Achieve two." }],
+            },
+          ],
+        },
+      ],
+      studyUnits: [
+        { code: "SU1", title: "First unit", modules: [`${code}-KM-01`] },
+        { code: "SU2", title: "Second unit", modules: [`${code}-KM-02`] },
+      ],
+    };
+  }
+
+  async function unitsOf(qualificationId: string) {
+    return withTenant(admin.organisationId, (tx) =>
+      tx
+        .select({ id: studyUnits.id, code: studyUnits.code })
+        .from(studyUnits)
+        .where(eq(studyUnits.qualificationId, qualificationId)),
+    );
+  }
+
+  async function criteriaFor(qualificationId: string, moduleCode: string) {
+    const readiness = await qualificationReadiness(
+      admin,
+      qualificationId,
+      learner.userId,
+    );
+    return readiness.components
+      .flatMap((c) => c.modules)
+      .filter((m) => m.code.endsWith(moduleCode))
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+  }
+
+  /**
+   * The point of issuing per study unit: a learner who has finished the first
+   * unit gets its statement without waiting for the rest of the qualification.
+   */
+  it("issues for one study unit while the rest is outstanding", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su1 = units.find((u) => u.code === "SU1")!;
+
+    const firstOnly = await criteriaFor(imported.qualificationId, "KM-01");
+    await achieve(firstOnly, firstOnly.map(() => "competent" as const));
+
+    // The whole qualification is not finished, so the ordinary statement
+    // must still refuse.
+    const whole = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    expect(whole.ok).toBe(false);
+
+    const issued = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+      su1.id,
+    );
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+
+    const statement = await getStatementOfResults(admin, issued.statementId);
+    expect(statement.statement.studyUnit?.code).toBe("SU1");
+
+    // And it confirms only what that unit delivers. A statement naming the
+    // second module would say the learner achieved something nobody assessed.
+    expect(statement.statement.modules).toHaveLength(1);
+    expect(statement.statement.modules[0].code).toContain("KM-01");
+  });
+
+  it("refuses a study unit whose own modules are outstanding", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su2 = units.find((u) => u.code === "SU2")!;
+
+    const firstOnly = await criteriaFor(imported.qualificationId, "KM-01");
+    await achieve(firstOnly, firstOnly.map(() => "competent" as const));
+
+    const result = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+      su2.id,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reasons.join(" ")).toContain("SU2");
+  });
+
+  /**
+   * The two forms are different documents making different claims, so holding
+   * one must not block the other. Holding the same one twice still must.
+   */
+  it("keeps the unit statement and the qualification statement apart", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su1 = units.find((u) => u.code === "SU1")!;
+    const su2 = units.find((u) => u.code === "SU2")!;
+
+    const all = [
+      ...(await criteriaFor(imported.qualificationId, "KM-01")),
+      ...(await criteriaFor(imported.qualificationId, "KM-02")),
+    ];
+    await achieve(all, all.map(() => "competent" as const));
+
+    const first = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+      su1.id,
+    );
+    expect(first.ok).toBe(true);
+
+    // A different unit is a different claim.
+    const second = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+      su2.id,
+    );
+    expect(second.ok).toBe(true);
+
+    // So is the whole qualification.
+    const whole = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    expect(whole.ok).toBe(true);
+
+    // The same claim twice is still refused.
+    await expect(
+      issueStatementOfResults(
+        admin,
+        imported.qualificationId,
+        learner.userId,
+        su1.id,
+      ),
+    ).rejects.toMatchObject({ code: "already_issued" });
+  });
+
+  it("refuses a study unit belonging to another qualification", async () => {
+    const mine = await importCurriculum(admin, twoUnits(`su-${suffix()}`));
+    const other = await importCurriculum(admin, twoUnits(`su-${suffix()}`));
+    const otherUnits = await unitsOf(other.qualificationId);
+
+    await expect(
+      issueStatementOfResults(
+        admin,
+        mine.qualificationId,
+        learner.userId,
+        otherUnits[0].id,
+      ),
+    ).rejects.toMatchObject({ code: "invalid_state" });
   });
 });

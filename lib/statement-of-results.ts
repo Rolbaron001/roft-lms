@@ -1,9 +1,12 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
+  curriculumModules,
   organisations,
   qualifications,
   statementsOfResults,
+  studyUnitModules,
+  studyUnits,
   users,
 } from "@/db/schema";
 import { qualificationReadiness } from "./eisa";
@@ -35,6 +38,13 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * Everything is frozen at issue. A curriculum can be reimported, a module
  * renamed, a learner's name corrected; the statement in somebody's hand must
  * keep saying what it said when it was signed.
+ *
+ * A statement may cover one study unit rather than the whole qualification.
+ * Curiosa issues one after each study unit, which was raised against them at a
+ * monitoring visit and written into their procedures afterwards. The two forms
+ * differ only in scope: a study-unit statement confirms the criteria of the
+ * modules that unit delivers, and the whole-qualification statement, which is
+ * what the assessment centre wants, still confirms all of them. Both verify.
  */
 
 export class StatementError extends Error {
@@ -44,7 +54,9 @@ export class StatementError extends Error {
       | "not_eligible"
       | "not_found"
       | "already_issued"
-      | "not_permitted",
+      | "not_permitted"
+      // A study unit that belongs elsewhere, or delivers nothing.
+      | "invalid_state",
   ) {
     super(message);
     this.name = "StatementError";
@@ -62,30 +74,132 @@ export type IssueOutcome =
  * a warning gets clicked past, and the consequence here lands on a learner who
  * travels to an assessment centre and is turned away.
  */
+/**
+ * The modules one study unit delivers, with the unit's own identity.
+ *
+ * A study unit is a teaching arrangement over the curriculum, not a division
+ * of it: several units can draw on the same module, and a module can be split
+ * across units. So the scope is read from the join rather than inferred, and a
+ * unit that delivers nothing is refused rather than producing a statement that
+ * confirms an empty set.
+ */
+async function studyUnitScope(
+  session: AuthenticatedSession,
+  qualificationId: string,
+  studyUnitId: string,
+): Promise<{ code: string; title: string; moduleCodes: Set<string> }> {
+  return withTenant(session.organisationId, async (tx) => {
+    const [unit] = await tx
+      .select({
+        code: studyUnits.code,
+        title: studyUnits.title,
+        qualificationId: studyUnits.qualificationId,
+      })
+      .from(studyUnits)
+      .where(eq(studyUnits.id, studyUnitId));
+
+    if (!unit) {
+      throw new StatementError("Study unit not found.", "not_found");
+    }
+
+    if (unit.qualificationId !== qualificationId) {
+      throw new StatementError(
+        `${unit.code} belongs to a different qualification. A statement cannot cover a study unit the learner is not enrolled against.`,
+        "invalid_state",
+      );
+    }
+
+    const rows = await tx
+      .select({ code: curriculumModules.code })
+      .from(studyUnitModules)
+      .innerJoin(
+        curriculumModules,
+        eq(curriculumModules.id, studyUnitModules.curriculumModuleId),
+      )
+      .where(eq(studyUnitModules.studyUnitId, studyUnitId));
+
+    if (rows.length === 0) {
+      throw new StatementError(
+        `${unit.code} delivers no modules, so there is nothing for a statement to confirm. Link its modules first.`,
+        "invalid_state",
+      );
+    }
+
+    return {
+      code: unit.code,
+      title: unit.title,
+      moduleCodes: new Set(rows.map((row) => row.code)),
+    };
+  });
+}
+
 export async function issueStatementOfResults(
   session: AuthenticatedSession,
   qualificationId: string,
   userId: string,
+  /** One study unit, or null for the whole qualification. */
+  studyUnitId: string | null = null,
 ): Promise<IssueOutcome> {
   assertSessionCan(session, "certificate:issue");
 
   const readiness = await qualificationReadiness(session, qualificationId, userId);
 
-  if (!readiness.curriculumComplete) {
+  // Which modules this statement speaks for. Null means all of them, and the
+  // checks below then behave exactly as they did before study units existed.
+  const scope = studyUnitId
+    ? await studyUnitScope(session, qualificationId, studyUnitId)
+    : null;
+
+  // Every check below is narrowed to what this statement actually claims. For
+  // a whole qualification that is the entire curriculum, exactly as before.
+  // For a study unit it is the modules that unit delivers: without narrowing,
+  // Study Unit 1's statement could not be issued until the whole qualification
+  // was finished, which is the opposite of what issuing per unit is for.
+  const inScope = (code: string) => !scope || scope.moduleCodes.has(code);
+
+  const uncaptured = readiness.modulesWithoutCriteria.filter(inScope);
+
+  if (uncaptured.length > 0) {
     return {
       ok: false,
       reasons: [
-        `The curriculum is not fully captured: ${readiness.modulesWithoutCriteria.join(", ")} carry nothing to achieve. A statement issued now would confirm achievement of modules nobody has transcribed.`,
+        `The curriculum is not fully captured: ${uncaptured.join(", ")} carry nothing to achieve. A statement issued now would confirm achievement of modules nobody has transcribed.`,
       ],
     };
   }
 
-  if (!readiness.eisaEligible) {
-    const outstanding = readiness.outstanding;
+  const modulesInScope = readiness.components
+    .flatMap((component) => component.modules)
+    .filter((module) => inScope(module.code));
+
+  if (modulesInScope.length === 0) {
     return {
       ok: false,
       reasons: [
-        `${outstanding.length} requirement${outstanding.length === 1 ? "" : "s"} outstanding. A Statement of Results confirms that every internal assessment criterion has been achieved, so it cannot be issued until they are.`,
+        "There are no modules in scope for this statement, so there is nothing for it to confirm.",
+      ],
+    };
+  }
+
+  const outstandingInScope = readiness.outstanding.filter((item) =>
+    inScope(item.moduleCode),
+  );
+
+  // Both conditions, not one. A module can be complete with nothing
+  // outstanding against it and still not be finished, because completeness for
+  // a work experience module is an accepted sign-off rather than a criterion,
+  // and that absence is not always expressed as an outstanding line.
+  if (outstandingInScope.length > 0 || !modulesInScope.every((m) => m.complete)) {
+    const outstanding = outstandingInScope;
+    const incomplete = modulesInScope
+      .filter((m) => !m.complete)
+      .map((m) => m.code);
+    return {
+      ok: false,
+      reasons: [
+        scope
+          ? `${outstanding.length} requirement${outstanding.length === 1 ? "" : "s"} outstanding in ${scope.code}. A Statement of Results confirms that every internal assessment criterion in its scope has been achieved, so it cannot be issued until they are.`
+          : `${outstanding.length} requirement${outstanding.length === 1 ? "" : "s"} outstanding. A Statement of Results confirms that every internal assessment criterion has been achieved, so it cannot be issued until they are.`,
         ...outstanding
           .slice(0, 10)
           .map(
@@ -94,6 +208,11 @@ export async function issueStatementOfResults(
           ),
         ...(outstanding.length > 10
           ? [`...and ${outstanding.length - 10} more.`]
+          : []),
+        ...(incomplete.length > 0 && outstanding.length === 0
+          ? [
+              `${incomplete.join(", ")} not yet complete. A work experience module is completed by an accepted sign-off rather than by criteria, so nothing is listed above.`,
+            ]
           : []),
       ],
     };
@@ -107,13 +226,20 @@ export async function issueStatementOfResults(
         and(
           eq(statementsOfResults.userId, userId),
           eq(statementsOfResults.qualificationId, qualificationId),
+          // Scoped, so a study-unit statement does not collide with the
+          // whole-qualification one, nor with another unit's.
+          studyUnitId
+            ? eq(statementsOfResults.studyUnitId, studyUnitId)
+            : isNull(statementsOfResults.studyUnitId),
           isNull(statementsOfResults.revokedAt),
         ),
       );
 
     if (existing) {
       throw new StatementError(
-        "This learner already holds a Statement of Results for this qualification. Withdraw it before issuing another, so two documents making the same claim are never in circulation.",
+        scope
+          ? `This learner already holds a Statement of Results for ${scope.code}. Withdraw it before issuing another, so two documents making the same claim are never in circulation.`
+          : "This learner already holds a Statement of Results for this qualification. Withdraw it before issuing another, so two documents making the same claim are never in circulation.",
         "already_issued",
       );
     }
@@ -143,6 +269,7 @@ export async function issueStatementOfResults(
         nqfLevel: qualifications.nqfLevel,
         totalCredits: qualifications.totalCredits,
         assessmentQualityPartner: qualifications.assessmentQualityPartner,
+        accreditationNumber: qualifications.accreditationNumber,
       })
       .from(qualifications)
       .where(eq(qualifications.id, qualificationId));
@@ -161,6 +288,7 @@ export async function issueStatementOfResults(
 
     const modules = readiness.components
       .flatMap((component) => component.modules)
+      .filter((module) => !scope || scope.moduleCodes.has(module.code))
       .map((module) => ({
         code: module.code,
         title: module.title,
@@ -181,6 +309,7 @@ export async function issueStatementOfResults(
         organisationId: session.organisationId,
         userId,
         qualificationId,
+        studyUnitId,
         verificationReference: reference,
         statement: {
           learner: {
@@ -195,7 +324,15 @@ export async function issueStatementOfResults(
             nqfLevel: qualification.nqfLevel,
             totalCredits: qualification.totalCredits,
             assessmentQualityPartner: qualification.assessmentQualityPartner,
+            // The qualification's own number where it has one, falling back to
+            // the provider's. An accreditation letter groups several
+            // qualifications, so the specific one is the truthful answer.
+            accreditationNumber:
+              qualification.accreditationNumber ??
+              provider?.accreditationNumber ??
+              null,
           },
+          studyUnit: scope ? { code: scope.code, title: scope.title } : null,
           provider: {
             legalName: provider?.legalName ?? "",
             accreditationNumber: provider?.accreditationNumber ?? null,
@@ -216,6 +353,8 @@ export async function issueStatementOfResults(
       after: {
         userId,
         qualificationId,
+        studyUnitId,
+        scope: scope ? scope.code : "whole qualification",
         reference,
         modules: modules.length,
       },
