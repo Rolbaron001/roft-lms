@@ -261,6 +261,24 @@ as a list and are not.
 - [ ] 7.4 Digital competency badges on completion
 - [ ] 7.5 Learner discipline: offences graded, warnings with a validity period, hearings
 
+---
+
+## Corrected after the fact
+
+**Moderation sampling.** Both assessments said the sample was 25 per cent,
+taken from the client's own written procedure. QCTO policy says otherwise: a
+cohort of ten or fewer is moderated in full, one of twenty or fewer at half.
+The platform sampled at a flat rate, which met the policy only above twenty and
+fell short on every smaller cohort - which is most of them.
+
+Corrected in both documents and in the platform on 1 September 2026. The
+configured rate is now a floor rather than the whole rule, and cohort size
+raises it.
+
+Worth raising with the client: their own procedure still states 25 per cent and
+says nothing about cohort size, so a provider following it on a cohort of eight
+would moderate two scripts and believe itself compliant.
+
 **7.2 carries health and disability information.** It needs deliberate handling
 under POPIA and must be visible only to those who have to act on it.
 

@@ -311,9 +311,13 @@ export function AssessmentManager({
               <option value="0">None</option>
             </select>
             <span className="block text-xs text-[var(--muted)]">
-              Ignored for a summative assessment, where every decision is
-              moderated. A newly registered assessor is always moderated in
-              full.
+              A floor, not a ceiling. Cohort size raises it: a cohort of ten or
+              fewer is moderated in full and one of twenty or fewer at half,
+              because a quarter of eight scripts is two, and two say almost
+              nothing about an assessor&rsquo;s judgement. This figure governs
+              cohorts above twenty. Ignored for a summative assessment, where
+              every decision is moderated, and a newly registered assessor is
+              always moderated in full.
             </span>
           </label>
 

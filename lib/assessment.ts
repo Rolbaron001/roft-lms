@@ -1,13 +1,15 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { withTenant } from "@/db/client";
+import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentDecisions,
   assessmentItems,
   assessmentSubmissions,
   assessments,
+  cohortMembers,
+  cohorts,
   courses,
   evidenceArtifacts,
   moderationQueue,
@@ -957,6 +959,49 @@ export async function getSubmissionForAssessment(
 }
 
 /**
+ * How much of a cohort must be moderated, given how big it is.
+ *
+ * QCTO policy sets a floor that rises as the cohort shrinks: a cohort of ten
+ * or fewer is moderated in full, and one of twenty or fewer is moderated at
+ * half. The reason is statistical rather than bureaucratic. A quarter of eight
+ * scripts is two, and two scripts say almost nothing about an assessor's
+ * judgement, so on a small cohort a percentage that is reasonable for a large
+ * one stops being evidence of anything.
+ *
+ * The configured rate is a floor, not a ceiling: a provider that chooses to
+ * moderate more than the policy requires keeps its own figure. Above twenty
+ * the configured rate governs, because the policy text sets minimums for small
+ * cohorts and leaves the rest to the provider's own assessment strategy.
+ *
+ * A cohort size of null means the learner is not on one - an individual
+ * enrolment rather than a scheduled intake - and there is no cohort rule to
+ * apply, so the configured rate stands.
+ */
+export function moderationRateFor(input: {
+  cohortSize: number | null;
+  configuredRate: number;
+}): { rate: number; reason: string } {
+  const configured = input.configuredRate;
+
+  if (input.cohortSize === null) {
+    return { rate: configured, reason: "no_cohort" };
+  }
+
+  if (input.cohortSize <= 10) {
+    return { rate: 1, reason: "cohort_of_ten_or_fewer" };
+  }
+
+  if (input.cohortSize <= 20) {
+    return {
+      rate: Math.max(0.5, configured),
+      reason: "cohort_of_twenty_or_fewer",
+    };
+  }
+
+  return { rate: configured, reason: "configured_rate" };
+}
+
+/**
  * Decides which decisions go to a moderator.
  *
  * Pure, so the rule can be tested directly rather than inferred from
@@ -1006,6 +1051,59 @@ export const decisionInput = z.object({
     .record(z.string(), z.enum(["competent", "not_yet_competent"]))
     .optional(),
 });
+
+/**
+ * How many learners are on the cohort this learner sits in for this course.
+ *
+ * A learner can be on more than one cohort over time, so the largest current
+ * one is taken: moderating to the bigger cohort's floor is the safe direction
+ * to be wrong in, and the alternative is choosing arbitrarily between them.
+ *
+ * Only current members count. Somebody who left the programme is not a
+ * candidate whose script could be sampled.
+ */
+async function cohortSizeForLearner(
+  tx: TenantDatabase,
+  courseId: string,
+  userId: string,
+): Promise<number | null> {
+  // The cohorts on this course the learner is currently a member of.
+  const mine = await tx
+    .select({ cohortId: cohortMembers.cohortId })
+    .from(cohortMembers)
+    .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+    .where(
+      and(
+        eq(cohorts.courseId, courseId),
+        eq(cohortMembers.userId, userId),
+        isNull(cohortMembers.leftAt),
+      ),
+    );
+
+  if (mine.length === 0) return null;
+
+  const sizes = await tx
+    .select({ cohortId: cohortMembers.cohortId, size: count() })
+    .from(cohortMembers)
+    .where(
+      and(
+        inArray(
+          cohortMembers.cohortId,
+          mine.map((row) => row.cohortId),
+        ),
+        isNull(cohortMembers.leftAt),
+      ),
+    )
+    .groupBy(cohortMembers.cohortId);
+
+  if (sizes.length === 0) return null;
+
+  // A learner can sit on more than one cohort for the same course over time.
+  // The largest is taken, because moderating to the bigger cohort's floor is
+  // the safe direction to be wrong in, and the alternative is choosing
+  // arbitrarily between them.
+  return Math.max(...sizes.map((row) => Number(row.size)));
+}
 
 export async function recordAssessorDecision(
   session: AuthenticatedSession,
@@ -1118,8 +1216,24 @@ export async function recordAssessorDecision(
       })
       .returning();
 
+    // How big is the cohort this learner sits in for this course? QCTO policy
+    // raises the moderation floor as a cohort shrinks, so the rate cannot be
+    // read from the assessment alone.
+    //
+    // Null where the learner is on no cohort at all, which is an individual
+    // enrolment rather than a scheduled intake. There is no cohort rule to
+    // apply to one person, so the configured rate stands.
+    const cohortSize = assessment.courseId
+      ? await cohortSizeForLearner(tx, assessment.courseId, submission.userId)
+      : null;
+
+    const required = moderationRateFor({
+      cohortSize,
+      configuredRate: Number(assessment.moderationSampleRate),
+    });
+
     const sampling = shouldModerate({
-      sampleRate: Number(assessment.moderationSampleRate),
+      sampleRate: required.rate,
       isNewAssessor: priorDecisions < NEW_ASSESSOR_DECISION_THRESHOLD,
       moderateAllForNewAssessors: assessment.moderateAllForNewAssessors,
       random: options.random,
@@ -1150,6 +1264,9 @@ export async function recordAssessorDecision(
         outcome: parsed.outcome,
         routedToModeration: sampling.moderate,
         samplingReason: sampling.reason,
+        cohortSize,
+        moderationRate: required.rate,
+        moderationRule: required.reason,
       },
     });
 
