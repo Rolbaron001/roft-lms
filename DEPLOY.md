@@ -347,17 +347,42 @@ worse than one who was never sent it.
 
 ### Automatic deploys
 
-`scripts/auto-deploy.sh` deploys whatever is on `main`, if it has moved. Run it
-from cron; it does nothing when the remote has not changed, so it is cheap to
-run often.
+`scripts/auto-deploy.sh` deploys whatever is on `main`, if it has moved. It
+does nothing when the remote has not changed, so it is safe to run as often as
+you like.
+
+**How often is a judgement, not a default.** Curiosa's server deploys once a
+day, at 16:00, on Roland's instruction of 1 September 2026:
 
 ```cron
-# Every two minutes: deploy main if it has moved
-*/2 * * * * cd $HOME/roft-lms && ./scripts/auto-deploy.sh >> /var/log/roft-deploy.log 2>&1
+# 16:00 daily: deploy whatever reached main during the day.
+0 16 * * * cd $HOME/roft-lms && ./scripts/auto-deploy.sh >> $HOME/logs/roft-deploy.log 2>&1
 ```
 
-It takes a local database copy first, pulls, rebuilds **both** images, applies
-the schema and the policies, and then checks the site actually came back. If it
+Work lands on GitHub as it is finished; the server takes it at the end of the
+day. That keeps the site stable while a day's work is in flight, and stops
+every push costing a build, a pull and a restart. The images are still built on
+every push, so by 16:00 the image for whatever is on `main` already exists and
+the deploy is a pull rather than a wait.
+
+A two-minute poll is the other reasonable setting, and was what this server ran
+until the daily schedule replaced it. Use it where the site is not in front of
+anyone yet.
+
+To deploy sooner than the schedule, run it by hand on the server:
+
+```bash
+cd ~/roft-lms && ./scripts/auto-deploy.sh
+```
+
+**Cron runs in the server's local time.** Curiosa's server is on
+Africa/Johannesburg, while the deploy log timestamps itself in UTC, so a log
+line reads two hours behind the crontab entry that produced it. Check which one
+a machine is on before copying times between them.
+
+It takes a local database copy first, pulls, fetches **both** images, applies
+the schema and the policies, starts the application, and then checks the site
+actually came back. If it
 does not, the log says so in a line you cannot miss.
 
 **Polling rather than a GitHub Action or a webhook.** An Action that deploys has
