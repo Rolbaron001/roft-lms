@@ -44,6 +44,16 @@ export const PERMISSIONS = [
   "enrolment:read_own",
   "enrolment:manage",
 
+  // Delivery: the dated occasions a cohort meets, and who was there.
+  //
+  // Scheduling and taking a register are separated because they are done by
+  // different people at different times. A coordinator lays out the term; the
+  // facilitator standing in front of the cohort marks who came. Giving the
+  // facilitator the power to reschedule as a side effect of marking a register
+  // would be a permission granted by accident.
+  "session:manage",
+  "attendance:record",
+
   // Assessment.
   "assessment:author",
   "assessment:take",
@@ -119,6 +129,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "competency:manage",
     "enrolment:read_all",
     "enrolment:manage",
+    "session:manage",
+    "attendance:record",
     "assessment:author",
     "evidence:read_all",
     "certificate:issue",
@@ -150,6 +162,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "competency:manage",
     "enrolment:read_all",
     "enrolment:manage",
+    "session:manage",
+    "attendance:record",
     "assessment:author",
     "report:tenant",
     ...SELF_SERVICE,
@@ -204,6 +218,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "course:read",
     "enrolment:read_all",
     "enrolment:manage",
+    "session:manage",
+    "attendance:record",
     "report:tenant",
     "report:statutory",
     "certificate:read_all",

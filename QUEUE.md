@@ -15,6 +15,35 @@ about whether it is finished. Ticked as it lands, with the commit.
 
 ---
 
+## Everything here is built for every tenant
+
+**Standing constraint, set by Roland on 1 September 2026.** Nothing in this
+queue is built for Curiosa alone. The register is drawn from Curiosa's
+practice because they are the tenant testing it, but every item lands as a
+capability of the platform.
+
+That has two halves, and they are different problems.
+
+**Isolation** is structural rather than a matter of discipline. Every table
+carries `organisation_id`; `db/policies.sql` finds those tables by that column
+and applies row-level security to each; the application connects as a role that
+cannot bypass it. `tests/tenant-isolation.test.ts` fails if any table exists
+with a tenant column and no policy, so a new table cannot be added carelessly
+and quietly go unprotected. Adding sessions, session workbooks and attendance
+took the count from 63 tables to 66 with no policy written by hand.
+
+**Neutrality** is a matter of judgement and needs watching. Where Curiosa's way
+of working is one option among several, it belongs in configuration rather than
+in the code: the naming convention already works this way. Where their practice
+follows from the regulator rather than from preference - a Statement of Results
+per study unit, a facilitator-led session, an accreditation number per
+qualification - it is the platform's behaviour and applies to everyone.
+
+The test of any item here is that a second tenant with different habits could
+adopt it without a fork.
+
+---
+
 ## Why this order
 
 Three things decide it, and none of them is preference.
@@ -82,12 +111,34 @@ makes this a migration rather than a form change.
 curriculum module it covers, a facilitator can take a register against one, and
 the platform can state a learner's attendance overall and to date.
 
-- [ ] 2.1 A session exists: date, time, cohort, facilitator, module, delivery mode
-- [ ] 2.2 Roll-out schedule per cohort, with workbook handout, submission and feedback against each lecture
-- [ ] 2.3 Register per session: present or absent per learner, taken by the facilitator
-- [ ] 2.4 Attendance percentages, overall and to date, per learner and per cohort
-- [ ] 2.5 Cohort naming from programme and induction date
-- [ ] 2.6 Live session link on the session, and in the notification that announces it
+- [x] 2.1 A session exists: date, time, cohort, facilitator, module, delivery mode
+- [x] 2.2 Roll-out schedule per cohort, with workbook handout, submission and feedback against each lecture
+- [x] 2.3 Register per session: present or absent per learner, taken by the facilitator
+- [x] 2.4 Attendance percentages, overall and to date, per learner and per cohort
+- [x] 2.5 Cohort naming from programme and induction date
+- [ ] 2.6 Live session link on the session, and in the notification that announces it *(link done; the notification waits on the mail relay)*
+
+**Landed.** Three tables, a library, a roll-out view on the cohort, and a
+register a facilitator takes with the room in front of them.
+
+The arithmetic is checked against the client's own workbook rather than against
+a number I chose. One of their learners reads 0.4571428571 overall and
+0.8421052632 to date; those are 16 present of 35 lectures, and 16 of the 19
+held. The test reproduces both from the same shape of data, so the two
+percentages mean what they mean to the client.
+
+Two exclusions carry as much weight as the totals, and both are tested. A
+cancelled lecture never happened, so counting it would mark a learner down for
+the provider's decision. A walk-in is voluntary, so absence from it is not a
+fact about the learner. Either one quietly dropped in a later rewrite would
+produce a plausible wrong number rather than a visible failure.
+
+Excused is held apart from absent because the learner support procedure turns
+on the difference, and a register that cannot tell them apart cannot evidence
+that the procedure was followed.
+
+Cancelling requires a reason, because an unexplained gap in a schedule is
+precisely what a monitoring visit asks about.
 
 **The regulatory point.** Credit-bearing programmes require facilitator-led
 delivery; self-study alone is not permitted. Until the platform knows what a

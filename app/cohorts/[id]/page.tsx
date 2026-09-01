@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cohortAttendance, cohortSchedule } from "@/lib/scheduling";
+import { Rollout } from "./rollout";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
@@ -40,6 +42,11 @@ export default async function CohortPage({
   const active = detail.members.filter((member) => member.leftAt === null);
 
   const canManage = session.permissions.includes("enrolment:manage");
+  const canSchedule = session.permissions.includes("session:manage");
+  const canRegister = session.permissions.includes("attendance:record");
+
+  const rollout = await cohortSchedule(session, detail.cohort.id);
+  const attendance = await cohortAttendance(session, detail.cohort.id);
 
   const timings = await stepTimings(
     session,
@@ -173,7 +180,68 @@ export default async function CohortPage({
 
       <div className="mt-6">
         <Card
-          title="The schedule"
+          title="Roll-out"
+          description="The dated sessions this cohort meets for, and the register taken at each. Where a programme carries credits it has to be facilitator-led, and this is the evidence that it was."
+        >
+          <Rollout
+            cohortId={detail.cohort.id}
+            sessions={rollout}
+            canManage={canSchedule}
+            canRegister={canRegister}
+          />
+        </Card>
+      </div>
+
+      {attendance.countable > 0 ? (
+        <div className="mt-6">
+          <Card
+            title="Attendance"
+            description="Overall is against the whole programme; to date is against what has actually been held. Early in a programme the first is meaninglessly low and the second is the honest one, so both are given rather than one being chosen for you."
+          >
+            <p className="mb-3 text-sm text-[var(--muted)]">
+              {attendance.held} of {attendance.countable} sessions held.
+              Cancelled sessions and voluntary walk-ins are left out of both.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                    <th className="pb-2">Learner</th>
+                    <th className="pb-2">Present</th>
+                    <th className="pb-2">Absent</th>
+                    <th className="pb-2">Excused</th>
+                    <th className="pb-2">To date</th>
+                    <th className="pb-2">Overall</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendance.learners.map((line) => (
+                    <tr
+                      key={line.userId}
+                      className="border-t border-[var(--border)]"
+                    >
+                      <td className="py-2 pr-3">{line.name}</td>
+                      <td className="py-2 pr-3 tabular-nums">{line.present}</td>
+                      <td className="py-2 pr-3 tabular-nums">{line.absent}</td>
+                      <td className="py-2 pr-3 tabular-nums">{line.excused}</td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {line.toDatePercent}%
+                      </td>
+                      <td className="py-2 tabular-nums">
+                        {line.overallPercent}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <Card
+          title="Course step release"
           description="Held as days from the start. Change the start date and every one of these moves with it."
         >
           {canManage ? (

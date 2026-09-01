@@ -12,6 +12,12 @@ import {
   setSchedule,
 } from "@/lib/cohorts";
 import { EnrolmentError } from "@/lib/enrolment";
+import {
+  scheduleSession,
+  SchedulingError,
+  setSessionStatus,
+  takeRegister,
+} from "@/lib/scheduling";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type CohortActionState = { error?: string; done?: string };
@@ -34,6 +40,7 @@ async function run(
     if (
       error instanceof CohortError ||
       error instanceof EnrolmentError ||
+      error instanceof SchedulingError ||
       error instanceof PermissionDeniedError
     ) {
       return { error: error.message };
@@ -164,4 +171,99 @@ function dayValue(formData: FormData, name: string): number | null {
 
   const value = Number(raw);
   return Number.isFinite(value) ? Math.trunc(value) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Sessions and the register
+// ---------------------------------------------------------------------------
+
+export async function scheduleSessionAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      scheduleSession(session, {
+        cohortId,
+        kind: (field(formData, "kind") || "lecture") as "lecture",
+        title: field(formData, "title") || undefined,
+        scheduledDate: field(formData, "scheduledDate"),
+        startTime: field(formData, "startTime") || undefined,
+        endTime: field(formData, "endTime") || undefined,
+        deliveryMode: (field(formData, "deliveryMode") || "virtual") as "virtual",
+        meetingUrl: field(formData, "meetingUrl") || undefined,
+        venue: field(formData, "venue") || undefined,
+        sequence: field(formData, "sequence")
+          ? Number(field(formData, "sequence"))
+          : undefined,
+      }),
+    "Session added to the schedule.",
+    [`/cohorts/${cohortId}`],
+  );
+}
+
+export async function setSessionStatusAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+  const status = field(formData, "status") as
+    | "scheduled"
+    | "completed"
+    | "cancelled"
+    | "postponed";
+
+  return run(
+    () => setSessionStatus(session, sessionId, status, field(formData, "note")),
+    "Session updated.",
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
+  );
+}
+
+/**
+ * Takes the register from the form.
+ *
+ * Every learner on the register is submitted together, including the ones left
+ * unmarked, which arrive as an empty value and are skipped. Submitting only
+ * the changed rows would make an unmarked learner indistinguishable from one
+ * marked and then cleared.
+ */
+export async function takeRegisterAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+
+  const marks: {
+    userId: string;
+    status: "present" | "absent" | "excused";
+    note?: string;
+  }[] = [];
+
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("mark:")) continue;
+    const status = String(value);
+    if (status !== "present" && status !== "absent" && status !== "excused") {
+      continue;
+    }
+    const userId = key.slice("mark:".length);
+    marks.push({
+      userId,
+      status,
+      note: field(formData, `note:${userId}`) || undefined,
+    });
+  }
+
+  return run(
+    () => takeRegister(session, sessionId, marks),
+    `Register taken: ${marks.length} marked.`,
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
+  );
 }

@@ -17,6 +17,7 @@ import {
   lessons,
   programmeDocuments,
   qualifications,
+  studyUnits,
 } from "./curriculum";
 import { assessments } from "./assessment";
 
@@ -457,5 +458,231 @@ export const stepReleases = pgTable(
     uniqueIndex("step_releases_unique_idx").on(t.cohortId, t.stepId),
     index("step_releases_cohort_idx").on(t.cohortId),
     index("step_releases_org_idx").on(t.organisationId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Sessions: the dated occasions a cohort actually meets.
+//
+// Nothing here existed before, and its absence was the largest single gap
+// between the platform and how the client works. Everything they run turns on
+// a lecture happening on a date: the roll-out schedule, the attendance
+// register, the workbook handed out and collected, the summative sitting, and
+// the monitoring visit that asks for evidence that any of it took place.
+//
+// It also carries a regulatory weight. A credit-bearing programme requires
+// facilitator-led delivery; self-study alone is not permitted. Without a record
+// of sessions the platform cannot evidence that the delivery happened, which is
+// precisely what a monitoring visit asks to see.
+// ---------------------------------------------------------------------------
+
+/**
+ * What kind of occasion this is.
+ *
+ * Split out rather than left as free text because the client's own schedule
+ * distinguishes them and each behaves differently: an induction is dated and
+ * attended but sits outside the lecture count, a summative sitting is
+ * invigilated, and a walk-in is voluntary so absence from it means nothing.
+ */
+export const sessionKind = pgEnum("session_kind", [
+  /** The opening session. Dated and attended, but outside the lecture count. */
+  "induction",
+  /** An ordinary facilitator-led lecture. */
+  "lecture",
+  /** Revision, held two to four weeks after the study it revises. */
+  "revision",
+  /** A summative assessment sitting. Invigilated. */
+  "summative",
+  /** The mock external assessment, run under EISA conditions. */
+  "mock_eisa",
+  /** Workplace experience induction, for coaches and learners together. */
+  "workplace_induction",
+  /**
+   * The fortnightly workplace walk-in. Voluntary by design, so absence from it
+   * is not a fact about the learner and this kind is left out of attendance.
+   */
+  "walk_in",
+]);
+
+export const sessionStatus = pgEnum("session_status", [
+  /** On the schedule, not yet held. The client's "Not Yet Started". */
+  "scheduled",
+  "completed",
+  "cancelled",
+  "postponed",
+]);
+
+export const deliveryMode = pgEnum("delivery_mode", [
+  "virtual",
+  "in_person",
+  "blended",
+]);
+
+/**
+ * Named for the cohort rather than called `sessions` alone: this schema
+ * already has a `sessions` table, and it is the one that holds sign-ins. Two
+ * tables of that name in one codebase is a bug waiting for whoever reads the
+ * shorter name and assumes.
+ */
+export const cohortSessions = pgTable(
+  "cohort_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+
+    /**
+     * The lecture number the client counts by, or null for anything outside
+     * that count: an induction, a walk-in, a summative sitting. Their schedule
+     * numbers lectures and dates the rest alongside them.
+     */
+    sequence: integer("sequence"),
+    kind: sessionKind("kind").notNull().default("lecture"),
+    title: text("title"),
+
+    /**
+     * Date and clock time held apart, and the time as text.
+     *
+     * A lecture is at 18:30 in the provider's own week. Storing that as an
+     * instant forces a time zone onto something that does not have one, and
+     * then moves the lecture whenever the server's zone is read differently.
+     * This platform has already been bitten once by a machine reading local
+     * time where the reader assumed UTC. The date is a date; the time is what
+     * the schedule says.
+     */
+    scheduledDate: date("scheduled_date").notNull(),
+    startTime: text("start_time"),
+    endTime: text("end_time"),
+
+    deliveryMode: deliveryMode("delivery_mode").notNull().default("virtual"),
+    /** Where a virtual session is held. Sent with the notice announcing it. */
+    meetingUrl: text("meeting_url"),
+    venue: text("venue"),
+
+    facilitatorId: uuid("facilitator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /** What this session covers. Both optional: an induction covers neither. */
+    curriculumModuleId: uuid("curriculum_module_id").references(
+      () => curriculumModules.id,
+      { onDelete: "set null" },
+    ),
+    studyUnitId: uuid("study_unit_id").references(() => studyUnits.id, {
+      onDelete: "set null",
+    }),
+
+    status: sessionStatus("status").notNull().default("scheduled"),
+    /** Why a session was cancelled or postponed. */
+    statusNote: text("status_note"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("cohort_sessions_cohort_idx").on(t.cohortId),
+    index("cohort_sessions_date_idx").on(t.scheduledDate),
+    index("cohort_sessions_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What happens to a workbook at a session.
+ *
+ * The client's roll-out schedule carries three columns against each lecture:
+ * which workbook is handed out, which is submitted, and which comes back with
+ * feedback. They are usually three different workbooks at the same lecture,
+ * which is why this is a row per role rather than three columns on the session.
+ */
+export const sessionWorkbookRole = pgEnum("session_workbook_role", [
+  "handout",
+  "submission",
+  "feedback",
+  /** Moderation falling in the period this session sits in. */
+  "moderation",
+]);
+
+export const sessionWorkbooks = pgTable(
+  "session_workbooks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cohortSessions.id, { onDelete: "cascade" }),
+    assessmentId: uuid("assessment_id")
+      .notNull()
+      .references(() => assessments.id, { onDelete: "cascade" }),
+    role: sessionWorkbookRole("role").notNull(),
+  },
+  (t) => [
+    uniqueIndex("session_workbooks_unique_idx").on(
+      t.sessionId,
+      t.assessmentId,
+      t.role,
+    ),
+    index("session_workbooks_session_idx").on(t.sessionId),
+    index("session_workbooks_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Whether a learner was there.
+ *
+ * The client records present or absent against roughly thirty-five dated
+ * lectures per cohort. Excused is kept apart from absent rather than folded
+ * into it: their support procedure turns on a learner who missed a session for
+ * a reason the provider accepted, and a register that cannot tell the two
+ * apart cannot evidence that the procedure was followed.
+ */
+export const attendanceStatus = pgEnum("attendance_status", [
+  "present",
+  "absent",
+  /** Absent for a reason the provider accepted. Counted separately. */
+  "excused",
+]);
+
+export const attendanceRecords = pgTable(
+  "attendance_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cohortSessions.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    status: attendanceStatus("status").notNull(),
+    note: text("note"),
+
+    /**
+     * Who took the register, and when. A register is evidence, so the question
+     * a monitoring visit asks is not only who was present but who says so.
+     */
+    markedById: uuid("marked_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    markedAt: timestamp("marked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("attendance_records_unique_idx").on(t.sessionId, t.userId),
+    index("attendance_records_user_idx").on(t.userId),
+    index("attendance_records_org_idx").on(t.organisationId),
   ],
 );
