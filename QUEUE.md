@@ -205,12 +205,34 @@ cannot be built before sessions exist, not because it matters less.*
 per-cohort consolidated workbook by hand, because the platform holds what they
 hold.
 
-- [ ] 4.1 Active programmes across cohorts, with training, EISA registration and assessment dates
-- [ ] 4.2 The assessment grid: every learner against every workbook and summative, by date
-- [ ] 4.3 The client's own statuses: Submitted, Competent, Not Yet Competent, Remediation, Redo, Absent first attempt, Transferred, Left the programme
-- [ ] 4.4 Workplace modules as submitted, then quality assured
-- [ ] 4.5 Per-cohort task list with percentage complete
-- [ ] 4.6 Monitoring visit status against a cohort
+- [x] 4.1 Active programmes across cohorts, with training, EISA registration and assessment dates
+- [x] 4.2 The assessment grid: every learner against every workbook and summative, by date
+- [x] 4.3 The client's own statuses, derived rather than stored
+- [x] 4.4 Workplace modules as submitted, then quality assured *(already built; verified rather than rebuilt)*
+- [x] 4.5 Per-cohort task list with percentage complete
+- [x] 4.6 Monitoring visit status against a cohort
+
+**Landed.** A tracker across every cohort, and an assessment grid within one.
+
+Nothing in it stores a status that could be worked out. The grid reads from
+submissions, decisions and registers rather than keeping its own copy, because
+a second place to say the same thing is a second place to disagree - and a
+spreadsheet maintained by hand is wrong from the moment something happens until
+somebody remembers to type it in, with no way to tell by looking which state it
+is in.
+
+Absent is the case that shows why. A learner who missed the sitting has no
+submission for an absence to be recorded on, so it is read from the register of
+the session the work was written at. That only became possible once sessions
+existed, which is why this stage sat behind stage 2.
+
+Workplace modules already moved through submitted, coach-signed and
+accepted-by-assessor, so 4.4 was verified rather than rebuilt.
+
+One rule worth guarding, and tested: a cancelled task leaves both halves of the
+percentage rather than counting as done. Otherwise a cohort reaches a hundred
+per cent by abandoning everything outstanding, and the number a coordinator
+trusts rises fastest exactly when a programme is falling apart.
 
 **Depends on 2.** Attendance and the schedule are half of what these sheets
 hold. Building this first would mean building it twice.

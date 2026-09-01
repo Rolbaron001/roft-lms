@@ -352,6 +352,15 @@ export const cohortStatus = pgEnum("cohort_status", [
   "cancelled",
 ]);
 
+export const monitoringVisitStatus = pgEnum("monitoring_visit_status", [
+  "not_scheduled",
+  "scheduled",
+  "conducted",
+  /** Been and gone, with findings the provider still has to answer. */
+  "findings_outstanding",
+  "closed",
+]);
+
 export const cohorts = pgTable(
   "cohorts",
   {
@@ -382,6 +391,35 @@ export const cohorts = pgTable(
       onDelete: "set null",
     }),
     status: cohortStatus("status").notNull().default("planned"),
+
+    /**
+     * The external assessment dates a provider plans a cohort around.
+     *
+     * Both matter and they are months apart: there are only three assessment
+     * dates a year and registration closes about three months ahead, so a
+     * cohort that misses the registration date waits for the next cycle. Held
+     * on the cohort because that is the unit the provider registers, and shown
+     * on the tracker so the window is visible before it closes rather than
+     * after.
+     */
+    eisaRegistrationDate: date("eisa_registration_date"),
+    eisaDate: date("eisa_date"),
+    /** "No EISA dates available", "Awaiting rewrite date", and so on. */
+    eisaNote: text("eisa_note"),
+
+    /**
+     * Whether the quality council has been to look at this cohort, and when.
+     *
+     * Kept per cohort rather than per provider because that is how it is
+     * asked: a monitoring visit examines a cohort's records, and the answer
+     * "yes, on another programme, two years ago" is not the answer to the
+     * question.
+     */
+    monitoringVisitStatus: monitoringVisitStatus("monitoring_visit_status")
+      .notNull()
+      .default("not_scheduled"),
+    monitoringVisitDate: date("monitoring_visit_date"),
+    monitoringVisitNote: text("monitoring_visit_note"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -684,5 +722,70 @@ export const attendanceRecords = pgTable(
     uniqueIndex("attendance_records_unique_idx").on(t.sessionId, t.userId),
     index("attendance_records_user_idx").on(t.userId),
     index("attendance_records_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Where a piece of work on a cohort has got to.
+ *
+ * The client's own tracker uses "Not Yet Started", "Complete", "Cancelled" and
+ * "Postponed", and drives a percentage complete from them. The same four words
+ * are used here rather than a tidier set, because the tracker is read by
+ * people who have been using those words for years and a rename buys nothing.
+ */
+export const taskStatus = pgEnum("task_status", [
+  "not_yet_started",
+  "in_progress",
+  "complete",
+  "cancelled",
+  "postponed",
+]);
+
+/**
+ * The work of running a cohort, as opposed to the teaching of it.
+ *
+ * Sessions cover what the learners attend. This covers everything else a
+ * coordinator is tracking on a spreadsheet: material to be readied, documents
+ * to be submitted, a moderator to be appointed, certificates to be chased.
+ *
+ * Deliberately thin. This is not a project management tool and should not grow
+ * into one; it exists so that the one sheet per cohort the client keeps by
+ * hand has somewhere to live next to the cohort it describes.
+ */
+export const cohortTasks = pgTable(
+  "cohort_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+
+    name: text("name").notNull(),
+    description: text("description"),
+    status: taskStatus("status").notNull().default("not_yet_started"),
+
+    /** Who is doing it. Null for something nobody has picked up yet. */
+    assigneeId: uuid("assignee_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    startDate: date("start_date"),
+    dueDate: date("due_date"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+
+    sortOrder: integer("sort_order").notNull().default(0),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("cohort_tasks_cohort_idx").on(t.cohortId),
+    index("cohort_tasks_org_idx").on(t.organisationId),
   ],
 );

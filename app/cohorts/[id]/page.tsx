@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cohortAttendance, cohortSchedule } from "@/lib/scheduling";
+import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
+import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
@@ -21,6 +23,22 @@ import {
  * The blocked list comes first deliberately. It is the only part a facilitator
  * has to act on today; the schedule and the register are reference.
  */
+/**
+ * The words the client already uses on this grid. "C" and "NYC" are theirs and
+ * are read at a glance by people who have used them for years; spelling them
+ * out would make the grid wider and no clearer.
+ */
+const GRID_LABEL: Record<string, string> = {
+  not_started: "—",
+  draft: "Started",
+  submitted: "Submitted",
+  competent: "C",
+  not_yet_competent: "NYC",
+  remediation: "Remediation",
+  absent: "Absent",
+  left: "Left",
+};
+
 export default async function CohortPage({
   params,
 }: {
@@ -47,6 +65,8 @@ export default async function CohortPage({
 
   const rollout = await cohortSchedule(session, detail.cohort.id);
   const attendance = await cohortAttendance(session, detail.cohort.id);
+  const grid = await cohortGrid(session, detail.cohort.id);
+  const tasks = await cohortTaskList(session, detail.cohort.id);
 
   const timings = await stepTimings(
     session,
@@ -238,6 +258,80 @@ export default async function CohortPage({
           </Card>
         </div>
       ) : null}
+
+      {grid.assessments.length > 0 && grid.learners.length > 0 ? (
+        <div className="mt-6">
+          <Card
+            title="Assessment"
+            description="Every learner against every piece of assessed work, in the order it is collected. Read from submissions, decisions and registers rather than kept by hand, so it cannot disagree with them."
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                    <th className="pb-2 pr-3">Learner</th>
+                    {grid.assessments.map((column) => (
+                      <th key={column.id} className="pb-2 pr-3">
+                        <span className="block">{column.title}</span>
+                        {column.dueOn ? (
+                          <span className="block font-normal normal-case tabular-nums">
+                            {column.dueOn}
+                          </span>
+                        ) : null}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {grid.learners.map((row) => (
+                    <tr
+                      key={row.userId}
+                      className="border-t border-[var(--border)]"
+                    >
+                      <td className="py-2 pr-3 whitespace-nowrap">
+                        {row.name}
+                        {row.leftAt ? (
+                          <span className="ml-2 text-xs text-[var(--muted)]">
+                            left
+                          </span>
+                        ) : null}
+                      </td>
+                      {row.cells.map((cell) => (
+                        <td
+                          key={cell.assessmentId}
+                          className="py-2 pr-3 whitespace-nowrap"
+                          title={cell.on ?? undefined}
+                        >
+                          {GRID_LABEL[cell.status] ?? cell.status}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Absent is read from the register of the sitting the work was
+              written at, not from the submission, because a learner who did
+              not attend has no submission for it to be recorded on.
+            </p>
+          </Card>
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <Card
+          title="Work on this cohort"
+          description="What has to happen around the teaching: material readied, documents submitted, a moderator appointed, certificates chased."
+        >
+          <CohortTasks
+            cohortId={detail.cohort.id}
+            tasks={tasks}
+            progress={taskProgress(tasks)}
+            canManage={canSchedule}
+          />
+        </Card>
+      </div>
 
       <div className="mt-6">
         <Card

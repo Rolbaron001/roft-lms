@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/people", label: "People", permission: "user:invite" },
   { href: "/capture", label: "Capture", permission: "assessment:author" },
   { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },
+  { href: "/tracker", label: "Tracker", permission: "enrolment:read_all" },
   // Everyone who has been given a platform mailbox. The page itself explains
   // it when somebody has not.
   { href: "/mail", label: "Mail", permission: "report:own" },

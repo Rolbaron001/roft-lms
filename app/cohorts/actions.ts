@@ -18,6 +18,11 @@ import {
   setSessionStatus,
   takeRegister,
 } from "@/lib/scheduling";
+import {
+  addCohortTask,
+  setTaskStatus,
+  TrackerError,
+} from "@/lib/tracker";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type CohortActionState = { error?: string; done?: string };
@@ -41,6 +46,7 @@ async function run(
       error instanceof CohortError ||
       error instanceof EnrolmentError ||
       error instanceof SchedulingError ||
+      error instanceof TrackerError ||
       error instanceof PermissionDeniedError
     ) {
       return { error: error.message };
@@ -265,5 +271,49 @@ export async function takeRegisterAction(
     () => takeRegister(session, sessionId, marks),
     `Register taken: ${marks.length} marked.`,
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The work of running a cohort
+// ---------------------------------------------------------------------------
+
+export async function addCohortTaskAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      addCohortTask(session, {
+        cohortId,
+        name: field(formData, "name"),
+        description: field(formData, "description") || undefined,
+        startDate: field(formData, "startDate") || undefined,
+        dueDate: field(formData, "dueDate") || undefined,
+      }),
+    "Task added.",
+    [`/cohorts/${cohortId}`, "/tracker"],
+  );
+}
+
+export async function setTaskStatusAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      setTaskStatus(
+        session,
+        field(formData, "taskId"),
+        field(formData, "status") as "complete",
+      ),
+    "Task updated.",
+    [`/cohorts/${cohortId}`, "/tracker"],
   );
 }
