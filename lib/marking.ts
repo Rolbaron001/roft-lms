@@ -4,10 +4,12 @@ import {
   assessmentCriteria,
   assessmentItemCriteria,
   assessmentItems,
+  assessmentPapers,
   assessmentSections,
   assessmentSubmissions,
   assessments,
   formativeFeedback,
+  sectionFeedback,
   itemResponses,
   rubricDescriptors,
   rubricDimensions,
@@ -539,6 +541,124 @@ export async function returnFeedback(
 }
 
 /** What a learner sees when their workbook comes back. */
+/**
+ * A facilitator's comment on one section of a learner's work.
+ *
+ * The submission-level comment says how the whole piece went. This says which
+ * part was weak, attached to the part, which is what makes feedback
+ * developmental rather than a verdict. A learner reading "your referencing is
+ * inconsistent" under the section it applies to can act on it; the same
+ * sentence at the foot of twenty questions is a riddle.
+ *
+ * One comment per section, edited rather than appended: a thread of comments on
+ * one section reads as a conversation nobody was having.
+ */
+export async function commentOnSection(
+  session: AuthenticatedSession,
+  input: { submissionId: string; sectionId: string; comments: string },
+) {
+  assertSessionCan(session, "assessment:assess");
+
+  const comments = input.comments.trim();
+  if (comments.length < 10) {
+    throw new MarkingError(
+      "Say something the learner can use. Returning an empty comment looks, on the record, exactly like feedback that was given.",
+      "invalid",
+    );
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    const paper = await readMarkedPaper(tx, input.submissionId);
+
+    if (paper.learnerId === session.userId) {
+      throw new MarkingError("You cannot mark your own work.", "not_permitted");
+    }
+
+    // The section has to belong to the paper being marked. Without this a
+    // comment could be attached to a section of an entirely different
+    // assessment, where it would surface against work it was never about.
+    const [section] = await tx
+      .select({ id: assessmentSections.id, paperId: assessmentSections.paperId })
+      .from(assessmentSections)
+      .where(eq(assessmentSections.id, input.sectionId));
+
+    if (!section) {
+      throw new MarkingError("That section does not exist.", "invalid");
+    }
+
+    // Which assessment this submission is actually against, read from the
+    // submission rather than inferred, so the comparison below is exact.
+    const [submission] = await tx
+      .select({ assessmentId: assessmentSubmissions.assessmentId })
+      .from(assessmentSubmissions)
+      .where(eq(assessmentSubmissions.id, input.submissionId));
+
+    const belongs = await tx
+      .select({ id: assessmentPapers.id })
+      .from(assessmentPapers)
+      .where(
+        and(
+          eq(assessmentPapers.id, section.paperId),
+          eq(assessmentPapers.assessmentId, submission.assessmentId),
+        ),
+      );
+
+    if (belongs.length === 0) {
+      throw new MarkingError(
+        "That section belongs to a different assessment, so a comment on it would appear against work it was never about.",
+        "invalid",
+      );
+    }
+
+    const [saved] = await tx
+      .insert(sectionFeedback)
+      .values({
+        organisationId: session.organisationId,
+        submissionId: input.submissionId,
+        sectionId: input.sectionId,
+        facilitatorId: session.userId,
+        comments,
+      })
+      .onConflictDoUpdate({
+        target: [sectionFeedback.submissionId, sectionFeedback.sectionId],
+        set: {
+          comments,
+          facilitatorId: session.userId,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "assessment.section_comment",
+      entityType: "assessment_submission",
+      entityId: input.submissionId,
+      after: { sectionId: input.sectionId },
+    });
+
+    return saved;
+  });
+}
+
+/** Every section comment on one submission. */
+export async function sectionComments(
+  session: AuthenticatedSession,
+  submissionId: string,
+) {
+  return withTenant(session.organisationId, (tx) =>
+    tx
+      .select({
+        sectionId: sectionFeedback.sectionId,
+        comments: sectionFeedback.comments,
+        updatedAt: sectionFeedback.updatedAt,
+      })
+      .from(sectionFeedback)
+      .where(eq(sectionFeedback.submissionId, submissionId)),
+  );
+}
+
 export async function getFeedback(
   session: AuthenticatedSession,
   submissionId: string,

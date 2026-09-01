@@ -156,11 +156,34 @@ consolidated workbook the client supplied.
 receiving a Word document by email, and a facilitator comments on a section of
 their work where the work is.
 
-- [ ] 3.1 Question types: multiple choice, matching columns, true/false with and without justification, short answer, essay, scenario
-- [ ] 3.2 Answers captured and saved as the learner works, not only on submit
-- [ ] 3.3 Per-section facilitator commenting, developmental and attached to the section
-- [ ] 3.4 Rubrics attached to an assessment, and more than one version of an instrument held at once
-- [ ] 3.5 Video by external link on a lesson
+- [x] 3.1 Question types: multiple choice, matching columns, true/false with and without justification, short answer, essay, scenario
+- [x] 3.2 Answers captured and saved as the learner works, not only on submit
+- [x] 3.3 Per-section facilitator commenting, developmental and attached to the section
+- [x] 3.4 Rubrics attached to an assessment, and more than one version of an instrument held at once *(already built; verified rather than rebuilt)*
+- [x] 3.5 Video by external link on a lesson *(already built; verified rather than rebuilt)*
+
+**Landed.** Less was missing than the assessment implied, and checking first
+saved rebuilding two of the five. Rubrics already attach to an item, papers
+already hold V1 and V2, and a lesson already carries an external link that the
+course player renders. Six of the eight question types existed.
+
+What was genuinely absent: matching columns, true-or-false-with-justification,
+draft saving, and per-section feedback. Also, though the assessment did not say
+so, the learner's form had no way to type at all: written answers had a type and
+a marking path but no textarea, so an essay question could be authored and never
+answered.
+
+Two marking rules are the part worth guarding. A matching item is all or
+nothing, the same way a multiple-response item already was, because partial
+credit on one type only would be a second marking philosophy hiding inside the
+first. And a justified true-or-false is never auto-awarded even though half of
+it could be: the box is exactly the half a guess gets right, so awarding on it
+would hand full marks to a guess and file it as evidence of competence.
+
+The trap in draft saving was the attempt count. A draft is the attempt already
+begun, so submitting finishes it; without that a learner who saved once would
+have silently spent two of the attempts they were allowed and found out at the
+worst moment.
 
 **The most repeated request in the meetings**, and the one that changes what a
 workbook *is* rather than adding a screen. Oral assessment already exists and is

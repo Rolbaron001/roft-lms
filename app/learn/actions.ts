@@ -4,13 +4,15 @@ import { recordStepOpened, SpineError } from "@/lib/spine";
 import { revalidatePath } from "next/cache";
 import { requestContext, requireSession } from "@/lib/request";
 import { EnrolmentError, markLessonComplete } from "@/lib/enrolment";
-import { AssessmentError, submitQuiz } from "@/lib/assessment";
+import { AssessmentError, saveQuizDraft, submitQuiz } from "@/lib/assessment";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type LearnState = { error?: string };
 
 export type QuizState = {
   error?: string;
+  /** When a draft was last kept, so the learner can see it happened. */
+  savedAt?: string;
   result?: {
     score: number;
     maxScore: number;
@@ -19,20 +21,52 @@ export type QuizState = {
   };
 };
 
+/**
+ * Reads a workbook form into the shape a submission stores.
+ *
+ * Two kinds of field, and they are kept in separate keys rather than merged
+ * into one list:
+ *
+ *   item:<id>   a chosen option, or "promptId:optionId" for a matching pair.
+ *               Radio buttons contribute one, checkboxes and matching several.
+ *   text:<id>   what the learner wrote, stored under "text:<id>".
+ *
+ * Merging prose into the same list as the choices would work right up until a
+ * true-or-false-with-justification item was left unanswered, at which point a
+ * one-element list could be either the choice or the justification and nothing
+ * could tell them apart. The marking engine only ever looks up an item by its
+ * own id, so the text keys sit alongside harmlessly.
+ */
+function collectAnswers(formData: FormData): Record<string, string[]> {
+  const responses: Record<string, string[]> = {};
+
+  for (const [key, value] of formData.entries()) {
+    const text = String(value);
+
+    if (key.startsWith("item:")) {
+      const itemId = key.slice("item:".length);
+      responses[itemId] = [...(responses[itemId] ?? []), text];
+      continue;
+    }
+
+    if (key.startsWith("text:")) {
+      // Blank textareas are dropped rather than stored as empty strings, so an
+      // unanswered question reads as unanswered rather than as an empty one.
+      if (text.trim().length === 0) continue;
+      responses[key] = [text];
+    }
+  }
+
+  return responses;
+}
+
 export async function submitQuizAction(
   _previous: QuizState,
   formData: FormData,
 ): Promise<QuizState> {
   const session = await requireSession();
 
-  // Answers arrive as item:<id> fields. Radio buttons contribute one value,
-  // checkboxes several, so every field is collected as a list.
-  const responses: Record<string, string[]> = {};
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith("item:")) continue;
-    const itemId = key.slice("item:".length);
-    responses[itemId] = [...(responses[itemId] ?? []), String(value)];
-  }
+  const responses = collectAnswers(formData);
 
   try {
     const context = await requestContext();
@@ -116,4 +150,29 @@ export async function openStepAction(
 
   revalidatePath(`/learn/${enrolmentId}`);
   return {};
+}
+
+/**
+ * Keeps what the learner has written so far, without submitting it.
+ *
+ * Called as they work. It spends no attempt and marks nothing; `submitQuiz`
+ * finishes the same draft rather than opening a second one.
+ */
+export async function saveQuizDraftAction(
+  _previous: QuizState,
+  formData: FormData,
+): Promise<QuizState> {
+  const session = await requireSession();
+
+  try {
+    const saved = await saveQuizDraft(session, {
+      assessmentId: String(formData.get("assessmentId") ?? ""),
+      enrolmentId: String(formData.get("enrolmentId") ?? "") || null,
+      responses: collectAnswers(formData),
+    });
+    return { savedAt: saved.savedAt.toISOString() };
+  } catch (error) {
+    if (error instanceof AssessmentError) return { error: error.message };
+    throw error;
+  }
 }

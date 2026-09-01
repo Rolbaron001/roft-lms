@@ -42,11 +42,23 @@ export const itemType = pgEnum("item_type", [
   "multiple_choice",
   "multiple_response",
   "true_false",
+  /**
+   * True or false, and say why.
+   *
+   * A separate type rather than a flag, because it marks differently: the
+   * choice can be marked by the engine and the justification cannot, so an
+   * item of this kind is always part auto-marked and part human-marked. A
+   * learner who guesses correctly and justifies it wrongly has not shown
+   * competence, and only a person can see that.
+   */
+  "true_false_justified",
   "short_answer",
   /** A structured response of several paragraphs, marked against a rubric. */
   "long_answer",
   "numeric",
   "scenario",
+  /** Two columns to be paired: prompts on the left, answers on the right. */
+  "matching",
   "file_upload",
   "observation_checklist",
 ]);
@@ -207,6 +219,21 @@ export const assessmentItems = pgTable(
     options: jsonb("options").$type<{ id: string; text: string }[]>(),
     /** Option ids that count as correct. Never sent to a learner's browser. */
     correctOptionIds: jsonb("correct_option_ids").$type<string[]>(),
+    /**
+     * The left column of a matching item. The right column is `options`, so
+     * the pool of answers is shared with every other selected-response type
+     * and nothing new has to learn how to render it.
+     */
+    matchPrompts: jsonb("match_prompts").$type<{ id: string; text: string }[]>(),
+    /**
+     * Which answer belongs to which prompt: { promptId: optionId }.
+     *
+     * Held apart from the prompts themselves for the same reason
+     * correctOptionIds is held apart from options: the prompts go to the
+     * learner's browser and this must not. Putting the answer on the prompt
+     * would send the mark scheme with the question.
+     */
+    correctMatches: jsonb("correct_matches").$type<Record<string, string>>(),
     /** Marking guidance for a human-marked item. */
     markingGuide: text("marking_guide"),
     /**
@@ -304,6 +331,15 @@ export const assessmentSubmissions = pgTable(
     // Provenance captured at submission, so evidence can be tied to a person,
     // a place and a moment during a regulatory audit.
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    /**
+     * When the learner's answers were last written down, submitted or not.
+     *
+     * Needed because a workbook is worked through across days: the learner
+     * is told when their answers were last kept, and an assessor looking at
+     * an unfinished one can tell a learner who stopped a fortnight ago from
+     * one who was still working an hour before the deadline.
+     */
+    lastSavedAt: timestamp("last_saved_at", { withTimezone: true }),
     submittedIp: text("submitted_ip"),
     submittedUserAgent: text("submitted_user_agent"),
     gpsLatitude: numeric("gps_latitude", { precision: 9, scale: 6 }),
@@ -955,6 +991,15 @@ export const itemResponses = pgTable(
     answerText: text("answer_text"),
     /** A number, where the item asks for one. */
     answerNumber: numeric("answer_number", { precision: 14, scale: 4 }),
+    /**
+     * How the learner paired a matching item: { promptId: optionId }.
+     *
+     * A prompt left unpaired is simply absent, which is the honest
+     * representation: it is not the same as pairing it wrongly, and a report
+     * that cannot tell the two apart cannot show whether a learner ran out of
+     * time or misunderstood.
+     */
+    matchedPairs: jsonb("matched_pairs").$type<Record<string, string>>(),
 
     /** Awarded by the marking engine, where the item can be marked by one. */
     autoMarks: numeric("auto_marks", { precision: 6, scale: 2 }),
@@ -1035,6 +1080,58 @@ export const assessmentItemCriteria = pgTable(
  * cluster around, so the learner knows what to re-read before the summative.
  * It is a diagnosis, not a judgement.
  */
+/**
+ * A facilitator's comment on one section of a learner's work.
+ *
+ * `formativeFeedback` already exists and is one comment on a whole submission.
+ * That is the right shape for "here is how you did", and the wrong shape for
+ * developmental feedback, which is the point of a workbook: a learner needs to
+ * know which part was weak, and a single paragraph covering twenty questions
+ * cannot say so without being read as a verdict on all of them.
+ *
+ * So this sits alongside rather than replacing it. The submission-level comment
+ * remains the summary; these are attached to the section they refer to, which
+ * is where the learner is looking when they read them.
+ *
+ * Deliberately not per item. Feedback on every question is not feedback, it is
+ * marking, and the platform already records an assessor comment against each
+ * answer for that. A section is the unit a facilitator actually thinks in.
+ */
+export const sectionFeedback = pgTable(
+  "section_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    sectionId: uuid("section_id")
+      .notNull()
+      .references(() => assessmentSections.id, { onDelete: "cascade" }),
+    facilitatorId: uuid("facilitator_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    comments: text("comments").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // One comment per section per submission, edited rather than appended.
+    // A thread of comments on one section reads as a conversation nobody had.
+    uniqueIndex("section_feedback_unique_idx").on(t.submissionId, t.sectionId),
+    index("section_feedback_submission_idx").on(t.submissionId),
+    index("section_feedback_org_idx").on(t.organisationId),
+  ],
+);
+
 export const formativeFeedback = pgTable(
   "formative_feedback",
   {

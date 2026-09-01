@@ -103,7 +103,9 @@ export default async function TakeAssessmentPage({
             type: item.type,
             points: item.points,
             options: item.options ?? [],
+            matchPrompts: item.matchPrompts,
           }))}
+          savedAnswers={view.draft?.answers}
         />
       ) : (
         // Evidence, practical observation and workplace logbook are all

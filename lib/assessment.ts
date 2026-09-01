@@ -350,6 +350,10 @@ export async function getAssessmentForLearner(
         stem: assessmentItems.stem,
         type: assessmentItems.type,
         options: assessmentItems.options,
+        // The left column of a matching item. Its answers live in
+        // correctMatches, which is deliberately not selected here: this query
+        // feeds the learner's browser.
+        matchPrompts: assessmentItems.matchPrompts,
         points: assessmentItems.points,
       })
       .from(assessmentItems)
@@ -364,6 +368,8 @@ export async function getAssessmentForLearner(
         autoScore: assessmentSubmissions.autoScore,
         maxScore: assessmentSubmissions.maxScore,
         submittedAt: assessmentSubmissions.submittedAt,
+        lastSavedAt: assessmentSubmissions.lastSavedAt,
+        responses: assessmentSubmissions.responses,
       })
       .from(assessmentSubmissions)
       .where(
@@ -374,7 +380,21 @@ export async function getAssessmentForLearner(
       )
       .orderBy(desc(assessmentSubmissions.attemptNumber));
 
-    return { assessment, items, attempts };
+    // Whatever was kept the last time the learner worked on this, so the form
+    // opens where they left it rather than empty.
+    const draft = attempts.find((attempt) => attempt.status === "draft");
+
+    return {
+      assessment,
+      items,
+      attempts,
+      draft: draft
+        ? {
+            savedAt: draft.lastSavedAt,
+            answers: (draft.responses ?? {}) as Record<string, string[]>,
+          }
+        : null,
+    };
   });
 }
 
@@ -398,8 +418,10 @@ export type MarkedResult = {
 export function markResponses(
   items: {
     id: string;
+    type?: string | null;
     points: number;
     correctOptionIds: string[] | null;
+    correctMatches?: Record<string, string> | null;
   }[],
   responses: Record<string, string[]>,
 ): { score: number; maxScore: number } {
@@ -408,6 +430,39 @@ export function markResponses(
 
   for (const item of items) {
     maxScore += item.points;
+
+    // True or false with a justification is deliberately never auto-awarded,
+    // even though half of it could be. A learner who picks the right box and
+    // justifies it wrongly has not shown competence, and the box is the half
+    // a guess gets right. Awarding the item on the choice alone would hand
+    // full marks to the guess and call it evidence. The whole item goes to a
+    // person, the same way a written answer does.
+    if (item.type === "true_false_justified") continue;
+
+    if (item.type === "matching") {
+      const correct = item.correctMatches;
+      if (!correct || Object.keys(correct).length === 0) continue;
+
+      // Pairs arrive as "promptId:optionId", so one field carries the whole
+      // answer and nothing about the form encoding has to change.
+      const given = new Map<string, string>();
+      for (const pair of responses[item.id] ?? []) {
+        const at = pair.indexOf(":");
+        if (at > 0) given.set(pair.slice(0, at), pair.slice(at + 1));
+      }
+
+      const entries = Object.entries(correct);
+      const everyPairRight =
+        given.size === entries.length &&
+        entries.every(([prompt, option]) => given.get(prompt) === option);
+
+      // All or nothing, which is how a multiple-response item is already
+      // marked here. Partial credit on one type and not the others would be a
+      // second marking philosophy hiding inside the first; an assessor can
+      // still award what they think is right.
+      if (everyPairRight) score += item.points;
+      continue;
+    }
 
     const correct = item.correctOptionIds;
     if (!correct || correct.length === 0) continue;
@@ -422,6 +477,87 @@ export function markResponses(
   }
 
   return { score, maxScore };
+}
+
+/**
+ * Saves a learner's answers without submitting them.
+ *
+ * A workbook is not a quiz taken in one sitting. The client's are worked
+ * through over a fortnight between lectures, and until now the only way to
+ * keep an answer was to submit the lot, which is also the act that spends an
+ * attempt. A learner who closed the tab lost the evening.
+ *
+ * The draft is a real submission at status `draft`, not a separate kind of
+ * thing, so submitting is a change of status rather than a copy between two
+ * tables and there is no second place for answers to live.
+ *
+ * Nothing is marked here and no attempt is spent. `submitQuiz` picks the draft
+ * up and finishes it.
+ */
+export async function saveQuizDraft(
+  session: AuthenticatedSession,
+  input: {
+    assessmentId: string;
+    enrolmentId?: string | null;
+    responses: Record<string, string[]>;
+  },
+): Promise<{ submissionId: string; savedAt: Date }> {
+  assertSessionCan(session, "assessment:take");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [assessment] = await tx
+      .select({ id: assessments.id, status: assessments.status })
+      .from(assessments)
+      .where(eq(assessments.id, input.assessmentId));
+
+    if (!assessment || assessment.status !== "published") {
+      throw new AssessmentError("Assessment not available.", "not_found");
+    }
+
+    const existing = await tx
+      .select({
+        id: assessmentSubmissions.id,
+        attemptNumber: assessmentSubmissions.attemptNumber,
+        status: assessmentSubmissions.status,
+      })
+      .from(assessmentSubmissions)
+      .where(
+        and(
+          eq(assessmentSubmissions.assessmentId, input.assessmentId),
+          eq(assessmentSubmissions.userId, session.userId),
+        ),
+      )
+      .orderBy(desc(assessmentSubmissions.attemptNumber));
+
+    const draft = existing.find((row) => row.status === "draft");
+    const savedAt = new Date();
+
+    if (draft) {
+      await tx
+        .update(assessmentSubmissions)
+        .set({ responses: input.responses, lastSavedAt: savedAt })
+        .where(eq(assessmentSubmissions.id, draft.id));
+      return { submissionId: draft.id, savedAt };
+    }
+
+    const [created] = await tx
+      .insert(assessmentSubmissions)
+      .values({
+        organisationId: session.organisationId,
+        assessmentId: input.assessmentId,
+        userId: session.userId,
+        enrolmentId: input.enrolmentId ?? null,
+        attemptNumber: (existing[0]?.attemptNumber ?? 0) + 1,
+        status: "draft",
+        responses: input.responses,
+        lastSavedAt: savedAt,
+      })
+      .returning({ id: assessmentSubmissions.id });
+
+    // Deliberately not audited. A draft saving every few seconds would bury
+    // the events that matter in a log a moderator has to read.
+    return { submissionId: created.id, savedAt };
+  });
 }
 
 export async function submitQuiz(
@@ -447,7 +583,11 @@ export async function submitQuiz(
     }
 
     const previous = await tx
-      .select({ attemptNumber: assessmentSubmissions.attemptNumber })
+      .select({
+        id: assessmentSubmissions.id,
+        attemptNumber: assessmentSubmissions.attemptNumber,
+        status: assessmentSubmissions.status,
+      })
       .from(assessmentSubmissions)
       .where(
         and(
@@ -455,10 +595,15 @@ export async function submitQuiz(
           eq(assessmentSubmissions.userId, session.userId),
         ),
       )
-      .orderBy(desc(assessmentSubmissions.attemptNumber))
-      .limit(1);
+      .orderBy(desc(assessmentSubmissions.attemptNumber));
 
-    const attemptNumber = (previous[0]?.attemptNumber ?? 0) + 1;
+    // A draft is this attempt, already begun. Submitting finishes it rather
+    // than starting another: without this the draft holds attempt 1, the
+    // submission takes attempt 2, and a learner who saved once has silently
+    // spent two of the attempts they were allowed.
+    const draft = previous.find((row) => row.status === "draft");
+    const attemptNumber =
+      draft?.attemptNumber ?? (previous[0]?.attemptNumber ?? 0) + 1;
 
     if (assessment.maxAttempts && attemptNumber > assessment.maxAttempts) {
       throw new AssessmentError(
@@ -470,8 +615,10 @@ export async function submitQuiz(
     const items = await tx
       .select({
         id: assessmentItems.id,
+        type: assessmentItems.type,
         points: assessmentItems.points,
         correctOptionIds: assessmentItems.correctOptionIds,
+        correctMatches: assessmentItems.correctMatches,
       })
       .from(assessmentItems)
       .where(eq(assessmentItems.assessmentId, input.assessmentId));
@@ -483,23 +630,35 @@ export async function submitQuiz(
     // assessor. The automatic score informs it; it does not replace it.
     const awaitingAssessor = assessment.purpose === "summative";
 
-    const [submission] = await tx
-      .insert(assessmentSubmissions)
-      .values({
-        organisationId: session.organisationId,
-        assessmentId: input.assessmentId,
-        userId: session.userId,
-        enrolmentId: input.enrolmentId ?? null,
-        attemptNumber,
-        status: awaitingAssessor ? "submitted" : "finalised",
-        responses: input.responses,
-        autoScore: score.toFixed(2),
-        maxScore: maxScore.toFixed(2),
-        submittedAt: new Date(),
-        submittedIp: input.ipAddress ?? null,
-        submittedUserAgent: input.userAgent ?? null,
-      })
-      .returning({ id: assessmentSubmissions.id });
+    const finished = {
+      status: (awaitingAssessor ? "submitted" : "finalised") as
+        | "submitted"
+        | "finalised",
+      responses: input.responses,
+      autoScore: score.toFixed(2),
+      maxScore: maxScore.toFixed(2),
+      submittedAt: new Date(),
+      submittedIp: input.ipAddress ?? null,
+      submittedUserAgent: input.userAgent ?? null,
+    };
+
+    const submission = draft
+      ? ((await tx
+          .update(assessmentSubmissions)
+          .set({ ...finished, lastSavedAt: new Date() })
+          .where(eq(assessmentSubmissions.id, draft.id))
+          .returning({ id: assessmentSubmissions.id }))[0])
+      : ((await tx
+          .insert(assessmentSubmissions)
+          .values({
+            organisationId: session.organisationId,
+            assessmentId: input.assessmentId,
+            userId: session.userId,
+            enrolmentId: input.enrolmentId ?? null,
+            attemptNumber,
+            ...finished,
+          })
+          .returning({ id: assessmentSubmissions.id }))[0]);
 
     await recordAudit(tx, {
       organisationId: session.organisationId,

@@ -42,6 +42,7 @@ import {
   recordModeration,
   shouldModerate,
   submitEvidence,
+  saveQuizDraft,
   submitQuiz,
 } from "@/lib/assessment";
 import { hashBytes, verifyIntegrity } from "@/lib/storage";
@@ -404,6 +405,87 @@ describe("taking a quiz", () => {
     await expect(
       submitQuiz(learner, { assessmentId: assessment.id, responses: {} }),
     ).rejects.toMatchObject({ code: "no_attempts_left" });
+  });
+
+  /**
+   * Saving is not submitting.
+   *
+   * A workbook is worked through over days, so a learner has to be able to
+   * keep what they have written without spending an attempt on it. The trap
+   * this guards is the one that would be invisible: if the draft took attempt
+   * one and the submission took attempt two, a learner who saved once would
+   * have quietly used both of the attempts they were allowed, and would find
+   * out at the worst moment.
+   */
+  it("does not spend an attempt on a saved draft", async () => {
+    const courseId = await publishedCourse(`Draft ${randomSuffix()}`);
+    const assessment = await createAssessment(admin, {
+      courseId,
+      title: "Workbook with one attempt",
+      maxAttempts: 1,
+    });
+    await addAssessmentItem(admin, {
+      assessmentId: assessment.id,
+      stem: "Only question",
+      options: ["Right", "Wrong"],
+      correctIndexes: [0],
+    });
+    await publishAssessment(admin, assessment.id);
+
+    await saveQuizDraft(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+    await saveQuizDraft(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+
+    // Two saves, then the one submission the learner is entitled to.
+    const result = await submitQuiz(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+    expect(result.submissionId).toBeTruthy();
+
+    // And the attempt limit still bites afterwards.
+    await expect(
+      submitQuiz(learner, { assessmentId: assessment.id, responses: {} }),
+    ).rejects.toMatchObject({ code: "no_attempts_left" });
+  });
+
+  /** Saving twice keeps one draft, not a pile of them. */
+  it("keeps one draft however many times it is saved", async () => {
+    const courseId = await publishedCourse(`Draft ${randomSuffix()}`);
+    const assessment = await createAssessment(admin, {
+      courseId,
+      title: "Workbook",
+    });
+    await addAssessmentItem(admin, {
+      assessmentId: assessment.id,
+      stem: "Question",
+      options: ["Right", "Wrong"],
+      correctIndexes: [0],
+    });
+    await publishAssessment(admin, assessment.id);
+
+    const first = await saveQuizDraft(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+    const second = await saveQuizDraft(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+
+    expect(second.submissionId).toBe(first.submissionId);
+
+    // And submitting finishes that same one rather than opening another.
+    const submitted = await submitQuiz(learner, {
+      assessmentId: assessment.id,
+      responses: {},
+    });
+    expect(submitted.submissionId).toBe(first.submissionId);
   });
 
   it("refuses an unpublished assessment", async () => {
