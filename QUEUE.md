@@ -349,19 +349,63 @@ because other tenants will need a programme made of several distinct courses.
 The meeting closed without agreement. Configurable labels per tenant is the
 smaller change and would let both be right.
 
-**Records management.** *Largely settled by the client on 31 August: Curiosa
-wants to move away from keeping records in separate filing systems, and as much
-as possible done in the platform.* That points at the platform becoming the
-record rather than a working copy. What still needs deciding is the migration
-and what happens to the Drive: whether it is retired, kept as an archive, or
-kept as the statutory store for documents the platform will not hold. The
-platform's audit log already records who did what, and retention can be driven
-from the certification date it already holds.
+**Records management.** *Settled by the client: the platform becomes the record,
+not a working copy.* Confirmed again on 1 September. This is no longer an open
+question but a piece of work, so it has moved into the queue as item 9.
 
 **Offline capability.** Raised for field rangers with no cellular coverage. It
 would change the shape of the platform rather than extend it: local storage,
 conflict resolution, and an answer for evidence captured on a device unseen for
 a fortnight. Scope it on its own before promising it.
+
+---
+
+## 9. The platform as the record
+
+**Done when:** Curiosa can retire the Google Drive as their system of record
+without losing anything their own procedure requires them to keep.
+
+- [ ] 9.1 Off-server backups: an object storage bucket, and the nightly backup actually uploading to it
+- [ ] 9.2 Evidence in object storage rather than on the server's disk
+- [ ] 9.3 A general document library: policies, accreditation letters, contracts, the PAIA manual
+- [ ] 9.4 Retention and archiving, driven from the dates the platform already holds
+- [ ] 9.5 Controlled deletion, so a record cannot quietly disappear
+- [ ] 9.6 Their Records Management procedure rewritten to describe the platform rather than a Drive
+
+**Why the platform is the better record, and not merely a different one.** A
+Drive holds folders. The platform holds a document attached to the learner, the
+enrolment and the assessment decision it belongs to, with an audit trail saying
+who filed it and who checked it. A monitoring visit asks "show me the evidence
+behind this decision", and that is one link here and a folder convention
+somebody has to remember there.
+
+**9.1 is the blocker and nothing else should start before it.** Verified on
+1 September by running the backup: it stops at "Missing required setting:
+BACKUP_BUCKET". Every backup is written to the same server the records are on,
+so losing the machine loses the records and the backups together. Until that is
+fixed, moving the record off a Drive that Google replicates and onto a single
+VPS makes the records *less* safe, not more. The S3 driver is already built and
+tested; this needs a bucket and two settings.
+
+**9.2 follows from it.** Evidence currently sits on the server's disk, which has
+11 GB free. Scanned certified copies, workbooks and video evidence across years
+of cohorts will exceed that, and the disk is also where the database and the
+backups live.
+
+**9.3 is a genuine gap in scope.** The platform holds learner documents and
+programme documents. Curiosa's procedure also covers general business documents
+- policies, accreditation letters, contracts - and there is nowhere for those
+to live.
+
+**9.4 is in their procedure and nowhere in the platform.** "Archive learner
+documentation within one month after certification." The platform holds the
+certification date, so it can drive that; it does not yet.
+
+**On access control.** Their procedure says only the CEO grants access or
+creates folders. The platform is role-based with an audit log, which is a
+stronger control but a different one, so 9.6 is a rewrite rather than a port.
+Worth saying plainly to the client rather than letting them discover that their
+SOP no longer describes what happens.
 
 ---
 
