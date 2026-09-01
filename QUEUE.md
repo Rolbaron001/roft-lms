@@ -244,12 +244,32 @@ hold. Building this first would mean building it twice.
 **Done when:** a learner cannot be registered without the documents their route
 requires, and the platform asks for the right ones.
 
-- [ ] 5.1 Document checklist: certified ID with a current certification date, certified copy of highest qualification, current CV
-- [ ] 5.2 Documents quality assured as they are collected, not at reporting time
-- [ ] 5.3 Requirements vary by route: learnership, standard qualification, RPL, employment equity points
-- [ ] 5.4 Programme type drives which documents are asked for
-- [ ] 5.5 POPIA consent captured with its date
-- [ ] 5.6 Credentials emailed on registration, with password reset instructions
+- [x] 5.1 Document checklist: certified ID with a current certification date, certified copy of highest qualification, current CV
+- [x] 5.2 Documents quality assured as they are collected, not at reporting time
+- [x] 5.3 Requirements vary by route: learnership, standard qualification, RPL, employment equity points
+- [x] 5.4 Route drives which documents are asked for
+- [x] 5.5 POPIA consent captured with its date *(already built; verified rather than rebuilt)*
+- [ ] 5.6 Credentials emailed on registration *(needs the relay credentials in .env; outbound 587 is confirmed open)*
+
+**Landed.** Documents are held against the person rather than the enrolment,
+because a certified identity document is a fact about the learner and asking
+for it again on their second qualification would be theatre.
+
+Two rules carry this, and both are tested. The route decides the list: an RPL
+candidate is claiming competence gained outside a formal programme, so asking
+them for a certified copy of a qualification asks them to prove the opposite of
+their case. And a certified copy expires, so a requirement satisfied in March is
+not satisfied in July without anybody having touched it - with an undated copy
+treated as expired rather than acceptable, because that is precisely how one
+reaches a statutory return.
+
+`consentGivenAt` and `consentVersion` were already on the user, so 5.5 was
+verified rather than rebuilt. That is the fifth item across four stages where
+checking first saved the work.
+
+5.6 is the only thing in this stage waiting on anything, and it is now waiting
+on configuration rather than on the network: outbound 587 is confirmed open, so
+it needs the relay host, user and password in the server's .env.
 
 **Waits on the mail relay** for 5.6 only. The rest is independent of it.
 

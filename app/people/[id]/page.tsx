@@ -11,13 +11,22 @@ import {
 import { mailDomainFor } from "@/lib/mail";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
+import { EnrolmentDocuments } from "./documents";
+import {
+  enrolmentReadiness,
+  learnerDocuments,
+  type EnrolmentRoute,
+} from "@/lib/enrolment-documents";
 
 export default async function PersonPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ route?: string }>;
 }) {
   const { id } = await params;
+  const { route } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("user:read");
 
@@ -31,6 +40,30 @@ export default async function PersonPage({
 
   const managers = await possibleLineManagers(session, id);
   const { person } = detail;
+
+  // Documents are only asked of learners. Showing the checklist against an
+  // assessor would invent a requirement nobody has.
+  const isLearner = detail.roles.some((row) => row.role === "learner");
+  const canManageEnrolments = session.permissions.includes("enrolment:manage");
+
+  const chosenRoute = (
+    [
+      "standard_qualification",
+      "skills_programme",
+      "learnership",
+      "rpl",
+      "employment_equity",
+    ] as const
+  ).includes(route as EnrolmentRoute)
+    ? (route as EnrolmentRoute)
+    : "standard_qualification";
+
+  const readiness =
+    isLearner && canManageEnrolments
+      ? await enrolmentReadiness(session, id, chosenRoute)
+      : null;
+  const held =
+    isLearner && canManageEnrolments ? await learnerDocuments(session, id) : [];
 
   // The domain a tenant's mailboxes live on. ROFT's own people sit on the
   // mail domain itself; a client's sit on a subdomain of it, so an address
@@ -126,6 +159,32 @@ export default async function PersonPage({
           canAnonymise={session.permissions.includes("user:anonymise")}
         />
       )}
+
+      {readiness ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Enrolment documents
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            Checked as they are collected rather than when a return is being
+            assembled. A missing certified copy found months later is far
+            harder to get, and the deadline is usually days away by then.
+          </p>
+          <EnrolmentDocuments
+            userId={id}
+            readiness={readiness}
+            held={held.map((document) => ({
+              id: document.id,
+              kind: document.kind,
+              filename: document.filename,
+              certifiedOn: document.certifiedOn,
+              verification: document.verification,
+              refusedReason: document.refusedReason,
+            }))}
+            canManage={canManageEnrolments}
+          />
+        </section>
+      ) : null}
     </AppShell>
   );
 }

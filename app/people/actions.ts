@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/request";
+import { requirePermission, requireSession } from "@/lib/request";
 import {
   anonymisePerson,
   invitePerson,
@@ -15,6 +15,11 @@ import {
   type Role,
 } from "@/lib/people";
 import { PermissionDeniedError } from "@/lib/rbac";
+import {
+  DocumentError,
+  recordEnrolmentDocument,
+  verifyEnrolmentDocument,
+} from "@/lib/enrolment-documents";
 
 export type PeopleState = {
   error?: string;
@@ -226,4 +231,74 @@ export async function anonymiseAction(
 
   revalidatePath("/people");
   redirect("/people");
+}
+
+// ---------------------------------------------------------------------------
+// Enrolment documents
+// ---------------------------------------------------------------------------
+
+export type PeopleActionState = { error?: string; done?: string };
+
+function describeDocument(error: unknown): string {
+  if (error instanceof PermissionDeniedError) {
+    return "Your role does not allow that.";
+  }
+  if (error instanceof DocumentError) return error.message;
+  if (error && typeof error === "object" && "issues" in error) {
+    return (error as { issues: { message: string }[] }).issues
+      .map((issue) => issue.message)
+      .join(" ");
+  }
+  console.error(error);
+  return "That could not be saved. Please try again.";
+}
+
+export async function recordDocumentAction(
+  _previous: PeopleActionState,
+  formData: FormData,
+): Promise<PeopleActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const userId = String(formData.get("userId") ?? "");
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a file." };
+  }
+
+  try {
+    await recordEnrolmentDocument(session, {
+      userId,
+      kind: String(formData.get("kind") ?? "other") as "other",
+      filename: file.name,
+      certifiedOn: String(formData.get("certifiedOn") ?? "") || undefined,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    });
+  } catch (error) {
+    return { error: describeDocument(error) };
+  }
+
+  revalidatePath(`/people/${userId}`);
+  return { done: "Document filed." };
+}
+
+export async function verifyDocumentAction(
+  _previous: PeopleActionState,
+  formData: FormData,
+): Promise<PeopleActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const userId = String(formData.get("userId") ?? "");
+
+  try {
+    await verifyEnrolmentDocument(
+      session,
+      String(formData.get("documentId") ?? ""),
+      String(formData.get("outcome") ?? "accepted") as "accepted",
+      String(formData.get("reason") ?? "") || undefined,
+    );
+  } catch (error) {
+    return { error: describeDocument(error) };
+  }
+
+  revalidatePath(`/people/${userId}`);
+  return { done: "Checked." };
 }
