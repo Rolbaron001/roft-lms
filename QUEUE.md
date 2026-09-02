@@ -396,7 +396,32 @@ is otherwise an unlimited supply of further chances wearing a different name.
 The oral assessment itself was already built, for the third attempt after two
 not-yet-competent results. This records the authorisation that opens it by the
 other route.
-- [ ] 7.3 Programme feedback within 48 hours of a summative, consolidated
+- [x] 7.3 Programme feedback within 48 hours of a summative, consolidated
+
+**Landed, and two steps of the procedure disappeared rather than being
+digitised.** Nobody acknowledges receipt, because receipt is a row; nobody
+transcribes anything into a consolidated spreadsheet, because the report is a
+query. What is gained is the two questions a folder of returned forms could
+never answer: which cohorts were never asked, and which learners have not
+answered while there is still time to ask again.
+
+Names are recorded and never displayed. The facilitator has to know who still
+owes a form in order to chase them, so a response carries a learner; the report
+shows answers together and unattributed, and the comments are shuffled so their
+order cannot be lined up against the outstanding list. That is a display
+decision rather than anonymity - the link is in the table - and what learners
+are told says only that answers are reported together, which is true.
+
+A late response is recorded, not refused. The deadline exists to say whether
+the provider asked in time, not to punish a learner for answering on the third
+day. Asking the same cohort twice about the same summative is refused: it would
+restart a deadline that has run and split one set of answers across two
+reports.
+
+**Needs the client.** The questions are held as versioned data, and the set
+shipped is a defensible default rather than Curiosa's own - theirs lives in a
+Google Form that was not among the documents handed over. When it arrives it
+replaces the default and no code changes to let it.
 - [ ] 7.4 Digital competency badges on completion
 - [ ] 7.5 Learner discipline: offences graded, warnings with a validity period, hearings
 

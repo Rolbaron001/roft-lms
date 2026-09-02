@@ -4,6 +4,8 @@ import { cohortAttendance, cohortSchedule } from "@/lib/scheduling";
 import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
 import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
+import { Feedback } from "./feedback";
+import { cohortFeedback } from "@/lib/feedback";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
@@ -66,6 +68,13 @@ export default async function CohortPage({
   const rollout = await cohortSchedule(session, detail.cohort.id);
   const attendance = await cohortAttendance(session, detail.cohort.id);
   const grid = await cohortGrid(session, detail.cohort.id);
+
+  // Feedback is a tenant-level report rather than an enrolment one: it is read
+  // by whoever runs the programme, and asked for by whoever schedules it.
+  const canReadReports = session.permissions.includes("report:tenant");
+  const feedbackRequests = canReadReports
+    ? await cohortFeedback(session, detail.cohort.id)
+    : [];
   const tasks = await cohortTaskList(session, detail.cohort.id);
 
   const timings = await stepTimings(
@@ -256,6 +265,26 @@ export default async function CohortPage({
                 </tbody>
               </table>
             </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {canReadReports ? (
+        <div className="mt-6">
+          <Card
+            title="Programme feedback"
+            description="Sent after a summative, answered within 48 hours. Nobody acknowledges receipt and nobody transcribes anything: receipt is a row and the report is a query."
+          >
+            <Feedback
+              cohortId={detail.cohort.id}
+              zone={tenant.timezone}
+              assessments={grid.assessments.map((column) => ({
+                id: column.id,
+                title: column.title,
+              }))}
+              requests={feedbackRequests}
+              canAsk={canManage}
+            />
           </Card>
         </div>
       ) : null}

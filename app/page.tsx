@@ -4,6 +4,7 @@ import { myEnrolments } from "@/lib/enrolment";
 import { listMyCertificates } from "@/lib/certificates";
 import { myLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { feedbackOwedBy } from "@/lib/feedback";
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: "Platform Owner",
@@ -35,6 +36,10 @@ function dueLabel(dueDate: Date | null, status: string): string | null {
 export default async function HomePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+
+  // Feedback forms this person still owes. On the front page rather than behind
+  // a notification, because a form nobody sees is a response rate nobody has.
+  const owed = await feedbackOwedBy(session, session.userId);
   const [enrolments, certificates, paths] = await Promise.all([
     myEnrolments(session),
     listMyCertificates(session),
@@ -71,6 +76,29 @@ export default async function HomePage() {
       </div>
 
       <div className="space-y-6">
+        {owed.length > 0 ? (
+          <Card
+            title={owed.length === 1 ? "One thing to tell us" : "A few things to tell us"}
+            description="Answers are reported together with everybody else's, not one by one. Two minutes each, and it is the only thing that changes how the next cohort is run."
+          >
+            <ul className="space-y-2 text-sm">
+              {owed.map((request) => (
+                <li key={request.id}>
+                  <Link
+                    href={`/feedback/${request.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {request.assessmentTitle ?? "The programme"}
+                  </Link>
+                  <span className="ml-2 text-[var(--muted)]">
+                    {request.cohortName}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
         {paths.map((path) => (
           <Card key={path.enrolmentId} title={path.title}>
             {path.description ? (

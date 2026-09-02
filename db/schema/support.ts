@@ -2,10 +2,12 @@ import {
   boolean,
   date,
   index,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { organisations, users } from "./tenancy";
@@ -444,6 +446,165 @@ export const missedAssessments = pgTable(
       t.organisationId,
       t.learnerId,
       t.assessmentId,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Programme feedback
+// ---------------------------------------------------------------------------
+
+/**
+ * The questions asked after a summative.
+ *
+ * Held as data rather than as columns, and versioned, because a provider will
+ * change what it asks and a change must not rewrite the meaning of answers
+ * already given. A response points at the version it answered, so a report can
+ * say which question a 4 out of 5 was a 4 to.
+ *
+ * The default set shipped with the platform is a reasonable one and is not the
+ * client's own. Theirs lives in a Google Form that was not among the documents
+ * handed over; when it arrives it replaces this, and nothing in the code has to
+ * change to let it.
+ */
+export const feedbackQuestionnaires = pgTable(
+  "feedback_questionnaires",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    name: text("name").notNull(),
+    /**
+     * The questions, in order.
+     *
+     * `key` is what a response is filed under and must never be reused for a
+     * different question - that is the one way a version can lie about
+     * historical answers.
+     */
+    questions: jsonb("questions")
+      .$type<
+        {
+          key: string;
+          prompt: string;
+          kind: "rating" | "text";
+          required: boolean;
+        }[]
+      >()
+      .notNull(),
+
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("feedback_questionnaires_org_idx").on(t.organisationId, t.active),
+  ],
+);
+
+/**
+ * An invitation to a cohort to give feedback on what they have just sat.
+ *
+ * The procedure sends the form the day after a summative and gives learners 48
+ * hours. Both of those are here as facts rather than as habits: the platform
+ * can say which cohorts were never asked, and which learners have not
+ * answered, and neither question can be answered from a folder of returned
+ * forms.
+ */
+export const feedbackRequests = pgTable(
+  "feedback_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    /** The summative it follows. Null for feedback on the programme overall. */
+    assessmentId: uuid("assessment_id").references(() => assessments.id, {
+      onDelete: "set null",
+    }),
+    questionnaireId: uuid("questionnaire_id")
+      .notNull()
+      .references(() => feedbackQuestionnaires.id, { onDelete: "restrict" }),
+
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    sentById: uuid("sent_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** 48 hours on, by the procedure. Held rather than computed on read. */
+    dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("feedback_requests_cohort_idx").on(t.organisationId, t.cohortId),
+    uniqueIndex("feedback_requests_once_idx").on(
+      t.organisationId,
+      t.cohortId,
+      t.assessmentId,
+    ),
+  ],
+);
+
+/**
+ * One learner's answers.
+ *
+ * The learner is recorded, because the facilitator has to know who still owes a
+ * form in order to chase them, and a response nobody can attribute cannot be
+ * chased. What the platform then does with that is the part worth stating
+ * plainly: the consolidated view never shows names, because feedback on a
+ * facilitator is only honest if the learner believes it will not be read back
+ * to them by name.
+ *
+ * That is a display decision, not anonymity. The link exists in the table and
+ * somebody with database access can follow it. Saying otherwise to a learner
+ * would be a lie, and the wording shown to them says only that responses are
+ * reported together - which is true.
+ */
+export const feedbackResponses = pgTable(
+  "feedback_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    requestId: uuid("request_id")
+      .notNull()
+      .references(() => feedbackRequests.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** Keyed by the question key, against the version that was asked. */
+    answers: jsonb("answers")
+      .$type<Record<string, string | number>>()
+      .notNull(),
+
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /**
+     * Whether it arrived after the 48 hours.
+     *
+     * Recorded, never refused. Feedback is voluntary and is worth having
+     * whenever it turns up; what the deadline is for is knowing whether the
+     * provider asked in time, not punishing a learner for answering late.
+     */
+    late: boolean("late").notNull().default(false),
+  },
+  (t) => [
+    uniqueIndex("feedback_responses_once_idx").on(
+      t.organisationId,
+      t.requestId,
+      t.learnerId,
     ),
   ],
 );
