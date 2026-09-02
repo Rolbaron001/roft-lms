@@ -13,6 +13,10 @@ import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
 import { EnrolmentDocuments } from "./documents";
 import { Appeals } from "./appeals";
+import { Support } from "./support";
+import { Missed } from "./missed";
+import { learnerMissedAssessments, learnerSupport } from "@/lib/support";
+import { dateInZone } from "@/lib/timezone";
 import {
   assessmentsForLearner,
   cohortsForLearner,
@@ -75,13 +79,36 @@ export default async function PersonPage({
   // work one. A learner reads their own from their own page, not this one.
   const canManageAppeals =
     isLearner && session.permissions.includes("appeal:manage");
-  const [appealCohorts, appealAssessments, lodged] = canManageAppeals
+
+  // Support is shown to anybody who has to act on it, and the detail behind it
+  // only to those entitled to read it. The redaction happens in the library,
+  // not here, so a page cannot leak it by forgetting.
+  const canActOnSupport =
+    isLearner && session.permissions.includes("support:act");
+  const canReadSupport = session.permissions.includes("support:read");
+  const canManageSupport = session.permissions.includes("support:manage");
+  const today = dateInZone(new Date(), tenant.timezone);
+
+  // The assessments this learner has sat. Both an appeal against a result and a
+  // missed summative date are filed against one, and the two sections are
+  // reached by different permissions - so it is loaded for either.
+  const satAssessments =
+    canManageAppeals || canActOnSupport
+      ? await assessmentsForLearner(session, id)
+      : [];
+
+  const [supportRecords, missed] = canActOnSupport
+    ? await Promise.all([
+        learnerSupport(session, id),
+        learnerMissedAssessments(session, id),
+      ])
+    : [[], []];
+  const [appealCohorts, lodged] = canManageAppeals
     ? await Promise.all([
         cohortsForLearner(session, id),
-        assessmentsForLearner(session, id),
         learnerAppeals(session, id),
       ])
-    : [[], [], []];
+    : [[], []];
 
   // The domain a tenant's mailboxes live on. ROFT's own people sit on the
   // mail domain itself; a client's sit on a subdomain of it, so an address
@@ -178,6 +205,47 @@ export default async function PersonPage({
         />
       )}
 
+      {canActOnSupport ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Support
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            What is being done for this learner, and by whom. The reason behind
+            an accommodation is health or financial information and is held
+            apart from it, because doing the accommodating does not require
+            knowing why.
+          </p>
+          <Support
+            learnerId={id}
+            records={supportRecords}
+            canRead={canReadSupport}
+            canManage={canManageSupport}
+            today={today}
+          />
+        </section>
+      ) : null}
+
+      {canActOnSupport ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Missed summative dates
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            One additional date, and one only. Where that is also missed on
+            medical grounds the learner goes to an oral assessment with an
+            observer from the employer.
+          </p>
+          <Missed
+            learnerId={id}
+            records={missed}
+            assessments={satAssessments}
+            canManage={canManageSupport}
+            today={today}
+          />
+        </section>
+      ) : null}
+
       {canManageAppeals ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -192,7 +260,7 @@ export default async function PersonPage({
             learnerId={id}
             zone={tenant.timezone}
             cohorts={appealCohorts}
-            assessments={appealAssessments}
+            assessments={satAssessments}
             existing={lodged.map((appeal) => ({
               id: appeal.id,
               ground: appeal.ground,

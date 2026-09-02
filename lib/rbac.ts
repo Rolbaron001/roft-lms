@@ -84,6 +84,21 @@ export const PERMISSIONS = [
   "appeal:lodge",
   "appeal:manage",
 
+  // Learner support, split in two on purpose.
+  //
+  // `support:act` is for the people who have to do the accommodating: the
+  // facilitator who allows the breaks, the assessor who extends the time. They
+  // get what to do. `support:read` additionally gets the health, disability or
+  // financial circumstance behind it, and is deliberately narrow, because the
+  // procedure requires the coordinator to inform a facilitator of the learner's
+  // requirements and does not require telling them why.
+  //
+  // Rolling these together would make a diagnosis visible to everybody rostered
+  // onto a cohort, which is a POPIA breach performed by an org chart.
+  "support:act",
+  "support:read",
+  "support:manage",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -127,6 +142,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   tenant_admin: [
     "appeal:manage",
+    "support:act",
+    "support:read",
+    "support:manage",
     "tenant:manage_settings",
     "tenant:manage_branding",
     "user:read",
@@ -167,6 +185,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   instructor: [
     "appeal:manage",
+    "support:act",
+    "support:read",
+    "support:manage",
     "user:read",
     "course:read",
     "course:author",
@@ -187,6 +208,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * and cannot issue the certificate that follows from it.
    */
   assessor: [
+    "support:act",
     "user:read",
     "course:read",
     "enrolment:read_all",
@@ -202,6 +224,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    */
   moderator: [
     "appeal:manage",
+    "support:act",
     "user:read",
     "course:read",
     "enrolment:read_all",
@@ -227,6 +250,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * over content or assessment outcomes.
    */
   skills_development_facilitator: [
+    "support:act",
     "user:read",
     "course:read",
     "enrolment:read_all",

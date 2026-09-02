@@ -365,7 +365,37 @@ handed back on a Monday now give the learner the same two days. Public holidays
 are passed in rather than known, and nothing passes any in yet, so a deadline
 falling on one is a day tighter than intended - the safe direction, and noted
 below.
-- [ ] 7.2 Learner support and special needs, with the extra assessment date and the oral alternative
+- [x] 7.2 Learner support and special needs, with the extra assessment date and the oral alternative
+
+**Landed, and the POPIA question answered structurally rather than by policy.**
+The record is split. The accommodation - allow breaks, seat near the door,
+provide printed materials - goes to whoever has to do it. The need behind it -
+the diagnosis, the symptoms, the financial circumstances - is restricted to the
+coordinating roles.
+
+That split comes straight out of the procedure, which says the coordinator
+"must inform the Facilitator / Assessor of learner requirements" and does not
+say tell them why. A platform that satisfies that by showing a facilitator
+somebody's diagnosis has done more than it was asked and more than it should.
+An assessor who can only act is told that detail exists and is withheld, so
+they can tell "nothing more to know" from "not mine to see" and go and ask if
+it matters.
+
+Recording a need refuses without the learner's own consent, held per record
+rather than per learner: somebody may disclose a mobility need and not a
+psychological one, and treating one consent as covering both is the failure the
+Act is about. The sensitive half is optional and the form says so - a record
+that says only what to do serves the learner just as well.
+
+**The one additional date is enforced.** Nobody grants a fourth deliberately;
+they grant a second one twice, months apart, because the first was arranged in a
+conversation nobody wrote down. The refusal names the date already granted. The
+oral route opens only on a recorded medical ground, because "missed it again"
+is otherwise an unlimited supply of further chances wearing a different name.
+
+The oral assessment itself was already built, for the third attempt after two
+not-yet-competent results. This records the authorisation that opens it by the
+other route.
 - [ ] 7.3 Programme feedback within 48 hours of a summative, consolidated
 - [ ] 7.4 Digital competency badges on completion
 - [ ] 7.5 Learner discipline: offences graded, warnings with a validity period, hearings
