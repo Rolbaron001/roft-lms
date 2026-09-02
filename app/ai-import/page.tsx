@@ -45,11 +45,11 @@ export default async function AiImportPage() {
 
       {!extension.enabled ? (
         <Card
-          title="No extension is switched on"
-          description="This is optional and off by default. Switch one on in Settings."
+          title="You have not switched on an AI extension"
+          description="It is optional, off by default, and yours rather than the tenant's — every member of staff has their own."
         >
-          <Link href="/settings" className="text-sm underline">
-            Go to Settings
+          <Link href="/account" className="text-sm underline">
+            Switch one on
           </Link>
         </Card>
       ) : extension.availability && !extension.availability.available ? (

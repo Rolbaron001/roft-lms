@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readJson, knownProviders, providerByName } from "@/lib/extensions";
 import { isAllowedRoot } from "@/lib/ai-import";
+import { ROLE_PERMISSIONS, can, type Role } from "@/lib/rbac";
 
 describe("readJson", () => {
   it("reads a bare object", () => {
@@ -105,5 +106,67 @@ describe("the provider registry", () => {
       expect(keys).not.toContain("token");
       expect(keys).not.toContain("credential");
     }
+  });
+});
+
+/**
+ * Who may switch on model assistance.
+ *
+ * The point of holding this per user rather than per tenant: a platform where
+ * only the administrator may enable it is a platform where only the
+ * administrator has it, and a facilitator building a programme has the same
+ * use for it as the person who bought the subscription.
+ */
+describe("who may use an AI extension", () => {
+  const holders = (Object.keys(ROLE_PERMISSIONS) as Role[])
+    .filter((role) => can({ roles: [role] }, "extension:use"))
+    .sort();
+
+  it("is every one of the provider's own staff roles", () => {
+    expect(holders).toEqual([
+      "assessor",
+      "instructor",
+      "moderator",
+      "skills_development_facilitator",
+      "tenant_admin",
+    ]);
+  });
+
+  it("is not only the administrator", () => {
+    expect(holders.length).toBeGreaterThan(1);
+    expect(can({ roles: ["instructor"] }, "extension:use")).toBe(true);
+    expect(can({ roles: ["assessor"] }, "extension:use")).toBe(true);
+  });
+
+  /** The learner's work is the thing being assessed. */
+  it("is not the learner", () => {
+    expect(can({ roles: ["learner"] }, "extension:use")).toBe(false);
+  });
+
+  /** Somebody else's employee, and the narrowest role on the platform. */
+  it("is not the workplace coach", () => {
+    expect(can({ roles: ["workplace_coach"] }, "extension:use")).toBe(false);
+  });
+
+  /** An auditor reads; they do not produce. */
+  it("is not the external verifier", () => {
+    expect(can({ roles: ["external_verifier"] }, "extension:use")).toBe(false);
+  });
+
+  /** ROFT hosts a tenant's records and holds no permission over them. */
+  it("is not the platform owner", () => {
+    expect(can({ roles: ["platform_owner"] }, "extension:use")).toBe(false);
+  });
+
+  /**
+   * Listing the folders a server process may read stays with an administrator.
+   * It is a security boundary rather than a preference, and every staff role
+   * holding it would let any of them point the platform at its own
+   * configuration.
+   */
+  it("does not let everybody choose which folders may be read", () => {
+    expect(can({ roles: ["instructor"] }, "tenant:manage_settings")).toBe(false);
+    expect(can({ roles: ["assessor"] }, "tenant:manage_settings")).toBe(false);
+    expect(can({ roles: ["tenant_admin"] }, "tenant:manage_settings")).toBe(true);
   });
 });

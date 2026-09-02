@@ -61,6 +61,19 @@ put your usage limits behind every tenant's work, and it is a licensing
 question rather than a technical one. It is your call and not mine to make
 quietly.
 
+**It is not limited to you.** Each member of staff switches on their own, on
+their own account page - the administrator, the facilitators, the assessors, the
+moderators and the skills development facilitator. Not learners, not an
+employer's workplace coach, and not an external verifier. The only part that
+stays with an administrator is the list of folders the platform may read, which
+is a security boundary rather than a preference.
+
+**But per-person settings are not per-person subscriptions.** The provider runs
+on the machine the platform runs on. On a shared server everybody's work goes
+through whichever Claude sign-in is on that server; where somebody runs the
+platform themselves, it uses their own. The account page says so plainly rather
+than letting anybody assume otherwise.
+
 **So there are two ways to use it, and you should pick one:**
 
 - **Run imports on your own machine.** Point the local copy of the platform at

@@ -1551,16 +1551,22 @@ export const disposalDecisions = pgTable(
 // ---------------------------------------------------------------------------
 
 /**
- * Which model-assisted provider a tenant has switched on, if any.
+ * What a tenant permits, as opposed to what any one person chooses.
  *
- * Per tenant and off by default. With nothing enabled the platform behaves
- * exactly as it did before: the interface omits the affordances rather than
- * offering something that would fail.
+ * The split matters. Whether somebody uses an AI extension at all, and with
+ * which provider, is a preference and belongs to the person - it is on their
+ * own account page and every member of the provider's staff sets their own.
+ * Which folders on the server may be read is not a preference. It is a
+ * security boundary, and letting each user name a folder would let any of them
+ * point the platform at its own configuration.
  *
- * There is no credential column, and that is deliberate rather than an
- * omission. The subscription-backed provider holds its own sign-in on the
- * machine it runs on, so the platform never sees, stores or transmits one, and
- * there is nowhere in the interface to type one in.
+ * So: the person decides whether, and the administrator decides where.
+ *
+ * There is no credential column here or on the per-user row, and that is
+ * deliberate rather than an omission. The subscription-backed provider holds
+ * its own sign-in on the machine it runs on, so the platform never sees,
+ * stores or transmits one, and there is nowhere in the interface to type one
+ * in.
  */
 export const aiSettings = pgTable(
   "ai_settings",
@@ -1598,6 +1604,45 @@ export const aiSettings = pgTable(
       .defaultNow(),
   },
   (t) => [uniqueIndex("ai_settings_org_idx").on(t.organisationId)],
+);
+
+/**
+ * One person's own choice about model assistance.
+ *
+ * Per user rather than per tenant, because the extension is a tool somebody
+ * uses while doing their own work, and a platform where only the administrator
+ * may switch it on is a platform where only the administrator has it. A
+ * facilitator building a programme has the same use for it as the person who
+ * bought the subscription.
+ *
+ * What this does not give is a subscription per person. The provider runs on
+ * the machine the platform is running on, so on a shared server everybody's
+ * work goes through whichever sign-in is on that machine. Where each person
+ * runs the platform themselves, each uses their own. The interface says so
+ * rather than implying otherwise.
+ */
+export const aiUserSettings = pgTable(
+  "ai_user_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** A provider name the platform knows, or null for none. */
+    provider: text("provider"),
+    /** Empty means the provider's own default. */
+    model: text("model"),
+    enabled: boolean("enabled").notNull().default(false),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("ai_user_settings_user_idx").on(t.organisationId, t.userId)],
 );
 
 export const aiRunOutcome = pgEnum("ai_run_outcome", [

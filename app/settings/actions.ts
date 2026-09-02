@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
 import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
-import { setExtension } from "@/lib/extensions";
+import { setAllowedImportRoots } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -132,13 +132,15 @@ export async function updateClockAction(
 export type ExtensionState = { error?: string; notice?: string };
 
 /**
- * Switching the AI extension on or off for this tenant.
+ * The folders an AI import may read, for the whole tenant.
  *
- * Under `tenant:manage_settings` rather than branding, like the clock: it
- * decides whether a model may read documents on the machine the platform runs
- * on, which is not a decision about how the site looks.
+ * An administrator's decision rather than a personal one, and the only part of
+ * the extension that is. Whether somebody uses model assistance at all is on
+ * their own account page; which folders on the server may be read is a security
+ * boundary, and letting each user name one would let any of them point the
+ * platform at its own configuration.
  */
-export async function updateExtensionAction(
+export async function updateImportRootsAction(
   _previous: ExtensionState,
   formData: FormData,
 ): Promise<ExtensionState> {
@@ -150,26 +152,21 @@ export async function updateExtensionAction(
     .filter(Boolean);
 
   try {
-    await setExtension(session, {
-      enabled: formData.get("enabled") === "on",
-      provider: String(formData.get("provider") ?? "") || null,
-      model: String(formData.get("model") ?? "").trim() || null,
-      allowedImportRoots: roots,
-    });
+    await setAllowedImportRoots(session, roots);
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
       return { error: "Your role does not allow that." };
     }
     console.error(error);
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "That could not be saved. Please try again.",
-    };
+    return { error: "That could not be saved. Please try again." };
   }
 
   revalidatePath("/settings");
-  revalidatePath("/qualifications");
-  return { notice: "Saved." };
+  revalidatePath("/ai-import");
+  return {
+    notice:
+      roots.length === 0
+        ? "Saved. With no folders listed, nobody can run a folder import."
+        : `Saved. ${roots.length} ${roots.length === 1 ? "folder" : "folders"} may be read.`,
+  };
 }

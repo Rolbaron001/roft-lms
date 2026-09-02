@@ -160,9 +160,9 @@ export async function AppShell({
             </Link>
 
             <Link
-              href="/account/password"
+              href="/account"
               className="text-xs opacity-75 underline-offset-2 transition hover:underline hover:opacity-100"
-              title="Change your password"
+              title="Your account"
             >
               {session.firstName} {session.lastName}
             </Link>

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { aiRuns, aiSettings } from "@/db/schema";
+import { aiRuns, aiSettings, aiUserSettings } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "../session";
 import { claudeCodeProvider } from "./claude-code";
 import {
@@ -36,17 +36,22 @@ export function providerByName(name: string | null): AiProvider | null {
 }
 
 export type ExtensionState = {
+  /** This person's own choice. */
   enabled: boolean;
   provider: string | null;
   providerLabel: string | null;
   model: string | null;
+  /** Set by an administrator for the whole tenant. */
   allowedImportRoots: string[];
   /** What the chosen provider says about itself right now. */
   availability: Availability | null;
 };
 
 /**
- * What this tenant has switched on, and whether it can actually run.
+ * What this person has switched on, and whether it can actually run.
+ *
+ * The choice is read from their own row and the folder allow-list from the
+ * tenant's, because the two are different kinds of decision - see the schema.
  *
  * Availability is asked at read time rather than remembered, because the
  * answer changes without anything in the platform changing: somebody signs in
@@ -56,36 +61,49 @@ export type ExtensionState = {
 export async function extensionState(
   session: AuthenticatedSession,
 ): Promise<ExtensionState> {
-  const stored = await withTenant(session.organisationId, async (tx) => {
-    const [row] = await tx
-      .select()
-      .from(aiSettings)
-      .where(eq(aiSettings.organisationId, session.organisationId));
-    return row ?? null;
-  });
+  const { mine, tenant } = await withTenant(
+    session.organisationId,
+    async (tx) => {
+      const [own] = await tx
+        .select()
+        .from(aiUserSettings)
+        .where(eq(aiUserSettings.userId, session.userId));
 
-  const provider = providerByName(stored?.provider ?? null);
+      const [org] = await tx
+        .select()
+        .from(aiSettings)
+        .where(eq(aiSettings.organisationId, session.organisationId));
+
+      return { mine: own ?? null, tenant: org ?? null };
+    },
+  );
+
+  const provider = providerByName(mine?.provider ?? null);
 
   return {
-    enabled: stored?.enabled ?? false,
-    provider: stored?.provider ?? null,
+    enabled: mine?.enabled ?? false,
+    provider: mine?.provider ?? null,
     providerLabel: provider?.label ?? null,
-    model: stored?.model ?? null,
-    allowedImportRoots: stored?.allowedImportRoots ?? [],
+    model: mine?.model ?? null,
+    allowedImportRoots: tenant?.allowedImportRoots ?? [],
     availability: provider ? await provider.availability() : null,
   };
 }
 
-export async function setExtension(
+/**
+ * One person switching their own extension on or off.
+ *
+ * Under a permission every member of the provider's staff holds, not the
+ * administrator's. A facilitator building a programme has the same use for
+ * this as the person who bought the subscription, and a platform where only
+ * the administrator may enable it is a platform where only the administrator
+ * has it.
+ */
+export async function setMyExtension(
   session: AuthenticatedSession,
-  input: {
-    enabled: boolean;
-    provider: string | null;
-    model?: string | null;
-    allowedImportRoots: string[];
-  },
+  input: { enabled: boolean; provider: string | null; model?: string | null },
 ) {
-  assertSessionCan(session, "tenant:manage_settings");
+  assertSessionCan(session, "extension:use");
 
   if (input.enabled && !providerByName(input.provider)) {
     throw new Error("Choose a provider the platform knows.");
@@ -93,23 +111,58 @@ export async function setExtension(
 
   return withTenant(session.organisationId, async (tx) => {
     const [existing] = await tx
-      .select({ id: aiSettings.id })
-      .from(aiSettings)
-      .where(eq(aiSettings.organisationId, session.organisationId));
+      .select({ id: aiUserSettings.id })
+      .from(aiUserSettings)
+      .where(eq(aiUserSettings.userId, session.userId));
 
     const values = {
       provider: input.provider,
       model: input.model || null,
       enabled: input.enabled,
-      allowedImportRoots: input.allowedImportRoots,
-      updatedById: session.userId,
       updatedAt: new Date(),
     };
 
     if (existing) {
       const [updated] = await tx
-        .update(aiSettings)
+        .update(aiUserSettings)
         .set(values)
+        .where(eq(aiUserSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await tx
+      .insert(aiUserSettings)
+      .values({
+        organisationId: session.organisationId,
+        userId: session.userId,
+        ...values,
+      })
+      .returning();
+    return created;
+  });
+}
+
+export async function setAllowedImportRoots(
+  session: AuthenticatedSession,
+  roots: string[],
+) {
+  assertSessionCan(session, "tenant:manage_settings");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [existing] = await tx
+      .select({ id: aiSettings.id })
+      .from(aiSettings)
+      .where(eq(aiSettings.organisationId, session.organisationId));
+
+    if (existing) {
+      const [updated] = await tx
+        .update(aiSettings)
+        .set({
+          allowedImportRoots: roots,
+          updatedById: session.userId,
+          updatedAt: new Date(),
+        })
         .where(eq(aiSettings.id, existing.id))
         .returning();
       return updated;
@@ -117,7 +170,11 @@ export async function setExtension(
 
     const [created] = await tx
       .insert(aiSettings)
-      .values({ organisationId: session.organisationId, ...values })
+      .values({
+        organisationId: session.organisationId,
+        allowedImportRoots: roots,
+        updatedById: session.userId,
+      })
       .returning();
     return created;
   });
@@ -150,7 +207,7 @@ export async function runExtension(
     return {
       ok: false,
       error:
-        "No AI extension is switched on for this tenant. It is enabled in Settings, per tenant, and off until somebody turns it on.",
+        "You have not switched on an AI extension. It is on your account page, it is yours rather than the tenant's, and it is off until you turn it on.",
     };
   }
 

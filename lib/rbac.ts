@@ -131,6 +131,20 @@ export const PERMISSIONS = [
   "records:read",
   "records:manage",
 
+  // Model assistance.
+  //
+  // Held by every member of the provider's own staff, not by administrators
+  // alone. The extension is a tool somebody uses while doing their own work,
+  // and a platform where only the administrator may switch it on is a platform
+  // where only the administrator has it.
+  //
+  // Not the learner, whose work is the thing being assessed. Not the workplace
+  // coach, who is the employer's employee rather than the provider's. Not the
+  // external verifier, who is an auditor and reads rather than produces. And
+  // not the platform owner, who holds no permission over a tenant's content at
+  // all.
+  "extension:use",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -174,6 +188,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   platform_owner: ["platform:manage_tenants", "platform:view_health"],
 
   tenant_admin: [
+    "extension:use",
     "appeal:manage",
     "records:read",
     "records:manage",
@@ -222,6 +237,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   workplace_coach: ["workplace:sign"],
 
   instructor: [
+    "extension:use",
     "appeal:manage",
     "records:read",
     "recognition:manage",
@@ -250,6 +266,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * and cannot issue the certificate that follows from it.
    */
   assessor: [
+    "extension:use",
     "support:act",
     "user:read",
     "course:read",
@@ -265,6 +282,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * assessing permission at all: the separation is the point of the role.
    */
   moderator: [
+    "extension:use",
     "appeal:manage",
     "support:act",
     "user:read",
@@ -292,6 +310,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * over content or assessment outcomes.
    */
   skills_development_facilitator: [
+    "extension:use",
     "support:act",
     "user:read",
     "course:read",

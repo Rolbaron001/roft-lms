@@ -5,7 +5,7 @@ import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
-import { extensionState, knownProviders } from "@/lib/extensions";
+import { extensionState } from "@/lib/extensions";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
@@ -52,20 +52,7 @@ export default async function SettingsPage() {
 
       {extension ? (
         <div className="mt-6">
-          <ExtensionForm
-            current={{
-              enabled: extension.enabled,
-              provider: extension.provider,
-              model: extension.model,
-              allowedImportRoots: extension.allowedImportRoots,
-              availability: extension.availability,
-              providers: knownProviders().map((provider) => ({
-                name: provider.name,
-                label: provider.label,
-                description: provider.description,
-              })),
-            }}
-          />
+          <ExtensionForm roots={extension.allowedImportRoots} />
         </div>
       ) : null}
 
