@@ -789,3 +789,249 @@ export const cohortTasks = pgTable(
     index("cohort_tasks_org_idx").on(t.organisationId),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Invigilation
+//
+// A note on the word, because this codebase now uses it twice. In papers.ts a
+// "sitting" is one learner's timed attempt at a paper. Here it is the room:
+// the scheduled occasion a cohort writes under supervision, with a door that
+// closes, a register that is also a declaration, and an incident log.
+//
+// The two are different things and both are needed. The individual attempt
+// already existed; none of the room did, and the room is what an external
+// invigilation licence actually buys. The client intends to end theirs in
+// March, which is the only deadline in this queue set from outside.
+// ---------------------------------------------------------------------------
+
+export const sittingStatus = pgEnum("sitting_status", [
+  "scheduled",
+  /** The door is open and candidates are being admitted. */
+  "open",
+  /** The door has closed. Nobody else may be admitted. */
+  "in_progress",
+  "closed",
+  "cancelled",
+]);
+
+/**
+ * A supervised writing occasion.
+ *
+ * One to one with the session it happens at, rather than a second dated thing
+ * of its own: the schedule already holds when and where a cohort meets, and
+ * two records of the same event drift apart. This holds only what supervision
+ * adds.
+ */
+export const invigilatedSittings = pgTable(
+  "invigilated_sittings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cohortSessions.id, { onDelete: "cascade" }),
+    /** The paper being written. */
+    assessmentId: uuid("assessment_id")
+      .notNull()
+      .references(() => assessments.id, { onDelete: "cascade" }),
+
+    invigilatorId: uuid("invigilator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * How long after the appointed hour the door stays open.
+     *
+     * The client's rule is five minutes, for both the external assessment and
+     * their own summatives. Held as a number rather than assumed, because it
+     * is a provider's policy rather than a law, and a tenant with a different
+     * rule should not need a fork to express it.
+     */
+    admissionClosesAfterMinutes: integer("admission_closes_after_minutes")
+      .notNull()
+      .default(5),
+
+    /**
+     * Whether cameras must stay on for the duration.
+     *
+     * The client's rule for a virtual sitting, and the platform cannot verify
+     * it: the meeting is held on Google Meet or Teams, and only the meeting
+     * knows what a camera is doing. What the platform holds is that the rule
+     * applied, that the invigilator confirmed each candidate on camera at
+     * admission, and who dropped off - which is what an appeal actually asks
+     * about.
+     */
+    cameraRequired: integer("camera_required").notNull().default(1),
+
+    /**
+     * How early a candidate is expected to arrive.
+     *
+     * Thirty minutes in a venue, ten on a virtual platform. A number rather
+     * than a rule in prose, so the sitting page can say it and a tenant with
+     * different practice is not forced into the client's.
+     */
+    arriveBeforeMinutes: integer("arrive_before_minutes").notNull().default(10),
+
+    /**
+     * What a candidate may bring or open.
+     *
+     * Free text rather than a list, because the answer is a sentence: "the
+     * prescribed theory guide only, no printed notes". A checklist would
+     * flatten the distinctions that matter.
+     */
+    permittedMaterials: text("permitted_materials"),
+
+    /**
+     * The declaration a candidate accepts when they sign in.
+     *
+     * Copied onto each candidate row at the moment they accept, not
+     * referenced, so that changing the wording later cannot alter what
+     * somebody is recorded as having agreed to.
+     */
+    declarationText: text("declaration_text"),
+
+    status: sittingStatus("status").notNull().default("scheduled"),
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("invigilated_sittings_session_idx").on(t.sessionId),
+    index("invigilated_sittings_org_idx").on(t.organisationId),
+  ],
+);
+
+export const admissionOutcome = pgEnum("admission_outcome", [
+  "admitted",
+  /** Turned away, with a reason. Late, no identity document, and so on. */
+  "refused",
+]);
+
+/**
+ * One candidate at one sitting.
+ *
+ * The register, the declaration and the receipt for the script all live here
+ * because they are the same act seen from three sides: the invigilator says
+ * this person was here, the candidate says they will not cheat, and the
+ * provider says it holds what they wrote.
+ */
+export const sittingCandidates = pgTable(
+  "sitting_candidates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sittingId: uuid("sitting_id")
+      .notNull()
+      .references(() => invigilatedSittings.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    outcome: admissionOutcome("outcome"),
+    admittedAt: timestamp("admitted_at", { withTimezone: true }),
+    /** Why somebody was turned away. Required when they were. */
+    refusedReason: text("refused_reason"),
+    admittedById: uuid("admitted_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * Signing the register is accepting the rules and declaring no intention
+     * to cheat. The wording is copied in at the moment of acceptance.
+     */
+    declarationAcceptedAt: timestamp("declaration_accepted_at", {
+      withTimezone: true,
+    }),
+    declarationText: text("declaration_text"),
+
+    /**
+     * When the invigilator saw them on camera.
+     *
+     * Separate from admission because they are separate acts: a candidate can
+     * be in the meeting and not on camera, which is the thing the rule exists
+     * to catch.
+     */
+    cameraConfirmedAt: timestamp("camera_confirmed_at", { withTimezone: true }),
+
+    /**
+     * When they dropped out of the meeting.
+     *
+     * The client's rule is that a candidate who drops off a virtual sitting is
+     * not readmitted, so this is not a note: it closes the door on that person
+     * for the rest of the sitting, and `admitCandidate` refuses on it.
+     */
+    droppedOffAt: timestamp("dropped_off_at", { withTimezone: true }),
+    droppedOffReason: text("dropped_off_reason"),
+
+    /**
+     * The receipt for the script.
+     *
+     * The client acknowledges receipt of every answer sheet on the day. A
+     * script that was written and then lost between the room and the assessor
+     * is the failure this exists to make impossible to hide.
+     */
+    scriptReceivedAt: timestamp("script_received_at", { withTimezone: true }),
+    scriptReference: text("script_reference"),
+    scriptReceivedById: uuid("script_received_by_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("sitting_candidates_unique_idx").on(t.sittingId, t.userId),
+    index("sitting_candidates_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * Anything that happened which the provider has to be able to explain.
+ *
+ * The client's procedure requires every incident to be reported in writing on
+ * the same day. Held against the sitting, and against a candidate where one is
+ * involved, because "a phone rang" and "this candidate was found with notes"
+ * are answered very differently at an appeal.
+ */
+export const sittingIncidents = pgTable(
+  "sitting_incidents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sittingId: uuid("sitting_id")
+      .notNull()
+      .references(() => invigilatedSittings.id, { onDelete: "cascade" }),
+    /** Null where the incident concerns the room rather than a person. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    description: text("description").notNull(),
+    /** What the invigilator did about it, at the time. */
+    actionTaken: text("action_taken"),
+
+    reportedById: uuid("reported_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reportedAt: timestamp("reported_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("sitting_incidents_sitting_idx").on(t.sittingId),
+    index("sitting_incidents_org_idx").on(t.organisationId),
+  ],
+);

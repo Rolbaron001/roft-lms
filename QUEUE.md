@@ -280,11 +280,42 @@ it needs the relay host, user and password in the server's .env.
 **Done when:** a summative sitting can be run and evidenced inside the
 platform, well enough to replace the external invigilation licence.
 
-- [ ] 6.1 A sitting: date, time, cohort, invigilator, permitted materials
-- [ ] 6.2 Admission and the cut-off after which nobody is admitted
-- [ ] 6.3 Attendance register whose signature is also the learner's declaration
-- [ ] 6.4 Scripts received and acknowledged per learner
-- [ ] 6.5 Incident report, filed the same day
+- [x] 6.1 A sitting: date, time, cohort, invigilator, permitted materials
+- [x] 6.2 Admission and the cut-off after which nobody is admitted
+- [x] 6.3 Attendance register whose signature is also the learner's declaration
+- [x] 6.4 Scripts received and acknowledged per learner
+- [x] 6.5 Incident report, filed the same day
+- [x] 6.6 Runs virtually: the meeting link, cameras confirmed, and drop-outs
+
+**Landed.** A supervised sitting hangs off the session it happens at rather
+than being a second dated thing, because the schedule already holds when and
+where a cohort meets and two records of one event drift apart.
+
+**On running it in the platform.** The sitting carries the meeting link the
+same way a lecture does, and the meeting itself stays on whatever platform the
+provider already uses. The platform does not become a video service: what an
+invigilation licence actually buys is not a room but a record - who was
+admitted and who was turned away, what each candidate agreed to, that their
+script was received, and what went wrong - and that is the part worth holding
+here. A camera cannot be verified from outside the meeting, so what is recorded
+is the invigilator confirming they saw it, which is what an appeal asks for
+anyway.
+
+Two rules refuse rather than warn, and both are tested against a fixed clock.
+Admission closes a set number of minutes after the start; a candidate admitted
+late has had longer with the paper than everybody else. And a candidate who
+drops out cannot be readmitted, because somebody unsupervised for ten minutes
+cannot be put back in the room on the strength of nobody remembering when they
+left.
+
+The refusal quotes the provider's own clock. An invigilator told "admission
+closed at 03:19" while their watch says 07:19 will reasonably conclude the
+platform is broken.
+
+**Left open:** the provider's UTC offset is configuration rather than a
+constant, but it belongs on the tenant record and currently sits in the
+environment. A second tenant outside South Africa needs it moved before they
+can run a sitting. Small, and noted here so it is not discovered by them.
 
 **The deadline.** The client intends to end the external licence in March. Much
 of the procedure will always be the invigilator's job; what the platform holds

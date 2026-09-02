@@ -4,6 +4,11 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { sessionRegister, SchedulingError } from "@/lib/scheduling";
 import { Card } from "@/components/ui";
 import { RegisterForm } from "./register-form";
+import { Sitting } from "./sitting";
+import { withTenant } from "@/db/client";
+import { invigilatedSittings } from "@/db/schema";
+import { sittingRegister } from "@/lib/invigilation";
+import { eq } from "drizzle-orm";
 
 const KIND_LABEL: Record<string, string> = {
   induction: "Induction",
@@ -40,6 +45,21 @@ export default async function SessionRegisterPage({
 
   const marked = register.lines.filter((line) => line.status !== null).length;
 
+  // A supervised sitting, if one has been set up at this session. Looked up by
+  // the session rather than passed in, so the invigilator reaches the room
+  // from the same page as the register and does not have to know it exists.
+  const sittingId = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({ id: invigilatedSittings.id })
+      .from(invigilatedSittings)
+      .where(eq(invigilatedSittings.sessionId, sessionId));
+    return row?.id ?? null;
+  });
+
+  const supervised = sittingId
+    ? await sittingRegister(session, sittingId)
+    : null;
+
   return (
     <main className="mx-auto max-w-4xl px-6 py-8">
       <Link
@@ -58,6 +78,36 @@ export default async function SessionRegisterPage({
         {KIND_LABEL[register.session.kind] ?? register.session.kind} ·{" "}
         {register.session.date} · {marked} of {register.lines.length} marked
       </p>
+
+      {supervised ? (
+        <div className="mt-6">
+          <Card
+            title="Supervised sitting"
+            description="Who was admitted, what they agreed to, and that their script was received. The meeting itself runs where your lectures do; this is the record of how it was supervised."
+          >
+            <Sitting
+              cohortId={id}
+              sitting={{
+                id: supervised.sitting.id,
+                status: supervised.sitting.status,
+                assessmentTitle: supervised.sitting.assessmentTitle,
+                scheduledDate: supervised.sitting.scheduledDate,
+                startTime: supervised.sitting.startTime,
+                closesAfter: supervised.sitting.closesAfter,
+                arriveBeforeMinutes: supervised.sitting.arriveBeforeMinutes,
+                cameraRequired: supervised.sitting.cameraRequired,
+                permittedMaterials: supervised.sitting.permittedMaterials,
+                declarationText: supervised.sitting.declarationText,
+                meetingUrl: supervised.sitting.meetingUrl,
+                venue: supervised.sitting.venue,
+                deliveryMode: supervised.sitting.deliveryMode,
+              }}
+              lines={supervised.lines}
+              incidents={supervised.incidents}
+            />
+          </Card>
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <Card

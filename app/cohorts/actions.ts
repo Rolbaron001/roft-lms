@@ -23,6 +23,15 @@ import {
   setTaskStatus,
   TrackerError,
 } from "@/lib/tracker";
+import {
+  acceptSittingDeclaration,
+  acknowledgeScript,
+  admitCandidate,
+  confirmCamera,
+  InvigilationError,
+  recordDropOut,
+  recordIncident,
+} from "@/lib/invigilation";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type CohortActionState = { error?: string; done?: string };
@@ -47,6 +56,7 @@ async function run(
       error instanceof EnrolmentError ||
       error instanceof SchedulingError ||
       error instanceof TrackerError ||
+      error instanceof InvigilationError ||
       error instanceof PermissionDeniedError
     ) {
       return { error: error.message };
@@ -315,5 +325,144 @@ export async function setTaskStatusAction(
       ),
     "Task updated.",
     [`/cohorts/${cohortId}`, "/tracker"],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Invigilation
+//
+// The provider's own offset from UTC, so a sitting scheduled at 09:00 is
+// judged against 09:00 where the provider is. Passed rather than guessed: the
+// session deliberately holds a date and a clock time apart, and the server's
+// idea of the zone is not the provider's.
+//
+// Configuration rather than a constant, because a second tenant will not be in
+// South Africa and must not need a fork to run a sitting. It belongs on the
+// tenant record rather than in the environment, and is noted in the queue as
+// such; the environment is the smaller wrong answer until then, and the
+// default keeps the current tenant correct.
+// ---------------------------------------------------------------------------
+
+const PROVIDER_UTC_OFFSET_MINUTES = Number(
+  process.env.PROVIDER_UTC_OFFSET_MINUTES ?? 120,
+);
+
+export async function admitCandidateAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+  const sittingId = field(formData, "sittingId");
+
+  return run(
+    () =>
+      admitCandidate(session, {
+        sittingId,
+        userId: field(formData, "userId"),
+        outcome: field(formData, "outcome") as "admitted" | "refused",
+        reason: field(formData, "reason") || undefined,
+        utcOffsetMinutes: PROVIDER_UTC_OFFSET_MINUTES,
+      }),
+    "Register updated.",
+    [`/cohorts/${cohortId}/sessions/${field(formData, "sessionId") || ""}`, `/cohorts/${cohortId}`],
+  );
+}
+
+export async function acceptDeclarationAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      acceptSittingDeclaration(
+        session,
+        field(formData, "sittingId"),
+        field(formData, "userId"),
+      ),
+    "Declaration recorded.",
+    [`/cohorts/${cohortId}`],
+  );
+}
+
+export async function confirmCameraAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      confirmCamera(
+        session,
+        field(formData, "sittingId"),
+        field(formData, "userId"),
+      ),
+    "Camera confirmed.",
+    [`/cohorts/${cohortId}`],
+  );
+}
+
+export async function recordDropOutAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      recordDropOut(
+        session,
+        field(formData, "sittingId"),
+        field(formData, "userId"),
+        field(formData, "reason") || undefined,
+      ),
+    "Drop-out recorded. They cannot be readmitted to this sitting.",
+    [`/cohorts/${cohortId}`],
+  );
+}
+
+export async function acknowledgeScriptAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      acknowledgeScript(
+        session,
+        field(formData, "sittingId"),
+        field(formData, "userId"),
+        field(formData, "reference") || undefined,
+      ),
+    "Script receipted.",
+    [`/cohorts/${cohortId}`],
+  );
+}
+
+export async function recordIncidentAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+
+  return run(
+    () =>
+      recordIncident(session, {
+        sittingId: field(formData, "sittingId"),
+        userId: field(formData, "userId") || null,
+        description: field(formData, "description"),
+        actionTaken: field(formData, "actionTaken") || undefined,
+      }),
+    "Incident filed.",
+    [`/cohorts/${cohortId}`],
   );
 }
