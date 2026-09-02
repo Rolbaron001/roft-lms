@@ -621,6 +621,46 @@ SOP no longer describes what happens.
 
 ---
 
+## 10. The AI extension
+
+**Done when:** somebody can point the platform at a folder of qualification
+documents and get a proposal they can check and commit, without an API key and
+without the platform ever holding a credential.
+
+- [x] 10.1 An extension framework: providers, availability, and an audit of every call
+- [x] 10.2 A subscription-backed provider driving Claude Code, with no API key
+- [x] 10.3 Switched on per tenant, off by default, with an allow-list of readable folders
+- [x] 10.4 Folder to proposal: PDFs and Word documents converted, read, and reported
+- [x] 10.5 Proposal to curriculum, a module at a time, through the ordinary authoring guards
+
+**Feasible, and built.** Verified against the client's own documents: the three
+PDFs in `121151 HRM Officer/Qualification Details` produced fifteen modules
+across all three components with their real QCTO codes, 337 topic elements and
+160 assessment criteria, in about seven minutes.
+
+More useful than the structure were the thirty-one notes it returned. It found
+that the Assessment Specification gives PM-01 as 10 credits where the
+Qualification and Curriculum Documents both say 8, and worked out that only 8
+makes the stated total of 134. It found that KM0107 has no topic elements and no
+assessment criteria anywhere in the curriculum, and said so rather than
+inventing them. It found the topic weightings sum to 100 per cent in one section
+and 85 in another. Those are accreditation problems in the source documents, and
+they were found in seven minutes.
+
+**Where it runs.** Wherever Claude Code is installed and signed in - which is a
+desktop, not the hosted server. On the server nobody is signed in, the provider
+reports itself unavailable, and the platform behaves exactly as it does now.
+That is the honest shape rather than a limitation to engineer around: see the
+handover note.
+
+**What it may not do.** It proposes. A person commits, a module at a time,
+through the same authoring functions the hand editor uses - so every guard that
+protects a hand-built curriculum protects this one. That is not caution for its
+own sake: a model will produce something plausible from a document that says
+nothing of the kind, and the review is the only place that gets caught.
+
+---
+
 ## Deliberately not in this queue
 
 **Video production.** Curiosa's procedure describes making a video in an

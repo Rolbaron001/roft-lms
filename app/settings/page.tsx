@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
 import { ClockForm } from "./clock-form";
+import { ExtensionForm } from "./extension-form";
+import { extensionState, knownProviders } from "@/lib/extensions";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
@@ -17,6 +19,8 @@ export default async function SettingsPage() {
   const convention = canManageSettings
     ? await namingConventionFor(session)
     : null;
+
+  const extension = canManageSettings ? await extensionState(session) : null;
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -43,6 +47,25 @@ export default async function SettingsPage() {
       {canManageSettings ? (
         <div className="mt-6">
           <ClockForm current={tenant.timezone} />
+        </div>
+      ) : null}
+
+      {extension ? (
+        <div className="mt-6">
+          <ExtensionForm
+            current={{
+              enabled: extension.enabled,
+              provider: extension.provider,
+              model: extension.model,
+              allowedImportRoots: extension.allowedImportRoots,
+              availability: extension.availability,
+              providers: knownProviders().map((provider) => ({
+                name: provider.name,
+                label: provider.label,
+                description: provider.description,
+              })),
+            }}
+          />
         </div>
       ) : null}
 

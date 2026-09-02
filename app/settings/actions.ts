@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
 import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
+import { setExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -126,4 +127,49 @@ export async function updateClockAction(
   // the whole tree rather than guessing which pages show one.
   revalidatePath("/", "layout");
   return { notice: "Saved. Timetabled times now mean this clock." };
+}
+
+export type ExtensionState = { error?: string; notice?: string };
+
+/**
+ * Switching the AI extension on or off for this tenant.
+ *
+ * Under `tenant:manage_settings` rather than branding, like the clock: it
+ * decides whether a model may read documents on the machine the platform runs
+ * on, which is not a decision about how the site looks.
+ */
+export async function updateExtensionAction(
+  _previous: ExtensionState,
+  formData: FormData,
+): Promise<ExtensionState> {
+  const session = await requireSession();
+
+  const roots = String(formData.get("allowedImportRoots") ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  try {
+    await setExtension(session, {
+      enabled: formData.get("enabled") === "on",
+      provider: String(formData.get("provider") ?? "") || null,
+      model: String(formData.get("model") ?? "").trim() || null,
+      allowedImportRoots: roots,
+    });
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) {
+      return { error: "Your role does not allow that." };
+    }
+    console.error(error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "That could not be saved. Please try again.",
+    };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/qualifications");
+  return { notice: "Saved." };
 }

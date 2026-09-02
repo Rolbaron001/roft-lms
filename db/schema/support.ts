@@ -1545,3 +1545,194 @@ export const disposalDecisions = pgTable(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// AI extensions
+// ---------------------------------------------------------------------------
+
+/**
+ * Which model-assisted provider a tenant has switched on, if any.
+ *
+ * Per tenant and off by default. With nothing enabled the platform behaves
+ * exactly as it did before: the interface omits the affordances rather than
+ * offering something that would fail.
+ *
+ * There is no credential column, and that is deliberate rather than an
+ * omission. The subscription-backed provider holds its own sign-in on the
+ * machine it runs on, so the platform never sees, stores or transmits one, and
+ * there is nowhere in the interface to type one in.
+ */
+export const aiSettings = pgTable(
+  "ai_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** A provider name the platform knows, or null for none. */
+    provider: text("provider"),
+    /** Empty means the provider's own default. */
+    model: text("model"),
+
+    enabled: boolean("enabled").notNull().default(false),
+
+    /**
+     * Folders on the machine running the platform that an import may read.
+     *
+     * An allow-list rather than a free path, because "point it at a folder"
+     * given to a server process is otherwise "read any file the service can
+     * reach". Empty means no import can run, which is the safe default for a
+     * tenant that has switched the extension on and not thought about this.
+     */
+    allowedImportRoots: jsonb("allowed_import_roots")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    updatedById: uuid("updated_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("ai_settings_org_idx").on(t.organisationId)],
+);
+
+export const aiRunOutcome = pgEnum("ai_run_outcome", [
+  "ok",
+  "failed",
+  "refused",
+]);
+
+/**
+ * Every model call the platform makes, whether it worked or not.
+ *
+ * Failures are recorded as carefully as successes, because a provider that
+ * keeps failing is itself a finding: usage limits reached, nobody signed in,
+ * a machine that has moved. Without the failures the log says the extension is
+ * never used, which is a different conclusion entirely.
+ *
+ * The prompt is not stored, only its hash and size. A prompt carries whatever
+ * document was being read, which may be a learner's evidence, and a log is
+ * read by more people than the thing it describes. The hash is enough to say
+ * two runs asked the same question.
+ */
+export const aiRuns = pgTable(
+  "ai_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    provider: text("provider").notNull(),
+    model: text("model"),
+    /** What it was asked to do: "import_qualification", and so on. */
+    task: text("task").notNull(),
+
+    promptHash: text("prompt_hash").notNull(),
+    promptBytes: integer("prompt_bytes").notNull(),
+
+    outcome: aiRunOutcome("outcome").notNull(),
+    durationMs: integer("duration_ms"),
+    /** Zero on a subscription. Recorded so a switch to metered is visible. */
+    costUsd: text("cost_usd"),
+    error: text("error"),
+
+    requestedById: uuid("requested_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("ai_runs_org_idx").on(t.organisationId, t.createdAt)],
+);
+
+export const importJobStatus = pgEnum("import_job_status", [
+  "reading",
+  /** The model has proposed something and a person has not looked yet. */
+  "proposed",
+  "failed",
+  "committed",
+  "discarded",
+]);
+
+/**
+ * A folder somebody pointed the extension at, and what it proposed.
+ *
+ * The same shape as the document capture that already exists, and for the same
+ * reason: the model proposes and a person commits. Nothing here writes a
+ * qualification. What it produces is a proposal that goes through the ordinary
+ * authoring functions one module at a time, so every guard that protects a
+ * hand-built curriculum protects this one.
+ *
+ * That is not caution for its own sake. A qualification is an accredited
+ * structure that an external verifier reads against the source document, and a
+ * curriculum nobody checked against the document it came from is precisely
+ * what this platform exists to prevent - whether a person typed it or a model
+ * did.
+ */
+export const aiImportJobs = pgTable(
+  "ai_import_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** The folder as given, and what was actually found in it. */
+    sourcePath: text("source_path").notNull(),
+    files: jsonb("files")
+      .$type<{ name: string; bytes: number; kind: string }[]>()
+      .notNull()
+      .default([]),
+
+    status: importJobStatus("status").notNull().default("reading"),
+
+    /**
+     * What the model proposed, as read.
+     *
+     * Stored whole and unedited so that what a person approved can be compared
+     * with what was proposed. A proposal that was quietly normalised on the way
+     * in cannot be audited.
+     */
+    proposal: jsonb("proposal"),
+    problems: jsonb("problems").$type<string[]>().notNull().default([]),
+
+    /** The qualification it was committed into, once it has been. */
+    qualificationId: uuid("qualification_id").references(
+      () => qualifications.id,
+      { onDelete: "set null" },
+    ),
+
+    /**
+     * The module codes already taken from this proposal.
+     *
+     * A proposal is committed a module at a time, over more than one sitting if
+     * whoever is checking it has other work. Without this the first commit
+     * would close the job and strand the rest, which is what happened the first
+     * time this was run end to end.
+     */
+    committedModules: jsonb("committed_modules")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+
+    requestedById: uuid("requested_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    requestedAt: timestamp("requested_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    committedById: uuid("committed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    committedAt: timestamp("committed_at", { withTimezone: true }),
+
+    error: text("error"),
+  },
+  (t) => [index("ai_import_jobs_org_idx").on(t.organisationId, t.status)],
+);
