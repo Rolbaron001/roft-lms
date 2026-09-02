@@ -99,6 +99,27 @@ export function clockInZone(instant: Date, timeZone: string): string {
   }).format(instant);
 }
 
+/**
+ * Which calendar day an instant falls on, where the provider is.
+ *
+ * Working-day deadlines are counted on a wall calendar, and "today" at 01:00
+ * in Johannesburg is still yesterday in London. Asking the server what day it
+ * is would make a deadline depend on where the machine happens to run.
+ */
+export function dateInZone(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+
+  const at = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${at("year")}-${at("month")}-${at("day")}`;
+}
+
 /** An instant on the provider's clock, as a date and a time. */
 export function stampInZone(instant: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {

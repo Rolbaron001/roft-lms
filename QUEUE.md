@@ -339,7 +339,32 @@ is the record that the sitting was run properly.
 Each is small on its own: a record, a few states, a report. They look daunting
 as a list and are not.
 
-- [ ] 7.1 Appeals, acknowledged within two hours and logged per cohort
+- [x] 7.1 Appeals, acknowledged within two hours and logged per cohort
+
+**Landed.** Filed per cohort, which is how the client files them and which is
+also the only way "three appeals against one assessor on one cohort" is ever a
+visible fact.
+
+Two rules refuse. A result appeal cannot be resolved until the internal
+moderator has been named - that is the step the procedure turns on and the one
+a coordinator under end-of-term pressure would skip. A conduct appeal has no
+such requirement, because there is no judgement for a moderator to re-examine
+and demanding one would only teach people to name somebody who did nothing.
+
+The two-hour acknowledgement is a recorded act rather than an email, so the
+platform can be asked which are overdue while there is still time to act. It
+cannot be re-stamped: the first one is the evidence.
+
+**A late appeal is not refused.** Turning one away would push the whole matter
+back into an inbox where nobody can audit it, which is worse than a late
+appeal. What is refused is accepting one silently - somebody says why, and the
+reason is part of the file.
+
+**Working days are counted properly.** A result handed back on a Friday and one
+handed back on a Monday now give the learner the same two days. Public holidays
+are passed in rather than known, and nothing passes any in yet, so a deadline
+falling on one is a day tighter than intended - the safe direction, and noted
+below.
 - [ ] 7.2 Learner support and special needs, with the extra assessment date and the oral alternative
 - [ ] 7.3 Programme feedback within 48 hours of a summative, consolidated
 - [ ] 7.4 Digital competency badges on completion
@@ -362,6 +387,13 @@ raises it.
 Worth raising with the client: their own procedure still states 25 per cent and
 says nothing about cohort size, so a provider following it on a cohort of eight
 would moderate two scripts and believe itself compliant.
+
+**Public holidays are not yet a tenant's to keep.** Every working-day deadline
+in this stage skips weekends and nothing else. A deadline that falls on a
+public holiday is therefore a day tighter than the procedure intends, which
+never disadvantages a learner but does misreport the provider as late. A
+per-tenant holiday calendar is the fix, and it belongs next to the time zone in
+Settings.
 
 **7.2 carries health and disability information.** It needs deliberate handling
 under POPIA and must be visible only to those who have to act on it.

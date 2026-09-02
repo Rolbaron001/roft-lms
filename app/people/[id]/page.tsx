@@ -12,6 +12,12 @@ import { mailDomainFor } from "@/lib/mail";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
 import { EnrolmentDocuments } from "./documents";
+import { Appeals } from "./appeals";
+import {
+  assessmentsForLearner,
+  cohortsForLearner,
+  learnerAppeals,
+} from "@/lib/appeals";
 import {
   enrolmentReadiness,
   learnerDocuments,
@@ -64,6 +70,18 @@ export default async function PersonPage({
       : null;
   const held =
     isLearner && canManageEnrolments ? await learnerDocuments(session, id) : [];
+
+  // Appeals are only ever about a learner, and only shown to somebody who can
+  // work one. A learner reads their own from their own page, not this one.
+  const canManageAppeals =
+    isLearner && session.permissions.includes("appeal:manage");
+  const [appealCohorts, appealAssessments, lodged] = canManageAppeals
+    ? await Promise.all([
+        cohortsForLearner(session, id),
+        assessmentsForLearner(session, id),
+        learnerAppeals(session, id),
+      ])
+    : [[], [], []];
 
   // The domain a tenant's mailboxes live on. ROFT's own people sit on the
   // mail domain itself; a client's sit on a subdomain of it, so an address
@@ -159,6 +177,34 @@ export default async function PersonPage({
           canAnonymise={session.permissions.includes("user:anonymise")}
         />
       )}
+
+      {canManageAppeals ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Appeals
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            Against a result, or against an assessor&rsquo;s conduct. Receipt is
+            acknowledged within two hours, and the clock starts when it is
+            lodged here.
+          </p>
+          <Appeals
+            learnerId={id}
+            zone={tenant.timezone}
+            cohorts={appealCohorts}
+            assessments={appealAssessments}
+            existing={lodged.map((appeal) => ({
+              id: appeal.id,
+              ground: appeal.ground,
+              cohortName: appeal.cohortName,
+              lodgedAt: appeal.lodgedAt,
+              status: appeal.status,
+              outcome: appeal.outcome,
+            }))}
+            canManage
+          />
+        </section>
+      ) : null}
 
       {readiness ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">

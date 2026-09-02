@@ -75,6 +75,15 @@ export const PERMISSIONS = [
   "workplace:log",
   "workplace:sign",
 
+  // The procedures that run when something has gone wrong.
+  //
+  // Lodging is separated from managing because a learner lodges their own
+  // appeal and must not be able to see anybody else's, let alone acknowledge
+  // or resolve one. Rolling them together would make every learner a
+  // coordinator on the strength of being allowed to complain.
+  "appeal:lodge",
+  "appeal:manage",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -97,6 +106,7 @@ export type Permission = (typeof PERMISSIONS)[number];
  */
 const SELF_SERVICE: Permission[] = [
   "course:read",
+  "appeal:lodge",
   "assessment:take",
   "workplace:log",
   "enrolment:read_own",
@@ -116,6 +126,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   platform_owner: ["platform:manage_tenants", "platform:view_health"],
 
   tenant_admin: [
+    "appeal:manage",
     "tenant:manage_settings",
     "tenant:manage_branding",
     "user:read",
@@ -155,6 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   workplace_coach: ["workplace:sign"],
 
   instructor: [
+    "appeal:manage",
     "user:read",
     "course:read",
     "course:author",
@@ -189,6 +201,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * assessing permission at all: the separation is the point of the role.
    */
   moderator: [
+    "appeal:manage",
     "user:read",
     "course:read",
     "enrolment:read_all",

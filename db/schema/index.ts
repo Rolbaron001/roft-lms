@@ -4,3 +4,4 @@ export * from "./curriculum";
 export * from "./learning";
 export * from "./assessment";
 export * from "./delivery";
+export * from "./support";
