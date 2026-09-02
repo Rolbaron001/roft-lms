@@ -22,6 +22,10 @@ import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
 import { detectMedia } from "./media";
 import { issueCertificateAutomatically } from "./certificates";
+import { awardEarnedBadges } from "./badges";
+import { qualificationReadiness } from "./eisa";
+import { DEFAULT_TIME_ZONE, dateInZone } from "./timezone";
+import { enrolments, organisations } from "@/db/schema";
 import { raise, usersWithRole } from "./notifications";
 import { assertOralRecorded } from "./reassessment";
 
@@ -1305,8 +1309,87 @@ export async function recordAssessorDecision(
       });
     }
 
-    return { decision, moderation: sampling };
+    return { decision, moderation: sampling, learnerId: submission.userId };
+  }).then(async (result) => {
+    // Badges, from the same reading of the criterion ledger that decides
+    // readiness. Attempted outside the transaction and swallowed on failure:
+    // a badge is recognition, and no failure to hand one out may roll back an
+    // assessor's signed decision.
+    //
+    // A learner whose result is not yet competent can still have completed a
+    // different module on the same qualification, so this is not gated on the
+    // outcome - it awards whatever is now true and nothing else.
+    try {
+      const timeZone = await withTenant(
+        session.organisationId,
+        async (tx) => {
+          const [row] = await tx
+            .select({ timezone: organisations.timezone })
+            .from(organisations)
+            .where(eq(organisations.id, session.organisationId));
+          return row?.timezone ?? DEFAULT_TIME_ZONE;
+        },
+      );
+
+      await awardBadgesForLearner(session, result.learnerId, timeZone);
+    } catch (error) {
+      console.error("Badge award failed", error);
+    }
+
+    return result;
   });
+}
+
+/**
+ * Awards any badge this learner has now earned across every qualification
+ * they are on.
+ *
+ * Reads readiness rather than re-deriving completion, so a badge can never
+ * claim something the assessment record does not. Readiness is the expensive
+ * part; it runs once per qualification the learner is actually enrolled on.
+ */
+async function awardBadgesForLearner(
+  session: AuthenticatedSession,
+  learnerId: string,
+  timeZone: string,
+): Promise<void> {
+  const qualificationIds = await withTenant(
+    session.organisationId,
+    async (tx) => {
+      const rows = await tx
+        .selectDistinct({ id: enrolments.qualificationId })
+        .from(enrolments)
+        .where(eq(enrolments.userId, learnerId));
+
+      return rows
+        .map((row) => row.id)
+        .filter((id): id is string => id !== null);
+    },
+  );
+
+  for (const qualificationId of qualificationIds) {
+    const readiness = await qualificationReadiness(
+      session,
+      qualificationId,
+      learnerId,
+    );
+
+    const completed = readiness.components
+      .flatMap((component) => component.modules)
+      .filter((module) => module.complete && module.competenceAchievedAt)
+      .map((module) => ({
+        curriculumModuleId: module.moduleId,
+        // The date the last criterion was achieved, on the provider's own
+        // calendar rather than the server's - a badge earned at 01:00 in
+        // Johannesburg was not earned yesterday.
+        completedOn: dateInZone(
+          module.competenceAchievedAt as Date,
+          timeZone,
+        ),
+      }));
+
+    await awardEarnedBadges(session.organisationId, learnerId, completed);
+  }
 }
 
 // ---------------------------------------------------------------------------

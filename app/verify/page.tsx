@@ -1,5 +1,6 @@
 import { verifyByReference } from "@/lib/certificates";
 import { verifyStatement } from "@/lib/statement-of-results";
+import { verifyBadge } from "@/lib/badges";
 import { currentTenant } from "@/lib/request";
 import { referencePrefix } from "@/lib/platform";
 
@@ -28,6 +29,14 @@ export default async function VerifyPage({
     reference && !certificate?.found ? await verifyStatement(reference) : null;
 
   const result = certificate?.found ? certificate : null;
+
+  // A badge, if the reference is one. Checked last and in the same box because
+  // whoever holds a reference has no reason to know which kind of thing it
+  // came from - and a badge reference looks like the others.
+  const badge =
+    reference && !certificate?.found && !statement?.found
+      ? await verifyBadge(reference)
+      : null;
 
   return (
     <main
@@ -216,6 +225,50 @@ export default async function VerifyPage({
                 </p>
               </>
             )}
+          </section>
+        ) : null}
+
+        {badge ? (
+          <section
+            className="mt-6 rounded-lg border-2 bg-[var(--surface)] p-6"
+            style={{ borderColor: "var(--success)" }}
+            aria-live="polite"
+          >
+            <h2 className="font-semibold" style={{ color: "var(--success)" }}>
+              <span className="mr-2" aria-hidden>
+                {badge.glyph}
+              </span>
+              {badge.name}
+            </h2>
+
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                <dt className="text-[var(--muted)]">Held by</dt>
+                <dd className="font-medium">{badge.holderName}</dd>
+              </div>
+              <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                <dt className="text-[var(--muted)]">Earned on</dt>
+                <dd>{badge.earnedOn}</dd>
+              </div>
+              {badge.description ? (
+                <div className="grid gap-1 sm:grid-cols-[9rem_1fr]">
+                  <dt className="text-[var(--muted)]">For</dt>
+                  <dd>{badge.description}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            {/*
+              Said plainly, and it is the most important sentence on the page.
+              A badge that reads like a certificate to an employer is the one
+              way this becomes a liability for the provider.
+            */}
+            <p className="mt-4 border-t border-[var(--border)] pt-3 text-sm text-[var(--muted)]">
+              This is a provider&rsquo;s own record that the holder completed
+              this module of study. It is not a national qualification, carries
+              no credits, and is not awarded by a quality council. A
+              qualification is verified by its own certificate reference.
+            </p>
           </section>
         ) : null}
       </div>

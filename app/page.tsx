@@ -5,6 +5,7 @@ import { listMyCertificates } from "@/lib/certificates";
 import { myLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { feedbackOwedBy } from "@/lib/feedback";
+import { learnerBadges } from "@/lib/badges";
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: "Platform Owner",
@@ -40,6 +41,12 @@ export default async function HomePage() {
   // Feedback forms this person still owes. On the front page rather than behind
   // a notification, because a form nobody sees is a response rate nobody has.
   const owed = await feedbackOwedBy(session, session.userId);
+
+  // Badges. On the front page rather than a profile nobody visits, because the
+  // whole point is that recognition arrives on the day the work is finished
+  // and is seen - formal certification is months away and the client has lost
+  // learners in that gap.
+  const earned = await learnerBadges(session, session.userId);
   const [enrolments, certificates, paths] = await Promise.all([
     myEnrolments(session),
     listMyCertificates(session),
@@ -93,6 +100,32 @@ export default async function HomePage() {
                   <span className="ml-2 text-[var(--muted)]">
                     {request.cohortName}
                   </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
+        {earned.length > 0 ? (
+          <Card
+            title="What you have earned"
+            description="Recorded on the day you finished, rather than when the certificate eventually arrives. Each carries a reference anybody can check."
+          >
+            <ul className="flex flex-wrap gap-3">
+              {earned.map((badge) => (
+                <li
+                  key={badge.id}
+                  className="rounded-lg border border-[var(--border)] px-4 py-3"
+                >
+                  <p className="text-sm font-medium">
+                    <span className="mr-2" aria-hidden>
+                      {badge.glyph}
+                    </span>
+                    {badge.name}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {badge.earnedOn} · {badge.reference}
+                  </p>
                 </li>
               ))}
             </ul>

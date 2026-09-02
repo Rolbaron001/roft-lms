@@ -15,6 +15,8 @@ import { EnrolmentDocuments } from "./documents";
 import { Appeals } from "./appeals";
 import { Support } from "./support";
 import { Missed } from "./missed";
+import { Conduct } from "./conduct";
+import { learnerCases } from "@/lib/conduct";
 import { learnerMissedAssessments, learnerSupport } from "@/lib/support";
 import { dateInZone } from "@/lib/timezone";
 import {
@@ -96,6 +98,13 @@ export default async function PersonPage({
     canManageAppeals || canActOnSupport
       ? await assessmentsForLearner(session, id)
       : [];
+
+  // Discipline is held by the coordinating roles only. A facilitator who could
+  // issue a final written warning to somebody who annoyed them this morning is
+  // a provider with a dispute it will lose.
+  const canManageConduct =
+    isLearner && session.permissions.includes("conduct:manage");
+  const conductCases = canManageConduct ? await learnerCases(session, id) : [];
 
   const [supportRecords, missed] = canActOnSupport
     ? await Promise.all([
@@ -204,6 +213,25 @@ export default async function PersonPage({
           canAnonymise={session.permissions.includes("user:anonymise")}
         />
       )}
+
+      {canManageConduct ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Conduct
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            What was alleged, which warnings were live at the time, whether
+            notice of a hearing was adequate, and what was decided. In the order
+            it happened, which is the order it gets read back in.
+          </p>
+          <Conduct
+            learnerId={id}
+            zone={tenant.timezone}
+            cases={conductCases}
+            today={today}
+          />
+        </section>
+      ) : null}
 
       {canActOnSupport ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">

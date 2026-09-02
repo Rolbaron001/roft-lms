@@ -13,6 +13,7 @@ import {
 import { organisations, users } from "./tenancy";
 import { cohorts } from "./delivery";
 import { assessments } from "./assessment";
+import { curriculumModules, qualifications } from "./curriculum";
 
 /**
  * The procedures that happen around a programme rather than in it.
@@ -606,5 +607,445 @@ export const feedbackResponses = pgTable(
       t.requestId,
       t.learnerId,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Competency badges
+// ---------------------------------------------------------------------------
+
+export const badgeKind = pgEnum("badge_kind", [
+  /** Earned by completing one curriculum module. */
+  "curriculum_module",
+  /** Earned by completing the whole qualification. */
+  "qualification",
+]);
+
+/**
+ * A badge a tenant defines and its learners can earn.
+ *
+ * Not decoration. Formal certification under the OQSF arrives months after the
+ * work is finished - the external assessment has to be sat, moderated and
+ * processed by the assessment quality partner - and the client has measurably
+ * lost learners in that gap. A badge is the recognition that arrives on the day
+ * the module is finished, which is the day it means something.
+ *
+ * What it deliberately is not is a qualification. A badge says this provider
+ * recorded this person as competent in this module on this date. It carries no
+ * SAQA identifier, no credits and no awarding-body claim, because inventing one
+ * would be a misrepresentation the regulator would be right to object to. The
+ * verification page says so in as many words.
+ */
+export const badges = pgTable(
+  "badges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    kind: badgeKind("kind").notNull(),
+    /** What earns it. Exactly one of these is set, per the kind. */
+    curriculumModuleId: uuid("curriculum_module_id").references(
+      () => curriculumModules.id,
+      { onDelete: "cascade" },
+    ),
+    qualificationId: uuid("qualification_id").references(
+      () => qualifications.id,
+      { onDelete: "cascade" },
+    ),
+
+    name: text("name").notNull(),
+    description: text("description"),
+    /**
+     * An emoji or short glyph. Deliberately not an image upload.
+     *
+     * A badge nobody has to design is a badge that actually gets created, and
+     * the client has no designer. An image store for something two characters
+     * wide would be cost with no reader.
+     */
+    glyph: text("glyph").notNull().default("★"),
+
+    active: boolean("active").notNull().default(true),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("badges_org_idx").on(t.organisationId, t.active),
+    uniqueIndex("badges_module_once_idx").on(
+      t.organisationId,
+      t.curriculumModuleId,
+    ),
+  ],
+);
+
+/**
+ * A badge somebody has earned.
+ *
+ * Awarded from the same reading of the criterion ledger that decides
+ * readiness, never typed in by hand, so a badge cannot claim something the
+ * assessment record does not. It carries the date the module was completed
+ * rather than the date the row happened to be written, because a learner who
+ * finished in March and had their badge created by a backfill in July finished
+ * in March.
+ */
+export const badgeAwards = pgTable(
+  "badge_awards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    badgeId: uuid("badge_id")
+      .notNull()
+      .references(() => badges.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** The day the work was finished, not the day this row was written. */
+    earnedOn: date("earned_on").notNull(),
+    /**
+     * A short public reference, so a learner can show somebody the badge
+     * without the platform having to expose a database identifier.
+     */
+    reference: text("reference").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("badge_awards_once_idx").on(
+      t.organisationId,
+      t.badgeId,
+      t.learnerId,
+    ),
+    uniqueIndex("badge_awards_reference_idx").on(t.reference),
+    index("badge_awards_learner_idx").on(t.organisationId, t.learnerId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Learner discipline
+// ---------------------------------------------------------------------------
+
+export const offenceGrade = pgEnum("offence_grade", [
+  /** Late arrival, minor disruption, a small assignment missed. */
+  "minor",
+  /** Repeated minor, unauthorised absence, cheating, disrespect, damage. */
+  "serious",
+  /** Theft, violence, harassment, substances, disrepute, repeated serious. */
+  "gross",
+]);
+
+export const disciplinaryStage = pgEnum("disciplinary_stage", [
+  /** A documented conversation. Explicitly not a warning. */
+  "informal_counselling",
+  "verbal_warning",
+  "written_warning",
+  "final_written_warning",
+  "hearing",
+  "closed",
+]);
+
+export const disciplinarySanction = pgEnum("disciplinary_sanction", [
+  "no_action",
+  "counselled",
+  "verbal_warning",
+  "written_warning",
+  "final_written_warning",
+  "terminated",
+  "expelled",
+]);
+
+/**
+ * A disciplinary matter, from the first note to the sanction.
+ *
+ * The procedure is long and mostly about people talking to each other, which a
+ * platform should not try to run. What it holds is the part that has to be
+ * provable afterwards: what the learner was accused of, what grade it was
+ * treated as, what warnings were live at the time, whether they were given
+ * notice of a hearing and how much, and what was decided.
+ *
+ * That list is not arbitrary. It is what a CCMA referral or a sponsor's
+ * complaint asks for, and it is exactly what a folder of emails cannot produce
+ * in the order it happened.
+ */
+export const disciplinaryCases = pgTable(
+  "disciplinary_cases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, {
+      onDelete: "set null",
+    }),
+
+    grade: offenceGrade("grade").notNull(),
+    /** What is alleged. Required: a case with no allegation cannot be answered. */
+    allegation: text("allegation").notNull(),
+    occurredOn: date("occurred_on").notNull(),
+
+    stage: disciplinaryStage("stage").notNull().default("informal_counselling"),
+
+    raisedById: uuid("raised_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    raisedAt: timestamp("raised_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    /** Whether the sponsor was told, which the procedure requires before a hearing. */
+    sponsorNotifiedAt: timestamp("sponsor_notified_at", { withTimezone: true }),
+    sponsorRepresentative: text("sponsor_representative"),
+
+    sanction: disciplinarySanction("sanction"),
+    /** Required to close. An unexplained sanction is indefensible. */
+    outcomeReason: text("outcome_reason"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedById: uuid("closed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * When the learner was given the outcome in writing.
+     *
+     * The right to appeal runs from this, not from the decision, so it is held
+     * separately. A learner who was never told has not had five working days.
+     */
+    outcomeGivenAt: timestamp("outcome_given_at", { withTimezone: true }),
+    appealBy: date("appeal_by"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("disciplinary_cases_learner_idx").on(t.organisationId, t.learnerId),
+    index("disciplinary_cases_open_idx").on(t.organisationId, t.stage),
+  ],
+);
+
+export const warningKind = pgEnum("warning_kind", [
+  "verbal",
+  "written",
+  "final_written",
+]);
+
+/**
+ * A warning, and the date it stops counting.
+ *
+ * The validity period is the whole reason this is a table rather than a column
+ * on the case. Escalation depends on what is live now, and a warning issued
+ * two years ago is not live - treating it as though it were is the single most
+ * common way a disciplinary decision is overturned.
+ */
+export const disciplinaryWarnings = pgTable(
+  "disciplinary_warnings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => disciplinaryCases.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    kind: warningKind("kind").notNull(),
+    issuedOn: date("issued_on").notNull(),
+    /** After this it no longer counts towards escalation. */
+    validUntil: date("valid_until").notNull(),
+
+    /** The rule broken, the standard expected, and what happens if it recurs. */
+    terms: text("terms").notNull(),
+
+    issuedById: uuid("issued_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** The learner's signature of receipt, which the procedure asks for. */
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("disciplinary_warnings_learner_idx").on(
+      t.organisationId,
+      t.learnerId,
+      t.validUntil,
+    ),
+  ],
+);
+
+/**
+ * A formal hearing.
+ *
+ * The notice period is the one thing here the platform genuinely enforces. The
+ * procedure says at least 48 hours, and a hearing convened at shorter notice is
+ * the procedural defect that costs a provider the case regardless of what the
+ * learner did. It is checked against the clock rather than trusted to whoever
+ * is arranging it under pressure.
+ */
+export const disciplinaryHearings = pgTable(
+  "disciplinary_hearings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => disciplinaryCases.id, { onDelete: "cascade" }),
+
+    noticeGivenAt: timestamp("notice_given_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+
+    venue: text("venue"),
+    /** Runs where the lectures do, if it is not in a room. */
+    meetingUrl: text("meeting_url"),
+
+    /** The specific allegations put, which the notice must state. */
+    allegations: text("allegations").notNull(),
+    /** The sanctions the learner is told are possible. */
+    sanctionsAdvised: text("sanctions_advised").notNull(),
+    /**
+     * That the learner was told their rights: to be assisted by a fellow
+     * learner, to present a case, to call and question witnesses.
+     *
+     * A single flag rather than four, because they are advised in one sentence
+     * of one letter and recording them apart would suggest a choice nobody has.
+     */
+    rightsAdvised: boolean("rights_advised").notNull().default(false),
+
+    heldAt: timestamp("held_at", { withTimezone: true }),
+    chairId: uuid("chair_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    assistedBy: text("assisted_by"),
+    findings: text("findings"),
+
+    postponedReason: text("postponed_reason"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("disciplinary_hearings_case_idx").on(t.organisationId, t.caseId)],
+);
+
+// ---------------------------------------------------------------------------
+// Grievances
+// ---------------------------------------------------------------------------
+
+export const grievanceStatus = pgEnum("grievance_status", [
+  "lodged",
+  "acknowledged",
+  "under_investigation",
+  "decided",
+  "appealed",
+  "closed",
+]);
+
+/**
+ * A learner's grievance, which runs the opposite way to a disciplinary case.
+ *
+ * Kept apart from appeals deliberately. An appeal is about a result or an
+ * assessor's conduct in assessing; a grievance is about treatment, conditions,
+ * or anything else affecting the learner's experience, and it goes to a
+ * different person on a different clock. Filing them together would put a
+ * complaint about a facilitator's behaviour in front of the moderator, who has
+ * no standing in it.
+ *
+ * The procedure promises confidentiality and freedom from victimisation. The
+ * platform cannot deliver either, but it can make the dates provable, which is
+ * what a learner who was victimised will need.
+ */
+export const grievances = pgTable(
+  "grievances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, {
+      onDelete: "set null",
+    }),
+
+    /** Whether informal resolution was tried, as the procedure encourages. */
+    informalAttempted: boolean("informal_attempted").notNull().default(false),
+
+    nature: text("nature").notNull(),
+    individualsInvolved: text("individuals_involved"),
+    occurredOn: date("occurred_on"),
+    desiredOutcome: text("desired_outcome"),
+
+    lodgedOn: date("lodged_on").notNull(),
+    lodgedAt: timestamp("lodged_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    status: grievanceStatus("status").notNull().default("lodged"),
+
+    /** Two working days, by the procedure. */
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    acknowledgeBy: date("acknowledge_by").notNull(),
+
+    /**
+     * The impartial person investigating.
+     *
+     * Named rather than assumed, and the platform refuses to let it be somebody
+     * the grievance is about - which is the failure the word "impartial" is
+     * there to prevent and the one that happens when a small provider is short
+     * of people.
+     */
+    investigatorId: uuid("investigator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    meetingHeldOn: date("meeting_held_on"),
+
+    decidedOn: date("decided_on"),
+    /** Seven to ten working days from the meeting, by the procedure. */
+    decisionDueBy: date("decision_due_by"),
+    decision: text("decision"),
+    decisionGivenAt: timestamp("decision_given_at", { withTimezone: true }),
+
+    appealLodgedOn: date("appeal_lodged_on"),
+    appealOfficerId: uuid("appeal_officer_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    appealDecision: text("appeal_decision"),
+    appealDecidedOn: date("appeal_decided_on"),
+
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("grievances_learner_idx").on(t.organisationId, t.learnerId),
+    index("grievances_open_idx").on(t.organisationId, t.status),
   ],
 );

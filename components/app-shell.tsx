@@ -47,6 +47,7 @@ const NAV: NavItem[] = [
     anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
   },
   { href: "/appeals", label: "Appeals", permission: "appeal:manage" },
+  { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
   { href: "/assess", label: "To assess", permission: "assessment:assess" },
   { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
   // Every signed-in person holds report:own, but a learner has no dashboard

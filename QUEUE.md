@@ -422,8 +422,42 @@ reports.
 shipped is a defensible default rather than Curiosa's own - theirs lives in a
 Google Form that was not among the documents handed over. When it arrives it
 replaces the default and no code changes to let it.
-- [ ] 7.4 Digital competency badges on completion
-- [ ] 7.5 Learner discipline: offences graded, warnings with a validity period, hearings
+- [x] 7.4 Digital competency badges on completion
+
+**Landed.** Awarded from the same reading of the criterion ledger that decides
+readiness, never typed in, so a badge cannot claim something the assessment
+record does not. It carries the day the work was finished rather than the day
+the row was written.
+
+Said plainly on the verification page: this is a provider's own record, not a
+national qualification, no credits, no quality council. That sentence is the
+most important thing on the page - a badge that reads like a certificate to an
+employer is the one way this becomes a liability.
+- [x] 7.5 Learner discipline: offences graded, warnings with a validity period, hearings
+- [x] 7.6 Grievances, which run the opposite way and were not in the original brief
+- [x] 7.7 Abscondment, derived from the attendance register
+
+**Landed.** Three rules refuse, and each is a procedural defect that would cost
+the provider the case whatever the learner did.
+
+A hearing needs 48 hours' notice, checked against the clock. A notice that does
+not state the allegations, or does not tell the learner they may be assisted and
+may call witnesses, is refused. And ending somebody's programme needs a hearing
+that was actually held with its findings recorded.
+
+Warnings expire, and only live ones count towards escalation. Treating a warning
+from two years ago as live is the commonest way a disciplinary decision is
+overturned, and a folder cannot tell the difference.
+
+**Grievances are kept apart from appeals** deliberately. An appeal is about a
+result and goes to the moderator; a grievance is about treatment and goes to an
+impartial investigator on a different clock. Appointing an investigator the
+grievance names is refused - "a designated impartial person" is the procedure's
+own promise, and a short-staffed week is exactly when it gets broken.
+
+**Abscondment is derived from the register**, never stored, so correcting a mark
+changes the answer at once. An absence recorded as excused is communication and
+breaks the run. It produces a list to act on and never a decision.
 
 ---
 

@@ -99,6 +99,18 @@ export const PERMISSIONS = [
   "support:read",
   "support:manage",
 
+  // Discipline and grievances.
+  //
+  // A learner lodges their own grievance and must not see anybody else's, so
+  // lodging is separated from managing exactly as it is for appeals. Nobody
+  // holds `conduct:manage` by virtue of teaching: a facilitator raises a
+  // matter with a coordinator, and a facilitator who could issue a final
+  // written warning to somebody who annoyed them this morning is a provider
+  // with a dispute it will lose.
+  "conduct:manage",
+  "grievance:lodge",
+  "grievance:manage",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -122,6 +134,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 const SELF_SERVICE: Permission[] = [
   "course:read",
   "appeal:lodge",
+  "grievance:lodge",
   "assessment:take",
   "workplace:log",
   "enrolment:read_own",
@@ -142,6 +155,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   tenant_admin: [
     "appeal:manage",
+    "conduct:manage",
+    "grievance:manage",
     "support:act",
     "support:read",
     "support:manage",
@@ -185,6 +200,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   instructor: [
     "appeal:manage",
+    "conduct:manage",
+    "grievance:manage",
     "support:act",
     "support:read",
     "support:manage",
