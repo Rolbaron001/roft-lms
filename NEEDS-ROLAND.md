@@ -84,9 +84,11 @@ than letting anybody assume otherwise.
   available to every tenant. Ask Anthropic whether your plan permits that before
   doing it.
 
-Either way, switch it on in **Settings** first, and list the folders it may
-read. That allow-list is not optional - a server process given a free path can
-read anything it can reach, including its own configuration.
+Either way, two things have to happen once. Each person switches their own on
+under **your account** (the link is your name, top right). And an administrator
+lists the folders that may be read, in **Settings** - that allow-list is not
+optional, because a server process given a free path can read anything it can
+reach, including its own configuration.
 
 ---
 
@@ -156,8 +158,8 @@ accumulate. Worth fixing, low priority, mine to do.
 ## What is on GitHub
 
 Stages 7, 8, 10 complete; stage 9 complete except the two items waiting on the
-bucket. Every commit passes typecheck, lint, 939 tests and a production build.
-96 tables are tenant-isolated, which the isolation test enforces.
+bucket. Every commit passes typecheck, lint, 946 tests and a production build.
+97 tables are tenant-isolated, which the isolation test enforces.
 
 The 16:00 deploy will take all of it. The schema changes apply themselves on the
 way in.
