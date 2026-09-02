@@ -110,6 +110,22 @@ export const qualifications = pgTable(
      * a number that disagrees with the official document while looking right.
      * Better to say "not stated" and derive visibly.
      */
+    /**
+     * The most of this qualification that may be obtained without doing it:
+     * by recognition of prior learning, credit transfer, or both together.
+     *
+     * A percentage of credits, per qualification, because the limit is a
+     * property of the award rather than of the provider. Fifty is the figure
+     * commonly applied and is a default rather than an authority - the
+     * qualification document or the assessment quality partner is, and where
+     * one says otherwise this is where that goes.
+     *
+     * It is enforced when an exemption is granted rather than checked at the
+     * end, because at the end the learner has already been told they are
+     * exempt.
+     */
+    maxExemptPercent: integer("max_exempt_percent").notNull().default(50),
+
     componentWeights: jsonb("component_weights").$type<{
       knowledge: number;
       practical: number;

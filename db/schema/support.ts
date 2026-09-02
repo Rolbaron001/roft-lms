@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -1047,5 +1048,314 @@ export const grievances = pgTable(
   (t) => [
     index("grievances_learner_idx").on(t.organisationId, t.learnerId),
     index("grievances_open_idx").on(t.organisationId, t.status),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Recognition of Prior Learning, and Credit Accumulation and Transfer
+// ---------------------------------------------------------------------------
+
+export const rplStatus = pgEnum("rpl_status", [
+  "applied",
+  /** The advisory session has happened: the candidate knows what is required. */
+  "advised",
+  "building_portfolio",
+  "submitted",
+  "judged",
+  "moderated",
+  "closed",
+]);
+
+export const rplOutcome = pgEnum("rpl_outcome", [
+  "granted",
+  /** Some modules recognised, the rest to be done as ordinary learning. */
+  "partial",
+  "refused",
+  "withdrawn",
+]);
+
+/**
+ * An application to have prior learning recognised.
+ *
+ * RPL is the highest-risk route in the whole framework and the one an external
+ * verifier looks at first, because it is the only way to hold a qualification
+ * without having been taught. The procedure that protects it is not the
+ * judgement itself but the two things either side of it: an advisory session
+ * where somebody explains to the candidate what evidence is actually needed,
+ * and independent moderation of every judgement rather than a sample.
+ *
+ * Both of those are enforced here. A candidate cannot go to judgement without
+ * a recorded advisory session, and no judgement grants an exemption until a
+ * moderator has confirmed it.
+ */
+export const rplApplications = pgTable(
+  "rpl_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+
+    appliedOn: date("applied_on").notNull(),
+
+    /**
+     * The advisory session, and who gave it.
+     *
+     * The step candidates are failed by when it is skipped: somebody assembles
+     * a folder of certificates nobody told them were the wrong kind of
+     * evidence, and is judged not yet competent on the strength of it.
+     */
+    advisorId: uuid("advisor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    advisedOn: date("advised_on"),
+    adviceGiven: text("advice_given"),
+
+    status: rplStatus("status").notNull().default("applied"),
+    outcome: rplOutcome("outcome"),
+    outcomeReason: text("outcome_reason"),
+
+    submittedOn: date("submitted_on"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("rpl_applications_learner_idx").on(t.organisationId, t.learnerId),
+    index("rpl_applications_open_idx").on(t.organisationId, t.status),
+  ],
+);
+
+/**
+ * One assessor's judgement on one module of an RPL application.
+ *
+ * Per module rather than per application, because a candidate with fifteen
+ * years in the job will usually have plenty of evidence for some modules and
+ * none for others, and "partially granted" is the ordinary outcome rather than
+ * the exception.
+ *
+ * Every judgement is moderated. Not a sample: the cohort-size sampling rule
+ * that governs ordinary assessment exists because ordinary assessment has a
+ * paper trail of taught sessions behind it. RPL has none, which is exactly why
+ * the whole of it is looked at twice.
+ */
+export const rplJudgements = pgTable(
+  "rpl_judgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => rplApplications.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    competent: boolean("competent").notNull(),
+    /** What the evidence was and why it satisfies the module. Required. */
+    rationale: text("rationale").notNull(),
+
+    assessorId: uuid("assessor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    judgedOn: date("judged_on").notNull(),
+
+    moderatorId: uuid("moderator_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    moderatedAt: timestamp("moderated_at", { withTimezone: true }),
+    moderatorAgreed: boolean("moderator_agreed"),
+    moderatorComment: text("moderator_comment"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("rpl_judgements_once_idx").on(
+      t.organisationId,
+      t.applicationId,
+      t.curriculumModuleId,
+    ),
+  ],
+);
+
+/**
+ * Credit carried in from a qualification the learner already holds.
+ *
+ * Different from RPL in the thing that matters: the learning was already
+ * assessed and certificated by somebody else, so what is being judged is
+ * whether that qualification's outcomes cover this module's, not whether the
+ * candidate can do the work. The evidence is a certificate rather than a
+ * portfolio, and the person who signs it off is checking a mapping.
+ */
+export const creditTransfers = pgTable(
+  "credit_transfers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    /** What they already hold. Free text: it was awarded elsewhere. */
+    sourceQualification: text("source_qualification").notNull(),
+    sourceProvider: text("source_provider"),
+    sourceSaqaId: text("source_saqa_id"),
+    sourceCredits: integer("source_credits"),
+    awardedOn: date("awarded_on"),
+
+    /**
+     * How the source outcomes cover this module's. Required.
+     *
+     * The whole of a credit transfer decision is this paragraph, and a transfer
+     * recorded without it is a claim nobody can check - which is what an
+     * external verifier is looking for.
+     */
+    mapping: text("mapping").notNull(),
+
+    approvedById: uuid("approved_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    approvedOn: date("approved_on").notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("credit_transfers_once_idx").on(
+      t.organisationId,
+      t.learnerId,
+      t.curriculumModuleId,
+    ),
+  ],
+);
+
+export const exemptionSource = pgEnum("exemption_source", ["rpl", "cat"]);
+
+/**
+ * A module the learner does not have to do, and why.
+ *
+ * One table for both routes, because what follows from an exemption is
+ * identical whichever produced it: the module counts towards the qualification
+ * and no assessment will ever be submitted for it.
+ *
+ * It exists as its own record rather than as a flag on progress because of
+ * item 8.3 - an RPL candidate must not read as a learner who skipped work.
+ * Readiness counts an exempt module as met and says which ones were exempt and
+ * on what basis, so a monitoring visit sees recognition where recognition
+ * happened rather than a gap somebody has to explain.
+ */
+export const moduleExemptions = pgTable(
+  "module_exemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    source: exemptionSource("source").notNull(),
+    /** Whichever record granted it. Exactly one is set. */
+    rplJudgementId: uuid("rpl_judgement_id").references(
+      () => rplJudgements.id,
+      { onDelete: "cascade" },
+    ),
+    creditTransferId: uuid("credit_transfer_id").references(
+      () => creditTransfers.id,
+      { onDelete: "cascade" },
+    ),
+
+    grantedOn: date("granted_on").notNull(),
+    grantedById: uuid("granted_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("module_exemptions_once_idx").on(
+      t.organisationId,
+      t.learnerId,
+      t.curriculumModuleId,
+    ),
+    index("module_exemptions_learner_idx").on(t.organisationId, t.learnerId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// EISA sittings
+// ---------------------------------------------------------------------------
+
+/**
+ * A dated external assessment window, and when registration for it closes.
+ *
+ * The assessment quality partner sets these, typically three a year, with
+ * registration closing about three months ahead. That gap is the whole reason
+ * this is in the platform: a cohort finishing in November is registered for a
+ * sitting whose deadline passed in August, and nobody notices until the
+ * deadline has gone because the dates live in an email from the AQP.
+ *
+ * Held per tenant rather than per qualification by default, because a small
+ * provider runs one AQP's calendar; where a qualification has its own the
+ * qualification is named and it wins.
+ */
+export const eisaSittings = pgTable(
+  "eisa_sittings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** Null means it applies to every qualification this tenant offers. */
+    qualificationId: uuid("qualification_id").references(
+      () => qualifications.id,
+      { onDelete: "cascade" },
+    ),
+
+    name: text("name").notNull(),
+    sittingDate: date("sitting_date").notNull(),
+    /** The date after which nobody can be entered for this sitting. */
+    registrationCloses: date("registration_closes").notNull(),
+
+    /** Who runs it: the assessment quality partner named on the letter. */
+    assessmentQualityPartner: text("assessment_quality_partner"),
+    note: text("note"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("eisa_sittings_dates_idx").on(
+      t.organisationId,
+      t.registrationCloses,
+    ),
   ],
 );

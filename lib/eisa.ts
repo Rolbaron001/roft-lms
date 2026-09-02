@@ -13,6 +13,7 @@ import {
   qualifications,
   users,
   workplaceLogbookEntries,
+  moduleExemptions,
   workplaceLogbooks,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
@@ -91,6 +92,14 @@ export type ModuleReadiness = {
   /** Weighted by topic, so a module is not 90% done because its small topics are. */
   percent: number;
   complete: boolean;
+  /**
+   * Recognised rather than assessed: prior learning, or credit carried in.
+   *
+   * Held apart from `complete` on purpose. Both mean the module is met, and a
+   * monitoring visit asks a completely different question about each - so an
+   * RPL candidate must never read as a learner who skipped the work.
+   */
+  exemption: { source: "rpl" | "cat"; grantedOn: string } | null;
   /**
    * When the last outstanding criterion in this module was achieved, or when
    * the assessor accepted the logbook. The Statement of Results has to carry a
@@ -426,6 +435,24 @@ export async function qualificationReadiness(
     // Work experience is proved by a signed logbook, not by criteria. Both the
     // requirements the curriculum lists and the learner's progress against them
     // are read here so a workplace module can report something truthful.
+    // Modules recognised rather than assessed. Read once, alongside the
+    // criterion ledger, because every module has to know whether it was.
+    const exemptions = moduleIds.length
+      ? await tx
+          .select({
+            curriculumModuleId: moduleExemptions.curriculumModuleId,
+            source: moduleExemptions.source,
+            grantedOn: moduleExemptions.grantedOn,
+          })
+          .from(moduleExemptions)
+          .where(
+            and(
+              eq(moduleExemptions.learnerId, userId),
+              inArray(moduleExemptions.curriculumModuleId, moduleIds),
+            ),
+          )
+      : [];
+
     const logbooks = moduleIds.length
       ? await tx
           .select({
@@ -654,6 +681,26 @@ export async function qualificationReadiness(
             .filter((d): d is Date => d !== null);
         }
 
+        // An exempt module is met, whatever the criteria say, and nothing about
+        // it is outstanding. Applied after both routes because it overrides
+        // either: prior learning recognised against a work experience module
+        // means no logbook will ever be opened.
+        const exempt = exemptions.find(
+          (row) => row.curriculumModuleId === curriculumModule.id,
+        );
+
+        if (exempt) {
+          complete = true;
+          weighted = 1;
+          while (
+            outstanding.length > 0 &&
+            outstanding[outstanding.length - 1].moduleCode ===
+              curriculumModule.code
+          ) {
+            outstanding.pop();
+          }
+        }
+
         return {
           moduleId: curriculumModule.id,
           code: curriculumModule.code,
@@ -666,6 +713,9 @@ export async function qualificationReadiness(
           route,
           percent: round(weighted * 100),
           complete,
+          exemption: exempt
+            ? { source: exempt.source, grantedOn: exempt.grantedOn }
+            : null,
           logbook: logbook
             ? {
                 id: logbook.id,

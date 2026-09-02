@@ -495,12 +495,41 @@ time.
 
 ## 8. RPL, CAT and EISA registration
 
-- [ ] 8.1 RPL: application, advisory, portfolio, judgement, moderation
-- [ ] 8.2 CAT: mapping against the previous qualification's outcomes
-- [ ] 8.3 Module exemption, so an RPL candidate does not read as a learner who skipped work
-- [ ] 8.4 The transfer limit enforced, so a provider cannot breach it without noticing
-- [ ] 8.5 EISA registration export, and the SETA registration alongside it
-- [ ] 8.6 EISA timing visible in advance: three dates a year, registration three months ahead
+- [x] 8.1 RPL: application, advisory, portfolio, judgement, moderation
+- [x] 8.2 CAT: mapping against the previous qualification's outcomes
+- [x] 8.3 Module exemption, so an RPL candidate does not read as a learner who skipped work
+- [x] 8.4 The transfer limit enforced, so a provider cannot breach it without noticing
+- [x] 8.5 EISA registration export
+- [x] 8.6 EISA timing visible in advance
+
+**Landed.** Three rules refuse.
+
+A candidate cannot be judged before the advisory session has been recorded,
+with what was actually advised rather than that a meeting happened. Skipping it
+is how a candidate is failed for assembling the wrong kind of evidence, and the
+platform is the only thing in a position to notice it never took place.
+
+Every RPL judgement is moderated, not sampled - the cohort-size rule exists
+because ordinary assessment has a paper trail of taught sessions behind it, and
+RPL has none. The judgement grants nothing; the exemption follows moderation, so
+a moderator who disagrees has nothing to unwind.
+
+The transfer limit is checked at the single point an exemption comes into
+existence, so neither route can breach it and neither has to remember to look.
+By credits rather than module count, because a learner exempted from every small
+module has not been exempted from half the qualification.
+
+**Readiness now counts an exempt module as met and says so.** That is 8.3: an
+RPL candidate must never read as a learner who skipped work, and a monitoring
+visit sees recognition where recognition happened.
+
+**Needs the client.** The exemption limit defaults to 50 per cent per
+qualification and that figure is a default rather than an authority. The
+qualification document or the assessment quality partner is; where one says
+otherwise it is one field on the qualification.
+
+**Needs the client.** EISA sitting dates come from the assessment quality
+partner's letter and have to be typed in once a year. Nothing can derive them.
 
 ---
 

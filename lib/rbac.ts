@@ -111,6 +111,16 @@ export const PERMISSIONS = [
   "grievance:lodge",
   "grievance:manage",
 
+  // Recognition of prior learning and credit transfer.
+  //
+  // Separate from assessing, because the judgement on an RPL module is made by
+  // an assessor under `assessment:assess` and moderated under
+  // `assessment:moderate` exactly as any other, while opening an application,
+  // giving the advisory session and approving a credit transfer are
+  // coordination. Rolling them together would let whoever gave the advice sign
+  // off the mapping that follows from it.
+  "recognition:manage",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -155,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   tenant_admin: [
     "appeal:manage",
+    "recognition:manage",
     "conduct:manage",
     "grievance:manage",
     "support:act",
@@ -200,6 +211,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   instructor: [
     "appeal:manage",
+    "recognition:manage",
     "conduct:manage",
     "grievance:manage",
     "support:act",
