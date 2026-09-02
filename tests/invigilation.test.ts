@@ -18,21 +18,35 @@ describe("sittingStartsAt", () => {
   /**
    * The session holds a date and a clock time separately, on purpose, so a
    * sitting at 09:00 stays at 09:00 whatever the server thinks the zone is.
-   * Putting them back together needs the provider's offset, which is why it is
+   * Putting them back together needs the provider's zone, which is why it is
    * an argument rather than a guess.
    */
   it("reads the provider's own clock, not the server's", () => {
     // 09:00 in South Africa is 07:00 UTC.
-    const sast = sittingStartsAt("2026-03-10", "09:00", 120);
+    const sast = sittingStartsAt("2026-03-10", "09:00", "Africa/Johannesburg");
     expect(sast.toISOString()).toBe("2026-03-10T07:00:00.000Z");
 
     // The same wall-clock time in UTC is a different instant.
-    const utc = sittingStartsAt("2026-03-10", "09:00", 0);
+    const utc = sittingStartsAt("2026-03-10", "09:00", "UTC");
     expect(utc.toISOString()).toBe("2026-03-10T09:00:00.000Z");
   });
 
+  /**
+   * The reason the tenant record holds a zone and not an offset. A provider in
+   * London runs a 09:00 sitting at 09:00 all year; the instant that is moves by
+   * an hour when the clocks change. An offset of +60 stored in March would
+   * refuse admission to everybody arriving on time in December.
+   */
+  it("follows daylight saving where the provider observes it", () => {
+    const winter = sittingStartsAt("2026-01-14", "09:00", "Europe/London");
+    expect(winter.toISOString()).toBe("2026-01-14T09:00:00.000Z");
+
+    const summer = sittingStartsAt("2026-07-14", "09:00", "Europe/London");
+    expect(summer.toISOString()).toBe("2026-07-14T08:00:00.000Z");
+  });
+
   it("treats a session with no time as starting at midnight", () => {
-    expect(sittingStartsAt("2026-03-10", null, 0).toISOString()).toBe(
+    expect(sittingStartsAt("2026-03-10", null, "UTC").toISOString()).toBe(
       "2026-03-10T00:00:00.000Z",
     );
   });

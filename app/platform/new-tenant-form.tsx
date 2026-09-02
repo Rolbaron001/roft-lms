@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_TIME_ZONE, supportedTimeZones } from "@/lib/timezone";
+
 import { useActionState, useState } from "react";
 import { createTenantAction, type PlatformState } from "./actions";
 
@@ -115,6 +117,25 @@ export function NewTenantForm() {
               <option value="dedicated_cloud">Dedicated cloud</option>
               <option value="on_premise">On premise</option>
             </select>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="block text-sm font-medium">Time zone</span>
+            <select
+              name="timezone"
+              defaultValue={DEFAULT_TIME_ZONE}
+              className={inputClass}
+            >
+              {supportedTimeZones().map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone.replace(/_/g, " ")}
+                </option>
+              ))}
+            </select>
+            <span className="block text-xs text-[var(--muted)]">
+              Every timetabled time for this tenant means this clock. They can
+              change it themselves in Settings.
+            </span>
           </label>
 
           <label className="block space-y-1.5">

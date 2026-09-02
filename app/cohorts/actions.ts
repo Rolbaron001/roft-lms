@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, requireTenant } from "@/lib/request";
 import {
   addMember,
   CohortError,
@@ -336,16 +336,11 @@ export async function setTaskStatusAction(
 // session deliberately holds a date and a clock time apart, and the server's
 // idea of the zone is not the provider's.
 //
-// Configuration rather than a constant, because a second tenant will not be in
-// South Africa and must not need a fork to run a sitting. It belongs on the
-// tenant record rather than in the environment, and is noted in the queue as
-// such; the environment is the smaller wrong answer until then, and the
-// default keeps the current tenant correct.
+// Read off the tenant record, which is where a provider sets it in Settings. A
+// tenant outside South Africa is then a configuration change rather than a
+// fork, and the cut-off is judged against the clock the invigilator is
+// actually watching.
 // ---------------------------------------------------------------------------
-
-const PROVIDER_UTC_OFFSET_MINUTES = Number(
-  process.env.PROVIDER_UTC_OFFSET_MINUTES ?? 120,
-);
 
 export async function admitCandidateAction(
   _previous: CohortActionState,
@@ -354,6 +349,7 @@ export async function admitCandidateAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
   const sittingId = field(formData, "sittingId");
+  const { timezone } = await requireTenant();
 
   return run(
     () =>
@@ -362,7 +358,7 @@ export async function admitCandidateAction(
         userId: field(formData, "userId"),
         outcome: field(formData, "outcome") as "admitted" | "refused",
         reason: field(formData, "reason") || undefined,
-        utcOffsetMinutes: PROVIDER_UTC_OFFSET_MINUTES,
+        timeZone: timezone,
       }),
     "Register updated.",
     [`/cohorts/${cohortId}/sessions/${field(formData, "sessionId") || ""}`, `/cohorts/${cohortId}`],

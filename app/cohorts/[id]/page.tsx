@@ -204,6 +204,7 @@ export default async function CohortPage({
           description="The dated sessions this cohort meets for, and the register taken at each. Where a programme carries credits it has to be facilitator-led, and this is the evidence that it was."
         >
           <Rollout
+            zone={tenant.timezone}
             cohortId={detail.cohort.id}
             sessions={rollout}
             canManage={canSchedule}

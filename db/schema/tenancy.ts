@@ -147,6 +147,16 @@ export const organisations = pgTable(
     qualityAssurancePartner: text("quality_assurance_partner"),
 
     /**
+     * The provider's own clock, as an IANA zone name.
+     *
+     * A timetable says "09:00" and means 09:00 where the provider is. Turning
+     * that into an instant needs a zone, and the server's is not it. Stored as
+     * a zone rather than an offset from UTC so that a tenant in a country that
+     * observes daylight saving is not an hour out for half the year.
+     */
+    timezone: text("timezone").notNull().default("Africa/Johannesburg"),
+
+    /**
      * Statutory retention window. Personal identifiers may be anonymised on
      * request once this has elapsed; achievement records are kept permanently.
      */

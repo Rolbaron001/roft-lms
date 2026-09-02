@@ -250,7 +250,7 @@ export function EnrolmentDocuments({
             <button
               type="submit"
               disabled={uploading}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {uploading ? "Filing…" : "File the document"}
             </button>

@@ -12,6 +12,12 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import {
+  DEFAULT_TIME_ZONE,
+  clockInZone,
+  zoneLabel,
+  zonedTimeToUtc,
+} from "./timezone";
 
 /**
  * Running a supervised sitting.
@@ -85,17 +91,9 @@ export function admissionOpen(input: {
 export function sittingStartsAt(
   scheduledDate: string,
   startTime: string | null,
-  utcOffsetMinutes: number,
+  timeZone: string,
 ): Date {
-  const [hours, minutes] = (startTime ?? "00:00").split(":").map(Number);
-  const asUtc = Date.UTC(
-    Number(scheduledDate.slice(0, 4)),
-    Number(scheduledDate.slice(5, 7)) - 1,
-    Number(scheduledDate.slice(8, 10)),
-    hours,
-    minutes,
-  );
-  return new Date(asUtc - utcOffsetMinutes * 60_000);
+  return zonedTimeToUtc(scheduledDate, startTime, timeZone);
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +234,7 @@ export async function admitCandidate(
     /** Passed by tests so the cut-off can be checked against a fixed clock. */
     now?: Date;
     /** The provider's own offset from UTC, for reading the session's time. */
-    utcOffsetMinutes?: number;
+    timeZone?: string;
   },
 ) {
   assertSessionCan(session, "attendance:record");
@@ -317,7 +315,7 @@ export async function admitCandidate(
       const startsAt = sittingStartsAt(
         sitting.scheduledDate,
         sitting.startTime,
-        input.utcOffsetMinutes ?? 0,
+        input.timeZone ?? DEFAULT_TIME_ZONE,
       );
       const door = admissionOpen({
         startsAt,
@@ -329,14 +327,11 @@ export async function admitCandidate(
         // Quoted in the provider's own time. The instant is UTC internally,
         // and an invigilator told "admission closed at 03:19" while their
         // clock says 07:19 will reasonably conclude the platform is broken.
-        const localClose = new Date(
-          door.closedAt.getTime() + (input.utcOffsetMinutes ?? 0) * 60_000,
-        )
-          .toISOString()
-          .slice(11, 16);
+        const zone = input.timeZone ?? DEFAULT_TIME_ZONE;
+        const localClose = clockInZone(door.closedAt, zone);
 
         throw new InvigilationError(
-          `Admission closed at ${localClose}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record them as refused with the reason instead: somebody admitted late has had longer with the paper than everybody else.`,
+          `Admission closed at ${localClose} ${zoneLabel(zone, door.closedAt)}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record them as refused with the reason instead: somebody admitted late has had longer with the paper than everybody else.`,
           "too_late",
         );
       }

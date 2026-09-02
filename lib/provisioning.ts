@@ -7,6 +7,7 @@ import { hashPassword } from "./password";
 import { generateInitialPassword } from "./people";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { clearTenantCache } from "./tenant";
+import { DEFAULT_TIME_ZONE, isSupportedTimeZone } from "./timezone";
 
 /**
  * Provisioning client organisations — the Platform Owner's job.
@@ -107,6 +108,11 @@ export const tenantInput = z.object({
   accreditationNumber: z.string().trim().max(100).optional(),
   wardCode: z.string().trim().max(20).optional(),
   qualityAssurancePartner: z.string().trim().max(200).optional(),
+  timezone: z
+    .string()
+    .trim()
+    .refine(isSupportedTimeZone, "That is not a time zone this server knows.")
+    .default(DEFAULT_TIME_ZONE),
   dataRetentionYears: z.coerce.number().int().min(1).max(50).default(5),
   featureFlags: z
     .object({
@@ -283,6 +289,7 @@ export async function createTenant(
           accreditationNumber: parsed.accreditationNumber ?? null,
           wardCode: parsed.wardCode ?? null,
           qualityAssurancePartner: parsed.qualityAssurancePartner ?? null,
+          timezone: parsed.timezone,
           dataRetentionYears: parsed.dataRetentionYears,
           featureFlags: parsed.featureFlags,
         })
@@ -375,6 +382,7 @@ export async function updateTenant(
           accreditationNumber: parsed.accreditationNumber ?? null,
           wardCode: parsed.wardCode ?? null,
           qualityAssurancePartner: parsed.qualityAssurancePartner ?? null,
+          timezone: parsed.timezone,
           dataRetentionYears: parsed.dataRetentionYears,
           featureFlags: parsed.featureFlags,
           updatedAt: new Date(),
@@ -570,6 +578,54 @@ export async function updateOwnBranding(
         primaryColour: updated.primaryColour,
         accentColour: updated.accentColour,
       },
+    });
+
+    return updated;
+  });
+
+  clearTenantCache();
+  return result;
+}
+
+/**
+ * Sets the provider's own clock.
+ *
+ * Its own function and its own permission, deliberately. This is the setting
+ * that decides whether a candidate arriving at 09:05 is admitted to a 09:00
+ * sitting, so moving it is not the same kind of act as changing a logo, and it
+ * is audited like the other things that change what the record means.
+ */
+export async function setTenantTimeZone(
+  session: AuthenticatedSession,
+  timezone: string,
+) {
+  assertSessionCan(session, "tenant:manage_settings");
+  const parsed = z
+    .string()
+    .trim()
+    .refine(isSupportedTimeZone, "That is not a time zone this server knows.")
+    .parse(timezone);
+
+  const result = await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({ timezone: organisations.timezone })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+
+    const [updated] = await tx
+      .update(organisations)
+      .set({ timezone: parsed, updatedAt: new Date() })
+      .where(eq(organisations.id, session.organisationId))
+      .returning();
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.timezone_updated",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { timezone: before?.timezone ?? null },
+      after: { timezone: updated.timezone },
     });
 
     return updated;

@@ -312,10 +312,21 @@ The refusal quotes the provider's own clock. An invigilator told "admission
 closed at 03:19" while their watch says 07:19 will reasonably conclude the
 platform is broken.
 
-**Left open:** the provider's UTC offset is configuration rather than a
-constant, but it belongs on the tenant record and currently sits in the
-environment. A second tenant outside South Africa needs it moved before they
-can run a sitting. Small, and noted here so it is not discovered by them.
+- [x] 6.7 The provider's clock is a tenant setting, and every time is labelled
+
+**Closed, and corrected on the way.** The clock moved from the environment onto
+the tenant record, where a provider sets it themselves in Settings and where it
+is chosen when a tenant is set up. What is stored is a zone name rather than a
+number of minutes: an offset of +120 is right for South Africa forever, and
+right for London for half of each year, so a stored offset would refuse
+admission to candidates arriving on time every winter.
+
+The reader's clock was also a fault, not just a gap. A register rendered times
+in whatever zone the browser happened to be in, so a moderator abroad and the
+invigilator who ran the sitting saw different admission times for the same
+event. Recorded times are now the provider's everywhere, labelled, and a reader
+elsewhere is shown their own local equivalent alongside - as a courtesy, never
+as the recorded value.
 
 **The deadline.** The client intends to end the external licence in March. Much
 of the procedure will always be the invigilator's job; what the platform holds

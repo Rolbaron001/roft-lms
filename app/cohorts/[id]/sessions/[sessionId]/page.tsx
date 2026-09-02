@@ -32,7 +32,7 @@ export default async function SessionRegisterPage({
   params: Promise<{ id: string; sessionId: string }>;
 }) {
   const { id, sessionId } = await params;
-  await requireTenant();
+  const tenant = await requireTenant();
   const session = await requirePermission("attendance:record");
 
   let register;
@@ -87,6 +87,7 @@ export default async function SessionRegisterPage({
           >
             <Sitting
               cohortId={id}
+              zone={tenant.timezone}
               sitting={{
                 id: supervised.sitting.id,
                 status: supervised.sitting.status,

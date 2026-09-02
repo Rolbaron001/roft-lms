@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { scheduleSessionAction } from "@/app/cohorts/actions";
 import type { CohortActionState } from "@/app/cohorts/actions";
 import type { ScheduledSession } from "@/lib/scheduling";
+import { ProviderClockNote } from "@/components/zoned-time";
 
 const KIND_LABEL: Record<string, string> = {
   induction: "Induction",
@@ -29,11 +30,14 @@ const inputClass =
  */
 export function Rollout({
   cohortId,
+  zone,
   sessions,
   canManage,
   canRegister,
 }: {
   cohortId: string;
+  /** The provider's clock. Every time in the timetable is on it. */
+  zone: string;
   sessions: ScheduledSession[];
   canManage: boolean;
   canRegister: boolean;
@@ -51,7 +55,9 @@ export function Rollout({
           be facilitator-led, so this is where the evidence that it was begins.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div>
+          <ProviderClockNote zone={zone} />
+          <div className="mt-2 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
@@ -117,6 +123,7 @@ export function Rollout({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -221,7 +228,7 @@ export function Rollout({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {pending ? "Adding…" : "Add to the schedule"}
             </button>

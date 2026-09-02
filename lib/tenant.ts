@@ -28,6 +28,8 @@ export type TenantIdentity = {
   strapline: string | null;
   primaryColour: string;
   accentColour: string;
+  /** The provider's own clock, as an IANA zone name. */
+  timezone: string;
   status: (typeof organisations.$inferSelect)["status"];
 };
 
@@ -166,6 +168,7 @@ export async function resolveTenant(
           strapline: organisations.strapline,
           primaryColour: organisations.primaryColour,
           accentColour: organisations.accentColour,
+          timezone: organisations.timezone,
           status: organisations.status,
         })
         .from(organisations)

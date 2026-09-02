@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useSyncExternalStore } from "react";
 import {
   admitCandidateAction,
   confirmCameraAction,
@@ -10,6 +10,8 @@ import {
   recordIncidentAction,
   type CohortActionState,
 } from "@/app/cohorts/actions";
+import { ZonedTime } from "@/components/zoned-time";
+import { clockInZone, viewerTimeZone, zoneLabel, zonedTimeToUtc } from "@/lib/timezone";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm";
@@ -44,8 +46,6 @@ export type SittingHeader = {
   deliveryMode: string;
 };
 
-const clock = (value: string | null) =>
-  value ? new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
 
 /**
  * The room, as the invigilator sees it.
@@ -57,11 +57,14 @@ const clock = (value: string | null) =>
  */
 export function Sitting({
   cohortId,
+  zone,
   sitting,
   lines,
   incidents,
 }: {
   cohortId: string;
+  /** The provider's clock. Every time on this page is on it. */
+  zone: string;
   sitting: SittingHeader;
   lines: SittingLine[];
   incidents: {
@@ -97,6 +100,22 @@ export function Sitting({
     FormData
   >(recordIncidentAction, {});
 
+  // The reader's own zone, only to show them the start time in their terms.
+  // It decides nothing: the cut-off is judged on the provider's clock.
+  const here = useSyncExternalStore(
+    () => () => {},
+    () => viewerTimeZone(),
+    () => null,
+  );
+  const elsewhere = here && here !== zone ? here : null;
+
+  const startsAt = zonedTimeToUtc(
+    sitting.scheduledDate,
+    sitting.startTime,
+    zone,
+  );
+  const closesAt = new Date(startsAt.getTime() + sitting.closesAfter * 60_000);
+
   const admitted = lines.filter((line) => line.outcome === "admitted").length;
   const error =
     state.error ??
@@ -110,13 +129,32 @@ export function Sitting({
       <div className="rounded-lg border border-[var(--border)] p-4">
         <p className="text-sm font-medium">
           {sitting.assessmentTitle} · {sitting.scheduledDate}
-          {sitting.startTime ? ` at ${sitting.startTime}` : ""}
+          {sitting.startTime ? (
+            <>
+              {" at "}
+              {sitting.startTime} {zoneLabel(zone, startsAt)}
+            </>
+          ) : null}
         </p>
+
+        {elsewhere && sitting.startTime ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            That is {clockInZone(startsAt, elsewhere)}{" "}
+            {zoneLabel(elsewhere, startsAt)} where you are. Times recorded here
+            are the provider&rsquo;s, which is what the record keeps.
+          </p>
+        ) : null}
+
         <p className="mt-1 text-sm text-[var(--muted)]">
           Candidates arrive {sitting.arriveBeforeMinutes} minutes before.
-          Admission closes {sitting.closesAfter} minutes after the start; after
-          that the platform refuses, because somebody admitted late has had
-          longer with the paper than everybody else.
+          Admission closes {sitting.closesAfter} minutes after the start
+          {sitting.startTime ? (
+            <>
+              , at {clockInZone(closesAt, zone)} {zoneLabel(zone, closesAt)}
+            </>
+          ) : null}
+          ; after that the platform refuses, because somebody admitted late has
+          had longer with the paper than everybody else.
           {sitting.cameraRequired ? " Cameras stay on throughout." : ""}
         </p>
 
@@ -126,7 +164,7 @@ export function Sitting({
               href={sitting.meetingUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-block rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+              className="inline-block rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white"
             >
               Join the sitting
             </a>
@@ -164,10 +202,12 @@ export function Sitting({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-              <th className="pb-2">Candidate</th>
-              <th className="pb-2">Admission</th>
-              <th className="pb-2">Declaration</th>
-              {sitting.cameraRequired ? <th className="pb-2">Camera</th> : null}
+              <th className="pb-2 pr-3">Candidate</th>
+              <th className="pb-2 pr-3">Admission</th>
+              <th className="pb-2 pr-3">Declaration</th>
+              {sitting.cameraRequired ? (
+                <th className="pb-2 pr-3">Camera</th>
+              ) : null}
               <th className="pb-2">Script</th>
             </tr>
           </thead>
@@ -178,7 +218,7 @@ export function Sitting({
                   {line.name}
                   {line.droppedOffAt ? (
                     <span className="ml-2 text-xs text-[var(--muted)]">
-                      dropped out {clock(line.droppedOffAt)}
+                      dropped out <ZonedTime at={line.droppedOffAt} zone={zone} showViewer={false} />
                       {line.droppedOffReason ? `: ${line.droppedOffReason}` : ""}
                     </span>
                   ) : null}
@@ -186,8 +226,8 @@ export function Sitting({
 
                 <td className="py-2 pr-3">
                   {line.outcome === "admitted" ? (
-                    <span className="tabular-nums">
-                      in at {clock(line.admittedAt)}
+                    <span>
+                      in at <ZonedTime at={line.admittedAt} zone={zone} showViewer={false} />
                     </span>
                   ) : line.outcome === "refused" ? (
                     <span className="text-[var(--muted)]">
@@ -225,9 +265,7 @@ export function Sitting({
 
                 <td className="py-2 pr-3">
                   {line.declarationAcceptedAt ? (
-                    <span className="tabular-nums">
-                      {clock(line.declarationAcceptedAt)}
-                    </span>
+                    <ZonedTime at={line.declarationAcceptedAt} zone={zone} showViewer={false} />
                   ) : line.outcome === "admitted" ? (
                     <form action={declAction}>
                       <input type="hidden" name="cohortId" value={cohortId} />
@@ -248,9 +286,7 @@ export function Sitting({
                 {sitting.cameraRequired ? (
                   <td className="py-2 pr-3">
                     {line.cameraConfirmedAt ? (
-                      <span className="tabular-nums">
-                        {clock(line.cameraConfirmedAt)}
-                      </span>
+                      <ZonedTime at={line.cameraConfirmedAt} zone={zone} showViewer={false} />
                     ) : line.outcome === "admitted" && !line.droppedOffAt ? (
                       <div className="flex flex-wrap gap-1">
                         <form action={cameraAction}>
@@ -284,8 +320,8 @@ export function Sitting({
 
                 <td className="py-2">
                   {line.scriptReceivedAt ? (
-                    <span className="tabular-nums">
-                      {clock(line.scriptReceivedAt)}
+                    <span>
+                      <ZonedTime at={line.scriptReceivedAt} zone={zone} showViewer={false} />
                       {line.scriptReference ? ` · ${line.scriptReference}` : ""}
                     </span>
                   ) : line.outcome === "admitted" ? (
@@ -326,8 +362,8 @@ export function Sitting({
           <ul className="mt-3 space-y-2 text-sm">
             {incidents.map((incident) => (
               <li key={incident.id}>
-                <span className="tabular-nums text-[var(--muted)]">
-                  {new Date(incident.occurredAt).toLocaleString()}
+                <span className="text-[var(--muted)]">
+                  <ZonedTime at={incident.occurredAt} zone={zone} withDate showViewer={false} />
                 </span>{" "}
                 {incident.description}
                 {incident.actionTaken ? (

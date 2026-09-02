@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
-import { updateOwnBranding } from "@/lib/provisioning";
+import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -88,4 +88,42 @@ export async function updateNamingAction(
   revalidatePath("/settings");
   revalidatePath("/capture");
   return { done: "Saved. Uploads from now on are read this way." };
+}
+
+export type ClockState = { error?: string; notice?: string };
+
+/**
+ * Saves the provider's own clock.
+ *
+ * Separated from branding by permission as well as by form: somebody who can
+ * change the logo should not be able to move every timetabled time in the
+ * platform by two hours.
+ */
+export async function updateClockAction(
+  _previous: ClockState,
+  formData: FormData,
+): Promise<ClockState> {
+  const session = await requireSession();
+
+  try {
+    await setTenantTimeZone(session, String(formData.get("timezone") ?? ""));
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) {
+      return { error: "Your role does not allow that." };
+    }
+    if (error && typeof error === "object" && "issues" in error) {
+      return {
+        error: (error as { issues: { message: string }[] }).issues
+          .map((issue) => issue.message)
+          .join(" "),
+      };
+    }
+    console.error(error);
+    return { error: "That could not be saved. Please try again." };
+  }
+
+  // Times appear on the schedule, the register and the sitting, so refresh
+  // the whole tree rather than guessing which pages show one.
+  revalidatePath("/", "layout");
+  return { notice: "Saved. Timetabled times now mean this clock." };
 }

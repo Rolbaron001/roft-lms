@@ -173,7 +173,7 @@ export function CohortTasks({
             <button
               type="submit"
               disabled={adding}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {adding ? "Adding…" : "Add task"}
             </button>

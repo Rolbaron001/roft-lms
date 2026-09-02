@@ -3,6 +3,7 @@ import { namingConventionFor } from "@/lib/capture";
 import { AppShell } from "@/components/app-shell";
 import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
+import { ClockForm } from "./clock-form";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
@@ -38,6 +39,12 @@ export default async function SettingsPage() {
           strapline: tenant.strapline,
         }}
       />
+
+      {canManageSettings ? (
+        <div className="mt-6">
+          <ClockForm current={tenant.timezone} />
+        </div>
+      ) : null}
 
       {convention ? (
         <div className="mt-6">
