@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   date,
   index,
@@ -1356,6 +1357,191 @@ export const eisaSittings = pgTable(
     index("eisa_sittings_dates_idx").on(
       t.organisationId,
       t.registrationCloses,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// The general document library
+// ---------------------------------------------------------------------------
+
+export const libraryCategory = pgEnum("library_category", [
+  /** Policies and procedures: the SOPs, the code of conduct, the assessment policy. */
+  "policy",
+  /** Accreditation letters, SETA correspondence, QCTO decisions. */
+  "accreditation",
+  /** Contracts: employers, sponsors, facilitators, suppliers. */
+  "contract",
+  /** Statutory: PAIA manual, POPIA notices, B-BBEE certificates, tax clearance. */
+  "statutory",
+  /** Insurance, leases, licences. */
+  "operational",
+  "other",
+]);
+
+export const libraryStatus = pgEnum("library_status", [
+  "current",
+  /** Superseded by a later version but kept, because it governed at the time. */
+  "superseded",
+  /** Past its retention date and moved out of the way, never deleted. */
+  "archived",
+]);
+
+/**
+ * Business documents that belong to the provider rather than to a learner.
+ *
+ * The gap that stops the platform being the record. It already holds documents
+ * attached to a learner, an enrolment or a qualification; the client's Records
+ * Management procedure also covers policies, accreditation letters, contracts
+ * and the PAIA manual, and there was nowhere for those to live. A record system
+ * missing the accreditation letter is not the system of record.
+ *
+ * Versioned by supersession rather than by overwriting. The policy that
+ * governed in March is the one an audit of March asks about, and a library that
+ * only ever holds the current version cannot answer that.
+ */
+export const libraryDocuments = pgTable(
+  "library_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    category: libraryCategory("category").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    /** The provider's own reference, where they have one. */
+    reference: text("reference"),
+    version: text("version"),
+
+    filename: text("filename").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    /** SHA-256 of the bytes, so a silent corruption is detectable. */
+    contentHash: text("content_hash").notNull(),
+
+    /** When it took effect, and when it stops being current. */
+    effectiveFrom: date("effective_from"),
+    expiresOn: date("expires_on"),
+
+    /**
+     * The document this one replaces.
+     *
+     * A chain rather than a version number, so "what was in force on this
+     * date" is answerable by walking it, and so superseding is one act rather
+     * than remembering to change a flag somewhere else.
+     */
+    supersedesId: uuid("supersedes_id"),
+
+    status: libraryStatus("status").notNull().default("current"),
+
+    /**
+     * Whether anybody signed in may read it.
+     *
+     * A code of conduct is meant to be read by learners; a facilitator's
+     * contract is not. Off by default, because the safe direction for a
+     * document nobody has thought about is not visible.
+     */
+    visibleToAll: boolean("visible_to_all").notNull().default(false),
+
+    uploadedById: uuid("uploaded_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("library_documents_category_idx").on(
+      t.organisationId,
+      t.category,
+      t.status,
+    ),
+    index("library_documents_expiry_idx").on(t.organisationId, t.expiresOn),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Retention and controlled deletion
+// ---------------------------------------------------------------------------
+
+export const retentionSubject = pgEnum("retention_subject", [
+  "learner_documents",
+  "assessment_evidence",
+  "library_document",
+]);
+
+export const disposalStatus = pgEnum("disposal_status", [
+  /** Past its retention date and waiting for somebody to decide. */
+  "due",
+  /** Moved out of the working view, still held. */
+  "archived",
+  /** Approved for destruction by a named person, and destroyed. */
+  "destroyed",
+  /** Deliberately kept beyond retention, with a reason. */
+  "retained",
+]);
+
+/**
+ * A decision about a record that has reached the end of its retention period.
+ *
+ * The client's procedure says "archive learner documentation within one month
+ * after certification". The platform holds the certification date, so it can
+ * say what is due; what it must not do is act on it. Deletion of a record that
+ * an external verifier may still ask for is not something any schedule should
+ * perform unattended, and a record that quietly disappeared is worse than one
+ * kept too long.
+ *
+ * So archiving is automatic and destruction is never. Every disposal is a row
+ * with a person's name on it, and "retained" is a first-class outcome rather
+ * than an omission - a provider under investigation keeps everything, and the
+ * reason for that belongs in the file.
+ */
+export const disposalDecisions = pgTable(
+  "disposal_decisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    subject: retentionSubject("subject").notNull(),
+    /** Whichever record this is about. Exactly one is set. */
+    learnerId: uuid("learner_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    libraryDocumentId: uuid("library_document_id").references(
+      () => libraryDocuments.id,
+      { onDelete: "cascade" },
+    ),
+
+    /** When the retention period elapsed. Derived, then recorded. */
+    dueOn: date("due_on").notNull(),
+
+    status: disposalStatus("status").notNull().default("due"),
+    /** Required for anything but archiving. */
+    reason: text("reason"),
+
+    decidedById: uuid("decided_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("disposal_decisions_due_idx").on(
+      t.organisationId,
+      t.status,
+      t.dueOn,
     ),
   ],
 );

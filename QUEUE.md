@@ -559,9 +559,29 @@ without losing anything their own procedure requires them to keep.
 
 - [ ] 9.1 Off-server backups: an object storage bucket, and the nightly backup actually uploading to it
 - [ ] 9.2 Evidence in object storage rather than on the server's disk
-- [ ] 9.3 A general document library: policies, accreditation letters, contracts, the PAIA manual
-- [ ] 9.4 Retention and archiving, driven from the dates the platform already holds
-- [ ] 9.5 Controlled deletion, so a record cannot quietly disappear
+- [x] 9.3 A general document library: policies, accreditation letters, contracts, the PAIA manual
+- [x] 9.4 Retention and archiving, driven from the dates the platform already holds
+- [x] 9.5 Controlled deletion, so a record cannot quietly disappear
+
+**Landed.** The library versions by supersession rather than by overwriting,
+and naming what a document replaces marks the old one superseded in the same
+act - so there is never a moment where two documents both claim to be current.
+The superseded one is kept, because the policy that governed in March is what
+an audit of March asks about.
+
+Retention is derived from the certification date the platform already holds,
+over the tenant's own period. Nothing is archived or destroyed by looking at
+it: the platform says what is due and a person decides.
+
+Destruction and deliberate retention both need a reason; archiving needs none.
+Destroying is irreversible and somebody will one day ask why a record a
+verifier wanted is not there. Keeping something past its date is a position a
+provider takes deliberately rather than an oversight. Archiving destroys
+nothing, and demanding a paragraph for it would make people stop doing it.
+
+**Still to do inside 9.5:** the decision is recorded, and acting on it against
+object storage is a separate deliberate step. That is on purpose while 9.1 is
+outstanding - there is nowhere safe to act.
 - [ ] 9.6 Their Records Management procedure rewritten to describe the platform rather than a Drive
 
 **Why the platform is the better record, and not merely a different one.** A

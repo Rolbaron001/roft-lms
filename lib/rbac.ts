@@ -121,6 +121,16 @@ export const PERMISSIONS = [
   // off the mapping that follows from it.
   "recognition:manage",
 
+  // The document library and the disposal register.
+  //
+  // Reading the library is not the same as reading every document in it: a
+  // document marked visible to everybody is readable by anybody signed in
+  // without this permission at all, and `records:read` is what opens the rest.
+  // A code of conduct is meant to be read by learners; a facilitator's
+  // contract is in the same library and is not.
+  "records:read",
+  "records:manage",
+
   // Certification.
   "certificate:issue",
   "certificate:read_all",
@@ -165,6 +175,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   tenant_admin: [
     "appeal:manage",
+    "records:read",
+    "records:manage",
     "recognition:manage",
     "conduct:manage",
     "grievance:manage",
@@ -211,6 +223,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   instructor: [
     "appeal:manage",
+    "records:read",
     "recognition:manage",
     "conduct:manage",
     "grievance:manage",
@@ -297,6 +310,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * no permission whose name implies a write.
    */
   external_verifier: [
+    "records:read",
     "course:read",
     "enrolment:read_all",
     "evidence:read_all",
