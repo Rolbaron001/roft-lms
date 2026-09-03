@@ -56,6 +56,10 @@ export function FolderPicker({
   );
   const [pending, start] = useTransition();
 
+  function openPicker() {
+    input.current?.click();
+  }
+
   function choose() {
     const files = Array.from(input.current?.files ?? []);
     if (files.length === 0) {
@@ -91,28 +95,48 @@ export function FolderPicker({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm">
-        <span className="text-[var(--muted)]">{label}</span>
-        <input
-          ref={input}
-          type="file"
-          multiple
-          onChange={choose}
-          // Not in the React types, and the reason this works at all: it makes
-          // the picker choose a folder and report every file inside it.
-          {...({
-            webkitdirectory: "",
-            directory: "",
-          } as Record<string, string>)}
-          className="mt-1 block text-sm"
-        />
-      </label>
+      <p className="text-sm text-[var(--muted)]">{label}</p>
+
+      {/*
+        Driven by the button below rather than shown.
+        
+        It was visible until somebody reported the button as broken, and they
+        were right to. A native file control renders as a small "Choose Files"
+        with "No file chosen" beside it, which does not read as the first step
+        of anything - so the eye goes to the large button underneath, which sat
+        disabled until the control nobody had noticed had been used. A disabled
+        button with no stated reason is indistinguishable from a broken one.
+      */}
+      <input
+        ref={input}
+        type="file"
+        multiple
+        onChange={choose}
+        // Not in the React types, and the reason this works at all: it makes
+        // the picker choose a folder and report every file inside it.
+        {...({
+          webkitdirectory: "",
+          directory: "",
+        } as Record<string, string>)}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+      />
 
       {chosen ? (
         <p className="text-xs text-[var(--muted)]">
-          {chosen.name} — {chosen.count}{" "}
-          {chosen.count === 1 ? "file" : "files"}, including everything in its
-          subfolders.
+          <span className="font-medium text-[var(--foreground)]">
+            {chosen.name}
+          </span>{" "}
+          — {chosen.count} {chosen.count === 1 ? "file" : "files"}, including
+          everything in its subfolders.{" "}
+          <button
+            type="button"
+            onClick={openPicker}
+            className="underline"
+          >
+            Choose a different folder
+          </button>
         </p>
       ) : null}
 
@@ -130,13 +154,21 @@ export function FolderPicker({
         </p>
       ) : null}
 
+      {/*
+        One button, two steps. Never disabled while there is something for it
+        to do, so it cannot look broken.
+      */}
       <button
         type="button"
-        onClick={send}
-        disabled={pending || !chosen}
+        onClick={chosen ? send : openPicker}
+        disabled={pending}
         className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Reading…" : "Read this folder"}
+        {pending
+          ? "Reading…"
+          : chosen
+            ? "Read this folder"
+            : "Choose a folder…"}
       </button>
 
       <div className="max-w-2xl text-xs text-[var(--muted)]">{hint}</div>

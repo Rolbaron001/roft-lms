@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
 import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
+import { NavMenu } from "./nav-menu";
 import { TenantLogo } from "./tenant-logo";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -20,75 +21,129 @@ type NavItem = {
   anyPermission?: Permission[];
 };
 
-const NAV: NavItem[] = [
-  { href: "/", label: "Home", permission: "report:own" },
-  { href: "/courses", label: "Courses", permission: "course:read" },
-  { href: "/paths", label: "Programmes", permission: "course:author" },
+/**
+ * A heading on the bar, and what sits under it.
+ *
+ * `label: null` means the items stand as their own links rather than behind a
+ * heading - kept for the two places somebody goes many times a day, where a
+ * click to open a menu first would be a tax rather than a tidy-up.
+ *
+ * Order is by how often a section is opened, not by importance: the work
+ * somebody does daily sits left of the work they do monthly.
+ */
+type NavSection = { label: string | null; items: NavItem[] };
+
+const NAV: NavSection[] = [
+  { label: null, items: [{ href: "/", label: "Home", permission: "report:own" }] },
+
   {
-    href: "/qualifications",
-    label: "Qualifications",
-    permission: "qualification:manage",
+    label: "Learning",
+    items: [
+      { href: "/courses", label: "Courses", permission: "course:read" },
+      { href: "/paths", label: "Programmes", permission: "course:author" },
+      {
+        href: "/qualifications",
+        label: "Qualifications",
+        permission: "qualification:manage",
+      },
+      { href: "/capture", label: "Capture", permission: "assessment:author" },
+      // A reference, not a record. Every signed-in person can read it,
+      // learners included - it exists so that everybody uses the same words.
+      {
+        href: "/records",
+        label: "Policies & documents",
+        permission: "course:read",
+      },
+      { href: "/dictionary", label: "Dictionary", permission: "report:own" },
+    ],
   },
-  { href: "/people", label: "People", permission: "user:invite" },
-  { href: "/capture", label: "Capture", permission: "assessment:author" },
+
   {
-    href: "/imports",
-    label: "AI history",
-    permission: "qualification:manage",
+    label: "People",
+    items: [
+      { href: "/people", label: "People", permission: "user:invite" },
+      { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },
+      { href: "/tracker", label: "Tracker", permission: "enrolment:read_all" },
+      // Reached by learners, coaches and staff alike, so it is gated on any
+      // one of the three permissions rather than a single role's.
+      {
+        href: "/workplace",
+        label: "Work experience",
+        anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
+      },
+      { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
+    ],
   },
-  { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },
-  { href: "/tracker", label: "Tracker", permission: "enrolment:read_all" },
-  // Everyone who has been given a platform mailbox. The page itself explains
-  // it when somebody has not.
-  { href: "/mail", label: "Mail", permission: "report:own" },
+
   {
-    href: "/readiness",
-    label: "EISA readiness",
-    permission: "enrolment:read_all",
+    label: "Assessment",
+    items: [
+      { href: "/assess", label: "To assess", permission: "assessment:assess" },
+      {
+        href: "/moderate",
+        label: "To moderate",
+        permission: "assessment:moderate",
+      },
+      // Learners held after a second not-yet-competent result. Work waiting to
+      // be done rather than a register to browse.
+      {
+        href: "/reassessments",
+        label: "Held for review",
+        permission: "enrolment:read_all",
+      },
+      { href: "/appeals", label: "Appeals", permission: "appeal:manage" },
+      { href: "/eisa", label: "EISA entry", permission: "enrolment:read_all" },
+      {
+        href: "/readiness",
+        label: "EISA readiness",
+        permission: "enrolment:read_all",
+      },
+    ],
   },
-  // Reached by learners, coaches and staff alike, so it is gated on any one
-  // of the three permissions rather than a single role's.
+
   {
-    href: "/workplace",
-    label: "Work experience",
-    anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
-  },
-  { href: "/appeals", label: "Appeals", permission: "appeal:manage" },
-  { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
-  { href: "/eisa", label: "EISA entry", permission: "enrolment:read_all" },
-  { href: "/assess", label: "To assess", permission: "assessment:assess" },
-  { href: "/moderate", label: "To moderate", permission: "assessment:moderate" },
-  // Every signed-in person holds report:own, but a learner has no dashboard
-  // worth a menu entry, so this is gated on team-or-wider reporting. Someone
-  // holding two roles can satisfy both, hence the deduplication below.
-  {
-    href: "/reports",
     label: "Reports",
-    anyPermission: ["report:team", "report:tenant"],
+    items: [
+      // Every signed-in person holds report:own, but a learner has no
+      // dashboard worth a menu entry, so this is gated on team-or-wider
+      // reporting.
+      {
+        href: "/reports",
+        label: "Reports",
+        anyPermission: ["report:team", "report:tenant"],
+      },
+      { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+    ],
   },
-  { href: "/statutory", label: "Statutory", permission: "report:statutory" },
-  // Learners held after a second not-yet-competent result. Work waiting to be
-  // done rather than a register to browse, so it sits with the other screens
-  // somebody opens to find out what needs their attention today.
+
+  // Everyone who has been given a platform mailbox. The page itself explains
+  // it when somebody has not. Left as its own link: it is opened all day.
+  { label: null, items: [{ href: "/mail", label: "Mail", permission: "report:own" }] },
+
   {
-    href: "/reassessments",
-    label: "Held for review",
-    permission: "enrolment:read_all",
+    label: "Admin",
+    items: [
+      {
+        href: "/settings",
+        label: "Settings",
+        // Reachable by anybody with something on it. An administrator sees the
+        // tenant's branding, clock and filenames; everybody else sees their
+        // own AI extension and nothing they cannot change.
+        anyPermission: ["tenant:manage_branding", "extension:use"],
+      },
+      {
+        href: "/imports",
+        label: "AI history",
+        permission: "qualification:manage",
+      },
+      // ROFT's own console, for managing every other client.
+      {
+        href: "/platform",
+        label: "Clients",
+        permission: "platform:manage_tenants",
+      },
+    ],
   },
-  // A reference, not a record. Every signed-in person can read it, learners
-  // included — it exists so that everybody uses the same words.
-  { href: "/records", label: "Policies & documents", permission: "course:read" },
-  { href: "/dictionary", label: "Dictionary", permission: "report:own" },
-  {
-    href: "/settings",
-    label: "Settings",
-    // Reachable by anybody with something on it. An administrator sees the
-    // tenant's branding, clock and filenames; everybody else sees their own AI
-    // extension and nothing they cannot change.
-    anyPermission: ["tenant:manage_branding", "extension:use"],
-  },
-  // ROFT's own console, for managing every other client.
-  { href: "/platform", label: "Clients", permission: "platform:manage_tenants" },
 ];
 
 export async function AppShell({
@@ -111,12 +166,21 @@ export async function AppShell({
   // nobody is shown a control that would only tell them no.
   const extension = await extensionState(session);
 
-  const links = NAV.filter((item) => {
-    if (item.permission) return session.permissions.includes(item.permission);
-    return (item.anyPermission ?? []).some((permission) =>
-      session.permissions.includes(permission),
-    );
-  });
+  // Filtered by permission rather than by role, so a link never appears for a
+  // page the person would be refused. A section left with nothing in it is
+  // dropped by the menu rather than shown empty.
+  const sections = NAV.map((section) => ({
+    label: section.label,
+    items: section.items
+      .filter((item) =>
+        item.permission
+          ? session.permissions.includes(item.permission)
+          : (item.anyPermission ?? []).some((permission) =>
+              session.permissions.includes(permission),
+            ),
+      )
+      .map((item) => ({ href: item.href, label: item.label })),
+  })).filter((section) => section.items.length > 0);
 
   return (
     <div
@@ -198,26 +262,12 @@ export async function AppShell({
         </div>
 
         {/*
-          Wraps rather than overflowing. There are fifteen links and the list
-          grows; at 1440px they already ran 361px past the container, which put
-          the last two off the right edge of the window entirely — invisible and
-          unclickable, with no scrollbar to hint they were there.
-
-          px-6 matches the header above and the main column below, so the first
-          link lines up with the logo and the page content rather than sitting
-          8px to their left.
+          Grouped rather than listed. px-6 matches the header above and the
+          main column below, so the first item lines up with the logo and the
+          page content rather than sitting 8px to their left.
         */}
-        <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-6 pb-1">
-          {links.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-t-md px-4 py-2 text-sm transition hover:bg-white/10"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <NavMenu groups={sections} />
+
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>

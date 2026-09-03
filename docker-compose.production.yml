@@ -65,6 +65,24 @@ services:
       # stored token stops opening. Set it (openssl rand -base64 32) and they
       # rotate independently.
       AI_TOKEN_KEY: ${AI_TOKEN_KEY:-}
+
+      # Outbound mail, and the domain the per-person mailboxes sit on.
+      #
+      # These were missing from this service entirely, which broke two things
+      # quietly rather than loudly. mailIsConfigured() reads MAIL_HOST and
+      # MAIL_FROM, so with neither set the application could not send at all -
+      # no registration mail, no notifications - while the tools container had
+      # them and could, which is why anything sent by a script worked and made
+      # the gap look like an intermittent fault. And mailDomainFor() falls back
+      # to lms.roftbusiness.org without MAIL_DOMAIN, so Curiosa's people were
+      # shown ROFT addresses for their own mailboxes.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
+
       AUTH_URL: https://${LMS_DOMAIN:?}
       PLATFORM_HOST: ${LMS_DOMAIN:?}
       # Who operates this deployment. Defaults keep ROFT's instance unchanged;
@@ -154,6 +172,9 @@ services:
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      # Or a script would propose a different address to the one the
+      # application shows for the same person.
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
     volumes:
       - evidence:/app/storage
       # Backups land on the host so they survive the container and can be
