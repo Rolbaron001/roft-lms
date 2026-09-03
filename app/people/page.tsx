@@ -3,6 +3,9 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { listPeople, possibleLineManagers } from "@/lib/people";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { InviteForm } from "./invite-form";
+import { RosterForm } from "./roster-form";
+import { extensionState } from "@/lib/extensions";
+import { Card as UiCard } from "@/components/ui";
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: "Platform Owner",
@@ -25,6 +28,11 @@ export default async function PeoplePage({
   const { search } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("user:read");
+
+  // Read only so the roster form can say what an extension would add. Creating
+  // people from a spreadsheet needs no extension and is offered either way.
+  const extension = await extensionState(session);
+  const mayUseExtension = session.permissions.includes("extension:use");
 
   const [people, managers] = await Promise.all([
     listPeople(session, { search }),
@@ -164,6 +172,26 @@ export default async function PeoplePage({
           </table>
         </div>
       </Card>
+
+      {canInvite ? (
+        <div className="mt-6">
+          <UiCard
+            title="Add a cohort from a spreadsheet"
+            description="Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created."
+          >
+            <RosterForm
+              extension={
+                mayUseExtension
+                  ? {
+                      enabled: extension.enabled,
+                      available: extension.availability?.available ?? false,
+                    }
+                  : null
+              }
+            />
+          </UiCard>
+        </div>
+      ) : null}
 
       {canInvite ? (
         <div className="mt-6">
