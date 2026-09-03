@@ -95,9 +95,28 @@ this way by a platform. Each person is using their own subscription for their
 own work, which is the most defensible version of the question, but it is still
 a question.
 
-**Optional, and worth doing.** Set `AI_TOKEN_KEY` on the server (`openssl rand
--base64 32`) so the tokens are not tied to `AUTH_SECRET`. Without it everything
-works; with it, rotating one does not invalidate the other.
+**`AI_TOKEN_KEY` is set.** Done on 3 September, before the deploy that
+introduces token storage and before anybody had stored one — which was the right
+moment, because changing that key later invalidates every stored token. It was
+generated on the server itself with `openssl rand -base64 32`, appended
+directly, and never printed, passed as an argument, or copied anywhere. So the
+tokens do not depend on `AUTH_SECRET`, and rotating one does not invalidate the
+other.
+
+Setting it in `.env` alone would have done nothing, which is worth knowing if
+you ever add another variable: `docker-compose.production.yml` lists every
+variable it passes explicitly rather than handing the whole file over, so an
+unlisted one reaches no container. It would have quietly fallen back to
+deriving the key from `AUTH_SECRET` — working, but not the way it was meant to,
+and nothing would have said so. The compose file now passes it, to the
+application only.
+
+**While in there**, two small things. `~/roft-lms/.env` and its backups were
+readable by any account on the box; they are now `600`, which is what the notes
+always said they should be. And the file has Windows line endings on about half
+its lines — harmless, because Docker Compose strips them (I checked against a
+non-secret value rather than assuming), so I left it alone rather than rewriting
+a file full of secrets for cosmetics.
 
 ---
 
