@@ -1,11 +1,12 @@
 import { requirePermission, requireTenant } from "@/lib/request";
 import { namingConventionFor } from "@/lib/capture";
 import { AppShell } from "@/components/app-shell";
+import { Card } from "@/components/ui";
 import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
-import { extensionState } from "@/lib/extensions";
+import { extensionState, knownProviders } from "@/lib/extensions";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
@@ -20,7 +21,11 @@ export default async function SettingsPage() {
     ? await namingConventionFor(session)
     : null;
 
-  const extension = canManageSettings ? await extensionState(session) : null;
+  // The extension is against this person's own profile, so it is offered to
+  // anybody whose role includes model assistance rather than to administrators
+  // alone.
+  const mayUseExtension = session.permissions.includes("extension:use");
+  const extension = mayUseExtension ? await extensionState(session) : null;
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -52,7 +57,24 @@ export default async function SettingsPage() {
 
       {extension ? (
         <div className="mt-6">
-          <ExtensionForm roots={extension.allowedImportRoots} />
+          <Card
+            title="Your AI extension"
+            description="Against your own profile. Optional, off by default, and what it lets you do is bounded by your role exactly as everything else is."
+          >
+            <ExtensionForm
+              current={{
+                enabled: extension.enabled,
+                provider: extension.provider,
+                model: extension.model,
+                availability: extension.availability,
+                providers: knownProviders().map((provider) => ({
+                  name: provider.name,
+                  label: provider.label,
+                  description: provider.description,
+                })),
+              }}
+            />
+          </Card>
         </div>
       ) : null}
 

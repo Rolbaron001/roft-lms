@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { aiRuns, aiSettings, aiUserSettings } from "@/db/schema";
+import { aiRuns, aiUserSettings } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "../session";
 import { claudeCodeProvider } from "./claude-code";
 import {
@@ -41,8 +41,6 @@ export type ExtensionState = {
   provider: string | null;
   providerLabel: string | null;
   model: string | null;
-  /** Set by an administrator for the whole tenant. */
-  allowedImportRoots: string[];
   /** What the chosen provider says about itself right now. */
   availability: Availability | null;
 };
@@ -50,8 +48,9 @@ export type ExtensionState = {
 /**
  * What this person has switched on, and whether it can actually run.
  *
- * The choice is read from their own row and the folder allow-list from the
- * tenant's, because the two are different kinds of decision - see the schema.
+ * Read from their own row. There is nothing tenant-wide to read alongside it:
+ * folders are chosen from the person's own computer at the moment they are
+ * needed, so nothing has to be registered anywhere and nothing restricted.
  *
  * Availability is asked at read time rather than remembered, because the
  * answer changes without anything in the platform changing: somebody signs in
@@ -61,22 +60,13 @@ export type ExtensionState = {
 export async function extensionState(
   session: AuthenticatedSession,
 ): Promise<ExtensionState> {
-  const { mine, tenant } = await withTenant(
-    session.organisationId,
-    async (tx) => {
-      const [own] = await tx
-        .select()
-        .from(aiUserSettings)
-        .where(eq(aiUserSettings.userId, session.userId));
-
-      const [org] = await tx
-        .select()
-        .from(aiSettings)
-        .where(eq(aiSettings.organisationId, session.organisationId));
-
-      return { mine: own ?? null, tenant: org ?? null };
-    },
-  );
+  const mine = await withTenant(session.organisationId, async (tx) => {
+    const [own] = await tx
+      .select()
+      .from(aiUserSettings)
+      .where(eq(aiUserSettings.userId, session.userId));
+    return own ?? null;
+  });
 
   const provider = providerByName(mine?.provider ?? null);
 
@@ -85,7 +75,6 @@ export async function extensionState(
     provider: mine?.provider ?? null,
     providerLabel: provider?.label ?? null,
     model: mine?.model ?? null,
-    allowedImportRoots: tenant?.allowedImportRoots ?? [],
     availability: provider ? await provider.availability() : null,
   };
 }
@@ -137,43 +126,6 @@ export async function setMyExtension(
         organisationId: session.organisationId,
         userId: session.userId,
         ...values,
-      })
-      .returning();
-    return created;
-  });
-}
-
-export async function setAllowedImportRoots(
-  session: AuthenticatedSession,
-  roots: string[],
-) {
-  assertSessionCan(session, "tenant:manage_settings");
-
-  return withTenant(session.organisationId, async (tx) => {
-    const [existing] = await tx
-      .select({ id: aiSettings.id })
-      .from(aiSettings)
-      .where(eq(aiSettings.organisationId, session.organisationId));
-
-    if (existing) {
-      const [updated] = await tx
-        .update(aiSettings)
-        .set({
-          allowedImportRoots: roots,
-          updatedById: session.userId,
-          updatedAt: new Date(),
-        })
-        .where(eq(aiSettings.id, existing.id))
-        .returning();
-      return updated;
-    }
-
-    const [created] = await tx
-      .insert(aiSettings)
-      .values({
-        organisationId: session.organisationId,
-        allowedImportRoots: roots,
-        updatedById: session.userId,
       })
       .returning();
     return created;

@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { and, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { aiImportJobs, curriculumModules, studyUnits } from "@/db/schema";
@@ -12,9 +11,9 @@ import { addTopic, addTopicElement } from "./curriculum-editor";
 import { uploadProgrammeDocument } from "./programme-documents";
 import { fileLibraryDocument } from "./records";
 import { getIngestJob, IngestError } from "./folder-import";
+import { getObject } from "./storage";
 import type { IngestionPlan, PlannedModule } from "./folder-plan";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
-import { join } from "node:path";
 
 /**
  * Committing a plan.
@@ -141,11 +140,21 @@ export async function commitPlan(
 
   // --- the documents -------------------------------------------------------
   for (const document of plan.documents) {
+    // Read back from where the upload was staged. The bytes are not on any
+    // disk path the server could re-walk: they came from a browser.
+    const key = (job.stagedFiles ?? {})[document.path];
+    if (!key) {
+      report.refused.push(
+        `${document.path}: was not staged when the folder was read, so there is nothing to file.`,
+      );
+      continue;
+    }
+
     let bytes: Uint8Array;
     try {
-      bytes = new Uint8Array(await readFile(join(job.sourcePath, document.path)));
+      bytes = await getObject(key);
     } catch {
-      report.refused.push(`${document.path}: could not be read from disk.`);
+      report.refused.push(`${document.path}: could not be read back from storage.`);
       continue;
     }
 

@@ -3,7 +3,8 @@ import { listCurriculumModules, listQualifications } from "@/lib/authoring";
 import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
 import { FromDocument } from "./from-document";
-import { FromFolder } from "./from-folder";
+import { FolderPicker } from "@/components/folder-picker";
+import { Card } from "@/components/ui";
 import { extensionState } from "@/lib/extensions";
 
 export default async function QualificationsPage() {
@@ -40,18 +41,32 @@ export default async function QualificationsPage() {
       {/* The documents come first: everything below is built on them, and the
           App can read most of what the form would otherwise ask for. */}
       <div className="mb-6">
-        <FromFolder
-          roots={extension.allowedImportRoots}
-          extension={
-            mayUseExtension
-              ? {
-                  enabled: extension.enabled,
-                  available: extension.availability?.available ?? false,
-                  reason: extension.availability?.reason ?? null,
-                }
-              : null
-          }
-        />
+        <Card
+          title="Build it from a folder"
+          description="Choose a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create. Nothing is written until you say so."
+        >
+          <FolderPicker
+            label="The qualification's folder, from your own computer"
+            extension={
+              mayUseExtension
+                ? {
+                    enabled: extension.enabled,
+                    available: extension.availability?.available ?? false,
+                    reason: extension.availability?.reason ?? null,
+                  }
+                : null
+            }
+            hint={
+              <>
+                Everything in the folder and its subfolders is read. A folder
+                carrying its own{" "}
+                <span className="font-mono">_control/blueprint.json</span> is
+                read straight from that file — in seconds, with no AI involved,
+                and the structure is exactly what the file says.
+              </>
+            }
+          />
+        </Card>
       </div>
 
       <div className="mb-6">

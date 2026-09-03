@@ -77,7 +77,14 @@ const NAV: NavItem[] = [
   // included — it exists so that everybody uses the same words.
   { href: "/records", label: "Records", permission: "course:read" },
   { href: "/dictionary", label: "Dictionary", permission: "report:own" },
-  { href: "/settings", label: "Settings", permission: "tenant:manage_branding" },
+  {
+    href: "/settings",
+    label: "Settings",
+    // Reachable by anybody with something on it. An administrator sees the
+    // tenant's branding, clock and filenames; everybody else sees their own AI
+    // extension and nothing they cannot change.
+    anyPermission: ["tenant:manage_branding", "extension:use"],
+  },
   // ROFT's own console, for managing every other client.
   { href: "/platform", label: "Clients", permission: "platform:manage_tenants" },
 ];
@@ -160,9 +167,9 @@ export async function AppShell({
             </Link>
 
             <Link
-              href="/account"
+              href="/account/password"
               className="text-xs opacity-75 underline-offset-2 transition hover:underline hover:opacity-100"
-              title="Your account"
+              title="Change your password"
             >
               {session.firstName} {session.lastName}
             </Link>

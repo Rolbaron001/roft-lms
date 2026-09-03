@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
 import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
-import { setAllowedImportRoots } from "@/lib/extensions";
+import { setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -132,41 +132,42 @@ export async function updateClockAction(
 export type ExtensionState = { error?: string; notice?: string };
 
 /**
- * The folders an AI import may read, for the whole tenant.
+ * One person switching their own AI extension on or off.
  *
- * An administrator's decision rather than a personal one, and the only part of
- * the extension that is. Whether somebody uses model assistance at all is on
- * their own account page; which folders on the server may be read is a security
- * boundary, and letting each user name one would let any of them point the
- * platform at its own configuration.
+ * Against their own profile, under a permission every member of the provider's
+ * staff holds rather than the administrator's. What it then lets them do is
+ * bounded by their role exactly as everything else is - an assessor with an
+ * extension can do assessor things faster, and nothing more.
  */
-export async function updateImportRootsAction(
+export async function updateMyExtensionAction(
   _previous: ExtensionState,
   formData: FormData,
 ): Promise<ExtensionState> {
   const session = await requireSession();
 
-  const roots = String(formData.get("allowedImportRoots") ?? "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
   try {
-    await setAllowedImportRoots(session, roots);
+    await setMyExtension(session, {
+      enabled: formData.get("enabled") === "on",
+      provider: String(formData.get("provider") ?? "") || null,
+      model: String(formData.get("model") ?? "").trim() || null,
+    });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return {
+        error:
+          "Your role does not include model assistance. It is held by the provider's own staff rather than by learners or by an employer's workplace coach.",
+      };
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "That could not be saved. Please try again.",
+    };
   }
 
   revalidatePath("/settings");
-  revalidatePath("/imports");
-  return {
-    notice:
-      roots.length === 0
-        ? "Saved. With no folders listed, nobody can run a folder import."
-        : `Saved. ${roots.length} ${roots.length === 1 ? "folder" : "folders"} may be read.`,
-  };
+  revalidatePath("/qualifications");
+  return { notice: "Saved." };
 }

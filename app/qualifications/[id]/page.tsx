@@ -10,8 +10,7 @@ import {
 import { describeSize } from "@/lib/media";
 import { AppShell, Card } from "@/components/app-shell";
 import { DocumentUploader } from "./documents/document-uploader";
-import { MaterialFolder } from "./material-folder";
-import { extensionState } from "@/lib/extensions";
+import { FolderPicker } from "@/components/folder-picker";
 
 const COMPONENT_LABELS: Record<string, string> = {
   knowledge: "Knowledge module",
@@ -47,9 +46,6 @@ export default async function QualificationPage({
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
 
-  // Read only for the folders an import may touch. Filing material needs no
-  // extension, so nothing here asks whether one is switched on.
-  const { allowedImportRoots } = await extensionState(session);
   const { qualification, modules, studyUnits, outcomes, unplacedModules } =
     await curriculumOutline(session, id);
   const [documents, uploadTargets] = await Promise.all([
@@ -244,7 +240,19 @@ export default async function QualificationPage({
 
         <Card>
           <p className="mb-3 text-sm font-medium">A whole folder at once</p>
-          <MaterialFolder qualificationId={id} roots={allowedImportRoots} />
+          <FolderPicker
+            qualificationId={id}
+            label="A folder of material, from your own computer"
+            hint={
+              <>
+                Theory guides and workbooks go to the study unit their filename
+                names, policies and contracts to the document library, and
+                everything else against this qualification. No AI is used here
+                at all — sorting documents by name is a rule rather than a
+                judgement.
+              </>
+            }
+          />
         </Card>
 
         <div className="mt-4">

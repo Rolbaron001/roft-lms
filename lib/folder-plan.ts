@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { extname } from "node:path";
+import { fileAt, textOf, type UploadedFile } from "./folder-upload";
 
 /**
  * What a folder is proposing to put into the platform.
@@ -281,14 +281,13 @@ function plannedModules(
  * blueprint is the ordinary case, not an error, and a malformed one should
  * fall through to the model rather than stop the import.
  */
-export async function readBlueprint(
-  folder: string,
-): Promise<IngestionPlan | null> {
+export function readBlueprint(files: UploadedFile[]): IngestionPlan | null {
+  const text = textOf(fileAt(files, "_control/blueprint.json"));
+  if (!text) return null;
+
   let parsed: Blueprint;
   try {
-    parsed = JSON.parse(
-      await readFile(join(folder, "_control", "blueprint.json"), "utf8"),
-    ) as Blueprint;
+    parsed = JSON.parse(text) as Blueprint;
   } catch {
     return null;
   }
@@ -348,20 +347,16 @@ export async function readBlueprint(
  * things the client's own build recorded and that no amount of reading the
  * document would recover.
  */
-export async function readRegister(
-  folder: string,
-): Promise<Map<string, { studyUnit: string | null; title: string; version: string | null }>> {
+export function readRegister(
+  files: UploadedFile[],
+): Map<string, { studyUnit: string | null; title: string; version: string | null }> {
   const found = new Map<
     string,
     { studyUnit: string | null; title: string; version: string | null }
   >();
 
-  let text: string;
-  try {
-    text = await readFile(join(folder, "_control", "register.csv"), "utf8");
-  } catch {
-    return found;
-  }
+  const text = textOf(fileAt(files, "_control/register.csv"));
+  if (!text) return found;
 
   const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length < 2) return found;

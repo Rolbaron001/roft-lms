@@ -629,7 +629,24 @@ without the platform ever holding a credential.
 
 - [x] 10.1 An extension framework: providers, availability, and an audit of every call
 - [x] 10.2 A subscription-backed provider driving Claude Code, with no API key
-- [x] 10.3 Switched on per tenant, off by default, with an allow-list of readable folders
+- [x] 10.3 Switched on against a person's own profile in Settings, off by default
+- [x] 10.10 Folders are chosen from the user's own computer, not registered anywhere
+
+**Corrected.** The first design had somebody type a path and the server read its
+own disk. Two things were wrong with that. It only works where the platform runs
+on the same machine as the folder, which is a laptop and not the server. And it
+made every user's reach the service account's reach, so the folders anybody
+could name had to be registered by an administrator - otherwise the platform
+could be pointed at its own configuration.
+
+A folder picker removes the problem rather than managing it. The browser hands
+over the files, a person can only offer what they can already open, and no
+server path is involved at any point. So there is nothing to register, the
+allow-list is gone, and the tenant-wide AI settings table went with it - there
+is now nothing about the extension that is not per person.
+
+The reading, the blueprint, the classification, the study units and the commit
+are untouched. Only how the files arrive changed.
 - [x] 10.4 Folder to proposal: PDFs and Word documents converted, read, and reported
 - [x] 10.5 Plan to curriculum and documents, in one act, through the ordinary authoring guards
 - [x] 10.6 The AI offered where the work is, not on a page of its own

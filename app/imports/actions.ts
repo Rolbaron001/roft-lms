@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/request";
-import { IngestError, discardIngest, ingestFolder } from "@/lib/folder-import";
+import { IngestError, discardIngest, ingestUpload } from "@/lib/folder-import";
 import { commitPlan } from "@/lib/folder-commit";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -38,29 +38,66 @@ function explain(error: unknown): ImportActionState {
  * Slow by nature - a model reading a curriculum document takes minutes, not
  * seconds - so the form says so rather than looking as though it has hung.
  */
+/**
+ * Reading a folder the browser has handed over.
+ *
+ * The files arrive as an upload rather than a path on the server, so there is
+ * nothing to register anywhere and nothing to restrict: a person offers what
+ * they can already open, exactly as they would attaching a single document.
+ */
 export async function readFolderAction(
   _previous: ImportActionState,
   formData: FormData,
 ): Promise<ImportActionState> {
   const session = await requirePermission("qualification:manage");
-  const path = field(formData, "path");
+
+  const entries = formData.getAll("files").filter(
+    (entry): entry is File => entry instanceof File,
+  );
+
+  if (entries.length === 0) {
+    return { error: "Choose a folder." };
+  }
 
   // Material goes against a qualification that already exists, so the mode and
   // the qualification travel together or not at all.
   const qualificationId = field(formData, "qualificationId");
   const mode = qualificationId ? "material" : "qualification";
 
+  // The paths are posted as a parallel list rather than keyed by filename: a
+  // programme folder has "121151 SU1 Theory Guide.docx" in one place and a
+  // memorandum of the same name in another, and keying by the last segment
+  // would file one of them where the other belongs. FormData keeps the order
+  // it was appended in, so the two lists line up.
+  const paths = formData.getAll("paths").map(String);
+
+  if (paths.length !== entries.length) {
+    return {
+      error:
+        "The files and their folder paths did not arrive together. Try again.",
+    };
+  }
+
+  const incoming = await Promise.all(
+    entries.map(async (entry, index) => ({
+      path: paths[index] || entry.name,
+      bytes: new Uint8Array(await entry.arrayBuffer()),
+    })),
+  );
+
+  const folderName = field(formData, "folderName") || "an uploaded folder";
+
   let job;
   try {
-    job = await ingestFolder(session, path, mode);
+    job = await ingestUpload(session, incoming, mode, folderName);
   } catch (error) {
-    return { ...explain(error), path };
+    return explain(error);
   }
 
   revalidatePath("/imports");
 
   if (job.status !== "proposed") {
-    return { error: job.error ?? "That folder could not be read.", path };
+    return { error: job.error ?? "That folder could not be read." };
   }
 
   return {

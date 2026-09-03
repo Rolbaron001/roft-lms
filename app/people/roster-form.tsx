@@ -77,8 +77,8 @@ export function RosterForm({
               {" "}
               An AI extension would additionally match headings the rules do not
               recognise; it would be shown the headings only, never the rows.{" "}
-              <Link href="/account" className="underline">
-                Your account
+              <Link href="/settings" className="underline">
+                Settings
               </Link>
             </>
           ) : null}

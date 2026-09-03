@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { desc, eq } from "drizzle-orm";
@@ -13,35 +13,37 @@ import {
   type IngestionPlan,
   type PlannedDocument,
 } from "./folder-plan";
-import { isAllowedRoot, walkFolder, type FoundFile } from "./folder-walk";
+import {
+  shapeUpload,
+  MAX_FILE_BYTES,
+  type UploadedFile,
+} from "./folder-upload";
 import { extensionState, readJson, runExtension } from "./extensions";
 import { readDocxText, readPdfText } from "./office";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { buildStorageKey, putObject } from "./storage";
 
 /**
- * Reading a folder into a plan.
+ * Reading an uploaded folder into a plan.
  *
- * The whole tree, in one pass: the qualification, its modules with their topics
+ * The whole tree in one pass: the qualification, its modules with their topics
  * and criteria, the study units, and every document filed against whichever of
  * those it belongs to. What comes back is a plan, not a qualification - a
  * person reads it and commits it in one act.
  *
- * **This is ordinary functionality and needs no AI extension.** A folder that
- * carries `_control/blueprint.json` is read from that file directly, and the
- * manifest beside it says which study unit each document belongs to and at what
- * version. That is file reading and pattern matching: free, instant, and
- * incapable of inventing an assessment criterion. Every user who can manage a
- * qualification can do it, on any machine, including the server.
+ * **Ordinary functionality; no AI extension needed.** A folder carrying
+ * `_control/blueprint.json` is read from that file, and the manifest beside it
+ * says which study unit each document belongs to and at what version. That is
+ * parsing: free, instant, and incapable of inventing an assessment criterion.
  *
  * **The extension adds exactly one thing.** A folder with no blueprint has no
  * structure to read, only prose - a curriculum document as a PDF. Deriving the
- * modules, topics and criteria from that is the part that needs a model, and it
- * is the only part. Somebody without an extension gets told precisely that,
- * rather than being turned away from the whole feature.
+ * modules and criteria from that is the part that needs a model, and the only
+ * part. Somebody without an extension is told precisely that.
  *
- * Getting this the wrong way round is a mistake worth naming: the first version
- * gated the lot behind the extension, which made a deterministic file read
- * unavailable to anybody who had not signed in to a model somewhere.
+ * The files arrive from the browser rather than being read off the server's
+ * disk, so no path is ever sent and no folder has to be registered anywhere.
+ * A person can offer what they can already open and nothing else.
  */
 
 export class IngestError extends Error {
@@ -49,7 +51,6 @@ export class IngestError extends Error {
     message: string,
     readonly reason:
       | "needs_extension"
-      | "not_allowed"
       | "not_found"
       | "empty"
       | "unreadable"
@@ -59,9 +60,6 @@ export class IngestError extends Error {
     this.name = "IngestError";
   }
 }
-
-/** A single document larger than this is not a curriculum document. */
-export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 const INSTRUCTION = `Read every document in this directory. They describe a South African
 occupational qualification.
@@ -107,10 +105,6 @@ Put anything you could not determine, and anything that looked wrong or
 incomplete in the source, into "notes". A person reads that list before
 anything is written to the platform.`;
 
-// ---------------------------------------------------------------------------
-// Reading
-// ---------------------------------------------------------------------------
-
 export type IngestMode =
   /** The whole tree: the curriculum, the study units and every document. */
   | "qualification"
@@ -123,32 +117,27 @@ export type IngestMode =
    */
   | "material";
 
-export async function ingestFolder(
+/**
+ * Reads an uploaded folder and records what it found.
+ *
+ * The files are staged into storage under the job before anything else, for
+ * two reasons. The commit happens in a later request and needs the bytes back.
+ * And what was uploaded is the evidence of what was imported: a proposal that
+ * cannot be compared with the folder it came from is a proposal nobody can
+ * audit afterwards.
+ */
+export async function ingestUpload(
   session: AuthenticatedSession,
-  path: string,
+  incoming: { path: string; bytes: Uint8Array }[],
   mode: IngestMode = "qualification",
+  folderName = "an uploaded folder",
 ) {
   assertSessionCan(session, "qualification:manage");
 
-  // The allow-list is a control on the platform reading the disk at all, not an
-  // AI setting. It applies whether or not a model is ever involved: a server
-  // process given a free path can read anything it can reach.
-  const state = await extensionState(session);
-
-  if (!isAllowedRoot(path, state.allowedImportRoots)) {
+  const shaped = shapeUpload(incoming);
+  if (shaped.files.length === 0) {
     throw new IngestError(
-      state.allowedImportRoots.length === 0
-        ? "No import folders have been allowed for this tenant. An administrator lists them in Settings: a server process given a free path can read anything it can reach."
-        : `That folder is outside the ones allowed for this tenant. Allowed: ${state.allowedImportRoots.join(", ")}.`,
-      "not_allowed",
-    );
-  }
-
-  const walked = await walkFolder(path);
-  const files = walked.files;
-  if (files.length === 0) {
-    throw new IngestError(
-      `Nothing was found at ${path}. Check the folder exists on the machine running the platform - not on yours, if those differ.`,
+      "That folder had nothing in it the platform could read.",
       "empty",
     );
   }
@@ -158,10 +147,10 @@ export async function ingestFolder(
       .insert(aiImportJobs)
       .values({
         organisationId: session.organisationId,
-        sourcePath: path,
-        files: files.map((file) => ({
+        sourcePath: folderName,
+        files: shaped.files.map((file) => ({
           name: file.path,
-          bytes: file.bytes,
+          bytes: file.bytes.byteLength,
           kind: file.kind,
         })),
         status: "reading",
@@ -172,47 +161,53 @@ export async function ingestFolder(
   });
 
   try {
-    const plan = await buildPlan(session, path, files, walked.warnings, mode);
-    return await finish(session, job.id, { status: "proposed", plan });
+    // Staged first, so the commit has the bytes and the record has the folder.
+    const staged: Record<string, string> = {};
+    for (const file of shaped.files) {
+      if (file.kind === "skip") continue;
+      const key = buildStorageKey(
+        session.organisationId,
+        `import/${job.id}`,
+        file.path.replace(/[\\/]/g, "_"),
+      );
+      await putObject(key, file.bytes, "application/octet-stream");
+      staged[file.path] = key;
+    }
+
+    const plan = await buildPlan(session, shaped.files, shaped.warnings, mode);
+    return await finish(session, job.id, { status: "proposed", plan, staged });
   } catch (error) {
     return await finish(session, job.id, {
       status: "failed",
       error:
         error instanceof Error
           ? error.message
-          : "The folder could not be read.",
+          : "That folder could not be read.",
     });
   }
 }
 
 async function buildPlan(
   session: AuthenticatedSession,
-  path: string,
-  files: FoundFile[],
-  /** Anything the walk itself could not do - a folder too deep, a limit hit. */
-  walkWarnings: string[],
+  files: UploadedFile[],
+  uploadWarnings: string[],
   mode: IngestMode,
 ): Promise<IngestionPlan> {
-  const warnings: string[] = [...walkWarnings];
+  const warnings: string[] = [...uploadWarnings];
 
   // Material goes against a qualification that already exists, so there is no
-  // curriculum to read and nothing for a model to do. An empty shell, and the
-  // documents are gathered below exactly as they are for a full import.
+  // curriculum to read and nothing for a model to do.
   if (mode === "material") {
-    return {
-      ...emptyPlan(),
-      ...(await documentsFor(path, files, warnings)),
-      warnings,
-    };
+    const gathered = documentsFor(files, warnings);
+    return { ...emptyPlan(), ...gathered, warnings };
   }
 
   // The structured path first, always. No model, no extension, no waiting.
-  let plan = await readBlueprint(path);
+  let plan = readBlueprint(files);
 
   if (!plan) {
-    // Only here is a model needed, and only for the structure. Everything
-    // below this point - filing the documents, identifying the study units -
-    // happens the same way either way.
+    // Only here is a model needed, and only for the structure. Filing the
+    // documents happens the same way either way.
     const state = await extensionState(session);
     const usable = state.enabled && (state.availability?.available ?? false);
 
@@ -225,13 +220,13 @@ async function buildPlan(
       );
     }
 
-    plan = await planFromDocuments(session, path, files);
+    plan = await planFromDocuments(session, files);
     warnings.push(
       "This folder had no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model will produce something plausible from a document that says nothing of the kind.",
     );
   }
 
-  const gathered = await documentsFor(path, files, warnings);
+  const gathered = documentsFor(files, warnings);
 
   return {
     ...plan,
@@ -268,32 +263,28 @@ function emptyPlan(): IngestionPlan {
  * arrived with a curriculum or on its own. Rules and a manifest throughout: no
  * model is asked anything here, in either mode.
  */
-async function documentsFor(
-  path: string,
-  files: FoundFile[],
+function documentsFor(
+  files: UploadedFile[],
   warnings: string[],
-): Promise<{
+): {
   documents: PlannedDocument[];
   studyUnits: { code: string; title: string }[];
-}> {
-  const register = await readRegister(path);
+} {
+  const register = readRegister(files);
 
-  // Every file becomes a planned document, except the ones that are structure
-  // rather than content. The blueprint and the manifest describe the folder;
-  // filing them as programme documents would put build machinery in front of a
-  // learner.
   const documents: PlannedDocument[] = [];
   for (const file of files) {
     if (file.kind === "skip") continue;
+    // The blueprint and the manifest describe the folder; filing them as
+    // programme documents would put build machinery in front of a learner.
     if (file.path.startsWith("_control/")) continue;
-    if (file.bytes > MAX_FILE_BYTES) {
-      warnings.push(
-        `${file.path} was left out: larger than ${Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB.`,
-      );
-      continue;
-    }
+    if (file.bytes.byteLength > MAX_FILE_BYTES) continue;
 
-    const planned = classifyDocument(file.path, file.filename, file.bytes);
+    const planned = classifyDocument(
+      file.path,
+      file.filename,
+      file.bytes.byteLength,
+    );
     const manifest = register.get(file.path);
 
     if (manifest) {
@@ -310,8 +301,7 @@ async function documentsFor(
     documents.push(planned);
   }
 
-  // Study units, from whatever named one. A theory guide for SU1 implies SU1
-  // exists even where nothing else says so.
+  // A theory guide for SU1 implies SU1 exists even where nothing else says so.
   const unitCodes = new Set<string>();
   for (const document of documents) {
     if (document.studyUnitCode) unitCodes.add(document.studyUnitCode);
@@ -339,14 +329,13 @@ async function documentsFor(
 /**
  * The fallback: a model reads the documents.
  *
- * Staged into a workspace and read as files, because asking for JSON on stdin
+ * Written into a workspace and read as files, because asking for JSON on stdin
  * gets prose - this appends to Claude Code's own system prompt rather than
  * replacing it, and the coding-assistant framing wins that argument every time.
  */
 async function planFromDocuments(
   session: AuthenticatedSession,
-  path: string,
-  files: FoundFile[],
+  files: UploadedFile[],
 ): Promise<IngestionPlan> {
   const workdir = await mkdtemp(join(tmpdir(), "lms-ingest-"));
   let staged = 0;
@@ -354,25 +343,30 @@ async function planFromDocuments(
   try {
     for (const file of files) {
       if (file.kind !== "text" && file.kind !== "convert") continue;
-      if (file.bytes > MAX_FILE_BYTES) continue;
       if (file.path.startsWith("_control/")) continue;
 
-      // Only the documents that describe the qualification. A folder of
-      // sixty policies and workbooks would bury the curriculum document in
-      // material the model does not need to read to answer the question.
-      if (!/qualification|curriculum|assessment specification|blueprint/i.test(file.path)) {
+      // Only the documents that describe the qualification. A folder of sixty
+      // policies and workbooks would bury the curriculum document in material
+      // the model does not need to read to answer the question.
+      if (
+        !/qualification|curriculum|assessment specification|blueprint/i.test(
+          file.path,
+        )
+      ) {
         continue;
       }
 
       const flat = file.path.replace(/[\\/]/g, "_");
       try {
         if (file.kind === "text") {
-          await copyFile(join(path, file.path), join(workdir, flat));
+          await writeFile(
+            join(workdir, flat),
+            Buffer.from(file.bytes),
+          );
         } else {
-          const bytes = new Uint8Array(await readFile(join(path, file.path)));
           const text = file.filename.toLowerCase().endsWith(".pdf")
-            ? (await readPdfText(bytes)).text
-            : readDocxText(bytes);
+            ? (await readPdfText(file.bytes)).text
+            : readDocxText(file.bytes);
           if (text.trim().length === 0) continue;
           await writeFile(join(workdir, `${flat}.txt`), text, "utf8");
         }
@@ -405,6 +399,7 @@ async function planFromDocuments(
 
     let raw: Record<string, unknown> | null = null;
     try {
+      const { readFile } = await import("node:fs/promises");
       raw = readJson(await readFile(join(workdir, "proposal.json"), "utf8"));
     } catch {
       raw = readJson(result.text ?? "");
@@ -443,6 +438,7 @@ async function finish(
   input: {
     status: "proposed" | "failed";
     plan?: IngestionPlan;
+    staged?: Record<string, string>;
     error?: string;
   },
 ) {
@@ -453,6 +449,7 @@ async function finish(
         status: input.status,
         proposal: input.plan ?? null,
         problems: input.plan?.warnings ?? [],
+        stagedFiles: input.staged ?? {},
         error: input.error ?? null,
       })
       .where(eq(aiImportJobs.id, jobId))
@@ -461,7 +458,7 @@ async function finish(
     await recordAudit(tx, {
       organisationId: session.organisationId,
       actorId: session.userId,
-      action: "ai.folder_read",
+      action: "folder.read",
       entityType: "ai_import_job",
       entityId: jobId,
       after: {

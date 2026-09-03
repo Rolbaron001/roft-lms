@@ -1551,60 +1551,22 @@ export const disposalDecisions = pgTable(
 // ---------------------------------------------------------------------------
 
 /**
- * What a tenant permits, as opposed to what any one person chooses.
+ * There is deliberately nothing tenant-wide about the AI extension.
  *
- * The split matters. Whether somebody uses an AI extension at all, and with
- * which provider, is a preference and belongs to the person - it is on their
- * own account page and every member of the provider's staff sets their own.
- * Which folders on the server may be read is not a preference. It is a
- * security boundary, and letting each user name a folder would let any of them
- * point the platform at its own configuration.
+ * There was, briefly: a list of folders on the server that an import was
+ * allowed to read. That existed because the first design had somebody type a
+ * path and the server read its own disk, which made every user's reach the
+ * service account's reach - so the folders anybody could name had to be
+ * registered by an administrator to stop the platform being pointed at its own
+ * configuration.
  *
- * So: the person decides whether, and the administrator decides where.
+ * Replacing the path with a folder picker removed the problem rather than
+ * managing it. The browser hands over the files, a person can only offer what
+ * they can already open, and no server path is involved at any point. Nothing
+ * left to register, and nothing left to restrict.
  *
- * There is no credential column here or on the per-user row, and that is
- * deliberate rather than an omission. The subscription-backed provider holds
- * its own sign-in on the machine it runs on, so the platform never sees,
- * stores or transmits one, and there is nowhere in the interface to type one
- * in.
+ * What remains is per person, below.
  */
-export const aiSettings = pgTable(
-  "ai_settings",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    organisationId: uuid("organisation_id")
-      .notNull()
-      .references(() => organisations.id, { onDelete: "cascade" }),
-
-    /** A provider name the platform knows, or null for none. */
-    provider: text("provider"),
-    /** Empty means the provider's own default. */
-    model: text("model"),
-
-    enabled: boolean("enabled").notNull().default(false),
-
-    /**
-     * Folders on the machine running the platform that an import may read.
-     *
-     * An allow-list rather than a free path, because "point it at a folder"
-     * given to a server process is otherwise "read any file the service can
-     * reach". Empty means no import can run, which is the safe default for a
-     * tenant that has switched the extension on and not thought about this.
-     */
-    allowedImportRoots: jsonb("allowed_import_roots")
-      .$type<string[]>()
-      .notNull()
-      .default([]),
-
-    updatedById: uuid("updated_by_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [uniqueIndex("ai_settings_org_idx").on(t.organisationId)],
-);
 
 /**
  * One person's own choice about model assistance.
@@ -1746,6 +1708,19 @@ export const aiImportJobs = pgTable(
      */
     proposal: jsonb("proposal"),
     problems: jsonb("problems").$type<string[]>().notNull().default([]),
+
+    /**
+     * Where each uploaded file was staged, keyed by its path in the folder.
+     *
+     * The commit happens in a later request and needs the bytes back. They are
+     * kept afterwards rather than swept up, because what was uploaded is the
+     * evidence of what was imported - a proposal that cannot be compared with
+     * the folder it came from is one nobody can audit.
+     */
+    stagedFiles: jsonb("staged_files")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
 
     /** The qualification it was committed into, once it has been. */
     qualificationId: uuid("qualification_id").references(

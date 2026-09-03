@@ -46,7 +46,7 @@ export default async function AiImportPage() {
           title="You have not switched on an AI extension"
           description="It is optional, off by default, and yours rather than the tenant's — every member of staff has their own."
         >
-          <Link href="/account" className="text-sm underline">
+          <Link href="/settings" className="text-sm underline">
             Switch one on
           </Link>
         </Card>
