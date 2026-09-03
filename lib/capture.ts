@@ -14,6 +14,7 @@ import {
 import { addPaper, addSection, addSectionItem, publishPaper } from "./papers";
 import { tagItemCriteria } from "./marking";
 import { assertProgrammeReady } from "./programme-readiness";
+import { assistCapture } from "./capture-assist";
 
 /**
  * Capturing a Word document as a paper the App can present.
@@ -199,6 +200,14 @@ export async function proposeCapture(
   }
 
   let parsed = parseWorkbook(paperText);
+
+  // Where the house-style parser found nothing, an AI extension gets a second
+  // reading - and only then. A paper it read twenty questions out of is a
+  // paper it understood, and replacing a deterministic reading with a
+  // probabilistic one would be a loss. Returns the paper unchanged where it
+  // cannot help, so a failed second attempt never costs the first.
+  const assist = await assistCapture(session, parsed, paperText);
+  parsed = assist.paper;
 
   if (input.guide) {
     const guideText = readDocxText(input.guide.bytes);

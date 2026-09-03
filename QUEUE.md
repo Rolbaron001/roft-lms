@@ -654,7 +654,28 @@ Verified with the extension switched off: the HRM Officer folder imported in
 full - 15 modules, 267 elements, 160 criteria, 26 documents, nothing refused. A
 folder without a blueprint refuses with a message naming the one thing that is
 missing and why.
-- [ ] 10.8 The same affordance at: uploading material, capturing an assessment, bulk learner registration
+- [x] 10.8 The same rule applied at: uploading material, capturing an assessment, bulk learner registration
+
+**All three built, and the split fell differently at each - which is the point
+of asking the question separately every time rather than assuming.**
+
+*Uploading material* uses no model at all. Sorting a folder of workbooks and
+theory guides is the same job as sorting the documents in a qualification
+folder, so it is the same code with the curriculum half switched off. The form
+says so, because somebody who has read about the extension elsewhere would
+reasonably wonder.
+
+*Bulk learner registration* is rules for the headings people actually write -
+Surname, Van, Voornaam, SA ID No - and no extension is needed. What one adds is
+headings the rules miss, and it is sent the column titles and never a row. A
+roster carries identity numbers and there is no reason for any of them to leave
+the machine to answer a question about column names.
+
+*Capturing an assessment* keeps the house-style parser as the first and usual
+reading. The extension gets a second attempt only where that found nothing -
+a paper the parser read twenty questions out of is one it understood. Anything
+the model proposes is marked for an assessor without exception, and it is never
+asked which answer is correct: that comes from the memorandum.
 
 **Corrected after the fact.** The first build put the AI on a page you navigate
 to, imported only the curriculum, and asked for approval one module at a time.
