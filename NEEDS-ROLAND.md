@@ -52,46 +52,52 @@ original.
 
 ---
 
-## 2. The AI extension: parked, not deleted, and I was wrong about why
+## 2. The AI extension: per person, and live
 
-You asked me to park it. It is parked. It is switched off by one setting
-(`LMS_AI_EXTENSION`), and while it is off the platform behaves exactly as it
-did before it existed - no buttons that do not work, no notices offering
-something unavailable. Nothing was deleted. Turning it back on is that one
-setting and a deploy.
+Unparked and rebuilt the way you asked for on 3 September. Each person brings
+their own Claude subscription; nobody signs in on the server; nobody shares
+anybody else's limits.
 
-**I owe you a correction.** I told you Claude Code holds one sign-in per
-machine, and that per-person or per-tenant use would need the server split up.
-That was wrong, and I should have tested it before telling you. It holds one
-sign-in **per configuration directory**, and which directory it uses is a
-variable you can set per run. I have since tested exactly that. So your
-instinct - that this ought to be solvable the way switching profiles on your
-laptop is solvable - was right and my answer was not.
+**What each person does, once.** On their own computer, with Claude Code
+installed, they run `claude setup-token`. It asks them to sign in to Anthropic
+in a browser and prints a token beginning `sk-ant-oat`. They paste that into
+Settings. That is the whole setup.
 
-The code now reflects it: each tenant gets its own profile directory, so
-Curiosa signing in on the server does not sign anybody else in and does not
-share Curiosa's limits with another provider.
+**It is off until they switch it on.** Setting it up makes it *available*, not
+*on*. A switch appears at the top of every page and beside every place that can
+use it. Somebody turns it on for a job, does the job, turns it off. Every
+sitting starts off, whatever the last one did, and signing out switches it off
+before it signs them out - so one left on by accident cannot outlive the
+sitting. The audit log records both.
 
-**What is still genuinely unsolved.** Per-*tenant* works. Per-*person* uses the
-same mechanism but needs somebody to complete an interactive `claude /login`
-through a web page, and driving an interactive terminal login through a browser
-form is fragile in a way I would not want under a production feature. So the
-honest position is: one sign-in per tenant is available now; one per person is
-not.
+**They can withdraw it at any time**, in two degrees: disable it and keep the
+token, or discard the token outright. Neither needs an administrator.
 
-**What that means in practice, if you unpark it.** One person signs Curiosa in
-once, over SSH. Everyone at Curiosa with the extension switched on then draws
-on that subscription and shares its limits. Nobody at another provider touches
-it. That is a licensing question for Anthropic rather than a technical one, and
-still your call - but it is a much smaller question than the one I put to you
-before.
+**What you are agreeing to, said plainly.** The platform now stores something it
+stores for nothing else: a credential it can read back. Passwords are hashed and
+unrecoverable; session tokens are stored as hashes; this is encrypted, because a
+token is useless unless it can be handed over as issued. It is sealed with
+AES-256-GCM under a key derived from the deployment's own secret, never shown
+again, never logged, and never written to disk when it is used - it goes to
+Claude Code as one argument to one run.
 
-**None of this affects folder import.** Reading a folder, working out what is
-in it and filing it is ordinary platform code and always was. The extension
-only adds one thing: working out the structure of a folder that does not carry
-a summary of itself. Every folder that does carry one imports at full speed
-with the extension off, which is how your own qualification folders import
-today.
+Two consequences worth knowing. Somebody who obtains both the database and the
+server's `AUTH_SECRET` could read the tokens, and a token is access to that
+person's whole Claude account rather than to anything in the LMS - so a person
+should discard theirs when they leave, and `claude setup-token` tokens can be
+revoked from their Anthropic account. And rotating `AUTH_SECRET` invalidates
+every stored token; nothing breaks, each person pastes a fresh one, and the
+platform says so rather than failing obscurely.
+
+**One thing to check with Anthropic**, unchanged from before and not mine to
+answer: whether their terms permit a personal subscription token being used
+this way by a platform. Each person is using their own subscription for their
+own work, which is the most defensible version of the question, but it is still
+a question.
+
+**Optional, and worth doing.** Set `AI_TOKEN_KEY` on the server (`openssl rand
+-base64 32`) so the tokens are not tied to `AUTH_SECRET`. Without it everything
+works; with it, rotating one does not invalidate the other.
 
 ---
 
@@ -206,9 +212,9 @@ Stages 7, 8, 10 complete; stage 9 complete except the two items waiting on the
 bucket. Every commit passes typecheck, lint, 961 tests and a production build.
 96 tables are tenant-isolated, which the isolation test enforces.
 
-Of the seven problems from your scan: 1, 2, 4, 6 and 7 are done, 3 is done bar
-the test above, and 5 - folder import on courses and programmes - went in on
-3 September. A course or programme folder files and indexes its documents
+Of the seven problems from your scan: 1, 4, 6 and 7 are done, 3 is done bar the
+test above, 2 - the AI extension - was rebuilt per person and is live, and 5 -
+folder import on courses and programmes - went in on 3 September. A course or programme folder files and indexes its documents
 against the thing you opened it from; it does not invent structure, because a
 course's shape is decided by you in the editor rather than by its documents.
 A qualification folder still builds structure, because a curriculum document
