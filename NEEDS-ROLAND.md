@@ -7,39 +7,48 @@ only one I would call urgent.
 
 ---
 
-## 1. A storage bucket. This is the blocker.
+## 1. A storage bucket. Less urgent than I said - correction below.
 
-**Why it matters more than anything else here.** Every backup is written to the
-same server the records are on. Lose the machine and you lose the records and
-the backups together, in one event. Until this is fixed, moving Curiosa's
-records off a Google Drive that Google replicates and onto one VPS makes them
-*less* safe, not more - so the whole of "the platform is the record" is
-waiting on it, and I have deliberately not built the parts that would encourage
-you to rely on it.
+**I overstated this on 2 September and want to correct it.** I wrote that losing
+the machine would lose the records and the backups together. Linda's mail of
+2 September says InspireTech takes a daily snapshot of the whole server, managed
+from the VPS console rather than on the server itself. So the catastrophic case
+is already covered, and my sentence was wrong. I had run the backup script, seen
+it stop at `BACKUP_BUCKET`, and concluded there was nothing off the machine at
+all. There is.
 
-**What is needed.** An S3-compatible bucket and its credentials. Any of these
-will do:
+**What is still missing, which is real but not an emergency.**
 
-- Ask InspireTech - they may offer object storage alongside the VPS, which is
-  the tidiest answer and one bill.
-- Backblaze B2, which is the cheapest at this size (a few dollars a month).
-- AWS S3 or Hetzner Object Storage.
+- *Granular restore.* A whole-server snapshot restores the machine to a point in
+  time. It cannot give you one learner's evidence file, or the database as it
+  was on Tuesday without also rolling back everything else. For a monitoring
+  visit asking for a specific record, that is the difference between minutes and
+  a rebuild.
+- *A copy that is not InspireTech's.* Snapshots live in their console, on their
+  account. That is one provider holding the server, the snapshot and the
+  restore. It is a good deal better than one disk, and it is not two providers.
+- *Disk headroom.* Unrelated to backups and still true: the server has about
+  11 GB free, shared by the database, the backups and every uploaded document.
+  Scanned certified copies and video evidence across years of cohorts will
+  exceed that, and a full disk stops the application rather than degrading it.
 
-**What happens then.** The S3 driver is already built and tested. It is two
-settings in the server's `.env` (`BACKUP_BUCKET` and the credentials) and the
-nightly backup starts working. I can do that part.
+**So the bucket is worth having, and it can wait for a sensible answer rather
+than a fast one.** The enquiry I drafted still stands. If InspireTech offer
+object storage, take it; if not, Backblaze B2 is a few dollars a month.
 
-**Do not skip the second half.** Once the bucket exists, evidence should move
-into it too - that is item 9.2. Flipping the switch sends *new* uploads to the
-bucket and leaves everything already on disk where it is, which is the worst of
-both. I have written `scripts/migrate-storage.mts` for exactly that: it copies
-what is already there, verifies every file by hash, and never deletes the local
-original. Run it with `--apply` after the switch, then look at the report before
-deleting anything.
+**Three questions for Linda, which cost nothing to ask:**
 
-The server disk has about 11 GB free, and scanned certified copies and video
-evidence across years of cohorts will exceed that. The database and the backups
-are on the same disk.
+- How many days of snapshots are retained, and how far back can we restore?
+- Is the snapshot stored in a different facility from the server itself?
+- Is the midnight backup she mentions our own database dump, or InspireTech's?
+  I could not tell from the wording, and the answer changes whether we have one
+  layer or two.
+
+**When a bucket does exist,** the S3 driver is already built and tested: two
+settings in the server's `.env` and the nightly dump starts going off the
+machine. Then run `scripts/migrate-storage.mts --apply` to move the documents
+already on disk - it copies, verifies every file by hash, and never deletes the
+original.
 
 ---
 
@@ -135,11 +144,44 @@ letting them discover it during a monitoring visit.
 
 ---
 
-## 5. Waiting on settings you already have in hand
+## 5. Outbound mail - settings received, and a password to change
 
-**Outbound mail.** Emailing credentials to a learner on registration is built
-and waiting on the relay host, user and password in the server's `.env`. Port
-587 is confirmed open. Give me those three and it works.
+Linda sent the server mail settings on 2 September. Two corrections to what I
+wrote before.
+
+**It is port 465, not 587.** I had noted 587 as confirmed. Linda's own advice is
+that 587 and 25 work but are "not secure and not recommended", and that some
+servers block them. 465 is TLS from the first byte; 587 opens in the clear and
+upgrades. Use 465.
+
+**No code change is needed.** `lib/mail.ts` already switches on the port number:
+`secure` on 465, STARTTLS otherwise. Getting that the wrong way round is the
+usual reason a correct username and password still will not connect, and it was
+handled when the mail layer was written.
+
+**What goes in the server's `.env`:**
+
+```
+MAIL_HOST=mail.curiosa.academy
+MAIL_PORT=465
+MAIL_USER=server@curiosa.academy
+MAIL_PASSWORD=<the password Linda sent>
+MAIL_FROM=server@curiosa.academy
+```
+
+**Put the password in yourself.** I have not written it into any file, command
+or commit, and I will not. That is a standing rule and not a comment on this
+particular password.
+
+**Then change it.** It arrived in plain text in an email, to two mailboxes, and
+now sits in a PDF in the project folder. That is three copies outside anybody's
+control. The PDF is not in the git repository - I checked - so nothing has been
+published, but the mailbox password for the server should be rotated once it is
+in the `.env`, and the new one should not travel by email.
+
+Once those five lines are set, learner credentials email themselves on
+registration and the mailbox at `webmail.curiosa.academy` is where anything
+bounced will land.
 
 ---
 
