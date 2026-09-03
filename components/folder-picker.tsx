@@ -10,6 +10,10 @@ import {
 /**
  * Choosing a folder to read.
  *
+ * `extension` is null while the AI extension is parked, and the note about it
+ * disappears with it - so a parked feature is absent rather than advertised
+ * and unavailable.
+ *
  * A folder picker rather than a path, which is the difference between a person
  * offering their own files and a server being told to go and read something.
  * They can only offer what they can already open, so nothing has to be
@@ -23,12 +27,16 @@ import {
  */
 export function FolderPicker({
   qualificationId,
+  courseId,
+  learningPathId,
   label,
   hint,
   extension,
 }: {
-  /** Set to file material against a qualification that already exists. */
+  /** Exactly one of these files against something that already exists. */
   qualificationId?: string;
+  courseId?: string;
+  learningPathId?: string;
   label: string;
   hint: React.ReactNode;
   /** Null where this person's role has no model assistance at all. */
@@ -59,6 +67,8 @@ export function FolderPicker({
 
     const body = new FormData();
     if (qualificationId) body.append("qualificationId", qualificationId);
+    if (courseId) body.append("courseId", courseId);
+    if (learningPathId) body.append("learningPathId", learningPathId);
     body.append("folderName", chosen?.name ?? "an uploaded folder");
 
     // Appended in step, so the two lists line up on the server.

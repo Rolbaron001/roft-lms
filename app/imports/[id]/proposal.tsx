@@ -77,11 +77,19 @@ export function Proposal({
   status,
   plan,
   qualifications,
+  target,
 }: {
   jobId: string;
   status: string;
   plan: PlanView;
   qualifications: { id: string; title: string }[];
+  /** Where this is going, decided when the folder was read. */
+  target: {
+    mode: string;
+    qualificationId?: string;
+    courseId?: string;
+    learningPathId?: string;
+  };
 }) {
   const [state, action, committing] = useActionState<
     ImportActionState,
@@ -241,23 +249,55 @@ export function Proposal({
           className="space-y-2 border-t border-[var(--border)] pt-4"
         >
           <input type="hidden" name="jobId" value={jobId} />
-          <label className="block text-sm">
-            <span className="text-[var(--muted)]">
-              Into which qualification
-            </span>
-            <select
-              name="qualificationId"
-              required
-              className={`${inputClass} mt-1 block w-full max-w-md`}
-            >
-              <option value="">Choose one</option>
-              {qualifications.map((qualification) => (
-                <option key={qualification.id} value={qualification.id}>
-                  {qualification.title}
-                </option>
-              ))}
-            </select>
-          </label>
+
+          {target.mode === "qualification" ? (
+            <label className="block text-sm">
+              <span className="text-[var(--muted)]">
+                Into which qualification
+              </span>
+              <select
+                name="qualificationId"
+                required
+                className={`${inputClass} mt-1 block w-full max-w-md`}
+              >
+                <option value="">Choose one</option>
+                {qualifications.map((qualification) => (
+                  <option key={qualification.id} value={qualification.id}>
+                    {qualification.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            // Already decided: this folder was read from the thing it belongs
+            // to, so asking again would only be a chance to get it wrong.
+            <>
+              <input
+                type="hidden"
+                name="qualificationId"
+                value={target.qualificationId ?? ""}
+              />
+              <input
+                type="hidden"
+                name="courseId"
+                value={target.courseId ?? ""}
+              />
+              <input
+                type="hidden"
+                name="learningPathId"
+                value={target.learningPathId ?? ""}
+              />
+              <p className="text-sm text-[var(--muted)]">
+                Filed against the{" "}
+                {target.mode === "course"
+                  ? "course"
+                  : target.mode === "programme"
+                    ? "programme"
+                    : "qualification"}{" "}
+                you started from.
+              </p>
+            </>
+          )}
 
           <p className="max-w-2xl text-xs text-[var(--muted)]">
             Everything above goes in at once, through the same checks that apply

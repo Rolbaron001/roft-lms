@@ -1722,6 +1722,24 @@ export const aiImportJobs = pgTable(
       .notNull()
       .default({}),
 
+    /**
+     * What the folder was being read into, decided when it was read.
+     *
+     * Held so the review screen does not have to ask again. A folder read from
+     * a course is filed against that course; only a folder read from nowhere in
+     * particular is building a new qualification, and only that one needs
+     * somebody to say which.
+     */
+    target: jsonb("target")
+      .$type<{
+        mode: "qualification" | "material" | "course" | "programme";
+        qualificationId?: string;
+        courseId?: string;
+        learningPathId?: string;
+      }>()
+      .notNull()
+      .default({ mode: "qualification" }),
+
     /** The qualification it was committed into, once it has been. */
     qualificationId: uuid("qualification_id").references(
       () => qualifications.id,

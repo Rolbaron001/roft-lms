@@ -115,7 +115,11 @@ export type IngestMode =
    * uploading a folder of workbooks or theory guides is ordinary functionality
    * with no extension involved at any point.
    */
-  | "material";
+  | "material"
+  /** Documents filed against a course that already exists. */
+  | "course"
+  /** Documents filed against a programme that already exists. */
+  | "programme";
 
 /**
  * Reads an uploaded folder and records what it found.
@@ -131,6 +135,11 @@ export async function ingestUpload(
   incoming: { path: string; bytes: Uint8Array }[],
   mode: IngestMode = "qualification",
   folderName = "an uploaded folder",
+  target: {
+    qualificationId?: string;
+    courseId?: string;
+    learningPathId?: string;
+  } = {},
 ) {
   assertSessionCan(session, "qualification:manage");
 
@@ -154,6 +163,7 @@ export async function ingestUpload(
           kind: file.kind,
         })),
         status: "reading",
+        target: { mode, ...target },
         requestedById: session.userId,
       })
       .returning();
@@ -195,9 +205,9 @@ async function buildPlan(
 ): Promise<IngestionPlan> {
   const warnings: string[] = [...uploadWarnings];
 
-  // Material goes against a qualification that already exists, so there is no
-  // curriculum to read and nothing for a model to do.
-  if (mode === "material") {
+  // Material, a course and a programme all go against something that already
+  // exists, so there is no curriculum to read and nothing for a model to do.
+  if (mode !== "qualification") {
     const gathered = documentsFor(files, warnings);
     return { ...emptyPlan(), ...gathered, warnings };
   }

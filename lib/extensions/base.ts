@@ -48,7 +48,7 @@ export type AiProvider = {
   description: string;
   /** What it uses when the caller does not say. */
   defaultModel: string;
-  availability(): Promise<Availability> | Availability;
+  availability(tenantId?: string): Promise<Availability> | Availability;
   run(input: {
     prompt: string;
     system?: string;
@@ -68,6 +68,8 @@ export type AiProvider = {
      * Without one it runs in an empty temporary directory and sees nothing.
      */
     workdir?: string;
+    /** Whose sign-in to use. Each tenant has its own. */
+    tenantId?: string;
   }): Promise<ExtensionResult>;
 };
 

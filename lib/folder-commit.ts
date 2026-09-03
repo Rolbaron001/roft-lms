@@ -65,7 +65,13 @@ const COMPONENTS = new Set(["knowledge", "practical", "workplace"]);
 
 export async function commitPlan(
   session: AuthenticatedSession,
-  input: { jobId: string; qualificationId: string },
+  input: {
+    jobId: string;
+    /** Exactly one of these says where the documents belong. */
+    qualificationId?: string;
+    courseId?: string;
+    learningPathId?: string;
+  },
 ): Promise<CommitReport> {
   assertSessionCan(session, "qualification:manage");
 
@@ -79,8 +85,13 @@ export async function commitPlan(
     );
   }
 
+  // A course or a programme takes documents and nothing else: there is no
+  // curriculum under it to build, and its study units belong to the
+  // qualification rather than to it.
+  const intoQualification = Boolean(input.qualificationId);
+
   const report: CommitReport = {
-    qualificationId: input.qualificationId,
+    qualificationId: input.qualificationId ?? "",
     modules: 0,
     topics: 0,
     elements: 0,
@@ -94,7 +105,7 @@ export async function commitPlan(
   // --- study units first, because documents attach to them -----------------
   const unitIds = new Map<string, string>();
 
-  for (const unit of plan.studyUnits) {
+  for (const unit of intoQualification ? plan.studyUnits : []) {
     try {
       const existing = await withTenant(session.organisationId, async (tx) => {
         const [row] = await tx
@@ -102,7 +113,7 @@ export async function commitPlan(
           .from(studyUnits)
           .where(
             and(
-              eq(studyUnits.qualificationId, input.qualificationId),
+              eq(studyUnits.qualificationId, input.qualificationId!),
               eq(studyUnits.code, unit.code),
             ),
           );
@@ -119,7 +130,7 @@ export async function commitPlan(
           .insert(studyUnits)
           .values({
             organisationId: session.organisationId,
-            qualificationId: input.qualificationId,
+            qualificationId: input.qualificationId!,
             code: unit.code,
             title: unit.title,
           })
@@ -134,8 +145,8 @@ export async function commitPlan(
   }
 
   // --- the curriculum ------------------------------------------------------
-  for (const planned of plan.modules) {
-    await commitModule(session, input.qualificationId, planned, report);
+  for (const planned of intoQualification ? plan.modules : []) {
+    await commitModule(session, input.qualificationId!, planned, report);
   }
 
   // --- the documents -------------------------------------------------------
@@ -185,10 +196,14 @@ export async function commitPlan(
       await uploadProgrammeDocument(
         session,
         {
-          // Attached to the study unit where one was identified, and to the
-          // qualification otherwise. The upload guard requires exactly one.
-          qualificationId: unitId ? undefined : input.qualificationId,
-          studyUnitId: unitId,
+          // Attached to the study unit where one was identified, and otherwise
+          // to whichever thing the import was started from. The upload guard
+          // requires exactly one, which is why these are mutually exclusive.
+          qualificationId:
+            unitId || !intoQualification ? undefined : input.qualificationId,
+          studyUnitId: intoQualification ? unitId : undefined,
+          courseId: input.courseId,
+          learningPathId: input.learningPathId,
           kind: document.kind ?? "other",
           title: document.title,
           version: document.version ?? undefined,
@@ -206,7 +221,7 @@ export async function commitPlan(
     await tx
       .update(aiImportJobs)
       .set({
-        qualificationId: input.qualificationId,
+        qualificationId: input.qualificationId ?? null,
         committedById: session.userId,
         committedAt: new Date(),
         status: "committed",

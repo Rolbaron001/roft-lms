@@ -26,6 +26,23 @@ const PROVIDERS: Record<ProviderName, AiProvider> = {
   claude_code: claudeCodeProvider,
 };
 
+/**
+ * Whether the AI extension is offered at all.
+ *
+ * Parked rather than removed, at Roland's request on 3 September, until the
+ * question of whose subscription pays is settled. Off by default and turned on
+ * with LMS_AI_EXTENSION=on.
+ *
+ * Everything it does still works and is still tested. What this hides is the
+ * offer: with it off, nothing in the interface mentions an extension, and the
+ * one thing that needs one - working a qualification's structure out of
+ * documents that carry no summary - simply says so without inviting anybody to
+ * go and switch something on.
+ */
+export function extensionOffered(): boolean {
+  return (process.env.LMS_AI_EXTENSION ?? "off").toLowerCase() === "on";
+}
+
 export function knownProviders(): AiProvider[] {
   return PROVIDER_NAMES.map((name) => PROVIDERS[name]);
 }
@@ -68,14 +85,20 @@ export async function extensionState(
     return own ?? null;
   });
 
-  const provider = providerByName(mine?.provider ?? null);
+  const provider = extensionOffered()
+    ? providerByName(mine?.provider ?? null)
+    : null;
 
   return {
-    enabled: mine?.enabled ?? false,
+    // Parked means off, whatever the stored row says. A tenant that enabled it
+    // before it was parked does not quietly keep it.
+    enabled: extensionOffered() && (mine?.enabled ?? false),
     provider: mine?.provider ?? null,
     providerLabel: provider?.label ?? null,
     model: mine?.model ?? null,
-    availability: provider ? await provider.availability() : null,
+    availability: provider
+      ? await provider.availability(session.organisationId)
+      : null,
   };
 }
 
@@ -168,7 +191,7 @@ export async function runExtension(
     return { ok: false, error: "That provider is no longer available." };
   }
 
-  const available = await provider.availability();
+  const available = await provider.availability(session.organisationId);
   if (!available.available) {
     await log(session, {
       provider: provider.name,
@@ -191,6 +214,7 @@ export async function runExtension(
     model: state.model ?? undefined,
     timeoutMs: input.timeoutMs,
     workdir: input.workdir,
+    tenantId: session.organisationId,
   });
 
   await log(session, {

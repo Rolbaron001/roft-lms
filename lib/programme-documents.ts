@@ -110,6 +110,8 @@ export const documentInput = z.object({
   qualificationId: z.string().uuid().optional(),
   studyUnitId: z.string().uuid().optional(),
   curriculumModuleId: z.string().uuid().optional(),
+  courseId: z.string().uuid().optional(),
+  learningPathId: z.string().uuid().optional(),
 });
 
 export type DocumentInput = z.input<typeof documentInput>;
@@ -184,11 +186,13 @@ export async function uploadProgrammeDocument(
     parsed.qualificationId,
     parsed.studyUnitId,
     parsed.curriculumModuleId,
+    parsed.courseId,
+    parsed.learningPathId,
   ].filter(Boolean);
 
   if (scopes.length !== 1) {
     throw new ProgrammeDocumentError(
-      "Attach the document to exactly one of a qualification, a study unit or a module.",
+      "Attach the document to exactly one of a qualification, a study unit, a module, a course or a programme.",
       "rejected",
     );
   }
@@ -269,6 +273,8 @@ export async function uploadProgrammeDocument(
         qualificationId,
         studyUnitId: parsed.studyUnitId ?? null,
         curriculumModuleId: parsed.curriculumModuleId ?? null,
+        courseId: parsed.courseId ?? null,
+        learningPathId: parsed.learningPathId ?? null,
         kind: parsed.kind,
         title: parsed.title,
         version: parsed.version ?? null,

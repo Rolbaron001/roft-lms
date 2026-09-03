@@ -4,7 +4,7 @@ import { listPeople, possibleLineManagers } from "@/lib/people";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { InviteForm } from "./invite-form";
 import { RosterForm } from "./roster-form";
-import { extensionState } from "@/lib/extensions";
+import { extensionOffered, extensionState } from "@/lib/extensions";
 import { Card as UiCard } from "@/components/ui";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -32,7 +32,8 @@ export default async function PeoplePage({
   // Read only so the roster form can say what an extension would add. Creating
   // people from a spreadsheet needs no extension and is offered either way.
   const extension = await extensionState(session);
-  const mayUseExtension = session.permissions.includes("extension:use");
+  const mayUseExtension =
+    extensionOffered() && session.permissions.includes("extension:use");
 
   const [people, managers] = await Promise.all([
     listPeople(session, { search }),

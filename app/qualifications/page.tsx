@@ -5,7 +5,7 @@ import { QualificationsManager } from "./qualifications-manager";
 import { FromDocument } from "./from-document";
 import { FolderPicker } from "@/components/folder-picker";
 import { Card } from "@/components/ui";
-import { extensionState } from "@/lib/extensions";
+import { extensionOffered, extensionState } from "@/lib/extensions";
 
 export default async function QualificationsPage() {
   const tenant = await requireTenant();
@@ -15,7 +15,8 @@ export default async function QualificationsPage() {
   // manage a qualification. The extension state is read only so the form can
   // say what an extension would add, not to decide whether to offer it.
   const extension = await extensionState(session);
-  const mayUseExtension = session.permissions.includes("extension:use");
+  const mayUseExtension =
+    extensionOffered() && session.permissions.includes("extension:use");
 
   const qualifications = await listQualifications(session);
   const withModules = await Promise.all(
@@ -61,11 +62,9 @@ export default async function QualificationsPage() {
                 Everything in the folder and its subfolders is read: the
                 curriculum, the study units, the guides and the policies.
                 <br />
-                Most folders take seconds and need no AI. A folder built by your
-                programme development system includes a summary of itself, and
-                that is read directly. A folder without one has to have its
-                structure worked out from the documents, which is the only part
-                an AI extension is needed for.
+                A folder built by your programme development system includes a
+                summary of itself, and that is read directly — in seconds. A
+                folder without one cannot have its structure worked out yet.
               </>
             }
           />

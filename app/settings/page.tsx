@@ -6,7 +6,11 @@ import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
-import { extensionState, knownProviders } from "@/lib/extensions";
+import {
+  extensionOffered,
+  extensionState,
+  knownProviders,
+} from "@/lib/extensions";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
@@ -24,7 +28,8 @@ export default async function SettingsPage() {
   // The extension is against this person's own profile, so it is offered to
   // anybody whose role includes model assistance rather than to administrators
   // alone.
-  const mayUseExtension = session.permissions.includes("extension:use");
+  const mayUseExtension =
+    extensionOffered() && session.permissions.includes("extension:use");
   const extension = mayUseExtension ? await extensionState(session) : null;
 
   return (

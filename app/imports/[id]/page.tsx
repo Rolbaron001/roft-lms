@@ -104,6 +104,7 @@ export default async function ImportJobPage({
               status={job.status}
               plan={plan}
               qualifications={available}
+              target={job.target}
             />
           </Card>
         </div>

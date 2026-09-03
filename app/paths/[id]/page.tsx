@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
+import { extensionOffered, extensionState } from "@/lib/extensions";
+import { FolderPicker } from "@/components/folder-picker";
 import {
   availableCourses,
   enrollableForPath,
   getLearningPath,
   LearningPathError,
 } from "@/lib/learning-paths";
-import { AppShell, StatusBadge } from "@/components/app-shell";
+import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { PathEditor } from "./path-editor";
 
 export default async function PathPage({
@@ -18,6 +20,10 @@ export default async function PathPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+
+  const canAuthorHere = session.permissions.includes("course:author");
+  const extension = await extensionState(session);
+  const mayUseExtension = extensionOffered() ? extension : null;
 
   let detail;
   try {
@@ -83,6 +89,37 @@ export default async function PathPage({
         canPublish={session.permissions.includes("course:publish")}
         canEnrol={canEnrol}
       />
+      {canAuthorHere ? (
+        <div className="mb-6">
+          <Card
+            title="Add documents from a folder"
+            description="Choose the folder this programme's material lives in and everything in it — including its subfolders — is read, filed and indexed. You see what it would file before anything is written."
+          >
+            <FolderPicker
+              learningPathId={id}
+              label="The programme's folder, from your own computer"
+              extension={
+                mayUseExtension
+                  ? {
+                      enabled: extension.enabled,
+                      available: extension.availability?.available ?? false,
+                      reason: extension.availability?.reason ?? null,
+                    }
+                  : null
+              }
+              hint={
+                <>
+                  Guides, workbooks, policies and templates are filed against
+                  this programme and their text indexed so they can be searched.
+                  <br />
+                  Structure is not created from here: the programme&rsquo;s own
+                  shape is built by adding courses to it below. This files what it holds.
+                </>
+              }
+            />
+          </Card>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
+import { extensionOffered, extensionState } from "@/lib/extensions";
+import { FolderPicker } from "@/components/folder-picker";
 import {
   AuthoringError,
   coverageReport,
@@ -18,6 +20,10 @@ export default async function CoursePage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+
+  const canAuthorHere = session.permissions.includes("course:author");
+  const extension = await extensionState(session);
+  const mayUseExtension = extensionOffered() ? extension : null;
 
   let detail;
   try {
@@ -119,6 +125,39 @@ export default async function CoursePage({
           canPublish={session.permissions.includes("course:publish")}
         />
       </div>
+
+      {canAuthorHere ? (
+        <div className="mb-6">
+          <Card
+            title="Add documents from a folder"
+            description="Choose the folder this course's material lives in and everything in it — including its subfolders — is read, filed and indexed. You see what it would file before anything is written."
+          >
+            <FolderPicker
+              courseId={id}
+              label="The course's folder, from your own computer"
+              extension={
+                mayUseExtension
+                  ? {
+                      enabled: extension.enabled,
+                      available: extension.availability?.available ?? false,
+                      reason: extension.availability?.reason ?? null,
+                    }
+                  : null
+              }
+              hint={
+                <>
+                  Guides, workbooks, policies and templates are filed against
+                  this course and their text indexed so they can be searched.
+                  <br />
+                  Structure is not created from here: the course&rsquo;s own
+                  shape is built in the editor below or from a qualification&rsquo;s modules. This files what it holds.
+                </>
+              }
+            />
+          </Card>
+        </div>
+      ) : null}
+
     </AppShell>
   );
 }

@@ -59,10 +59,19 @@ export async function readFolderAction(
     return { error: "Choose a folder." };
   }
 
-  // Material goes against a qualification that already exists, so the mode and
-  // the qualification travel together or not at all.
+  // Whatever it is being filed against decides the mode. Nothing named means
+  // a qualification is being created from the folder itself.
   const qualificationId = field(formData, "qualificationId");
-  const mode = qualificationId ? "material" : "qualification";
+  const courseId = field(formData, "courseId");
+  const learningPathId = field(formData, "learningPathId");
+
+  const mode = courseId
+    ? "course"
+    : learningPathId
+      ? "programme"
+      : qualificationId
+        ? "material"
+        : "qualification";
 
   // The paths are posted as a parallel list rather than keyed by filename: a
   // programme folder has "121151 SU1 Theory Guide.docx" in one place and a
@@ -89,7 +98,11 @@ export async function readFolderAction(
 
   let job;
   try {
-    job = await ingestUpload(session, incoming, mode, folderName);
+    job = await ingestUpload(session, incoming, mode, folderName, {
+      qualificationId: qualificationId || undefined,
+      courseId: courseId || undefined,
+      learningPathId: learningPathId || undefined,
+    });
   } catch (error) {
     return explain(error);
   }
@@ -117,7 +130,9 @@ export async function commitPlanAction(
   try {
     report = await commitPlan(session, {
       jobId,
-      qualificationId: field(formData, "qualificationId"),
+      qualificationId: field(formData, "qualificationId") || undefined,
+      courseId: field(formData, "courseId") || undefined,
+      learningPathId: field(formData, "learningPathId") || undefined,
     });
   } catch (error) {
     return explain(error);

@@ -821,6 +821,24 @@ export const programmeDocuments = pgTable(
       { onDelete: "cascade" },
     ),
 
+    /**
+     * A course, or a programme made of courses.
+     *
+     * Added because there was nowhere to put a course's own material: a
+     * document could belong to a qualification, a study unit or a module and
+     * nothing else, so pointing the platform at a folder of course material had
+     * no answer to "where does this go". Declared here rather than by
+     * referencing the tables directly, because courses and learning paths live
+     * in `learning.ts` and that file already imports this one.
+     */
+    courseId: uuid("course_id").references(() => courses.id, {
+      onDelete: "cascade",
+    }),
+    learningPathId: uuid("learning_path_id").references(
+      () => learningPaths.id,
+      { onDelete: "cascade" },
+    ),
+
     kind: programmeDocumentKind("kind").notNull(),
     title: text("title").notNull(),
     /** The provider's own version marker: "V2", "Final", "07072025". */

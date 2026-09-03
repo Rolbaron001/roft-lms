@@ -71,10 +71,21 @@ function newerFirst(a: string, b: string): number {
  * sign-in in its own words, so the worst case is a clearer message replaced by
  * a less clear one.
  */
-export function signedIn(): boolean {
-  const home =
+export function profileDir(tenantId?: string): string | null {
+  const base =
     process.env.CLAUDE_CONFIG_DIR ??
     (process.env.HOME ? join(process.env.HOME, ".claude") : null);
+
+  if (!base) return null;
+  // A directory per tenant. Claude Code keeps one sign-in per config
+  // directory, not one per machine, so pointing it at a different directory
+  // gives a different subscription - which is how one server carries Curiosa's
+  // sign-in and ROFT's without either seeing the other's usage.
+  return tenantId ? join(base, "tenants", tenantId) : base;
+}
+
+export function signedIn(tenantId?: string): boolean {
+  const home = profileDir(tenantId);
 
   if (!home) return true;
 
@@ -82,10 +93,8 @@ export function signedIn(): boolean {
     if (existsSync(join(home, marker))) return true;
   }
 
-  // Some installations keep it beside the directory rather than inside it.
-  if (process.env.HOME && existsSync(join(process.env.HOME, ".claude.json"))) {
-    return true;
-  }
+  // Claude Code also writes a .claude.json beside the directory it is given.
+  if (existsSync(`${home}.json`)) return true;
 
   return false;
 }
@@ -217,7 +226,7 @@ export const claudeCodeProvider: AiProvider = {
     "Uses the Claude subscription signed in on the machine running the platform. No API key and no per-token cost. Unavailable on the server, where nobody is signed in.",
   defaultModel: "claude-opus-5",
 
-  availability(): Availability {
+  availability(tenantId?: string): Availability {
     const cli = findClaudeCli();
     if (!cli) {
       return {
@@ -233,7 +242,7 @@ export const claudeCodeProvider: AiProvider = {
     // all because the two need completely different things done about them,
     // and the earlier message ran them together - it told somebody to install
     // software that was already there.
-    if (!signedIn()) {
+    if (!signedIn(tenantId)) {
       return {
         available: false,
         reason: "Nobody has signed in to Claude on this platform yet.",
@@ -295,9 +304,14 @@ export const claudeCodeProvider: AiProvider = {
         stdout: string;
         stderr: string;
       }>((resolve, reject) => {
+        const profile = profileDir(input.tenantId);
         const child = spawn(command, args, {
           cwd: workdir,
           windowsHide: true,
+          // The tenant's own sign-in, rather than whatever the machine has.
+          env: profile
+            ? { ...process.env, CLAUDE_CONFIG_DIR: profile }
+            : process.env,
         });
 
         let stdout = "";
