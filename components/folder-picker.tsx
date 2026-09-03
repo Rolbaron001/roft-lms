@@ -131,25 +131,27 @@ export function FolderPicker({
               <span className="font-medium text-[var(--success)]">
                 Your AI extension is on.
               </span>{" "}
-              A folder with no blueprint will have its structure read out of the
-              documents instead — slower, and worth checking against the
-              curriculum document.
+              A folder that does not include a summary of itself will have its
+              structure worked out from the documents instead — slower, and
+              worth checking against the curriculum document.
             </>
           ) : extension.enabled ? (
             <>
               <span className="font-medium">
                 Your AI extension cannot run here.
               </span>{" "}
-              {extension.reason} A folder with a blueprint still imports
-              normally; one without cannot have its structure read.
+              {extension.reason} A folder that includes a summary of itself
+              still imports normally; one without it cannot have its structure
+              worked out.
             </>
           ) : (
             <>
               <span className="font-medium">
                 An AI extension adds one thing here:
               </span>{" "}
-              reading the structure out of the documents when a folder has no
-              blueprint. Everything else works without one. You can switch one
+              working out the structure from the documents, when a folder does
+              not include a summary of itself. Everything else works without
+              one. You can switch one
               on in{" "}
               <Link href="/settings" className="underline">
                 Settings

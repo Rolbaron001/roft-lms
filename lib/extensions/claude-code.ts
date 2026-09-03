@@ -58,6 +58,38 @@ function newerFirst(a: string, b: string): number {
  * inside the desktop application, under a version directory - newest wins,
  * compared numerically, because a plain string sort puts 2.1.9 above 2.1.247.
  */
+/**
+ * Whether a subscription has been signed in where the platform runs.
+ *
+ * Claude Code writes its credentials under the home directory. Checking for
+ * them separates "not installed" from "installed and nobody has signed in",
+ * which are the same to a program and completely different to a person: one is
+ * a deployment fault and the other is a five-minute job somebody has to choose
+ * to do.
+ *
+ * A false positive here costs nothing. The run itself reports a missing
+ * sign-in in its own words, so the worst case is a clearer message replaced by
+ * a less clear one.
+ */
+export function signedIn(): boolean {
+  const home =
+    process.env.CLAUDE_CONFIG_DIR ??
+    (process.env.HOME ? join(process.env.HOME, ".claude") : null);
+
+  if (!home) return true;
+
+  for (const marker of [".credentials.json", "credentials.json"]) {
+    if (existsSync(join(home, marker))) return true;
+  }
+
+  // Some installations keep it beside the directory rather than inside it.
+  if (process.env.HOME && existsSync(join(process.env.HOME, ".claude.json"))) {
+    return true;
+  }
+
+  return false;
+}
+
 export function findClaudeCli(): string | null {
   const override = (process.env.LMS_CLAUDE_CLI ?? "").trim();
   if (override) return existsSync(override) ? override : null;
@@ -190,11 +222,27 @@ export const claudeCodeProvider: AiProvider = {
     if (!cli) {
       return {
         available: false,
-        reason: "Claude Code is not installed on the machine running the platform.",
+        reason:
+          "Claude Code is not installed where the platform is running.",
         remedy:
-          "Install Claude Code and sign in on that machine, or set LMS_CLAUDE_CLI to the full path of the claude executable. On the hosted server nobody is signed in, and this provider stays unavailable there.",
+          "On the hosted platform it is installed already, so seeing this means something is wrong with the deployment rather than with your account - tell whoever maintains it. Running the platform on your own machine, install Claude Code there.",
       };
     }
+
+    // Installed but nobody has signed in. Distinguished from not installed at
+    // all because the two need completely different things done about them,
+    // and the earlier message ran them together - it told somebody to install
+    // software that was already there.
+    if (!signedIn()) {
+      return {
+        available: false,
+        reason: "Nobody has signed in to Claude on this platform yet.",
+        remedy:
+          "This is a one-time step and it needs somebody with a Claude subscription to do it, because it means authenticating that subscription. Whoever maintains the platform runs `claude` on the server and follows the /login prompt. Note that a single sign-in serves the whole platform: everyone's AI use draws on that one subscription and its limits, because Claude Code holds one sign-in per machine rather than one per person.",
+        detail: cli,
+      };
+    }
+
     return { available: true, detail: cli };
   },
 

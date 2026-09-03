@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { activeProgrammes } from "@/lib/tracker";
 import { Card } from "@/components/ui";
+import { AppShell } from "@/components/app-shell";
 
 const VISIT_LABEL: Record<string, string> = {
   not_scheduled: "Not scheduled",
@@ -27,7 +28,7 @@ export default async function TrackerPage({
   searchParams: Promise<{ all?: string }>;
 }) {
   const { all } = await searchParams;
-  await requireTenant();
+  const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
 
   const includeFinished = all === "1";
@@ -36,7 +37,7 @@ export default async function TrackerPage({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
+    <AppShell tenant={tenant} session={session}>
       <h1 className="text-xl font-semibold">Tracker</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         {includeFinished
@@ -152,6 +153,6 @@ export default async function TrackerPage({
           )}
         </Card>
       </div>
-    </main>
+    </AppShell>
   );
 }

@@ -80,6 +80,11 @@ services:
       # Evidence uploads must outlive the container. Losing these loses the
       # Portfolio of Evidence behind every assessment decision.
       - evidence:/app/storage
+      # The AI extension's sign-in, if anybody ever completes one. Without this
+      # a redeploy would sign the platform out silently, and the next person to
+      # use it would be told the extension is unavailable with no explanation
+      # of what changed.
+      - claude:/home/nextjs/.claude
     depends_on:
       db:
         condition: service_healthy
@@ -243,6 +248,9 @@ networks:
     internal: true
 
 volumes:
+  # Holds nothing until somebody signs the AI extension in, and is harmless
+  # empty. See the note on the app service.
+  claude:
   pgdata:
   evidence:
   caddy_data:

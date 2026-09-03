@@ -55,10 +55,13 @@ export default async function RecordsPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Records</h1>
+        <h1 className="text-xl font-semibold">Policies and documents</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Policies, accreditation letters, contracts and statutory documents -
-          everything the provider holds that does not belong to one learner.
+          The Quality Management System and its policies, accreditation
+          letters, contracts, and statutory documents like the PAIA manual —
+          everything the provider holds that does not belong to one learner or
+          one qualification. Importing a qualification folder files its QMS
+          policies here automatically.
           {canManage
             ? " And what has reached the end of its retention period."
             : ""}

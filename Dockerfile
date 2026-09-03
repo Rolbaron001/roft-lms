@@ -99,6 +99,22 @@ COPY --chown=nextjs:nodejs scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
 # survive a redeploy.
 RUN mkdir -p /app/storage && chown nextjs:nodejs /app/storage
 
+# Claude Code, for the optional AI extension.
+#
+# Installed rather than left to be added by hand, because "install it on the
+# server" is not a reasonable thing to ask of somebody who wanted a folder
+# read. It ships switched off and unused: without a sign-in it reports itself
+# unavailable and the platform behaves exactly as it does without it.
+#
+# The sign-in is the one part that cannot be baked in. It is a person
+# authenticating their own subscription, it happens once, and it is done by
+# running `claude` in this container and following /login. The credentials land
+# in the home directory below, which the compose file mounts a volume over so
+# they survive a redeploy - otherwise every deploy would silently sign the
+# platform out.
+RUN npm install -g @anthropic-ai/claude-code  && mkdir -p /home/nextjs/.claude  && chown -R nextjs:nodejs /home/nextjs
+ENV HOME=/home/nextjs
+
 USER nextjs
 EXPOSE 3000
 

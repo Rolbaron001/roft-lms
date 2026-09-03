@@ -75,7 +75,7 @@ const NAV: NavItem[] = [
   },
   // A reference, not a record. Every signed-in person can read it, learners
   // included — it exists so that everybody uses the same words.
-  { href: "/records", label: "Records", permission: "course:read" },
+  { href: "/records", label: "Policies & documents", permission: "course:read" },
   { href: "/dictionary", label: "Dictionary", permission: "report:own" },
   {
     href: "/settings",

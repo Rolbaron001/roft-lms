@@ -101,7 +101,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               </p>
             ) : (
               <div className="rounded-md border border-[var(--border)] p-3 text-sm">
-                <p className="font-medium">Not available on this machine</p>
+                <p className="font-medium">Not ready yet</p>
                 <p className="mt-1 text-[var(--muted)]">
                   {current.availability.reason}
                 </p>
@@ -120,11 +120,12 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
           */}
           <p className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
             <span className="font-medium">Whose subscription this uses.</span>{" "}
-            The extension runs on the machine the platform is running on, not on
-            yours. Where that is a shared server, everybody&rsquo;s work goes
-            through whichever Claude sign-in is on that server. Where you run the
-            platform on your own machine, it uses your own sign-in. Either way
-            the platform never sees a credential: there is no field here for one
+            The AI runs where the platform runs, not on your own computer, and
+            it holds one sign-in for the whole platform rather than one per
+            person. So everybody&rsquo;s AI use draws on that single
+            subscription and shares its limits. Switching this on says you want
+            to use it; it does not give you a separate allowance. The platform
+            never sees a credential either way: there is no field here for one
             and no column for one.
           </p>
 

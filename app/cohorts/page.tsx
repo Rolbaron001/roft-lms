@@ -5,6 +5,9 @@ import { listCourses } from "@/lib/authoring";
 import { EmptyState } from "@/components/empty-state";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { NewCohort } from "./new-cohort";
+import { RosterForm } from "@/app/people/roster-form";
+import { Card } from "@/components/ui";
+import { extensionState } from "@/lib/extensions";
 
 /**
  * The cohorts a provider is running.
@@ -15,6 +18,12 @@ import { NewCohort } from "./new-cohort";
 export default async function CohortsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
+
+  // A cohort usually arrives as a spreadsheet of names, so the same import that
+  // sits under People is offered here too - this is where somebody is when
+  // they have one in front of them.
+  const canInvite = session.permissions.includes("user:invite");
+  const extension = canInvite ? await extensionState(session) : null;
   const cohorts = await listCohorts(session);
 
   // Only fetched for somebody who can actually start one: listCourses asks for
@@ -83,6 +92,26 @@ export default async function CohortsPage() {
           ))}
         </ul>
       )}
+
+      {canInvite ? (
+        <div className="mt-6">
+          <Card
+            title="Add a cohort from a spreadsheet"
+            description="Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created, then enrol them onto a cohort above."
+          >
+            <RosterForm
+              extension={
+                session.permissions.includes("extension:use") && extension
+                  ? {
+                      enabled: extension.enabled,
+                      available: extension.availability?.available ?? false,
+                    }
+                  : null
+              }
+            />
+          </Card>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

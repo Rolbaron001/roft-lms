@@ -214,8 +214,8 @@ async function buildPlan(
     if (!usable) {
       throw new IngestError(
         state.enabled
-          ? `This folder has no _control/blueprint.json, so its structure has to be read out of the documents - and that is the one part that needs an AI extension. Yours is switched on but cannot run here: ${state.availability?.reason ?? "it is not available on this machine."} Everything else about importing a folder works without it.`
-          : "This folder has no _control/blueprint.json, so its structure has to be read out of the documents - and that is the one part that needs an AI extension, which you have not switched on. A folder that carries a blueprint imports with no extension at all.",
+          ? `This folder does not include a summary of itself (a _control/blueprint.json), so its structure has to be worked out from the documents - and that is the one part that needs an AI extension. Yours is switched on but cannot run here: ${state.availability?.reason ?? "it is not available on this machine."} Everything else about importing a folder works without it.`
+          : "This folder does not include a summary of itself (a _control/blueprint.json, which your programme development system writes), so its structure has to be worked out from the documents - and that is the one part that needs an AI extension, which you have not switched on. A folder that includes one imports with no extension at all.",
         "needs_extension",
       );
     }
