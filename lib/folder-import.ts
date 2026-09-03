@@ -131,7 +131,8 @@ export async function ingestFolder(
     );
   }
 
-  const files = await walkFolder(path);
+  const walked = await walkFolder(path);
+  const files = walked.files;
   if (files.length === 0) {
     throw new IngestError(
       `Nothing was found at ${path}. Check the folder exists on the machine running the platform - not on yours, if those differ.`,
@@ -158,7 +159,7 @@ export async function ingestFolder(
   });
 
   try {
-    const plan = await buildPlan(session, path, files);
+    const plan = await buildPlan(session, path, files, walked.warnings);
     return await finish(session, job.id, { status: "proposed", plan });
   } catch (error) {
     return await finish(session, job.id, {
@@ -175,8 +176,10 @@ async function buildPlan(
   session: AuthenticatedSession,
   path: string,
   files: FoundFile[],
+  /** Anything the walk itself could not do - a folder too deep, a limit hit. */
+  walkWarnings: string[],
 ): Promise<IngestionPlan> {
-  const warnings: string[] = [];
+  const warnings: string[] = [...walkWarnings];
 
   // The structured path first, always. No model, no extension, no waiting.
   let plan = await readBlueprint(path);

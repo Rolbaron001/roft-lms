@@ -18,10 +18,36 @@ export const CONVERTIBLE = new Set([".pdf", ".docx"]);
 /** Stored and indexed but not read for structure. */
 export const STORABLE = new Set([".xlsx", ".pptx", ".png", ".jpg", ".jpeg"]);
 
-/** How deep to go. Deeper than this is somebody's working directory. */
-const MAX_DEPTH = 4;
-/** More than this in one folder is not a programme, it is a drive. */
-const MAX_FILES = 500;
+/**
+ * How deep to go.
+ *
+ * Six, which is generous: the client's own programme folders use two, and a
+ * qualification split into programmes, courses and their material would use
+ * four or five. Beyond six somebody has pointed this at a drive rather than a
+ * programme, and walking it would take minutes to find nothing.
+ */
+const MAX_DEPTH = 6;
+
+/**
+ * How many files before it stops.
+ *
+ * Two thousand, and - this is the part that matters - it says so when it stops.
+ * The first version cut off silently at five hundred, which would have imported
+ * part of a large folder and reported success. A missing workbook nobody was
+ * told about is worse than a refusal.
+ */
+const MAX_FILES = 2000;
+
+export type WalkResult = {
+  files: FoundFile[];
+  /**
+   * Anything the walk could not do, in words.
+   *
+   * A walk that quietly stopped is the one outcome nobody can act on: a folder
+   * would import missing half its material and report success.
+   */
+  warnings: string[];
+};
 
 export type FoundFile = {
   /** Relative to the folder pointed at, with forward slashes. */
@@ -66,11 +92,20 @@ function kindOf(filename: string): FoundFile["kind"] {
  * right way for them to be excluded - by what they are rather than by where
  * they sit.
  */
-export async function walkFolder(root: string): Promise<FoundFile[]> {
+export async function walkFolder(root: string): Promise<WalkResult> {
   const found: FoundFile[] = [];
+  const tooDeep: string[] = [];
+  let truncated = false;
 
   async function descend(directory: string, depth: number): Promise<void> {
-    if (depth > MAX_DEPTH || found.length >= MAX_FILES) return;
+    if (found.length >= MAX_FILES) {
+      truncated = true;
+      return;
+    }
+    if (depth > MAX_DEPTH) {
+      tooDeep.push(relative(root, directory).split(sep).join("/"));
+      return;
+    }
 
     let entries;
     try {
@@ -80,7 +115,10 @@ export async function walkFolder(root: string): Promise<FoundFile[]> {
     }
 
     for (const entry of entries) {
-      if (found.length >= MAX_FILES) return;
+      if (found.length >= MAX_FILES) {
+        truncated = true;
+        return;
+      }
 
       const full = join(directory, entry.name);
 
@@ -117,5 +155,21 @@ export async function walkFolder(root: string): Promise<FoundFile[]> {
   }
 
   await descend(root, 0);
-  return found.sort((a, b) => a.path.localeCompare(b.path));
+
+  const warnings: string[] = [];
+  if (truncated) {
+    warnings.push(
+      `This folder holds more than ${MAX_FILES} files and only the first ${MAX_FILES} were read. Everything below is what was found; the rest was not. Point at a narrower folder, or say so and the limit can be raised.`,
+    );
+  }
+  for (const directory of tooDeep) {
+    warnings.push(
+      `${directory} is nested more than ${MAX_DEPTH} folders deep and was not read.`,
+    );
+  }
+
+  return {
+    files: found.sort((a, b) => a.path.localeCompare(b.path)),
+    warnings,
+  };
 }
