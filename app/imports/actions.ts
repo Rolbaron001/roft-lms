@@ -10,6 +10,8 @@ export type ImportActionState = {
   error?: string;
   notice?: string;
   path?: string;
+  /** Set once a folder has been read, so the form can link straight to it. */
+  jobId?: string;
 };
 
 function field(formData: FormData, name: string): string {
@@ -43,14 +45,28 @@ export async function readFolderAction(
   const session = await requirePermission("qualification:manage");
   const path = field(formData, "path");
 
+  // Material goes against a qualification that already exists, so the mode and
+  // the qualification travel together or not at all.
+  const qualificationId = field(formData, "qualificationId");
+  const mode = qualificationId ? "material" : "qualification";
+
+  let job;
   try {
-    await ingestFolder(session, path);
+    job = await ingestFolder(session, path, mode);
   } catch (error) {
     return { ...explain(error), path };
   }
 
   revalidatePath("/imports");
-  return { notice: "Read. What it proposes is below, for you to check." };
+
+  if (job.status !== "proposed") {
+    return { error: job.error ?? "That folder could not be read.", path };
+  }
+
+  return {
+    notice: "Read. Check what it found before committing any of it.",
+    jobId: job.id,
+  };
 }
 
 export async function commitPlanAction(

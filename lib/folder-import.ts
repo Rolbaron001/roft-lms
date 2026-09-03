@@ -111,9 +111,22 @@ anything is written to the platform.`;
 // Reading
 // ---------------------------------------------------------------------------
 
+export type IngestMode =
+  /** The whole tree: the curriculum, the study units and every document. */
+  | "qualification"
+  /**
+   * Documents only, filed against a qualification that already exists.
+   *
+   * Never calls a model. Classifying a document is rules and a manifest, so
+   * uploading a folder of workbooks or theory guides is ordinary functionality
+   * with no extension involved at any point.
+   */
+  | "material";
+
 export async function ingestFolder(
   session: AuthenticatedSession,
   path: string,
+  mode: IngestMode = "qualification",
 ) {
   assertSessionCan(session, "qualification:manage");
 
@@ -159,7 +172,7 @@ export async function ingestFolder(
   });
 
   try {
-    const plan = await buildPlan(session, path, files, walked.warnings);
+    const plan = await buildPlan(session, path, files, walked.warnings, mode);
     return await finish(session, job.id, { status: "proposed", plan });
   } catch (error) {
     return await finish(session, job.id, {
@@ -178,8 +191,20 @@ async function buildPlan(
   files: FoundFile[],
   /** Anything the walk itself could not do - a folder too deep, a limit hit. */
   walkWarnings: string[],
+  mode: IngestMode,
 ): Promise<IngestionPlan> {
   const warnings: string[] = [...walkWarnings];
+
+  // Material goes against a qualification that already exists, so there is no
+  // curriculum to read and nothing for a model to do. An empty shell, and the
+  // documents are gathered below exactly as they are for a full import.
+  if (mode === "material") {
+    return {
+      ...emptyPlan(),
+      ...(await documentsFor(path, files, warnings)),
+      warnings,
+    };
+  }
 
   // The structured path first, always. No model, no extension, no waiting.
   let plan = await readBlueprint(path);
@@ -206,6 +231,51 @@ async function buildPlan(
     );
   }
 
+  const gathered = await documentsFor(path, files, warnings);
+
+  return {
+    ...plan,
+    studyUnits:
+      plan.studyUnits.length > 0 ? plan.studyUnits : gathered.studyUnits,
+    documents: gathered.documents,
+    warnings: [...plan.warnings, ...warnings],
+  };
+}
+
+/** A plan with no qualification in it, for a material-only import. */
+function emptyPlan(): IngestionPlan {
+  return {
+    source: "blueprint",
+    qualification: {
+      title: "",
+      saqaId: null,
+      curriculumCode: null,
+      nqfLevel: null,
+      credits: null,
+      purpose: null,
+    },
+    modules: [],
+    studyUnits: [],
+    documents: [],
+    warnings: [],
+  };
+}
+
+/**
+ * The documents in a folder, and the study units they imply.
+ *
+ * Shared by both modes because filing a document is the same job whether it
+ * arrived with a curriculum or on its own. Rules and a manifest throughout: no
+ * model is asked anything here, in either mode.
+ */
+async function documentsFor(
+  path: string,
+  files: FoundFile[],
+  warnings: string[],
+): Promise<{
+  documents: PlannedDocument[];
+  studyUnits: { code: string; title: string }[];
+}> {
   const register = await readRegister(path);
 
   // Every file becomes a planned document, except the ones that are structure
@@ -251,22 +321,18 @@ async function buildPlan(
     if (code) unitCodes.add(code);
   }
 
-  const studyUnits = [...unitCodes]
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map((code) => ({ code, title: code }));
-
   const unrecognised = documents.filter((row) => row.kind === "other").length;
   if (unrecognised > 0) {
     warnings.push(
-      `${unrecognised} ${unrecognised === 1 ? "document was" : "documents were"} not recognised by name and will be filed as "other" against the qualification. They are listed below with the reasoning, and can be re-filed afterwards.`,
+      `${unrecognised} ${unrecognised === 1 ? "document was" : "documents were"} not recognised by name and will be filed as "other". They are listed below with the reasoning, and can be re-filed afterwards.`,
     );
   }
 
   return {
-    ...plan,
-    studyUnits: plan.studyUnits.length > 0 ? plan.studyUnits : studyUnits,
     documents,
-    warnings: [...plan.warnings, ...warnings],
+    studyUnits: [...unitCodes]
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .map((code) => ({ code, title: code })),
   };
 }
 

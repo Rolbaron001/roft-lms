@@ -10,6 +10,8 @@ import {
 import { describeSize } from "@/lib/media";
 import { AppShell, Card } from "@/components/app-shell";
 import { DocumentUploader } from "./documents/document-uploader";
+import { MaterialFolder } from "./material-folder";
+import { extensionState } from "@/lib/extensions";
 
 const COMPONENT_LABELS: Record<string, string> = {
   knowledge: "Knowledge module",
@@ -44,6 +46,10 @@ export default async function QualificationPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+
+  // Read only for the folders an import may touch. Filing material needs no
+  // extension, so nothing here asks whether one is switched on.
+  const { allowedImportRoots } = await extensionState(session);
   const { qualification, modules, studyUnits, outcomes, unplacedModules } =
     await curriculumOutline(session, id);
   const [documents, uploadTargets] = await Promise.all([
@@ -237,16 +243,24 @@ export default async function QualificationPage({
         </p>
 
         <Card>
-          <DocumentUploader
-            qualificationId={id}
-            kinds={DOCUMENT_KINDS.map((kind) => ({
-              value: kind,
-              label: DOCUMENT_KIND_LABELS[kind],
-            }))}
-            units={uploadTargets.units}
-            modules={uploadTargets.modules}
-          />
+          <p className="mb-3 text-sm font-medium">A whole folder at once</p>
+          <MaterialFolder qualificationId={id} roots={allowedImportRoots} />
         </Card>
+
+        <div className="mt-4">
+          <Card>
+            <p className="mb-3 text-sm font-medium">Or one document</p>
+            <DocumentUploader
+              qualificationId={id}
+              kinds={DOCUMENT_KINDS.map((kind) => ({
+                value: kind,
+                label: DOCUMENT_KIND_LABELS[kind],
+              }))}
+              units={uploadTargets.units}
+              modules={uploadTargets.modules}
+            />
+          </Card>
+        </div>
 
         {documents.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
