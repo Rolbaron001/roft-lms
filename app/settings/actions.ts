@@ -146,11 +146,23 @@ export async function updateMyExtensionAction(
   const session = await requireSession();
 
   try {
+    const forget = formData.get("intent") === "forget";
+
     await setMyExtension(session, {
-      enabled: formData.get("enabled") === "on",
+      available: !forget && formData.get("available") === "on",
       provider: String(formData.get("provider") ?? "") || null,
       model: String(formData.get("model") ?? "").trim() || null,
+      // An empty box means "leave the stored one alone", not "clear it".
+      // Discarding is its own button, because a token nobody meant to remove is
+      // a person locked out of their own work with nothing to show why.
+      token: String(formData.get("token") ?? "").trim() || null,
+      forget,
     });
+
+    if (forget) {
+      revalidatePath("/settings");
+      return { notice: "Token discarded. Nothing of it is kept." };
+    }
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
       return {
@@ -167,7 +179,11 @@ export async function updateMyExtensionAction(
     };
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/qualifications");
-  return { notice: "Saved." };
+  // The extension changes what many pages offer, and which ones is not
+  // knowable from here.
+  revalidatePath("/", "layout");
+  return {
+    notice:
+      "Saved. It is available but not switched on — use the AI switch at the top of any page when you want it for a job.",
+  };
 }

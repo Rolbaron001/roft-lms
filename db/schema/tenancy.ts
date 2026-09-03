@@ -338,6 +338,20 @@ export const sessions = pgTable(
     createdIp: text("created_ip"),
     userAgent: text("user_agent"),
 
+    /**
+     * When the AI extension was switched on in this sitting, or null for off.
+     *
+     * On the session rather than the person, which is the whole point. Signing
+     * in never carries a switch forward: a person who used it yesterday starts
+     * today with it off, turns it on for the job that needs it, and turns it
+     * off again. Signing out switches it off explicitly before the session is
+     * revoked, so one left on by accident cannot outlive the sitting.
+     *
+     * A timestamp rather than a flag because when it went on is worth knowing
+     * afterwards, and because null is an unambiguous off.
+     */
+    aiOnSince: timestamp("ai_on_since", { withTimezone: true }),
+
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     revokedReason: text("revoked_reason"),
   },

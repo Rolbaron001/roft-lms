@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { extensionOffered, extensionState } from "@/lib/extensions";
+import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
 import {
   availableCourses,
@@ -23,7 +23,7 @@ export default async function PathPage({
 
   const canAuthorHere = session.permissions.includes("course:author");
   const extension = await extensionState(session);
-  const mayUseExtension = extensionOffered() ? extension : null;
+  const mayUseExtension = extension.registered ? extension : null;
 
   let detail;
   try {
@@ -101,7 +101,7 @@ export default async function PathPage({
               extension={
                 mayUseExtension
                   ? {
-                      enabled: extension.enabled,
+                      on: extension.on,
                       available: extension.availability?.available ?? false,
                       reason: extension.availability?.reason ?? null,
                     }

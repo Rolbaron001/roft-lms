@@ -149,6 +149,7 @@ const summary = await importCurriculum(
     roles,
     permissions: permissionsFor({ roles }),
     mustChangePassword: false,
+    aiOn: false,
   },
   raw,
 );

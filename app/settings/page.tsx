@@ -1,3 +1,4 @@
+import { dateInZone } from "@/lib/timezone";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { namingConventionFor } from "@/lib/capture";
 import { AppShell } from "@/components/app-shell";
@@ -68,7 +69,12 @@ export default async function SettingsPage() {
           >
             <ExtensionForm
               current={{
-                enabled: extension.enabled,
+                registered: extension.registered,
+                available: extension.available,
+                tokenHint: extension.tokenHint,
+                tokenAddedAt: extension.tokenAddedAt
+                  ? dateInZone(extension.tokenAddedAt, tenant.timezone)
+                  : null,
                 provider: extension.provider,
                 model: extension.model,
                 availability: extension.availability,

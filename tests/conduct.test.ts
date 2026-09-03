@@ -140,6 +140,7 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
     roles,
     permissions: permissionsFor({ roles }),
     mustChangePassword: false,
+    aiOn: false,
   };
 }
 

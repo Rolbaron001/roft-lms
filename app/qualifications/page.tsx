@@ -51,7 +51,7 @@ export default async function QualificationsPage() {
             extension={
               mayUseExtension
                 ? {
-                    enabled: extension.enabled,
+                    on: extension.on,
                     available: extension.availability?.available ?? false,
                     reason: extension.availability?.reason ?? null,
                   }

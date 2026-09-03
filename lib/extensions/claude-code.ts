@@ -223,7 +223,7 @@ export const claudeCodeProvider: AiProvider = {
   name: "claude_code",
   label: "Claude Code (subscription)",
   description:
-    "Uses the Claude subscription signed in on the machine running the platform. No API key and no per-token cost. Unavailable on the server, where nobody is signed in.",
+    "Uses your own Claude subscription, through a token you generate on your own computer with `claude setup-token`. Not an API key: no per-token cost, and it draws on the subscription you already pay for rather than a shared one.",
   defaultModel: "claude-opus-5",
 
   availability(tenantId?: string): Availability {
@@ -238,20 +238,15 @@ export const claudeCodeProvider: AiProvider = {
       };
     }
 
-    // Installed but nobody has signed in. Distinguished from not installed at
-    // all because the two need completely different things done about them,
-    // and the earlier message ran them together - it told somebody to install
-    // software that was already there.
-    if (!signedIn(tenantId)) {
-      return {
-        available: false,
-        reason: "Nobody has signed in to Claude on this platform yet.",
-        remedy:
-          "This is a one-time step and it needs somebody with a Claude subscription to do it, because it means authenticating that subscription. Whoever maintains the platform runs `claude` on the server and follows the /login prompt. Note that a single sign-in serves the whole platform: everyone's AI use draws on that one subscription and its limits, because Claude Code holds one sign-in per machine rather than one per person.",
-        detail: cli,
-      };
-    }
-
+    // Whether anybody is signed in on the machine is no longer the question.
+    // Each person brings their own token and it is supplied per run, so a
+    // server with no sign-in at all is a perfectly working deployment. What is
+    // left to check is that the program exists.
+    //
+    // `tenantId` is still taken, and the profile directory still separated per
+    // tenant, because Claude Code writes working state beside its credentials
+    // and one tenant's should not land in another's.
+    void tenantId;
     return { available: true, detail: cli };
   },
 
@@ -308,10 +303,22 @@ export const claudeCodeProvider: AiProvider = {
         const child = spawn(command, args, {
           cwd: workdir,
           windowsHide: true,
-          // The tenant's own sign-in, rather than whatever the machine has.
-          env: profile
-            ? { ...process.env, CLAUDE_CONFIG_DIR: profile }
-            : process.env,
+          // This person's own subscription, for this run and no other.
+          //
+          // Passed in the environment of the child process rather than written
+          // anywhere: it exists for the life of one spawn and leaves nothing on
+          // disk. CLAUDE_CODE_OAUTH_TOKEN is what Claude Code reads a
+          // subscription token from - verified against `claude auth status`,
+          // which reports authMethod "oauth_token" when it is set.
+          //
+          // The config directory is still separated per tenant, because the
+          // program writes working state there even when the credential comes
+          // from the environment.
+          env: {
+            ...process.env,
+            ...(profile ? { CLAUDE_CONFIG_DIR: profile } : {}),
+            ...(input.token ? { CLAUDE_CODE_OAUTH_TOKEN: input.token } : {}),
+          },
         });
 
         let stdout = "";

@@ -41,10 +41,10 @@ export default async function AiImportPage() {
         </p>
       </div>
 
-      {!extension.enabled ? (
+      {!extension.registered ? (
         <Card
-          title="You have not switched on an AI extension"
-          description="It is optional, off by default, and yours rather than the tenant's — every member of staff has their own."
+          title="You have not set up an AI extension"
+          description="It is optional and yours rather than the tenant's — every member of staff sets up their own, with their own subscription."
         >
           <Link href="/settings" className="text-sm underline">
             Switch one on

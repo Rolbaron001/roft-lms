@@ -10,7 +10,12 @@ const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
 
 export type ExtensionView = {
-  enabled: boolean;
+  /** A token is stored. */
+  registered: boolean;
+  /** Set up and permitted, so it can be switched on for a sitting. */
+  available: boolean;
+  tokenHint: string | null;
+  tokenAddedAt: string | null;
   provider: string | null;
   model: string | null;
   availability: {
@@ -26,16 +31,20 @@ export type ExtensionView = {
  * Your own AI extension, in Settings and against your own profile.
  *
  * Yours rather than the tenant's: every member of the provider's staff sets
- * their own, and what it then lets them do is bounded by their role exactly as
- * everything else is. An administrator switching it on does not switch it on
- * for anybody else, and does not need to.
+ * their own, with their own subscription, and what it then lets them do is
+ * bounded by their role exactly as everything else is. An administrator setting
+ * theirs up does not set anybody else's up, and does not need to.
+ *
+ * This page is where it is set up. It is not where it is switched on - that
+ * happens per sitting, from the switch at the top of any page, and starts off
+ * every time somebody signs in.
  */
 export function ExtensionForm({ current }: { current: ExtensionView }) {
   const [state, action, saving] = useActionState<ExtensionState, FormData>(
     updateMyExtensionAction,
     {},
   );
-  const [enabled, setEnabled] = useState(current.enabled);
+  const [available, setAvailable] = useState(current.available);
   const [provider, setProvider] = useState(
     current.provider ?? current.providers[0]?.name ?? "",
   );
@@ -44,17 +53,76 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
 
   return (
     <form action={action} className="space-y-4">
+      {current.registered ? (
+        <div className="rounded-md border border-[var(--border)] p-3 text-sm">
+          <p className="font-medium">A token is stored</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Ending {current.tokenHint}
+            {current.tokenAddedAt ? `, saved ${current.tokenAddedAt}` : ""}. It
+            is encrypted and is never shown again, here or anywhere else.
+          </p>
+          <button
+            type="submit"
+            name="intent"
+            value="forget"
+            disabled={saving}
+            className="mt-2 rounded-md border border-[var(--danger)] px-3 py-1 text-xs text-[var(--danger)] disabled:opacity-60"
+          >
+            Discard it
+          </button>
+        </div>
+      ) : null}
+
+      <label className="block text-sm">
+        <span className="text-[var(--muted)]">
+          {current.registered
+            ? "Replace it with a new token — leave empty to keep the stored one"
+            : "Your token"}
+        </span>
+        <input
+          name="token"
+          type="password"
+          autoComplete="off"
+          placeholder="sk-ant-oat…"
+          className={`${inputClass} mt-1 block w-full max-w-md font-mono`}
+        />
+      </label>
+
+      {/*
+        The one instruction that matters, and it is deliberately a command they
+        run themselves. Nothing about this flow asks for a Claude password, and
+        nothing here would accept one.
+      */}
+      <div className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
+        <p className="font-medium text-[var(--foreground)]">
+          Where the token comes from
+        </p>
+        <p className="mt-1">
+          On your own computer, with Claude Code installed, run:
+        </p>
+        <pre className="mt-1 overflow-x-auto rounded bg-[var(--surface)] px-2 py-1 font-mono">
+          claude setup-token
+        </pre>
+        <p className="mt-1">
+          It asks you to sign in to Anthropic in your browser and then prints a
+          token beginning <span className="font-mono">sk-ant-oat</span>. Paste
+          that. It is not an API key and there is no per-token cost — it draws on
+          the Claude subscription you already pay for. Never give anybody your
+          Anthropic password; this platform has no field for one.
+        </p>
+      </div>
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name="enabled"
-          checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
+          name="available"
+          checked={available}
+          onChange={(event) => setAvailable(event.target.checked)}
         />
-        Use an AI extension in my work
+        Make it available to switch on
       </label>
 
-      {enabled ? (
+      {available ? (
         <>
           <label className="block text-sm">
             <span className="text-[var(--muted)]">Which one</span>
@@ -89,51 +157,39 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             />
           </label>
 
-          {current.availability ? (
-            current.availability.available ? (
-              <p className="text-sm text-[var(--success)]">
-                Ready.
-                {current.availability.detail ? (
-                  <span className="ml-2 font-mono text-xs text-[var(--muted)]">
-                    {current.availability.detail}
-                  </span>
-                ) : null}
+          {current.availability && !current.availability.available ? (
+            <div className="rounded-md border border-[var(--border)] p-3 text-sm">
+              <p className="font-medium">Not ready yet</p>
+              <p className="mt-1 text-[var(--muted)]">
+                {current.availability.reason}
               </p>
-            ) : (
-              <div className="rounded-md border border-[var(--border)] p-3 text-sm">
-                <p className="font-medium">Not ready yet</p>
+              {current.availability.remedy ? (
                 <p className="mt-1 text-[var(--muted)]">
-                  {current.availability.reason}
+                  {current.availability.remedy}
                 </p>
-                {current.availability.remedy ? (
-                  <p className="mt-1 text-[var(--muted)]">
-                    {current.availability.remedy}
-                  </p>
-                ) : null}
-              </div>
-            )
+              ) : null}
+            </div>
           ) : null}
 
           {/*
-            Said plainly, because the alternative is somebody assuming their own
-            subscription is being used when on a shared server it is not.
+            Said plainly, because per-person means the platform holds something
+            it holds for nothing else, and somebody agreeing to that should know
+            they are agreeing to it.
           */}
           <p className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-            <span className="font-medium">Whose subscription this uses.</span>{" "}
-            The AI runs where the platform runs, not on your own computer, and
-            it holds one sign-in for the whole platform rather than one per
-            person. So everybody&rsquo;s AI use draws on that single
-            subscription and shares its limits. Switching this on says you want
-            to use it; it does not give you a separate allowance. The platform
-            never sees a credential either way: there is no field here for one
-            and no column for one.
+            <span className="font-medium">What the platform keeps.</span> Your
+            token, encrypted, until you discard it. It is used only for work you
+            ask for, only while you have the switch on, and it is never shown
+            back to you or written to any log. Available is not the same as on:
+            every sitting starts with it off, you switch it on for a job, and
+            signing out switches it off for you if you forget.
           </p>
-
         </>
       ) : (
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          With this off, the platform behaves exactly as it does now — the
-          affordances are absent rather than offered and failing.
+          {current.registered
+            ? "Your token is kept but cannot be used. Nothing in the platform will offer AI assistance until you make it available again."
+            : "With this off, the platform behaves exactly as it does without an extension — the affordances are absent rather than offered and failing."}
         </p>
       )}
 

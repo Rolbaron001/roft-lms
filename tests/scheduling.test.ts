@@ -52,6 +52,7 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
     roles,
     permissions: permissionsFor({ roles }),
     mustChangePassword: false,
+    aiOn: false,
   };
 }
 
@@ -538,6 +539,7 @@ describe("across tenants", () => {
       roles: ["tenant_admin"],
       permissions: permissionsFor({ roles: ["tenant_admin"] }),
       mustChangePassword: false,
+      aiOn: false,
     };
 
     // Not found rather than forbidden: to the other tenant it does not exist,

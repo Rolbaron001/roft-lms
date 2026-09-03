@@ -179,7 +179,7 @@ export async function proposeRoster(
   // Only the leftovers, and only the headings.
   if (detection.unmatched.length > 0) {
     const state = await extensionState(session);
-    const usable = state.enabled && (state.availability?.available ?? false);
+    const usable = state.on && (state.availability?.available ?? false);
 
     if (usable) {
       const matched = await matchHeadings(

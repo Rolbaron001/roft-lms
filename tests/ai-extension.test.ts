@@ -50,9 +50,16 @@ describe("the provider registry", () => {
   });
 
   /**
-   * No provider may carry a credential. The subscription-backed one holds its
-   * own sign-in on the machine it runs on, and the platform never sees one -
-   * there is no field for it and no column for it.
+   * No provider may carry a credential of its own.
+   *
+   * The platform does now hold one - each person's subscription token, sealed,
+   * on their own row - and that was a deliberate decision rather than a drift.
+   * What must not happen is a provider holding it: a token belongs to the
+   * person who asked for the work and reaches the provider as an argument to
+   * one run, never as configuration that outlives the call. A provider with a
+   * credential on it would be a provider serving whoever configured it.
+   *
+   * See tests/extension-token.test.ts for how the stored one is handled.
    */
   it("exposes no credential anywhere on a provider", () => {
     for (const provider of knownProviders()) {

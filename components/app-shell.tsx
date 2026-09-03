@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
+import { extensionState } from "@/lib/extensions";
+import { AiSwitch } from "./ai-switch";
 import { TenantLogo } from "./tenant-logo";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -102,6 +104,13 @@ export async function AppShell({
   // and no page can forget to.
   const unread = await unreadCount(session);
 
+  // The AI switch belongs in the header for the same reason. Somebody switches
+  // it on for one job and off again afterwards, which only works if it is
+  // reachable from wherever that job happens rather than from a settings page
+  // two clicks away. Absent entirely for anybody who has not set one up, so
+  // nobody is shown a control that would only tell them no.
+  const extension = await extensionState(session);
+
   const links = NAV.filter((item) => {
     if (item.permission) return session.permissions.includes(item.permission);
     return (item.anyPermission ?? []).some((permission) =>
@@ -165,6 +174,10 @@ export async function AppShell({
                 </span>
               ) : null}
             </Link>
+
+            {extension.available ? (
+              <AiSwitch on={extension.on} variant="header" />
+            ) : null}
 
             <Link
               href="/account/password"

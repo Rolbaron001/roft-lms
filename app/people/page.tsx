@@ -184,7 +184,7 @@ export default async function PeoplePage({
               extension={
                 mayUseExtension
                   ? {
-                      enabled: extension.enabled,
+                      on: extension.on,
                       available: extension.availability?.available ?? false,
                     }
                   : null

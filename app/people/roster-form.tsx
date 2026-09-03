@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
+import { AiSwitch } from "@/components/ai-switch";
 import {
   commitRosterAction,
   readRosterAction,
@@ -26,7 +26,7 @@ export function RosterForm({
   extension,
 }: {
   /** Null where this person's role has no model assistance at all. */
-  extension: { enabled: boolean; available: boolean } | null;
+  extension: { on: boolean; available: boolean } | null;
 }) {
   const [readState, readAction, reading] = useActionState<
     RosterActionState,
@@ -63,7 +63,7 @@ export function RosterForm({
           CSV or Excel. Column headings are matched by name — &ldquo;Surname&rdquo;,
           &ldquo;Last Name&rdquo; and &ldquo;Van&rdquo; all work, and no
           extension is needed for any of it.
-          {extension?.enabled && extension.available ? (
+          {extension?.on && extension.available ? (
             <>
               {" "}
               <span className="font-medium text-[var(--success)]">
@@ -75,14 +75,17 @@ export function RosterForm({
           ) : extension ? (
             <>
               {" "}
-              An AI extension would additionally match headings the rules do not
-              recognise; it would be shown the headings only, never the rows.{" "}
-              <Link href="/settings" className="underline">
-                Settings
-              </Link>
+              With your AI extension switched on it would additionally match
+              headings the rules do not recognise; it would be shown the
+              headings only, never the rows. The switch is at the top of the
+              page.
             </>
           ) : null}
         </p>
+
+        {extension?.available ? (
+          <AiSwitch on={extension.on} />
+        ) : null}
       </form>
 
       {state.error ? (

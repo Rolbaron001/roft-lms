@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { and, count, eq, gt, isNull, ne, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import { loginAttempts, sessions, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -34,6 +34,14 @@ export type AuthenticatedSession = {
   /** Somebody else chose the current password. Nothing else is reachable
    *  until it has been replaced — see requireSession. */
   mustChangePassword: boolean;
+  /**
+   * Whether the AI extension is switched on in this sitting.
+   *
+   * Never carried over from the last one. Signing in always starts it off,
+   * whatever the person did yesterday, because an extension left on is a
+   * credential in use that nobody remembered choosing.
+   */
+  aiOn: boolean;
 };
 
 export type RequestContext = {
@@ -191,6 +199,10 @@ export async function signIn(
         roles,
         permissions: permissionsFor({ roles }),
         mustChangePassword: user.mustChangePassword,
+        // A new sitting always starts with the extension off. Stated rather
+        // than left to the column default, because it is a rule about how
+        // signing in behaves and not an incidental initial value.
+        aiOn: false,
       },
     };
   });
@@ -219,6 +231,7 @@ export async function resolveSession(
         absoluteExpiresAt: sessions.absoluteExpiresAt,
         idleExpiresAt: sessions.idleExpiresAt,
         revokedAt: sessions.revokedAt,
+        aiOnSince: sessions.aiOnSince,
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
@@ -260,7 +273,43 @@ export async function resolveSession(
       roles,
       permissions: permissionsFor({ roles }),
       mustChangePassword: row.mustChangePassword,
+      aiOn: row.aiOnSince !== null,
     };
+  });
+}
+
+/**
+ * Switching the extension on or off for this sitting.
+ *
+ * Written to the session rather than the person, so it dies with the sitting
+ * even if nothing switches it off - a closed laptop, an expired session, a
+ * revoked one. The audit entry names which way it went, because "who had a
+ * credential live, and when" is the question this design exists to be able to
+ * answer.
+ */
+export async function setSessionAi(
+  session: AuthenticatedSession,
+  on: boolean,
+  context: RequestContext = {},
+): Promise<void> {
+  await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .update(sessions)
+      .set({ aiOnSince: on ? new Date() : null })
+      .where(and(eq(sessions.id, session.sessionId), isNull(sessions.revokedAt)))
+      .returning({ id: sessions.id });
+
+    if (!row) return;
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: on ? "extension.switched_on" : "extension.switched_off",
+      entityType: "session",
+      entityId: row.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
   });
 }
 
@@ -272,6 +321,36 @@ export async function signOut(
   if (!token) return;
 
   await withTenant(organisationId, async (tx) => {
+    // The extension goes off before the session goes away, and it is two
+    // statements rather than one on purpose. Revoking the session would strand
+    // the switch as effectively-off, which is not the same as off: the log
+    // would show a sitting that ended with a credential still live and nothing
+    // saying it had been put down. Somebody who forgets to switch it off gets
+    // the same record as somebody who remembered.
+    const [live] = await tx
+      .update(sessions)
+      .set({ aiOnSince: null })
+      .where(
+        and(
+          eq(sessions.tokenHash, hashToken(token)),
+          isNull(sessions.revokedAt),
+          isNotNull(sessions.aiOnSince),
+        ),
+      )
+      .returning({ id: sessions.id, userId: sessions.userId });
+
+    if (live) {
+      await recordAudit(tx, {
+        organisationId,
+        actorId: live.userId,
+        action: "extension.switched_off",
+        entityType: "session",
+        entityId: live.id,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+      });
+    }
+
     const [row] = await tx
       .update(sessions)
       .set({ revokedAt: new Date(), revokedReason: "signed_out" })

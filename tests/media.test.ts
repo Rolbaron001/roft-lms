@@ -75,6 +75,7 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
     roles,
     permissions: permissionsFor({ roles }),
     mustChangePassword: false,
+    aiOn: false,
   };
 }
 
@@ -466,6 +467,7 @@ describe("reading somebody else's file", () => {
       roles: ["tenant_admin"],
       permissions: permissionsFor({ roles: ["tenant_admin"] }),
       mustChangePassword: false,
+      aiOn: false,
     };
 
     // Knowing the lesson id is not enough; it belongs to another tenant.

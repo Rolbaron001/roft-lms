@@ -68,8 +68,18 @@ export type AiProvider = {
      * Without one it runs in an empty temporary directory and sees nothing.
      */
     workdir?: string;
-    /** Whose sign-in to use. Each tenant has its own. */
+    /** Whose working directory to use. Each tenant has its own. */
     tenantId?: string;
+    /**
+     * The caller's own subscription token, for this run only.
+     *
+     * Supplied per call rather than configured, because it belongs to the
+     * person who asked and not to the platform. A provider must pass it to the
+     * tool it runs and must not write it anywhere: no file, no log, no error
+     * message. Nothing above this contract ever sees it - the registry reads it
+     * at the moment of a run and does not return it.
+     */
+    token?: string;
   }): Promise<ExtensionResult>;
 };
 

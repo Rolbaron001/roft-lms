@@ -120,11 +120,11 @@ export async function assistCapture(
   }
 
   const state = await extensionState(session);
-  if (!state.enabled || !(state.availability?.available ?? false)) {
+  if (!state.on || !(state.availability?.available ?? false)) {
     return {
       paper: withProblem(
         paper,
-        state.enabled
+        state.on
           ? "The usual reading found no questions in this paper, and the AI extension that would try a second reading cannot run on this machine."
           : "The usual reading found no questions in this paper. An AI extension would try a second reading of it; without one, the questions have to be added by hand.",
       ),

@@ -44,6 +44,7 @@ function sessionFor(
     roles,
     permissions: permissionsFor({ roles }),
     mustChangePassword: false,
+    aiOn: false,
   };
 }
 

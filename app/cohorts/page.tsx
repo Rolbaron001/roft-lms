@@ -7,7 +7,7 @@ import { AppShell, StatusBadge } from "@/components/app-shell";
 import { NewCohort } from "./new-cohort";
 import { RosterForm } from "@/app/people/roster-form";
 import { Card } from "@/components/ui";
-import { extensionOffered, extensionState } from "@/lib/extensions";
+import { extensionState } from "@/lib/extensions";
 
 /**
  * The cohorts a provider is running.
@@ -101,11 +101,10 @@ export default async function CohortsPage() {
           >
             <RosterForm
               extension={
-                extensionOffered() &&
-                session.permissions.includes("extension:use") &&
-                extension
+                extension?.registered &&
+                session.permissions.includes("extension:use")
                   ? {
-                      enabled: extension.enabled,
+                      on: extension.on,
                       available: extension.availability?.available ?? false,
                     }
                   : null

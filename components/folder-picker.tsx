@@ -6,13 +6,14 @@ import {
   readFolderAction,
   type ImportActionState,
 } from "@/app/imports/actions";
+import { AiSwitch } from "./ai-switch";
 
 /**
  * Choosing a folder to read.
  *
- * `extension` is null while the AI extension is parked, and the note about it
- * disappears with it - so a parked feature is absent rather than advertised
- * and unavailable.
+ * `extension` is null for anybody who has not set one up, and the note about it
+ * disappears with it - so somebody without an extension sees a plain folder
+ * picker rather than an advertisement for something they do not have.
  *
  * A folder picker rather than a path, which is the difference between a person
  * offering their own files and a server being told to go and read something.
@@ -39,8 +40,14 @@ export function FolderPicker({
   learningPathId?: string;
   label: string;
   hint: React.ReactNode;
-  /** Null where this person's role has no model assistance at all. */
-  extension?: { enabled: boolean; available: boolean; reason: string | null } | null;
+  /** Null where this person has no extension set up at all. */
+  extension?: {
+    /** Switched on for this sitting. */
+    on: boolean;
+    /** The provider can actually run here. */
+    available: boolean;
+    reason: string | null;
+  } | null;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<ImportActionState>({});
@@ -134,43 +141,45 @@ export function FolderPicker({
 
       <div className="max-w-2xl text-xs text-[var(--muted)]">{hint}</div>
 
-      {extension === undefined ? null : extension === null ? null : (
-        <p className="max-w-2xl text-xs text-[var(--muted)]">
-          {extension.enabled && extension.available ? (
-            <>
-              <span className="font-medium text-[var(--success)]">
-                Your AI extension is on.
-              </span>{" "}
-              A folder that does not include a summary of itself will have its
-              structure worked out from the documents instead — slower, and
-              worth checking against the curriculum document.
-            </>
-          ) : extension.enabled ? (
-            <>
-              <span className="font-medium">
-                Your AI extension cannot run here.
-              </span>{" "}
-              {extension.reason} A folder that includes a summary of itself
-              still imports normally; one without it cannot have its structure
-              worked out.
-            </>
-          ) : (
-            <>
-              <span className="font-medium">
-                An AI extension adds one thing here:
-              </span>{" "}
-              working out the structure from the documents, when a folder does
-              not include a summary of itself. Everything else works without
-              one. You can switch one
-              on in{" "}
-              <Link href="/settings" className="underline">
-                Settings
-              </Link>
-              .
-            </>
-          )}
-        </p>
-      )}
+      {extension ? (
+        <div className="max-w-2xl space-y-2 border-t border-[var(--border)] pt-3">
+          <p className="text-xs text-[var(--muted)]">
+            {extension.on && extension.available ? (
+              <>
+                <span className="font-medium text-[var(--success)]">
+                  Your AI extension is on for this sitting.
+                </span>{" "}
+                A folder that does not include a summary of itself will have its
+                structure worked out from the documents instead — slower, and
+                worth checking against the curriculum document. Switch it off
+                when you are done with it.
+              </>
+            ) : !extension.available ? (
+              <>
+                <span className="font-medium">
+                  Your AI extension cannot run here.
+                </span>{" "}
+                {extension.reason} A folder that includes a summary of itself
+                still imports normally; one without it cannot have its structure
+                worked out.
+              </>
+            ) : (
+              <>
+                <span className="font-medium">
+                  Your AI extension is off, which is how every sitting starts.
+                </span>{" "}
+                It adds one thing here: working out the structure from the
+                documents, when a folder does not include a summary of itself.
+                Everything else on this page works without it.
+              </>
+            )}
+          </p>
+
+          {/* Switchable from here rather than only from the header, because
+              this is where somebody finds out they wanted it on. */}
+          {extension.available ? <AiSwitch on={extension.on} /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

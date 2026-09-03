@@ -47,6 +47,12 @@ const RENAMES: Rename[] = [
     ],
     why: "The curriculum document heads that column \"Curriculum Code\"; the QCTO does not own the field.",
   },
+  {
+    table: "ai_user_settings",
+    from: "enabled",
+    to: "available",
+    why: "Enabled used to mean switched on. Switched on is now per sitting and lives on the session; this column is the person's standing permission for themselves, which is a different thing and had to stop sharing a name with it.",
+  },
 ];
 
 async function main() {

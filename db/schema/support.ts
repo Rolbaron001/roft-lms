@@ -1598,7 +1598,35 @@ export const aiUserSettings = pgTable(
     provider: text("provider"),
     /** Empty means the provider's own default. */
     model: text("model"),
-    enabled: boolean("enabled").notNull().default(false),
+
+    /**
+     * Whether this person's extension may be switched on at all.
+     *
+     * Not the same thing as switched on: that is per sitting and lives on the
+     * session, because somebody who turns it on for one job should not find it
+     * still on a week later. This is the person's own standing switch, and it
+     * is theirs alone - an administrator cannot set it for them, and nothing
+     * else in the platform sets it either.
+     */
+    available: boolean("available").notNull().default(false),
+
+    /**
+     * Their token, encrypted.
+     *
+     * Held rather than hashed because it has to be handed to the provider as
+     * issued. That is a real departure from how this platform treats every
+     * other secret, and it was a decision taken deliberately: Roland asked for
+     * per-person extensions on 3 September knowing that per-person means the
+     * platform holds a credential.
+     *
+     * It is sealed with a key derived from the deployment's own secret, never
+     * displayed, never logged, and never returned to the browser. What comes
+     * back to the person is `tokenHint`.
+     */
+    tokenSealed: text("token_sealed"),
+    /** The last four characters, so a person can tell which token is stored. */
+    tokenHint: text("token_hint"),
+    tokenAddedAt: timestamp("token_added_at", { withTimezone: true }),
 
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
