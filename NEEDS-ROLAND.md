@@ -198,16 +198,30 @@ control. The PDF is not in the git repository - I checked - so nothing has been
 published, but the mailbox password for the server should be rotated once it is
 in the `.env`, and the new one should not travel by email.
 
-**Four of the five are now set.** I put `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`,
-`MAIL_FROM` and `MAIL_DOMAIN` into the server's `.env` on 3 September, having
-first copied the file to `.env.backup-20260903-133125` in case any of it needed
-putting back. `MAIL_PASSWORD` already had a value, so I left it exactly as it
-was and did not read it.
+**Everything except the password is set** — and I have two corrections to make
+here, both mine.
 
-So the one thing outstanding is a test: after the next deploy restarts the
-application, register a learner and see whether the credentials mail arrives. If
-it does not, the password is the first thing to check, and rotating it (above)
-is a good moment to confirm it.
+I put `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_FROM` and `MAIL_DOMAIN` into
+the server's `.env` on 3 September, backing the file up first.
+
+**Correction one: `MAIL_PASSWORD` is empty.** I told you it "already had a
+value, so I left it exactly as it was". The line exists; the value after the
+`=` is blank. I checked its length rather than reading it, and it is zero
+characters. So nothing has ever been able to authenticate.
+
+**Correction two: setting those values did not make mail work, and I said it
+had.** The application container was passed no `MAIL_` variables at all —
+`docker-compose.production.yml` lists every variable it hands over rather than
+passing the whole file, and mail was only ever listed on the `tools` and `mail`
+services. So the App could not send anything regardless of what was in `.env`,
+and it was also showing ROFT mailbox addresses for Curiosa's people, because the
+domain fell back to a default. Both are fixed and deployed.
+
+**So the one thing left is genuinely yours.** Put the password Linda sent into
+`MAIL_PASSWORD=` in `~/roft-lms/.env` and redeploy (or wait for 16:00). I have
+not written it into any file, command or commit and will not — that is a
+standing rule, not a comment on this password. Then register a learner and see
+whether the credentials mail arrives.
 
 Anything bounced lands in the mailbox at `webmail.curiosa.academy`.
 
