@@ -631,7 +631,32 @@ without the platform ever holding a credential.
 - [x] 10.2 A subscription-backed provider driving Claude Code, with no API key
 - [x] 10.3 Switched on per tenant, off by default, with an allow-list of readable folders
 - [x] 10.4 Folder to proposal: PDFs and Word documents converted, read, and reported
-- [x] 10.5 Proposal to curriculum, a module at a time, through the ordinary authoring guards
+- [x] 10.5 Plan to curriculum and documents, in one act, through the ordinary authoring guards
+- [x] 10.6 The AI offered where the work is, not on a page of its own
+- [x] 10.7 Structured folders read directly, with the model as the fallback
+- [ ] 10.8 The same affordance at: uploading material, capturing an assessment, bulk learner registration
+
+**Corrected after the fact.** The first build put the AI on a page you navigate
+to, imported only the curriculum, and asked for approval one module at a time.
+All three were wrong, and Roland said so.
+
+It is now an affordance that appears inside the work - on Create a qualification
+first - and renders nothing at all for somebody without an extension registered.
+It cascades: point it at a qualification folder and it takes the curriculum, the
+study units, the theory guides, the policies and the learner agreement, filing
+each against whatever it belongs to. And it commits in one act, with anything
+the guards turn away reported rather than swallowed.
+
+**The structured path is the default and the model is the fallback.** The
+client's own programme development system writes `_control/blueprint.json` and
+`_control/register.csv`. Where those exist the structure is a file, read
+directly: free, instant, and incapable of inventing an assessment criterion. The
+model reads documents only where they are absent.
+
+Measured on the real HRM Officer folder: **0.0 seconds** to read and 2.5 seconds
+to commit 15 modules, 52 topics, 267 elements, 160 criteria, 2 study units and
+26 documents, with nothing refused. The model path on the same qualification
+took seven minutes.
 
 **Feasible, and built.** Verified against the client's own documents: the three
 PDFs in `121151 HRM Officer/Qualification Details` produced fifteen modules

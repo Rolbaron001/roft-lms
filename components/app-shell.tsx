@@ -31,7 +31,7 @@ const NAV: NavItem[] = [
   { href: "/capture", label: "Capture", permission: "assessment:author" },
   {
     href: "/ai-import",
-    label: "Build from documents",
+    label: "AI history",
     permission: "qualification:manage",
   },
   { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },

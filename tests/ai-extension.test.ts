@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readJson, knownProviders, providerByName } from "@/lib/extensions";
-import { isAllowedRoot } from "@/lib/ai-import";
+import { isAllowedRoot } from "@/lib/ai-folder";
 import { ROLE_PERMISSIONS, can, type Role } from "@/lib/rbac";
 
 describe("readJson", () => {

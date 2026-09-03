@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { ImportError, getImportJob, type ImportProposal } from "@/lib/ai-import";
+import { IngestError, getIngestJob } from "@/lib/ai-ingest";
+import type { IngestionPlan } from "@/lib/ai-plan";
 import { withTenant } from "@/db/client";
 import { qualifications } from "@/db/schema";
 import { AppShell } from "@/components/app-shell";
@@ -20,13 +21,13 @@ export default async function ImportJobPage({
 
   let job;
   try {
-    job = await getImportJob(session, id);
+    job = await getIngestJob(session, id);
   } catch (error) {
-    if (error instanceof ImportError) notFound();
+    if (error instanceof IngestError) notFound();
     throw error;
   }
 
-  const proposal = job.proposal as ImportProposal | null;
+  const plan = job.proposal as IngestionPlan | null;
 
   const available = await withTenant(session.organisationId, (tx) =>
     tx
@@ -92,27 +93,22 @@ export default async function ImportJobPage({
         </div>
       ) : null}
 
-      {proposal ? (
+      {plan ? (
         <div className="mt-6">
           <Card
-            title={proposal.title ?? "What it proposes"}
-            description={
-              proposal.saqaId
-                ? `SAQA ${proposal.saqaId}${proposal.nqfLevel ? ` · NQF ${proposal.nqfLevel}` : ""}`
-                : "The extension proposes; you commit, a module at a time."
-            }
+            title="What it proposes"
+            description="Everything in one place. The warnings are the part that matters - read those before anything else."
           >
             <Proposal
               jobId={job.id}
               status={job.status}
-              modules={proposal.modules ?? []}
+              plan={plan}
               qualifications={available}
-              problems={job.problems}
-              committed={job.committedModules ?? []}
             />
           </Card>
         </div>
       ) : null}
+
     </AppShell>
   );
 }

@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { listImportJobs } from "@/lib/ai-import";
+import { listIngestJobs } from "@/lib/ai-ingest";
 import { extensionState } from "@/lib/extensions";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { ZonedTime } from "@/components/zoned-time";
-import { FolderReader } from "./reader";
 
 const STATUS_LABEL: Record<string, string> = {
   reading: "Reading",
@@ -29,17 +28,16 @@ export default async function AiImportPage() {
   const session = await requirePermission("qualification:manage");
 
   const extension = await extensionState(session);
-  const jobs = await listImportJobs(session);
+  const jobs = await listIngestJobs(session);
 
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Build from documents</h1>
+        <h1 className="text-xl font-semibold">What the AI has read</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Point the extension at a folder and it reads what is in it and
-          proposes the qualification those documents describe. It proposes only:
-          you commit it a module at a time, and every check that applies to a
-          hand-built curriculum applies to this one.
+          Every folder that has been read, and what became of it. Reading a new
+          one starts where the work is — on the qualification, course or
+          material you are building — rather than here.
         </p>
       </div>
 
@@ -52,23 +50,7 @@ export default async function AiImportPage() {
             Switch one on
           </Link>
         </Card>
-      ) : extension.availability && !extension.availability.available ? (
-        <Card
-          title="The extension is switched on but cannot run here"
-          description={extension.availability.reason}
-        >
-          <p className="text-sm text-[var(--muted)]">
-            {extension.availability.remedy}
-          </p>
-        </Card>
-      ) : (
-        <Card
-          title="Read a folder"
-          description="PDFs, Word documents and plain text. PDFs and Word files are converted with the same extractor the rest of the platform uses, so the model reads what Capture would read."
-        >
-          <FolderReader roots={extension.allowedImportRoots} />
-        </Card>
-      )}
+      ) : null}
 
       {jobs.length > 0 ? (
         <div className="mt-6">

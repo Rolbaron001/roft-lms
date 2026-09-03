@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/request";
-import { ImportError, discardImport, importFromFolder } from "@/lib/ai-import";
-import { commitProposedModule } from "@/lib/ai-import-commit";
+import { IngestError, discardIngest, ingestFolder } from "@/lib/ai-ingest";
+import { commitPlan } from "@/lib/ai-commit";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type ImportActionState = {
@@ -17,7 +17,7 @@ function field(formData: FormData, name: string): string {
 }
 
 function explain(error: unknown): ImportActionState {
-  if (error instanceof ImportError) return { error: error.message };
+  if (error instanceof IngestError) return { error: error.message };
   if (error instanceof PermissionDeniedError) {
     return { error: "Your role does not allow that." };
   }
@@ -44,7 +44,7 @@ export async function readFolderAction(
   const path = field(formData, "path");
 
   try {
-    await importFromFolder(session, path);
+    await ingestFolder(session, path);
   } catch (error) {
     return { ...explain(error), path };
   }
@@ -53,19 +53,18 @@ export async function readFolderAction(
   return { notice: "Read. What it proposes is below, for you to check." };
 }
 
-export async function commitModuleAction(
+export async function commitPlanAction(
   _previous: ImportActionState,
   formData: FormData,
 ): Promise<ImportActionState> {
   const session = await requirePermission("qualification:manage");
   const jobId = field(formData, "jobId");
 
-  let summary;
+  let report;
   try {
-    summary = await commitProposedModule(session, {
+    report = await commitPlan(session, {
       jobId,
       qualificationId: field(formData, "qualificationId"),
-      moduleCode: field(formData, "moduleCode"),
     });
   } catch (error) {
     return explain(error);
@@ -74,14 +73,23 @@ export async function commitModuleAction(
   revalidatePath(`/ai-import/${jobId}`);
   revalidatePath("/qualifications");
 
+  const built = [
+    `${report.modules} modules`,
+    `${report.topics} topics`,
+    `${report.elements} elements`,
+    `${report.criteria} criteria`,
+    `${report.studyUnits} study units`,
+    `${report.documents + report.libraryDocuments} documents`,
+  ].join(", ");
+
+  // Anything the ordinary guards turned away is said rather than swallowed.
+  // A silent partial import is the one outcome nobody could act on.
   const refused =
-    summary.refused.length > 0
-      ? ` ${summary.refused.length} thing${summary.refused.length === 1 ? "" : "s"} were turned away by the ordinary checks: ${summary.refused.join(" ")}`
+    report.refused.length > 0
+      ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` And ${report.refused.length - 8} more.` : ""}`
       : "";
 
-  return {
-    notice: `${summary.moduleCode} added: ${summary.topics} topics, ${summary.elements} elements, ${summary.criteria} criteria.${refused}`,
-  };
+  return { notice: `Committed: ${built}.${refused}` };
 }
 
 export async function discardImportAction(
@@ -92,7 +100,7 @@ export async function discardImportAction(
   const jobId = field(formData, "jobId");
 
   try {
-    await discardImport(session, jobId);
+    await discardIngest(session, jobId);
   } catch (error) {
     return explain(error);
   }
