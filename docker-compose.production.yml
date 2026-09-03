@@ -57,6 +57,14 @@ services:
       # Quoted: the message after :? contains a colon and a space, which YAML
       # would otherwise read as the start of another key.
       AUTH_SECRET: "${AUTH_SECRET:?generate one with npx auth secret}"
+      # Seals each person's AI extension token at rest.
+      #
+      # Optional, and only on this service: nothing else reads or writes a
+      # token. Left unset, the key is derived from AUTH_SECRET instead, which
+      # works but ties the two together - rotate the session secret and every
+      # stored token stops opening. Set it (openssl rand -base64 32) and they
+      # rotate independently.
+      AI_TOKEN_KEY: ${AI_TOKEN_KEY:-}
       AUTH_URL: https://${LMS_DOMAIN:?}
       PLATFORM_HOST: ${LMS_DOMAIN:?}
       # Who operates this deployment. Defaults keep ROFT's instance unchanged;
