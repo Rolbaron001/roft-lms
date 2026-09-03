@@ -10,12 +10,11 @@ export default async function QualificationsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
 
-  // The AI affordance renders nothing at all unless this person has an
-  // extension registered, which is why the state is read here rather than
-  // guarded in the component.
-  const extension = session.permissions.includes("extension:use")
-    ? await extensionState(session)
-    : null;
+  // Folder import is ordinary functionality and is shown to everybody who can
+  // manage a qualification. The extension state is read only so the form can
+  // say what an extension would add, not to decide whether to offer it.
+  const extension = await extensionState(session);
+  const mayUseExtension = session.permissions.includes("extension:use");
 
   const qualifications = await listQualifications(session);
   const withModules = await Promise.all(
@@ -40,21 +39,20 @@ export default async function QualificationsPage() {
 
       {/* The documents come first: everything below is built on them, and the
           App can read most of what the form would otherwise ask for. */}
-      {extension ? (
-        <div className="mb-6">
-          <FromFolder
-            available={extension.enabled && (extension.availability?.available ?? false)}
-            unavailableReason={
-              !extension.enabled
-                ? "You have not switched on an AI extension."
-                : extension.availability?.available
-                  ? null
-                  : (extension.availability?.reason ?? null)
-            }
-            roots={extension.allowedImportRoots}
-          />
-        </div>
-      ) : null}
+      <div className="mb-6">
+        <FromFolder
+          roots={extension.allowedImportRoots}
+          extension={
+            mayUseExtension
+              ? {
+                  enabled: extension.enabled,
+                  available: extension.availability?.available ?? false,
+                  reason: extension.availability?.reason ?? null,
+                }
+              : null
+          }
+        />
+      </div>
 
       <div className="mb-6">
         <FromDocument />

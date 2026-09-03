@@ -30,7 +30,7 @@ const NAV: NavItem[] = [
   { href: "/people", label: "People", permission: "user:invite" },
   { href: "/capture", label: "Capture", permission: "assessment:author" },
   {
-    href: "/ai-import",
+    href: "/imports",
     label: "AI history",
     permission: "qualification:manage",
   },

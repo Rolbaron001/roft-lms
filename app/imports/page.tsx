@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { listIngestJobs } from "@/lib/ai-ingest";
+import { listIngestJobs } from "@/lib/folder-import";
 import { extensionState } from "@/lib/extensions";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -62,7 +62,7 @@ export default async function AiImportPage() {
               {jobs.map((job) => (
                 <li key={job.id} className="flex flex-wrap items-baseline gap-x-3">
                   <Link
-                    href={`/ai-import/${job.id}`}
+                    href={`/imports/${job.id}`}
                     className="font-mono text-xs hover:underline"
                   >
                     {job.sourcePath}

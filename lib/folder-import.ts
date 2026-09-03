@@ -12,8 +12,8 @@ import {
   studyUnitFromName,
   type IngestionPlan,
   type PlannedDocument,
-} from "./ai-plan";
-import { isAllowedRoot, walkFolder, type FoundFile } from "./ai-folder";
+} from "./folder-plan";
+import { isAllowedRoot, walkFolder, type FoundFile } from "./folder-walk";
 import { extensionState, readJson, runExtension } from "./extensions";
 import { readDocxText, readPdfText } from "./office";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
@@ -26,26 +26,29 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * those it belongs to. What comes back is a plan, not a qualification - a
  * person reads it and commits it in one act.
  *
- * Two paths, and the order is the point.
+ * **This is ordinary functionality and needs no AI extension.** A folder that
+ * carries `_control/blueprint.json` is read from that file directly, and the
+ * manifest beside it says which study unit each document belongs to and at what
+ * version. That is file reading and pattern matching: free, instant, and
+ * incapable of inventing an assessment criterion. Every user who can manage a
+ * qualification can do it, on any machine, including the server.
  *
- * Where the folder carries `_control/blueprint.json`, the structure is read
- * from it directly: free, instant, and incapable of inventing a criterion. The
- * client's own programme development system writes that file, so their folders
- * have one. The manifest beside it says which study unit each document belongs
- * to and at what version, which is a fact no amount of reading the document
- * would recover.
+ * **The extension adds exactly one thing.** A folder with no blueprint has no
+ * structure to read, only prose - a curriculum document as a PDF. Deriving the
+ * modules, topics and criteria from that is the part that needs a model, and it
+ * is the only part. Somebody without an extension gets told precisely that,
+ * rather than being turned away from the whole feature.
  *
- * Only where those are absent does a model read the documents. That is the
- * slow, costly and fallible path, and it is the fallback rather than the
- * default. A platform that sends a perfectly good JSON file to a language model
- * to have it described back has misunderstood what it is holding.
+ * Getting this the wrong way round is a mistake worth naming: the first version
+ * gated the lot behind the extension, which made a deterministic file read
+ * unavailable to anybody who had not signed in to a model somewhere.
  */
 
 export class IngestError extends Error {
   constructor(
     message: string,
     readonly reason:
-      | "not_enabled"
+      | "needs_extension"
       | "not_allowed"
       | "not_found"
       | "empty"
@@ -114,13 +117,10 @@ export async function ingestFolder(
 ) {
   assertSessionCan(session, "qualification:manage");
 
+  // The allow-list is a control on the platform reading the disk at all, not an
+  // AI setting. It applies whether or not a model is ever involved: a server
+  // process given a free path can read anything it can reach.
   const state = await extensionState(session);
-  if (!state.enabled) {
-    throw new IngestError(
-      "You have not switched on an AI extension. It is on your account page.",
-      "not_enabled",
-    );
-  }
 
   if (!isAllowedRoot(path, state.allowedImportRoots)) {
     throw new IngestError(
@@ -178,13 +178,28 @@ async function buildPlan(
 ): Promise<IngestionPlan> {
   const warnings: string[] = [];
 
-  // The structured path first, always.
+  // The structured path first, always. No model, no extension, no waiting.
   let plan = await readBlueprint(path);
 
   if (!plan) {
+    // Only here is a model needed, and only for the structure. Everything
+    // below this point - filing the documents, identifying the study units -
+    // happens the same way either way.
+    const state = await extensionState(session);
+    const usable = state.enabled && (state.availability?.available ?? false);
+
+    if (!usable) {
+      throw new IngestError(
+        state.enabled
+          ? `This folder has no _control/blueprint.json, so its structure has to be read out of the documents - and that is the one part that needs an AI extension. Yours is switched on but cannot run here: ${state.availability?.reason ?? "it is not available on this machine."} Everything else about importing a folder works without it.`
+          : "This folder has no _control/blueprint.json, so its structure has to be read out of the documents - and that is the one part that needs an AI extension, which you have not switched on. A folder that carries a blueprint imports with no extension at all.",
+        "needs_extension",
+      );
+    }
+
     plan = await planFromDocuments(session, path, files);
     warnings.push(
-      "This folder has no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model will produce something plausible from a document that says nothing of the kind.",
+      "This folder had no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model will produce something plausible from a document that says nothing of the kind.",
     );
   }
 

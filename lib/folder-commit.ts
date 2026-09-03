@@ -11,8 +11,8 @@ import {
 import { addTopic, addTopicElement } from "./curriculum-editor";
 import { uploadProgrammeDocument } from "./programme-documents";
 import { fileLibraryDocument } from "./records";
-import { getIngestJob, IngestError } from "./ai-ingest";
-import type { IngestionPlan, PlannedModule } from "./ai-plan";
+import { getIngestJob, IngestError } from "./folder-import";
+import type { IngestionPlan, PlannedModule } from "./folder-plan";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { join } from "node:path";
 

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/request";
-import { IngestError, discardIngest, ingestFolder } from "@/lib/ai-ingest";
-import { commitPlan } from "@/lib/ai-commit";
+import { IngestError, discardIngest, ingestFolder } from "@/lib/folder-import";
+import { commitPlan } from "@/lib/folder-commit";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type ImportActionState = {
@@ -49,7 +49,7 @@ export async function readFolderAction(
     return { ...explain(error), path };
   }
 
-  revalidatePath("/ai-import");
+  revalidatePath("/imports");
   return { notice: "Read. What it proposes is below, for you to check." };
 }
 
@@ -70,7 +70,7 @@ export async function commitPlanAction(
     return explain(error);
   }
 
-  revalidatePath(`/ai-import/${jobId}`);
+  revalidatePath(`/imports/${jobId}`);
   revalidatePath("/qualifications");
 
   const built = [
@@ -105,6 +105,6 @@ export async function discardImportAction(
     return explain(error);
   }
 
-  revalidatePath("/ai-import");
+  revalidatePath("/imports");
   return { notice: "Discarded. The proposal is kept on the record." };
 }

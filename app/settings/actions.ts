@@ -162,7 +162,7 @@ export async function updateImportRootsAction(
   }
 
   revalidatePath("/settings");
-  revalidatePath("/ai-import");
+  revalidatePath("/imports");
   return {
     notice:
       roots.length === 0

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { IngestError, getIngestJob } from "@/lib/ai-ingest";
-import type { IngestionPlan } from "@/lib/ai-plan";
+import { IngestError, getIngestJob } from "@/lib/folder-import";
+import type { IngestionPlan } from "@/lib/folder-plan";
 import { withTenant } from "@/db/client";
 import { qualifications } from "@/db/schema";
 import { AppShell } from "@/components/app-shell";
@@ -39,7 +39,7 @@ export default async function ImportJobPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <Link
-        href="/ai-import"
+        href="/imports"
         className="text-sm text-[var(--muted)] hover:underline"
       >
         ← Back

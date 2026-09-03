@@ -634,6 +634,26 @@ without the platform ever holding a credential.
 - [x] 10.5 Plan to curriculum and documents, in one act, through the ordinary authoring guards
 - [x] 10.6 The AI offered where the work is, not on a page of its own
 - [x] 10.7 Structured folders read directly, with the model as the fallback
+- [x] 10.9 Folder import is ordinary functionality; the extension adds one thing
+
+**Corrected again, and this one mattered more.** The first two versions gated
+the whole folder import behind the AI extension. That was wrong: reading
+`_control/blueprint.json` and filing documents by rule is deterministic file
+handling, and putting it behind a model sign-in made ordinary functionality
+unavailable to anybody who had not registered one - and unavailable on the
+server, where nobody is signed in and nobody will be.
+
+Folder import is now available to every user who can manage a qualification, on
+any machine. The extension adds exactly one thing: reading the structure out of
+the documents when a folder has no blueprint to read. The form says so in place,
+so somebody without an extension can see what they would gain rather than find
+the feature missing, and somebody with one can see that most of this never
+touches it.
+
+Verified with the extension switched off: the HRM Officer folder imported in
+full - 15 modules, 267 elements, 160 criteria, 26 documents, nothing refused. A
+folder without a blueprint refuses with a message naming the one thing that is
+missing and why.
 - [ ] 10.8 The same affordance at: uploading material, capturing an assessment, bulk learner registration
 
 **Corrected after the fact.** The first build put the AI on a page you navigate

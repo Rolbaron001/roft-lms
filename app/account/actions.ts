@@ -41,6 +41,6 @@ export async function updateMyExtensionAction(
   }
 
   revalidatePath("/account");
-  revalidatePath("/ai-import");
+  revalidatePath("/imports");
   return { notice: "Saved." };
 }

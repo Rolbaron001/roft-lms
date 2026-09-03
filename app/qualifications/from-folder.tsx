@@ -2,41 +2,47 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { AiAssist } from "@/components/ai-assist";
-import { readFolderAction, type ImportActionState } from "@/app/ai-import/actions";
+import { readFolderAction, type ImportActionState } from "@/app/imports/actions";
+import { Card } from "@/components/ui";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
 
 /**
- * Building a whole qualification from a folder, offered where qualifications
- * are created rather than on a page of its own.
+ * Building a whole qualification from a folder.
  *
- * One field, because there is one thing it needs. The warning about how long
- * it takes is there because a model reading a curriculum document is not a page
- * load, and a form that looks as though it has hung gets clicked again - which
- * starts a second run against the same subscription for nothing.
+ * Ordinary functionality, available to anybody who can manage a qualification.
+ * A folder carrying its own blueprint is read from that file: no model, no
+ * extension, no waiting, and it works on the server exactly as on a desktop.
+ *
+ * The extension adds one thing, and the form says which: reading the structure
+ * out of the documents, for a folder that has no blueprint. Somebody without an
+ * extension should see what they would gain rather than find the whole feature
+ * missing, which is what the first version did.
  */
 export function FromFolder({
-  available,
-  unavailableReason,
   roots,
+  extension,
 }: {
-  available: boolean;
-  unavailableReason: string | null;
   roots: string[];
+  /** Null where this person's role has no model assistance at all. */
+  extension: {
+    enabled: boolean;
+    available: boolean;
+    reason: string | null;
+  } | null;
 }) {
   const [state, action, reading] = useActionState<ImportActionState, FormData>(
     readFolderAction,
     {},
   );
 
+  const ready = Boolean(extension?.enabled && extension.available);
+
   return (
-    <AiAssist
-      title="Build this from a folder"
-      invitation="Point it at a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create."
-      available={available}
-      unavailableReason={unavailableReason}
+    <Card
+      title="Build it from a folder"
+      description="Point at a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create. Nothing is written until you say so."
     >
       <form action={action} className="space-y-3">
         <label className="block text-sm">
@@ -69,7 +75,7 @@ export function FromFolder({
         {state.notice ? (
           <p className="text-sm text-[var(--muted)]">
             {state.notice}{" "}
-            <Link href="/ai-import" className="underline">
+            <Link href="/imports" className="underline">
               Review it
             </Link>
           </p>
@@ -80,16 +86,57 @@ export function FromFolder({
           disabled={reading || roots.length === 0}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {reading ? "Reading — this can take a few minutes…" : "Read the folder"}
+          {reading ? "Reading…" : "Read the folder"}
         </button>
 
-        <p className="max-w-2xl text-xs text-[var(--muted)]">
-          Nothing is written yet. It produces a plan you read and then commit in
-          one act, and a folder carrying its own blueprint file is read from
-          that directly — no model, no guessing, and a few seconds rather than a
-          few minutes.
-        </p>
+        {/*
+          What the extension changes, said in one place. Somebody without one
+          should understand exactly what they would gain; somebody with one
+          should understand that most of this never touches it.
+        */}
+        <div className="max-w-2xl border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+          <p>
+            A folder carrying its own{" "}
+            <span className="font-mono">_control/blueprint.json</span> is read
+            straight from that file — in seconds, with no AI involved, and the
+            structure is exactly what the file says.
+          </p>
+
+          <p className="mt-2">
+            {ready ? (
+              <>
+                <span className="font-medium text-[var(--success)]">
+                  Your AI extension is on.
+                </span>{" "}
+                A folder with no blueprint will have its structure read out of
+                the documents instead — slower, and worth checking against the
+                curriculum document.
+              </>
+            ) : extension?.enabled ? (
+              <>
+                <span className="font-medium">
+                  Your AI extension cannot run here.
+                </span>{" "}
+                {extension.reason} A folder with a blueprint still imports
+                normally; one without cannot have its structure read.
+              </>
+            ) : (
+              <>
+                <span className="font-medium">
+                  An AI extension adds one thing here:
+                </span>{" "}
+                reading the structure out of the documents when a folder has no
+                blueprint. Everything else works without one. You can switch one
+                on under{" "}
+                <Link href="/account" className="underline">
+                  your account
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        </div>
       </form>
-    </AiAssist>
+    </Card>
   );
 }
