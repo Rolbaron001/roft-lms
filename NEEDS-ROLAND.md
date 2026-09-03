@@ -52,52 +52,46 @@ original.
 
 ---
 
-## 2. Where the AI extension runs. A decision, not a task.
+## 2. The AI extension: parked, not deleted, and I was wrong about why
 
-It works. Verified against your own documents: the three PDFs in
-`121151 HRM Officer/Qualification Details` produced fifteen modules with their
-real QCTO codes, 337 topic elements and 160 assessment criteria, in about seven
-minutes. It also found three defects in those source documents, which is in the
-commit message and worth reading.
+You asked me to park it. It is parked. It is switched off by one setting
+(`LMS_AI_EXTENSION`), and while it is off the platform behaves exactly as it
+did before it existed - no buttons that do not work, no notices offering
+something unavailable. Nothing was deleted. Turning it back on is that one
+setting and a deploy.
 
-**But it only runs where Claude Code is signed in.** That is your desktop. On
-the InspireTech server nobody is signed in and the extension reports itself
-unavailable - the platform behaves exactly as it does now.
+**I owe you a correction.** I told you Claude Code holds one sign-in per
+machine, and that per-person or per-tenant use would need the server split up.
+That was wrong, and I should have tested it before telling you. It holds one
+sign-in **per configuration directory**, and which directory it uses is a
+variable you can set per run. I have since tested exactly that. So your
+instinct - that this ought to be solvable the way switching profiles on your
+laptop is solvable - was right and my answer was not.
 
-I did not engineer around that, and I want to be straight about why. Signing
-your personal Claude subscription into a multi-tenant production server would
-put your usage limits behind every tenant's work, and it is a licensing
-question rather than a technical one. It is your call and not mine to make
-quietly.
+The code now reflects it: each tenant gets its own profile directory, so
+Curiosa signing in on the server does not sign anybody else in and does not
+share Curiosa's limits with another provider.
 
-**It is not limited to you.** Each member of staff switches on their own, on
-their own account page - the administrator, the facilitators, the assessors, the
-moderators and the skills development facilitator. Not learners, not an
-employer's workplace coach, and not an external verifier. The only part that
-stays with an administrator is the list of folders the platform may read, which
-is a security boundary rather than a preference.
+**What is still genuinely unsolved.** Per-*tenant* works. Per-*person* uses the
+same mechanism but needs somebody to complete an interactive `claude /login`
+through a web page, and driving an interactive terminal login through a browser
+form is fragile in a way I would not want under a production feature. So the
+honest position is: one sign-in per tenant is available now; one per person is
+not.
 
-**But per-person settings are not per-person subscriptions.** The provider runs
-on the machine the platform runs on. On a shared server everybody's work goes
-through whichever Claude sign-in is on that server; where somebody runs the
-platform themselves, it uses their own. The account page says so plainly rather
-than letting anybody assume otherwise.
+**What that means in practice, if you unpark it.** One person signs Curiosa in
+once, over SSH. Everyone at Curiosa with the extension switched on then draws
+on that subscription and shares its limits. Nobody at another provider touches
+it. That is a licensing question for Anthropic rather than a technical one, and
+still your call - but it is a much smaller question than the one I put to you
+before.
 
-**So there are two ways to use it, and you should pick one:**
-
-- **Run imports on your own machine.** Point the local copy of the platform at
-  a folder, check the proposal, commit it. The qualification then lives in the
-  database and syncs like anything else. This needs nothing from anybody and is
-  what I would do.
-- **Sign in on the server.** One `claude` then `/login` over SSH makes it
-  available to every tenant. Ask Anthropic whether your plan permits that before
-  doing it.
-
-Either way, two things have to happen once. Each person switches their own on
-under **your account** (the link is your name, top right). And an administrator
-lists the folders that may be read, in **Settings** - that allow-list is not
-optional, because a server process given a free path can read anything it can
-reach, including its own configuration.
+**None of this affects folder import.** Reading a folder, working out what is
+in it and filing it is ordinary platform code and always was. The extension
+only adds one thing: working out the structure of a folder that does not carry
+a summary of itself. Every folder that does carry one imports at full speed
+with the extension off, which is how your own qualification folders import
+today.
 
 ---
 
@@ -179,9 +173,18 @@ control. The PDF is not in the git repository - I checked - so nothing has been
 published, but the mailbox password for the server should be rotated once it is
 in the `.env`, and the new one should not travel by email.
 
-Once those five lines are set, learner credentials email themselves on
-registration and the mailbox at `webmail.curiosa.academy` is where anything
-bounced will land.
+**Four of the five are now set.** I put `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`,
+`MAIL_FROM` and `MAIL_DOMAIN` into the server's `.env` on 3 September, having
+first copied the file to `.env.backup-20260903-133125` in case any of it needed
+putting back. `MAIL_PASSWORD` already had a value, so I left it exactly as it
+was and did not read it.
+
+So the one thing outstanding is a test: after the next deploy restarts the
+application, register a learner and see whether the credentials mail arrives. If
+it does not, the password is the first thing to check, and rotating it (above)
+is a good moment to confirm it.
+
+Anything bounced lands in the mailbox at `webmail.curiosa.academy`.
 
 ---
 
@@ -200,8 +203,20 @@ accumulate. Worth fixing, low priority, mine to do.
 ## What is on GitHub
 
 Stages 7, 8, 10 complete; stage 9 complete except the two items waiting on the
-bucket. Every commit passes typecheck, lint, 946 tests and a production build.
-97 tables are tenant-isolated, which the isolation test enforces.
+bucket. Every commit passes typecheck, lint, 961 tests and a production build.
+96 tables are tenant-isolated, which the isolation test enforces.
+
+Of the seven problems from your scan: 1, 2, 4, 6 and 7 are done, 3 is done bar
+the test above, and 5 - folder import on courses and programmes - went in on
+3 September. A course or programme folder files and indexes its documents
+against the thing you opened it from; it does not invent structure, because a
+course's shape is decided by you in the editor rather than by its documents.
+A qualification folder still builds structure, because a curriculum document
+says what the structure is.
 
 The 16:00 deploy will take all of it. The schema changes apply themselves on the
-way in.
+way in - I applied the same two columns to the development database by hand,
+because `drizzle-kit push` wants an interactive terminal it does not have in my
+environment and failed quietly enough that I nearly missed it. The deploy script
+runs it with `--force` and re-applies the security policies straight afterwards,
+which is why the server does not have that problem.
