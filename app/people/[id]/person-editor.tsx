@@ -161,6 +161,27 @@ export function PersonEditor({
           and gone when they leave.
         </p>
 
+        {/*
+          Added because the obvious question was going unanswered: an
+          administrator issues a mailbox, is asked for no password, and
+          reasonably concludes something is missing. Nothing is - the mailbox
+          lives inside the platform - but the screen never said so, and a
+          design nobody can infer from the screen is a design that generates
+          support questions.
+        */}
+        <p className="mt-2 rounded-md border border-[var(--border)] p-3 text-sm text-[var(--muted)]">
+          <span className="font-medium text-[var(--foreground)]">
+            There is no separate password, because there is no separate login.
+          </span>{" "}
+          This is not a mailbox on a mail host with its own webmail. Mail sent
+          to this address is delivered into the platform, and the person reads
+          and answers it under <span className="font-medium">Mail</span> after
+          signing in the way they always do. That is the point of it: the
+          correspondence sits inside the learner&rsquo;s record, in the audit
+          log and in the backup, rather than in a private inbox that leaves
+          when they do.
+        </p>
+
         <Message state={mailboxState} />
 
         <form action={mailboxAction} className="mt-4 flex flex-wrap items-end gap-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction, type LoginState } from "./actions";
 
@@ -19,7 +19,6 @@ function SubmitButton() {
 
 export function LoginForm() {
   const [visible, setVisible] = useState(false);
-  const showId = useId();
 
   const [state, formAction] = useActionState<LoginState, FormData>(
     loginAction,
@@ -78,12 +77,17 @@ export function LoginForm() {
           because a password box that shows its contents when somebody else is
           at the machine is a worse failure than a mistyped password.
         */}
-        <label
-          htmlFor={showId}
-          className="flex w-fit items-center gap-2 pt-1 text-sm text-[var(--muted)]"
-        >
+        {/*
+          The label wraps the checkbox, and deliberately does not also carry a
+          `for` pointing at it. Both together associate the same control twice,
+          and a browser that forwards the label's click to a control already
+          inside it toggles the box on and straight back off - a checkbox that
+          visibly does nothing. It behaves correctly in the browsers tested
+          here, which is exactly what makes it worth removing rather than
+          arguing about: the second association buys nothing.
+        */}
+        <label className="flex w-fit items-center gap-2 pt-1 text-sm text-[var(--muted)]">
           <input
-            id={showId}
             type="checkbox"
             checked={visible}
             onChange={(event) => setVisible(event.target.checked)}
