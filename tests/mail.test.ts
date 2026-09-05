@@ -7,7 +7,12 @@
  * other's assessment correspondence.
  */
 import { describe, expect, it } from "vitest";
-import { isRetryable, renderEmail, mailIsConfigured } from "@/lib/mail";
+import {
+  isRetryable,
+  renderEmail,
+  mailIsConfigured,
+  verifyRelay,
+} from "@/lib/mail";
 import { proposeMailboxAddress } from "@/lib/people";
 
 describe("deciding whether to try again", () => {
@@ -70,6 +75,34 @@ describe("knowing whether mail can be sent at all", () => {
     delete process.env.MAIL_FROM;
 
     expect(mailIsConfigured()).toBe(false);
+
+    if (host) process.env.MAIL_HOST = host;
+    if (from) process.env.MAIL_FROM = from;
+  });
+
+  /**
+   * The settings page offers a button that checks this, so the unconfigured
+   * answer has to be a plain result rather than a thrown error - otherwise an
+   * administrator pressing it on a deployment with no mail server set up gets
+   * a crash instead of "no mail server is set up".
+   *
+   * It also has to answer without touching the network, or the test suite
+   * would depend on a mail server being reachable from wherever it runs.
+   */
+  it("reports rather than throws when nothing is configured", async () => {
+    const host = process.env.MAIL_HOST;
+    const from = process.env.MAIL_FROM;
+    delete process.env.MAIL_HOST;
+    delete process.env.MAIL_FROM;
+
+    const result = await verifyRelay();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("MAIL_HOST");
+      // Retryable, because the answer changes the moment somebody sets it.
+      expect(result.retryable).toBe(true);
+    }
 
     if (host) process.env.MAIL_HOST = host;
     if (from) process.env.MAIL_FROM = from;

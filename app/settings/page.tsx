@@ -10,6 +10,8 @@ import { NamingForm } from "./naming-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
+import { MailTest } from "./mail-test";
+import { mailIsConfigured } from "@/lib/mail";
 import {
   extensionOffered,
   extensionState,
@@ -86,6 +88,17 @@ export default async function SettingsPage() {
       {canManageSettings ? (
         <div className="mt-6">
           <ClockForm current={tenant.timezone} />
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div className="mt-6">
+          <Card
+            title="Outbound mail"
+            description="Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived."
+          >
+            <MailTest configured={mailIsConfigured()} />
+          </Card>
         </div>
       ) : null}
 
