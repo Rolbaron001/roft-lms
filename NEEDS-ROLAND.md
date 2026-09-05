@@ -239,6 +239,46 @@ accumulate. Worth fixing, low priority, mine to do.
 
 ---
 
+## The accessibility sweep, and what it found
+
+You asked me to check that what the platform provides for is actually
+reachable, after noticing that badges could not have worked. You were right,
+and it was worse than partly: the awarding logic and the learner display were
+real and tested, but no screen anywhere could create a badge - so none could
+exist, so nothing was ever awarded.
+
+I checked it mechanically rather than by eye. Every exported function in the
+codebase, tested against whether any screen imports it: 479 capabilities, and
+**three with working, tested logic and no way in at all.**
+
+- **Recognition of prior learning and credit transfer** - nine functions
+  enforcing advisory before judgement, moderation by a second person and the
+  exemption ceiling. No interface whatsoever, and RPL is required under the
+  OQSF. Now at **Prior learning** in the menu.
+- **Badges** - now at **Badges**, with a designer.
+- **Setting up an invigilated sitting** - the register, admission cut-off,
+  declaration, camera check and incident log all worked, but only for a sitting
+  that already existed and nothing could create one. Now on the session page.
+
+Plus **no way to withdraw** an issued certificate or Statement of Results.
+Both now sit on the document itself, and require a reason.
+
+Three more faults fell out of building those, each the same shape - something
+that looked fine in the code and failed in use:
+
+- **Settings refused people the menu invited.** It demanded branding
+  permission, while the menu offered it to anybody with an AI extension and the
+  extension copy told them in as many words to go there.
+- **Saving a menu arrangement said "Saved" and changed nothing** - the tenant
+  identity is cached and the shell reads the menu from it.
+- **The sitting form appeared on an induction and then refused it.** The
+  library was right to refuse; offering the form there was the fault.
+
+None of those would have been found by reading code or running tests. All three
+came from driving the browser, which is now how I check this kind of work.
+
+---
+
 ## What is on GitHub
 
 Stages 7, 8, 10 complete; stage 9 complete except the two items waiting on the
@@ -247,7 +287,15 @@ bucket. Every commit passes typecheck, lint, 961 tests and a production build.
 
 Of the seven problems from your scan: 1, 4, 6 and 7 are done, 3 is done bar the
 test above, 2 - the AI extension - was rebuilt per person and is live, and 5 -
-folder import on courses and programmes - went in on 3 September. A course or programme folder files and indexes its documents
+folder import on courses and programmes - went in on 3 September.
+
+The six touch-ups of 5 September are all deployed: a show-password checkbox on
+sign-in; "Certificate of Competence" removed from the banner and from the
+certificate itself; the Statement of Results reachable by the learner who has to
+carry it, with a print-or-save control; badges with a designer and a provider
+default; an editable menu; and an infographic, in two forms - a web page and an
+A4 document in `Design/How the LMS Works (A4).html`, which prints to PDF from
+your browser. A course or programme folder files and indexes its documents
 against the thing you opened it from; it does not invent structure, because a
 course's shape is decided by you in the editor rather than by its documents.
 A qualification folder still builds structure, because a curriculum document
