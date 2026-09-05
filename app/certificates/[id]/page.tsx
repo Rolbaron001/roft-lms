@@ -5,6 +5,8 @@ import { CertificateError, getCertificate } from "@/lib/certificates";
 import { AppShell } from "@/components/app-shell";
 import { TenantLogo } from "@/components/tenant-logo";
 import { PrintButton } from "@/components/print-button";
+import { WithdrawDocument } from "@/components/withdraw-document";
+import { withdrawCertificateAction } from "./actions";
 
 export default async function CertificatePage({
   params,
@@ -14,6 +16,10 @@ export default async function CertificatePage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+
+  // Issuing and withdrawing are the same responsibility. A learner looking at
+  // their own certificate sees neither control.
+  const mayWithdraw = session.permissions.includes("certificate:issue");
 
   let detail;
   try {
@@ -45,7 +51,16 @@ export default async function CertificatePage({
         </p>
       ) : null}
 
-      <div className="mb-4 flex justify-end print:hidden">
+      <div className="mb-4 flex flex-wrap items-start justify-end gap-3 print:hidden">
+        {mayWithdraw && !certificate.revokedAt ? (
+          <WithdrawDocument
+            action={withdrawCertificateAction}
+            idName="certificateId"
+            idValue={certificate.id}
+            what="this certificate"
+            consequence="The learner may have given the reference to an employer. It keeps resolving and will say it was withdrawn."
+          />
+        ) : null}
         <PrintButton label="Print or save this certificate" />
       </div>
 

@@ -25,6 +25,8 @@ import {
 } from "@/lib/tracker";
 import {
   acceptSittingDeclaration,
+  createSitting,
+  setSittingStatus,
   acknowledgeScript,
   admitCandidate,
   confirmCamera,
@@ -341,6 +343,77 @@ export async function setTaskStatusAction(
 // fork, and the cut-off is judged against the clock the invigilator is
 // actually watching.
 // ---------------------------------------------------------------------------
+
+/**
+ * Setting up a supervised sitting on a scheduled session.
+ *
+ * The gap this closes: the register, the admission cut-off, the declaration,
+ * the camera check and the incident log were all built and reachable - but only
+ * for a sitting that already existed, and nothing in the platform could create
+ * one. An invigilator opening the session page found the supervision machinery
+ * absent with no way to ask for it.
+ *
+ * Under session:manage rather than attendance:record. Setting the rules of a
+ * sitting - what may be brought in, how late somebody may arrive, what they
+ * declare - is scheduling, not invigilating; the person running the room on the
+ * day records against those rules rather than choosing them.
+ */
+export async function createSittingAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+
+  return run(
+    () =>
+      createSitting(session, {
+        sessionId,
+        assessmentId: field(formData, "assessmentId"),
+        invigilatorId: field(formData, "invigilatorId") || undefined,
+        admissionClosesAfterMinutes: field(
+          formData,
+          "admissionClosesAfterMinutes",
+        ),
+        arriveBeforeMinutes: field(formData, "arriveBeforeMinutes"),
+        cameraRequired: formData.get("cameraRequired") === "on",
+        permittedMaterials: field(formData, "permittedMaterials") || undefined,
+        declarationText: field(formData, "declarationText") || undefined,
+      }),
+    "Sitting set up. It is scheduled until you open it.",
+    [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}`],
+  );
+}
+
+/**
+ * Moving a sitting between scheduled, open, in progress, closed and cancelled.
+ *
+ * The status is what the admission window is judged against, so this is not
+ * cosmetic: a sitting nobody opened admits nobody, and one nobody closed leaves
+ * the register looking like it is still running. The library enforces which
+ * moves are allowed.
+ */
+export async function setSittingStatusAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+  const status = field(formData, "status") as
+    | "scheduled"
+    | "open"
+    | "in_progress"
+    | "closed"
+    | "cancelled";
+
+  return run(
+    () => setSittingStatus(session, field(formData, "sittingId"), status),
+    `Sitting ${status.replace("_", " ")}.`,
+    [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}`],
+  );
+}
 
 export async function admitCandidateAction(
   _previous: CohortActionState,

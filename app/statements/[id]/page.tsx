@@ -3,6 +3,8 @@ import { requireSession, requireTenant } from "@/lib/request";
 import { getStatementOfResults, StatementError } from "@/lib/statement-of-results";
 import { describeAccreditation } from "@/lib/accreditation";
 import { PrintButton } from "@/components/print-button";
+import { WithdrawDocument } from "@/components/withdraw-document";
+import { withdrawStatementAction } from "./actions";
 
 const COMPONENT_LABEL: Record<string, string> = {
   knowledge: "Knowledge",
@@ -49,6 +51,10 @@ export default async function StatementPage({
     throw error;
   }
 
+  // Issuing and withdrawing are the same responsibility, so they are the same
+  // permission. A learner reading their own statement sees neither.
+  const mayWithdraw = session.permissions.includes("certificate:issue");
+
   const { learner, qualification, provider, modules, studyUnit } =
     record.statement;
 
@@ -67,7 +73,19 @@ export default async function StatementPage({
         that produces the paper - and until now the page assumed somebody would
         find their browser's own print menu.
       */}
-      <div className="mb-6 flex justify-end print:hidden">
+      <div className="mb-6 flex flex-wrap items-start justify-end gap-3 print:hidden">
+        {/* Withdrawal sits beside the document rather than on a management
+            screen, because the moment somebody decides to withdraw one is the
+            moment they are looking at it. */}
+        {mayWithdraw && !record.revokedAt ? (
+          <WithdrawDocument
+            action={withdrawStatementAction}
+            idName="statementId"
+            idValue={id}
+            what="this Statement of Results"
+            consequence="An assessment centre may already hold a copy. The reference keeps working and will say it was withdrawn."
+          />
+        ) : null}
         <PrintButton label="Print or save this Statement of Results" />
       </div>
 
