@@ -55,6 +55,9 @@ const NAV: NavSection[] = [
         permission: "course:read",
       },
       { href: "/dictionary", label: "Dictionary", permission: "report:own" },
+      // Designed alongside the courses they recognise rather than under Admin:
+      // a badge is part of how an intervention is set up, not a setting.
+      { href: "/badges", label: "Badges", permission: "course:read" },
     ],
   },
 

@@ -11,6 +11,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { awardCompletionBadgeIn } from "./badges";
 
 /**
  * Learning paths: several courses chained into a programme, with
@@ -621,6 +622,16 @@ export async function advanceLearningPaths(
         entityType: "enrolment",
         entityId: pathEnrolment.id,
         after: { steps: steps.length },
+      });
+
+      // The programme's own badge, or the provider's default, or nothing.
+      // Finishing a programme is a bigger thing than finishing one of its
+      // courses, so it earns its own recognition rather than only the last
+      // course's.
+      await awardCompletionBadgeIn(tx, organisationId, userId, {
+        kind: "learning_path",
+        id: membership.learningPathId,
+        completedOn: new Date().toISOString().slice(0, 10),
       });
 
       completedPaths.push(membership.learningPathId);

@@ -15,7 +15,12 @@ import {
 import { organisations, users } from "./tenancy";
 import { cohorts } from "./delivery";
 import { assessments } from "./assessment";
-import { curriculumModules, qualifications } from "./curriculum";
+import {
+  courses,
+  curriculumModules,
+  learningPaths,
+  qualifications,
+} from "./curriculum";
 
 /**
  * The procedures that happen around a programme rather than in it.
@@ -621,6 +626,27 @@ export const badgeKind = pgEnum("badge_kind", [
   "curriculum_module",
   /** Earned by completing the whole qualification. */
   "qualification",
+  /** Earned by completing one of the provider's own courses. */
+  "course",
+  /** Earned by completing a programme - a sequence of courses. */
+  "learning_path",
+  /**
+   * The tenant's fallback, used wherever nothing more specific is set.
+   *
+   * There is at most one, and it names nothing: a provider that does not want
+   * to design a badge per intervention designs this one instead and every
+   * completion earns it. Without it, a provider who designs nothing simply has
+   * no badges, which is also a valid choice.
+   */
+  "default",
+]);
+
+/** How a badge is drawn. Shape and two colours, and nothing to upload. */
+export const badgeShape = pgEnum("badge_shape", [
+  "circle",
+  "shield",
+  "hexagon",
+  "rosette",
 ]);
 
 /**
@@ -656,6 +682,13 @@ export const badges = pgTable(
       () => qualifications.id,
       { onDelete: "cascade" },
     ),
+    courseId: uuid("course_id").references(() => courses.id, {
+      onDelete: "cascade",
+    }),
+    learningPathId: uuid("learning_path_id").references(
+      () => learningPaths.id,
+      { onDelete: "cascade" },
+    ),
 
     name: text("name").notNull(),
     description: text("description"),
@@ -668,6 +701,20 @@ export const badges = pgTable(
      */
     glyph: text("glyph").notNull().default("★"),
 
+    /**
+     * The design: a shape and two colours.
+     *
+     * Enough to make a provider's badges look like theirs and unlike another
+     * provider's, and little enough that designing one is a minute's work
+     * rather than a job for somebody with a graphics program. Defaults are the
+     * tenant's own brand colours, so a badge created without touching any of
+     * this already looks like it belongs to them.
+     */
+    shape: badgeShape("shape").notNull().default("circle"),
+    /** Hex, validated on the way in. */
+    background: text("background"),
+    ink: text("ink"),
+
     active: boolean("active").notNull().default(true),
 
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -679,6 +726,12 @@ export const badges = pgTable(
     uniqueIndex("badges_module_once_idx").on(
       t.organisationId,
       t.curriculumModuleId,
+    ),
+    uniqueIndex("badges_course_once_idx").on(t.organisationId, t.courseId),
+    uniqueIndex("badges_path_once_idx").on(t.organisationId, t.learningPathId),
+    uniqueIndex("badges_qualification_once_idx").on(
+      t.organisationId,
+      t.qualificationId,
     ),
   ],
 );

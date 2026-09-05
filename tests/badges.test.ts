@@ -9,7 +9,14 @@ import {
   qualifications,
   users,
 } from "@/db/schema";
-import { awardEarnedBadges, learnerBadges, verifyBadge } from "@/lib/badges";
+import {
+  awardCompletionBadge,
+  awardEarnedBadges,
+  defineBadge,
+  learnerBadges,
+  retireBadge,
+  verifyBadge,
+} from "@/lib/badges";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -192,5 +199,158 @@ describe("cleanup", () => {
       await tx.delete(organisations).where(eq(organisations.id, organisationId));
     });
     expect(true).toBe(true);
+  });
+});
+
+/**
+ * The default badge, and what earns it.
+ *
+ * Roland asked for a badge per intervention with a tenant-wide fallback "should
+ * a Tenant elect not to have different badges for each intervention". The
+ * fallback is the part worth pinning down: it fires when nobody has configured
+ * anything, which is exactly the case nobody tests by hand.
+ *
+ * Its own organisation and its own learner, because a test above deletes the
+ * shared one to prove that badges cascade with their tenant.
+ */
+describe("the default badge", () => {
+  let orgId: string;
+  let staff: AuthenticatedSession;
+  let learner: string;
+  let fallbackId: string;
+
+  beforeAll(async () => {
+    const made = await withPlatformScope("default badge fixture", async (tx) => {
+      const [organisation] = await tx
+        .insert(organisations)
+        .values({
+          slug: `default-badge-${Date.now()}`,
+          legalName: "Default Badge Ltd",
+          displayName: "Default Badge",
+          status: "active",
+        })
+        .returning({ id: organisations.id });
+
+      const [person] = await tx
+        .insert(users)
+        .values({
+          organisationId: organisation.id,
+          email: `learner-${Date.now()}@example.test`,
+          passwordHash: "x",
+          firstName: "Test",
+          lastName: "Learner",
+          status: "active",
+        })
+        .returning({ id: users.id });
+
+      const [badge] = await tx
+        .insert(badges)
+        .values({
+          organisationId: organisation.id,
+          kind: "default",
+          name: "Provider Achievement",
+          glyph: "✦",
+          shape: "shield",
+          background: "#4C1D95",
+          ink: "#FFFFFF",
+        })
+        .returning({ id: badges.id });
+
+      return {
+        orgId: organisation.id,
+        learner: person.id,
+        fallbackId: badge.id,
+      };
+    });
+
+    orgId = made.orgId;
+    learner = made.learner;
+    fallbackId = made.fallbackId;
+    staff = {
+      sessionId: "00000000-0000-0000-0000-000000000000",
+      userId: made.learner,
+      organisationId: made.orgId,
+      email: "staff@example.test",
+      firstName: "Test",
+      lastName: "Staff",
+      roles: ["tenant_admin"],
+      permissions: permissionsFor({ roles: ["tenant_admin"] }),
+      mustChangePassword: false,
+      aiOn: false,
+    };
+  });
+
+  it("is awarded when the thing finished has no badge of its own", async () => {
+    const { awarded } = await awardCompletionBadge(orgId, learner, {
+      kind: "course",
+      id: "00000000-0000-0000-0000-0000000000ff",
+      completedOn: "2026-09-05",
+    });
+
+    expect(awarded).toBe(true);
+    const held = await learnerBadges(staff, learner);
+    expect(held.map((row) => row.name)).toContain("Provider Achievement");
+  });
+
+  /**
+   * A learner who finishes three courses under one default badge holds it once.
+   * Otherwise their page is the same row repeated with nothing to tell the
+   * copies apart.
+   */
+  it("is held once however many things are finished", async () => {
+    const before = (await learnerBadges(staff, learner)).length;
+
+    await awardCompletionBadge(orgId, learner, {
+      kind: "course",
+      id: "00000000-0000-0000-0000-0000000000ee",
+      completedOn: "2026-09-06",
+    });
+
+    expect((await learnerBadges(staff, learner)).length).toBe(before);
+  });
+
+  /**
+   * Retired rather than deleted. A learner may have shown somebody this badge,
+   * and a definition that vanished turns their verification into "no such
+   * badge", which reads as though they invented it.
+   */
+  it("keeps existing awards when it is retired", async () => {
+    await retireBadge(staff, fallbackId);
+
+    const after = await learnerBadges(staff, learner);
+    expect(after.map((row) => row.name)).toContain("Provider Achievement");
+  });
+
+  it("awards nothing once retired, and does not fail", async () => {
+    const { awarded } = await awardCompletionBadge(orgId, learner, {
+      kind: "course",
+      id: "00000000-0000-0000-0000-0000000000dd",
+      completedOn: "2026-09-07",
+    });
+
+    // A provider with nothing active gets nothing. That is a choice, not a
+    // fault, and it must not raise.
+    expect(awarded).toBe(false);
+  });
+
+  it("refuses a default that also names something", async () => {
+    await expect(
+      defineBadge(staff, {
+        kind: "default",
+        name: "Contradictory",
+        qualificationId: "00000000-0000-0000-0000-000000000001",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses a colour that is not a colour", async () => {
+    await expect(
+      defineBadge(staff, {
+        kind: "course",
+        courseId: "00000000-0000-0000-0000-000000000002",
+        name: "Bad colour",
+        background: "purple",
+      }),
+    ).rejects.toThrow();
   });
 });

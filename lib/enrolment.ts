@@ -16,6 +16,7 @@ import { can } from "./rbac";
 import { issueCertificateAutomatically } from "./certificates";
 import { advanceLearningPaths } from "./learning-paths";
 import { raise } from "./notifications";
+import { awardCompletionBadgeIn } from "./badges";
 
 /**
  * Enrolment, delivery and progress.
@@ -559,6 +560,15 @@ async function refreshCompletion(
       enrolment.userId,
       enrolment.courseId!,
     );
+
+    // And the badge for finishing it, if one is designed - the course's own,
+    // or the provider's default, or nothing at all. Same transaction as the
+    // completion it recognises, so the two cannot disagree.
+    await awardCompletionBadgeIn(tx, session.organisationId, enrolment.userId, {
+      kind: "course",
+      id: enrolment.courseId!,
+      completedOn: completedAt.toISOString().slice(0, 10),
+    });
   }
 
   return { total, done, completed: finished };
