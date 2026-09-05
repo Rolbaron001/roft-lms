@@ -66,12 +66,22 @@ export function BrandingForm({
             <p className="text-xs opacity-75">Learning Management System</p>
           </div>
         </div>
+        {/*
+          This preview used to carry a "Certificate of Competence" chip, to
+          show the accent colour against the primary one.
+
+          It was removed rather than reworded. Under the OQSF the certificate
+          for an occupational qualification is issued by the QCTO through SAQA,
+          not by the provider - so a provider's own settings page displaying
+          that phrase as if it were theirs to award is wrong, and wrong in a way
+          a client could reasonably repeat to a learner. The accent colour is
+          shown on the band below instead, which demonstrates the same thing
+          and claims nothing.
+        */}
         <span
-          className="mt-3 inline-block rounded-full px-3 py-1 text-xs font-medium"
-          style={{ background: accent, color: primary }}
-        >
-          Certificate of Competence
-        </span>
+          className="mt-3 block h-1.5 w-24 rounded-full"
+          style={{ background: accent }}
+        />
       </div>
 
       <form action={action} className="space-y-4">

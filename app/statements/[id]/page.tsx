@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { getStatementOfResults, StatementError } from "@/lib/statement-of-results";
 import { describeAccreditation } from "@/lib/accreditation";
+import { PrintButton } from "@/components/print-button";
 
 const COMPONENT_LABEL: Record<string, string> = {
   knowledge: "Knowledge",
@@ -60,6 +61,16 @@ export default async function StatementPage({
 
   return (
     <main className="mx-auto max-w-3xl bg-white px-10 py-10 text-[13px] leading-relaxed text-black print:px-0 print:py-0">
+      {/*
+        The only thing on this page that is not the document. A learner carries
+        this to the assessment centre on paper, so there has to be something
+        that produces the paper - and until now the page assumed somebody would
+        find their browser's own print menu.
+      */}
+      <div className="mb-6 flex justify-end print:hidden">
+        <PrintButton label="Print or save this Statement of Results" />
+      </div>
+
       {record.revokedAt ? (
         <div className="mb-6 border-4 border-black p-4 text-center">
           <p className="text-lg font-bold uppercase">Withdrawn</p>

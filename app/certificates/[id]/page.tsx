@@ -4,6 +4,7 @@ import { requireSession, requireTenant } from "@/lib/request";
 import { CertificateError, getCertificate } from "@/lib/certificates";
 import { AppShell } from "@/components/app-shell";
 import { TenantLogo } from "@/components/tenant-logo";
+import { PrintButton } from "@/components/print-button";
 
 export default async function CertificatePage({
   params,
@@ -44,6 +45,10 @@ export default async function CertificatePage({
         </p>
       ) : null}
 
+      <div className="mb-4 flex justify-end print:hidden">
+        <PrintButton label="Print or save this certificate" />
+      </div>
+
       {/* The certificate itself. Kept plain so it prints sensibly. */}
       <article
         className={`rounded-lg border-2 bg-[var(--surface)] p-10 text-center ${
@@ -68,8 +73,19 @@ export default async function CertificatePage({
           {tenant.displayName}
         </p>
 
+        {/*
+          "Certificate of Completion", not "of Competence".
+          
+          A certificate here is issued for one of the provider's own courses,
+          which the provider is entitled to certify. "Certificate of Competence"
+          is the OQSF's term for the certificate the QCTO issues through SAQA
+          for an occupational qualification, and a provider issuing a document
+          under that name invites a learner to believe they hold something they
+          do not. The competencies below are still named, because that is what
+          was actually assessed and it is the useful part.
+        */}
         <h1 className="mt-6 text-sm uppercase tracking-widest text-[var(--muted)]">
-          Certificate of Competence
+          Certificate of Completion
         </h1>
 
         <p className="mt-6 text-sm text-[var(--muted)]">
@@ -80,7 +96,7 @@ export default async function CertificatePage({
         </p>
 
         <p className="mt-6 text-sm text-[var(--muted)]">
-          has demonstrated competence in
+          has completed
         </p>
         <p className="mt-2 text-lg font-medium">{certificate.title}</p>
 
@@ -122,6 +138,19 @@ export default async function CertificatePage({
           {certificate.verificationReference}
         </p>
       </article>
+
+        {/*
+          Said on the document itself rather than only in the platform, because
+          the document is what leaves the platform and gets shown to an
+          employer.
+        */}
+        <p className="mx-auto mt-8 max-w-md text-xs text-[var(--muted)]">
+          This is {tenant.displayName}&rsquo;s own certificate for a course it
+          delivered. It is not a national qualification and does not carry a
+          SAQA credit or identifier. Where a learner is working towards an
+          occupational qualification, the certificate for it is issued by the
+          QCTO.
+        </p>
 
       <p className="mt-4 text-center text-xs text-[var(--muted)]">
         Anyone can confirm this certificate with the reference above, without

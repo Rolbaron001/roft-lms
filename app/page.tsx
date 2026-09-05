@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
 import { myEnrolments } from "@/lib/enrolment";
 import { listMyCertificates } from "@/lib/certificates";
+import { listStatementsFor } from "@/lib/statement-of-results";
 import { myLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { feedbackOwedBy } from "@/lib/feedback";
@@ -47,10 +48,15 @@ export default async function HomePage() {
   // and is seen - formal certification is months away and the client has lost
   // learners in that gap.
   const earned = await learnerBadges(session, session.userId);
-  const [enrolments, certificates, paths] = await Promise.all([
+  // The Statement of Results is the document a learner is required to carry to
+  // the external assessment, so the place they look for it is their own front
+  // page. It was reachable only from the readiness screen, which is staff-side:
+  // the learner could open their own statement but had no link that led there.
+  const [enrolments, certificates, paths, statements] = await Promise.all([
     myEnrolments(session),
     listMyCertificates(session),
     myLearningPaths(session),
+    listStatementsFor(session, session.userId),
   ]);
 
   // Courses reached through a programme are shown inside it, so they are not
@@ -291,6 +297,40 @@ export default async function HomePage() {
             </div>
           )}
         </Card>
+
+        {statements.length > 0 ? (
+          <Card
+            title="My Statement of Results"
+            description="Take this to the external assessment with your identity document. The centre checks it before you may sit."
+          >
+            <ul className="space-y-2">
+              {statements.map((statement) => (
+                <li key={statement.id}>
+                  <Link
+                    href={`/statements/${statement.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] px-4 py-3 transition hover:border-[var(--brand-accent)]"
+                  >
+                    <span className="text-sm">
+                      <span className="font-medium">Statement of Results</span>
+                      <span className="block font-mono text-xs text-[var(--muted)]">
+                        {statement.verificationReference}
+                      </span>
+                    </span>
+                    <span className="text-xs text-[var(--muted)]">
+                      {statement.revokedAt ? (
+                        <span className="font-medium text-[var(--danger)]">
+                          Withdrawn
+                        </span>
+                      ) : (
+                        `Issued ${statement.issuedAt.toLocaleDateString("en-ZA")}`
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         {certificates.length > 0 ? (
           <Card title="My certificates">
