@@ -3,152 +3,16 @@ import { logoutAction } from "@/app/login/actions";
 import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
+import { arrangeNavigation } from "@/lib/navigation";
 import { TenantLogo } from "./tenant-logo";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
-import type { Permission } from "@/lib/rbac";
 
 /**
  * The shared frame. Navigation is filtered by permission rather than by role,
  * so a link never appears for a page the person would be refused.
  */
-type NavItem = {
-  href: string;
-  label: string;
-  permission?: Permission;
-  /** Shown when the person holds any one of these. */
-  anyPermission?: Permission[];
-};
-
-/**
- * A heading on the bar, and what sits under it.
- *
- * `label: null` means the items stand as their own links rather than behind a
- * heading - kept for the two places somebody goes many times a day, where a
- * click to open a menu first would be a tax rather than a tidy-up.
- *
- * Order is by how often a section is opened, not by importance: the work
- * somebody does daily sits left of the work they do monthly.
- */
-type NavSection = { label: string | null; items: NavItem[] };
-
-const NAV: NavSection[] = [
-  { label: null, items: [{ href: "/", label: "Home", permission: "report:own" }] },
-
-  {
-    label: "Learning",
-    items: [
-      { href: "/courses", label: "Courses", permission: "course:read" },
-      { href: "/paths", label: "Programmes", permission: "course:author" },
-      {
-        href: "/qualifications",
-        label: "Qualifications",
-        permission: "qualification:manage",
-      },
-      { href: "/capture", label: "Capture", permission: "assessment:author" },
-      // A reference, not a record. Every signed-in person can read it,
-      // learners included - it exists so that everybody uses the same words.
-      {
-        href: "/records",
-        label: "Policies & documents",
-        permission: "course:read",
-      },
-      { href: "/dictionary", label: "Dictionary", permission: "report:own" },
-      // Designed alongside the courses they recognise rather than under Admin:
-      // a badge is part of how an intervention is set up, not a setting.
-      { href: "/badges", label: "Badges", permission: "course:read" },
-    ],
-  },
-
-  {
-    label: "People",
-    items: [
-      { href: "/people", label: "People", permission: "user:invite" },
-      { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },
-      { href: "/tracker", label: "Tracker", permission: "enrolment:read_all" },
-      // Reached by learners, coaches and staff alike, so it is gated on any
-      // one of the three permissions rather than a single role's.
-      {
-        href: "/workplace",
-        label: "Work experience",
-        anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
-      },
-      { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
-    ],
-  },
-
-  {
-    label: "Assessment",
-    items: [
-      { href: "/assess", label: "To assess", permission: "assessment:assess" },
-      {
-        href: "/moderate",
-        label: "To moderate",
-        permission: "assessment:moderate",
-      },
-      // Learners held after a second not-yet-competent result. Work waiting to
-      // be done rather than a register to browse.
-      {
-        href: "/reassessments",
-        label: "Held for review",
-        permission: "enrolment:read_all",
-      },
-      { href: "/appeals", label: "Appeals", permission: "appeal:manage" },
-      { href: "/eisa", label: "EISA entry", permission: "enrolment:read_all" },
-      {
-        href: "/readiness",
-        label: "EISA readiness",
-        permission: "enrolment:read_all",
-      },
-    ],
-  },
-
-  {
-    label: "Reports",
-    items: [
-      // Every signed-in person holds report:own, but a learner has no
-      // dashboard worth a menu entry, so this is gated on team-or-wider
-      // reporting.
-      {
-        href: "/reports",
-        label: "Reports",
-        anyPermission: ["report:team", "report:tenant"],
-      },
-      { href: "/statutory", label: "Statutory", permission: "report:statutory" },
-    ],
-  },
-
-  // Everyone who has been given a platform mailbox. The page itself explains
-  // it when somebody has not. Left as its own link: it is opened all day.
-  { label: null, items: [{ href: "/mail", label: "Mail", permission: "report:own" }] },
-
-  {
-    label: "Admin",
-    items: [
-      {
-        href: "/settings",
-        label: "Settings",
-        // Reachable by anybody with something on it. An administrator sees the
-        // tenant's branding, clock and filenames; everybody else sees their
-        // own AI extension and nothing they cannot change.
-        anyPermission: ["tenant:manage_branding", "extension:use"],
-      },
-      {
-        href: "/imports",
-        label: "AI history",
-        permission: "qualification:manage",
-      },
-      // ROFT's own console, for managing every other client.
-      {
-        href: "/platform",
-        label: "Clients",
-        permission: "platform:manage_tenants",
-      },
-    ],
-  },
-];
-
 export async function AppShell({
   tenant,
   session,
@@ -172,7 +36,7 @@ export async function AppShell({
   // Filtered by permission rather than by role, so a link never appears for a
   // page the person would be refused. A section left with nothing in it is
   // dropped by the menu rather than shown empty.
-  const sections = NAV.map((section) => ({
+  const sections = arrangeNavigation(tenant.navigation ?? null).map((section) => ({
     label: section.label,
     items: section.items
       .filter((item) =>

@@ -116,6 +116,24 @@ export const organisations = pgTable(
      * Null means no convention: the reviewer fills the details in by hand,
      * which is slower but never blocked.
      */
+    /**
+     * How this provider wants the menu arranged, or null for the built-in one.
+     *
+     * Stored as headings and the pages under them, by href. Not as a copy of
+     * the whole navigation: a provider who reorganised the bar in March must
+     * still get a page added in July, and a stored copy would silently freeze
+     * the menu at the day it was edited. So what is kept is the arrangement,
+     * and anything the platform knows about that the arrangement does not
+     * mention is appended rather than hidden.
+     *
+     * Per tenant rather than per person. A provider's staff talk to each other
+     * about where things are, and a menu that differs per user makes "it is
+     * under People" untrue for the person being helped.
+     */
+    navigation: jsonb("navigation").$type<
+      { label: string | null; items: string[] }[]
+    >(),
+
     namingConvention: jsonb("naming_convention").$type<{
       pattern: string;
       artefactCodes: Record<string, string>;
