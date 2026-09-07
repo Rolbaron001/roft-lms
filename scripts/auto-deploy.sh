@@ -216,7 +216,15 @@ log "Starting."
 # running against the old schema. The tools runs are safe without it because
 # the pull above has already fetched the image they need, and fails the deploy
 # if it could not.
-$COMPOSE up -d --no-build || fail "the application did not start"
+# --remove-orphans stops containers for services this file no longer starts.
+#
+# Without it, a service removed from the file - or moved behind a profile, as
+# the inbound mail receiver was - keeps running from the previous deploy, with
+# its ports still bound. Switching something off in the file then does nothing
+# on the machine, which is the worst kind of change: it reads as done and is
+# not. Everything in this stack is managed by compose, so there is nothing here
+# for it to remove that we did not mean to remove.
+$COMPOSE up -d --no-build --remove-orphans || fail "the application did not start"
 
 # --- did it come back? ------------------------------------------------------
 

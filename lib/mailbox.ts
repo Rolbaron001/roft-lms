@@ -1,8 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import { mailAttachments, mailMessages, users } from "@/db/schema";
-import { deliver } from "./mail";
 import { getObject } from "./storage";
 import { recordAudit } from "./audit";
 import { type AuthenticatedSession } from "./session";
@@ -227,35 +227,77 @@ export async function sendFromMailbox(
       .trim() || null;
   }
 
-  const result = await deliver({
-    to: parsed.to,
-    toName: parsed.to,
-    subject: parsed.subject,
-    body: parsed.body,
-    inReplyTo,
-    references,
+  // Who is being written to, among this provider's own mailboxes.
+  //
+  // This is the whole of the change from what came before. Every message used
+  // to be handed to the outbound relay, which meant the "internal" mailbox was
+  // not internal at all: it could write to any address on the internet, through
+  // the provider's mail server, carrying the provider's reputation, and nothing
+  // in the record distinguished a note to an assessor from an email to a
+  // stranger.
+  //
+  // Now a message is filed directly into the recipient's mailbox and never
+  // touches SMTP. Correspondence between two people at the same provider stays
+  // where an audit can find it, and the only mail the platform still sends out
+  // - sign-in details and password resets - travels its own path, which nobody
+  // can compose into.
+  const recipient = await withTenant(session.organisationId, async (tx) => {
+    const [found] = await tx
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        mailboxAddress: users.mailboxAddress,
+      })
+      .from(users)
+      .where(eq(users.mailboxAddress, parsed.to.trim().toLowerCase()));
+    return found ?? null;
   });
 
-  if (!result.ok) {
+  if (!recipient) {
     throw new MailboxError(
-      `That could not be sent: ${result.error}`,
-      "not_permitted",
+      "That is not a mailbox at this provider. Platform mail is for correspondence inside the platform, where it stays on the learner's record. To write to an outside address, use your own email.",
+      "not_found",
     );
   }
 
+  if (recipient.id === me.id) {
+    throw new MailboxError("That is your own mailbox.", "not_permitted");
+  }
+
   return withTenant(session.organisationId, async (tx) => {
+    // An identifier of our own, so a reply threads against it exactly as one
+    // received from outside would. `.invalid` is reserved precisely so that it
+    // can never be mistaken for a routable host.
+    const messageId = `<${randomUUID()}@platform.invalid>`;
+
+    // The recipient's copy, unread - because they have not read it.
+    await tx.insert(mailMessages).values({
+      organisationId: session.organisationId,
+      mailboxUserId: recipient.id,
+      direction: "inbound",
+      messageId,
+      inReplyTo,
+      references,
+      fromAddress: me.mailboxAddress!,
+      fromName: `${me.firstName} ${me.lastName}`,
+      toAddresses: recipient.mailboxAddress!,
+      subject: parsed.subject,
+      bodyText: parsed.body,
+    });
+
     const [created] = await tx
       .insert(mailMessages)
       .values({
         organisationId: session.organisationId,
         mailboxUserId: me.id,
         direction: "outbound",
-        messageId: result.messageId ?? null,
+        messageId,
         inReplyTo,
         references,
         fromAddress: me.mailboxAddress!,
         fromName: `${me.firstName} ${me.lastName}`,
-        toAddresses: parsed.to,
+        toAddresses: recipient.mailboxAddress!,
         subject: parsed.subject,
         bodyText: parsed.body,
         // Sent mail is read by definition; leaving it unread would inflate

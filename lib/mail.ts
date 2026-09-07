@@ -37,15 +37,24 @@ export type DeliveryResult =
 /**
  * The domain a tenant's mailboxes live on.
  *
- * ROFT's own people sit on the mail domain itself; a client's sit on a
- * subdomain of it, so an address plainly belongs to that client and one
- * tenant's mailbox names cannot collide with another's by accident.
+ * Deliberately not routable. A platform mailbox is an identifier the system
+ * uses to file correspondence against a person; mail addressed to it is
+ * delivered inside the platform and read there, and no message ever leaves by
+ * SMTP. `.internal` is reserved by ICANN for exactly this - a name that is
+ * meaningful inside one system and can never resolve on the public internet.
  *
- * Receiving at any of these needs an MX record, which is why it is a
- * predictable pattern rather than a free-text field per tenant.
+ * It used to default to a real domain, which was wrong in two ways at once.
+ * Nothing could arrive, because the domain's MX pointed at the provider's own
+ * mail host rather than here; and an issued address could collide with a real
+ * mailbox on that host, so a learner's platform address might be somebody's
+ * actual email. Both problems disappear when the name cannot route.
+ *
+ * The platform's own tenant sits on the base name; a client's sits on a
+ * subdomain of it, so an address plainly belongs to that client and one
+ * tenant's mailbox names cannot collide with another's.
  */
 export function mailDomainFor(tenantSlug: string): string {
-  const base = process.env.MAIL_DOMAIN ?? "lms.roftbusiness.org";
+  const base = process.env.MAILBOX_DOMAIN ?? "lms.internal";
   const platform = process.env.PLATFORM_ORG_SLUG ?? "roft";
   return tenantSlug === platform ? base : `${tenantSlug}.${base}`;
 }

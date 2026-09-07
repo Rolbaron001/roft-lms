@@ -74,14 +74,16 @@ services:
       # no registration mail, no notifications - while the tools container had
       # them and could, which is why anything sent by a script worked and made
       # the gap look like an intermittent fault. And mailDomainFor() falls back
-      # to lms.roftbusiness.org without MAIL_DOMAIN, so Curiosa's people were
-      # shown ROFT addresses for their own mailboxes.
+      # to a default without MAILBOX_DOMAIN, so people were shown addresses on
+      # somebody else's domain for their own mailboxes.
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-}
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
+      # Names platform mailboxes. Not routable - see lib/mail.ts.
+      MAILBOX_DOMAIN: ${MAILBOX_DOMAIN:-lms.internal}
 
       AUTH_URL: https://${LMS_DOMAIN:?}
       PLATFORM_HOST: ${LMS_DOMAIN:?}
@@ -175,6 +177,8 @@ services:
       # Or a script would propose a different address to the one the
       # application shows for the same person.
       MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
+      # Names platform mailboxes. Not routable - see lib/mail.ts.
+      MAILBOX_DOMAIN: ${MAILBOX_DOMAIN:-lms.internal}
     volumes:
       - evidence:/app/storage
       # Backups land on the host so they survive the container and can be
@@ -200,8 +204,20 @@ services:
       target: tools
     restart: unless-stopped
     command: ["npx", "tsx", "scripts/mail-receiver.mts"]
-    ports:
-      - "25:25"
+
+    # Off by default, and no longer listening on the internet.
+    #
+    # Platform mail is internal: a message is filed straight into the
+    # recipient's mailbox and nothing arrives from outside. So this server had
+    # nothing to receive - the domain's MX has always pointed at the provider's
+    # own mail host - while port 25 sat open to the internet collecting probes
+    # from anybody scanning for a relay. Attack surface with no purpose.
+    #
+    # Kept rather than deleted, behind a profile, because the code works and a
+    # deployment that genuinely wants externally-addressable mailboxes needs
+    # only an MX record and `--profile inbound-mail`. Turning it back on is a
+    # decision somebody makes, not a default nobody chose.
+    profiles: ["inbound-mail"]
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
@@ -216,6 +232,8 @@ services:
       PLATFORM_REFERENCE_PREFIX: ${PLATFORM_REFERENCE_PREFIX:-ROFT}
       PLATFORM_ILLUSTRATION: ${PLATFORM_ILLUSTRATION:-}
       MAIL_DOMAIN: ${MAIL_DOMAIN:-${LMS_DOMAIN}}
+      # Names platform mailboxes. Not routable - see lib/mail.ts.
+      MAILBOX_DOMAIN: ${MAILBOX_DOMAIN:-lms.internal}
       # Evidence on this server's disk until a bucket exists. Switching to
       # "s3" moves it without a rebuild — and changes what the nightly backup
       # covers, which backup.sh says out loud when it runs.
