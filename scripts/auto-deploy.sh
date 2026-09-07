@@ -216,14 +216,19 @@ log "Starting."
 # running against the old schema. The tools runs are safe without it because
 # the pull above has already fetched the image they need, and fails the deploy
 # if it could not.
-# --remove-orphans stops containers for services this file no longer starts.
+# --remove-orphans stops containers for services no longer in this file.
 #
-# Without it, a service removed from the file - or moved behind a profile, as
-# the inbound mail receiver was - keeps running from the previous deploy, with
-# its ports still bound. Switching something off in the file then does nothing
-# on the machine, which is the worst kind of change: it reads as done and is
-# not. Everything in this stack is managed by compose, so there is nothing here
-# for it to remove that we did not mean to remove.
+# Worth knowing what it does NOT cover: a service that is still defined but
+# gated behind a profile is not an orphan, because compose can still see it.
+# Moving the inbound mail receiver behind a profile left its container running
+# from the previous deploy with port 25 still bound, and this flag did not
+# touch it - it had to be removed by hand with
+# `compose --profile inbound-mail rm -sf mail`.
+#
+# So: taking a service out of the file is handled here; putting one behind a
+# profile needs that one-off removal as well. Everything in this stack is
+# managed by compose, so there is nothing here for it to remove that we did
+# not mean to remove.
 $COMPOSE up -d --no-build --remove-orphans || fail "the application did not start"
 
 # --- did it come back? ------------------------------------------------------
