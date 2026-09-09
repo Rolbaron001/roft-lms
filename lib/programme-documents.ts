@@ -19,6 +19,7 @@ import {
 import { importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { modulesOfCondition } from "./part-qualifications";
 
 /**
  * The programme document library.
@@ -416,14 +417,24 @@ export async function qualificationForDocumentUpload(
 
   return withTenant(session.organisationId, async (tx) => {
     const [qualification] = await tx
-      .select({ id: qualifications.id, title: qualifications.title })
+      .select({
+        id: qualifications.id,
+        title: qualifications.title,
+        parentId: qualifications.parentQualificationId,
+      })
       .from(qualifications)
       .where(eq(qualifications.id, qualificationId));
 
+    // A part's study units are its parent's, like everything else curricular.
     const units = await tx
       .select({ id: studyUnits.id, code: studyUnits.code, title: studyUnits.title })
       .from(studyUnits)
-      .where(eq(studyUnits.qualificationId, qualificationId));
+      .where(
+        eq(
+          studyUnits.qualificationId,
+          qualification?.parentId ?? qualificationId,
+        ),
+      );
 
     const modules = await tx
       .select({
@@ -432,7 +443,9 @@ export async function qualificationForDocumentUpload(
         title: curriculumModules.title,
       })
       .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId));
+      .where(
+        modulesOfCondition(qualificationId, qualification?.parentId ?? null),
+      );
 
     return { qualification, units, modules };
   });

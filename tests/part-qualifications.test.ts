@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
+  assessmentCriteria,
   curriculumModules,
   organisations,
   programmeDocuments,
@@ -30,6 +31,7 @@ import {
   selectModules,
 } from "@/lib/part-qualifications";
 import { programmeReadiness } from "@/lib/programme-readiness";
+import { criterionCoverage } from "@/lib/programme-reports";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -124,6 +126,15 @@ async function buildFamily(options: { partCredits?: number } = {}) {
           credits: spec.credits,
         })
         .returning({ id: curriculumModules.id });
+
+      // One criterion each, so the reports below have something to count.
+      await tx.insert(assessmentCriteria).values({
+        organisationId,
+        curriculumModuleId: row.id,
+        code: `IAC-${spec.code}`,
+        description: "Something a learner must demonstrate.",
+      });
+
       modules[spec.code] = row.id;
     }
 
@@ -390,5 +401,40 @@ describe("readiness, for something with no curriculum document of its own", () =
 
     expect(part.curriculum.modules).toBe(1);
     expect(parent.curriculum.modules).toBe(PARENT_MODULES.length);
+  });
+});
+
+/**
+ * The sweep, locked in.
+ *
+ * Four places outside readiness ask a qualification for its modules and meant
+ * the whole curriculum: the EISA calculation, criterion coverage, what a
+ * document may be attached to, and the alignment matrix. Each one read the
+ * curriculum directly, which for a part returns nothing at all - so a part
+ * reported no criteria, no coverage and nothing to be assessed on, and looked
+ * like a qualification nobody had finished setting up.
+ *
+ * This covers the one whose arithmetic a person actually reads. If it breaks,
+ * check the other three: they share `modulesOfCondition`.
+ */
+describe("reports over a part", () => {
+  it("counts the criteria of the modules it takes, and no others", async () => {
+    const { parentId, partId, modules } = await buildFamily();
+    await selectModules(
+      admin,
+      partId,
+      KITCHENETTE_CODES.map((code) => modules[code]),
+    );
+
+    const forPart = await criterionCoverage(admin, partId);
+    const forParent = await criterionCoverage(admin, parentId);
+
+    expect(forPart).toHaveLength(KITCHENETTE_CODES.length);
+    expect(forParent).toHaveLength(PARENT_MODULES.length);
+
+    // The module the part does not take must not appear in its coverage.
+    expect(forPart.map((row) => row.moduleCode)).not.toContain(
+      "811201-000-00-KM-09",
+    );
   });
 });

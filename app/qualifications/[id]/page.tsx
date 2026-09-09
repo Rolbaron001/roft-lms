@@ -96,12 +96,38 @@ export default async function QualificationPage({
             ? `weighted ${Math.round(qualification.componentWeights.knowledge * 100)}/${Math.round(qualification.componentWeights.practical * 100)}/${Math.round(qualification.componentWeights.workplace * 100)} as stated in the document`
             : "no component weighting stated — readiness derives it from credits"}
         </p>
+        {/*
+          A part qualification is not built here and must not offer to be. Its
+          curriculum belongs to the qualification it comes from; what is its
+          own is which of those modules it takes.
+        */}
+        {qualification.parentQualificationId ? (
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            A part qualification drawn from{" "}
+            <Link
+              href={`/qualifications/${qualification.parentQualificationId}`}
+              className="underline underline-offset-2"
+            >
+              its parent qualification
+            </Link>
+            , whose curriculum it shares. Nothing is copied, so a
+            learner&rsquo;s work against a module counts once wherever they met
+            it.
+          </p>
+        ) : null}
+
         {session.permissions.includes("qualification:manage") ? (
           <Link
-            href={`/qualifications/${qualification.id}/edit`}
+            href={
+              qualification.parentQualificationId
+                ? `/qualifications/${qualification.id}/modules`
+                : `/qualifications/${qualification.id}/edit`
+            }
             className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
           >
-            Build the curriculum
+            {qualification.parentQualificationId
+              ? "Choose which modules this takes"
+              : "Build the curriculum"}
           </Link>
         ) : null}
       </div>

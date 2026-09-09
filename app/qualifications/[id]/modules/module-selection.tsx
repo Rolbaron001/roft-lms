@@ -101,12 +101,19 @@ export function ModuleSelection({
             {group.modules.map((module) => (
               <li key={module.id}>
                 <label className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-[var(--background)]">
+                  {/*
+                    Named explicitly. The label wraps the input, but the input's
+                    value is a UUID, and a reader announcing "checkbox,
+                    f9cf8226-7a4a..." is no use to somebody deciding which
+                    modules a qualification takes.
+                  */}
                   <input
                     type="checkbox"
                     name="moduleId"
                     value={module.id}
                     checked={ticked.has(module.id)}
                     onChange={() => toggle(module.id)}
+                    aria-label={`${module.code} ${module.title}`}
                     className="mt-1"
                   />
                   <span className="text-sm">

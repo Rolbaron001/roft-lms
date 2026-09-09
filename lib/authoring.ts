@@ -334,19 +334,44 @@ export async function curriculumOutline(
       throw new AuthoringError("Qualification not found.", "not_found");
     }
 
-    const modules = await tx
-      .select({
-        id: curriculumModules.id,
-        component: curriculumModules.component,
-        code: curriculumModules.code,
-        title: curriculumModules.title,
-        description: curriculumModules.description,
-        credits: curriculumModules.credits,
-        sortOrder: curriculumModules.sortOrder,
-      })
-      .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId))
-      .orderBy(asc(curriculumModules.sortOrder));
+    const moduleColumns = {
+      id: curriculumModules.id,
+      component: curriculumModules.component,
+      code: curriculumModules.code,
+      title: curriculumModules.title,
+      description: curriculumModules.description,
+      credits: curriculumModules.credits,
+      sortOrder: curriculumModules.sortOrder,
+    };
+
+    /**
+     * A part qualification shows the modules it takes, not an empty page.
+     *
+     * Reading the curriculum directly here made a part's own page report "0
+     * modules · 0 internal assessment criteria" and offer to build a
+     * curriculum it must not have - while the list it was reached from
+     * correctly said nine. Found by opening the page rather than by reasoning
+     * about it.
+     *
+     * Everything below hangs off these module ids, so the topics, elements and
+     * criteria follow without further change: they belong to the parent's
+     * modules, which is where a part's assessment criteria live.
+     */
+    const modules = qualification.parentQualificationId
+      ? await tx
+          .select(moduleColumns)
+          .from(qualificationModules)
+          .innerJoin(
+            curriculumModules,
+            eq(curriculumModules.id, qualificationModules.curriculumModuleId),
+          )
+          .where(eq(qualificationModules.qualificationId, qualificationId))
+          .orderBy(asc(curriculumModules.sortOrder))
+      : await tx
+          .select(moduleColumns)
+          .from(curriculumModules)
+          .where(eq(curriculumModules.qualificationId, qualificationId))
+          .orderBy(asc(curriculumModules.sortOrder));
 
     const moduleIds = modules.map((m) => m.id);
 

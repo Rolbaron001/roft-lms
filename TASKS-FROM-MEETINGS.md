@@ -43,6 +43,15 @@ user-facing string is the work.
 
 ---
 
+## 2. Part qualifications — **done, 9 September**
+
+Built against the real Commercial Cleaner documents rather than invented ones,
+which is what caught the four things reasoning would not have. See
+`PART-QUALIFICATIONS-AND-TEMPLATES.md` for what the documents settled and what
+they corrected. What follows is the task as it was written.
+
+---
+
 ## 2. Part qualifications
 
 **From the notes:** Heidi set out the sub-framework — full qualification, part
@@ -76,6 +85,22 @@ folder. Best built against those real documents rather than invented ones.
 
 **Size:** large, and it reaches the readiness calculation, which is the most
 load-bearing arithmetic in the platform.
+
+---
+
+## 3. Occupational skills programmes — **mostly done, 9 September**
+
+The `kind` work from task 2 covers it, including the case Heidi described where
+a skills programme stands alone with no parent: it then carries its own
+curriculum, exactly as a full qualification does, and the platform does not ask
+it for a parent. A skills programme harvested from a qualification takes the
+same path a part does.
+
+**What is still outstanding is the FISA**, which is a different assessment shape
+from the EISA the platform models — provider-set and provider-moderated rather
+than set by an assessment quality partner. The templates for it arrived with
+`Design/Templates/` and it is its own body of work; see
+`PART-QUALIFICATIONS-AND-TEMPLATES.md`.
 
 ---
 
@@ -197,18 +222,29 @@ the full qualification is not involved. Same for a skills programme.
 right, and the parent link records where a part came from rather than being the
 route a learner travels.
 
-### 2 · Not yet answered — my question was the problem
+### 2 · Answered by the documents instead — settled
 
 I asked whether a derived programme "shares the parent's modules or holds its
 own copies", which is an implementation question wearing a business suit. Heidi
-reasonably said she did not understand it. Re-asked in the section below.
+reasonably said she did not understand it, and the documents she then sent
+answered it without her having to.
 
-**What we can infer meanwhile**, from the meeting notes rather than guessing: a
-part qualification sits "under the same curriculum code" as its parent and
-"does not generate a separate curriculum document". Both point at one shared
-curriculum with the part selecting a subset of its modules, rather than a copy.
-Worth confirming before building on it, because it is the difference between
-one criterion ledger and two.
+**The curriculum document filed under 118710 is byte-identical to the one filed
+under 118709 — same MD5.** One curriculum, filed twice, and each part's SAQA
+document lists which of its modules that part takes. So: one shared curriculum,
+one criterion ledger, and a part selects a subset. Built that way.
+
+One correction worth recording, because I had it wrong: a part does **not**
+repeat its parent's curriculum code. 118709 states `811201-000-00` and 118710
+states `811201-000-01` — the numeric suffix Heidi described in the meeting was
+right and my later assumption was not. What ties a part to its parent is that
+every module it lists carries the parent's prefix.
+
+**Still worth asking, because the documents do not say:** if a learner completes
+118710 and later enrols for 118709, does their work on the shared modules count,
+or must they repeat it? The platform is built for "it counts" — one module, one
+place it is ever marked complete — which is what the shared curriculum implies.
+Cheaper to confirm than to rebuild.
 
 ### 3 · The clock starts at induction — settled, and better than expected
 

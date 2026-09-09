@@ -17,6 +17,7 @@ import {
   workplaceLogbooks,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { modulesOfCondition } from "./part-qualifications";
 
 /**
  * EISA readiness.
@@ -344,6 +345,7 @@ export async function qualificationReadiness(
         title: qualifications.title,
         saqaId: qualifications.saqaId,
         componentWeights: qualifications.componentWeights,
+        parentQualificationId: qualifications.parentQualificationId,
       })
       .from(qualifications)
       .where(eq(qualifications.id, qualificationId));
@@ -375,7 +377,15 @@ export async function qualificationReadiness(
         sortOrder: curriculumModules.sortOrder,
       })
       .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId));
+      // A part is assessed against the modules it takes, not against its
+      // parent's whole curriculum. Counted over the parent's, every part
+      // learner would sit at a fraction of the readiness they had earned.
+      .where(
+        modulesOfCondition(
+          qualificationId,
+          qualification.parentQualificationId,
+        ),
+      );
 
     const moduleIds = modules.map((m) => m.id);
 

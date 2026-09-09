@@ -16,9 +16,11 @@ import {
   lessonCriteria,
   lessons,
   progressRecords,
+  qualifications,
   stepProgress,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { modulesOfCondition } from "./part-qualifications";
 
 /**
  * The three reports a provider acts on.
@@ -79,6 +81,11 @@ export async function criterionCoverage(
   assertSessionCan(session, "course:read");
 
   return withTenant(session.organisationId, async (tx) => {
+    const [entry] = await tx
+      .select({ parentId: qualifications.parentQualificationId })
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+
     const criteria = await tx
       .select({
         criterionId: assessmentCriteria.id,
@@ -93,7 +100,7 @@ export async function criterionCoverage(
         curriculumModules,
         eq(curriculumModules.id, assessmentCriteria.curriculumModuleId),
       )
-      .where(eq(curriculumModules.qualificationId, qualificationId))
+      .where(modulesOfCondition(qualificationId, entry?.parentId ?? null))
       .orderBy(asc(curriculumModules.code), asc(assessmentCriteria.code));
 
     if (criteria.length === 0) return [];

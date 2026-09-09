@@ -4,11 +4,13 @@ import {
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
+  qualifications,
   topicElementAlignment,
 } from "@/db/schema";
 import { readXlsxSheets, type Sheet } from "./office";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { modulesOfCondition } from "./part-qualifications";
 
 /**
  * Reading a provider's Curriculum Alignment Matrix.
@@ -211,10 +213,15 @@ export async function importAlignmentMatrix(
   const reading = readAlignmentMatrix(bytes);
 
   return withTenant(session.organisationId, async (tx) => {
+    const [entry] = await tx
+      .select({ parentId: qualifications.parentQualificationId })
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+
     const modules = await tx
       .select({ id: curriculumModules.id })
       .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId));
+      .where(modulesOfCondition(qualificationId, entry?.parentId ?? null));
 
     if (modules.length === 0) {
       throw new AlignmentMatrixError(

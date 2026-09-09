@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql as dbSql } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import {
   curriculumModules,
@@ -97,6 +97,34 @@ export async function modulesOf(
       .where(eq(qualificationModules.qualificationId, qualificationId))
       .orderBy(curriculumModules.code);
   });
+}
+
+/**
+ * The condition to put on a `curriculumModules` query so it means "the modules
+ * this qualification is assessed against".
+ *
+ * There are two dozen places that ask a qualification for its modules, and the
+ * naive query - `where qualification_id = ?` - is right for a full
+ * qualification and silently empty for a part. Silently is the problem: a part
+ * reports no modules, no criteria and nothing to be assessed on, which looks
+ * like a qualification nobody has finished setting up rather than a bug.
+ *
+ * So this returns the condition rather than the rows, and can be dropped into
+ * an existing query without restructuring it. Takes the qualification's own
+ * `parentQualificationId`, which the caller usually has already.
+ */
+export function modulesOfCondition(
+  qualificationId: string,
+  parentQualificationId: string | null,
+) {
+  if (!parentQualificationId) {
+    return eq(curriculumModules.qualificationId, qualificationId);
+  }
+
+  return dbSql`${curriculumModules.id} in (
+    select qm.curriculum_module_id from qualification_modules qm
+    where qm.qualification_id = ${qualificationId}
+  )`;
 }
 
 /**
