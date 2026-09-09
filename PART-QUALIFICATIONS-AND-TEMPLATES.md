@@ -130,7 +130,7 @@ column 33, and `data-loading-specification-document.pdf` for the rest.
 
 | Template | Bearing on the platform |
 |---|---|
-| `QCTO SoR Template.docx` | The platform already issues a Statement of Results. Its layout should be checked against this and reconciled. |
+| `QCTO SoR Template.docx` | **Done, 9 September.** Reconciled — see below. |
 | `TEMPLATE - Programme Enrolment Form V3.docx` | The artefact a QCTO monitor asks for. The platform holds none. |
 | `FISA INSTRUMENT STRUCTURE.docx` | Skills programmes end in a FISA, set and moderated by the provider — not the external EISA the platform models. |
 | `FISA Pre-Moderator Report.docx`, `Examiner Developer Report.docx` | Moderation artefacts for a FISA. The platform has moderation but not these reports. |
@@ -167,6 +167,62 @@ against the 47 the document states, and leaves the part ready for material.
 **Not yet:** a screen to change a qualification's kind or parent after it is
 created. It is set at creation and read from the document on import, which
 covers both routes in; correcting a mistake means the form, for now.
+
+---
+
+## The Statement of Results, reconciled — 9 September
+
+Read the template beside what the platform prints. Most of it matched. Seven
+things did not, and all seven are now on the document:
+
+- **Valid until.** "This SoR is valid for a period of two years from date of
+  issue." The platform said nothing about it, so an assessment centre checking a
+  three-year-old reference was told it was valid. Verification now separates
+  *expired* from *withdrawn* — a learner whose document ran out has not had
+  anything taken away from them, and should not be told they have.
+- **Admission to the EISA**, as a yes/no with the date of the next sitting,
+  taken from the calendar and frozen at issue.
+- **The attachments checklist**: the learner's ID always; at NQF 3 and 4, proof
+  of Maths and English.
+- **A named signature block** — Principal or Academic Manager, and a
+  designation — plus a space for the institution's stamp.
+- **The two disclaimers**: that this is not an Occupational Certificate, and
+  that only the QCTO issues one.
+- **The provider's address**, which the template's letterhead calls for.
+- **C/NYC** stated rather than left to be inferred from "Competent".
+
+Found while doing it, and worth knowing separately: the public verification page
+showed **nothing at all** for a Statement of Results reference. The result box
+was gated on a certificate being found, so somebody at an assessment centre
+typing a valid reference off a learner's document saw the page sit there as
+though they had not pressed the button. Badges were in the same position. Fixed.
+
+---
+
+## Worth a look: the Commercial Cleaner curriculum imports thin
+
+Not part of the part-qualification work, but it surfaced while testing it.
+Importing 118709's curriculum document reads all 22 modules and all their
+topics, and then reports, for nearly every topic:
+
+```
+KM01 / KM-01-KT01: nothing to teach was read.
+KM01 / KM-01-KT01: no assessment criteria were read.
+```
+
+So the modules and topics land, and the **content of each topic and its internal
+assessment criteria do not**. That matters: readiness, the alignment matrix and
+the Statement of Results are all computed over criteria, and a qualification
+whose criteria did not import cannot have anybody declared ready against it —
+the platform already refuses, correctly, with "9 of 9 modules have no criteria
+yet".
+
+The 121151 document reads fully, so this is a difference in how the Commercial
+Cleaner document is laid out rather than a general fault. It is the same shape
+of problem as the `Cr 6` credits gap fixed today — one house style the reader
+does not know — and it wants the same treatment: read the real file, find the
+pattern, add it. **Not started; flagged rather than begun, because it is its own
+piece of work.**
 
 ---
 
