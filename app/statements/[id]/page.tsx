@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
-import { getStatementOfResults, StatementError } from "@/lib/statement-of-results";
+import {
+  getStatementOfResults,
+  StatementError,
+  validUntilFor,
+} from "@/lib/statement-of-results";
 import { describeAccreditation } from "@/lib/accreditation";
 import { PrintButton } from "@/components/print-button";
 import { WithdrawDocument } from "@/components/withdraw-document";
@@ -58,6 +62,20 @@ export default async function StatementPage({
   const { learner, qualification, provider, modules, studyUnit } =
     record.statement;
 
+  const validUntil = record.statement.validUntil
+    ? new Date(record.statement.validUntil)
+    : validUntilFor(record.issuedAt);
+
+  const nextEisa = record.statement.nextEisa ?? null;
+
+  /**
+   * The QCTO template asks for proof of Maths and English at levels 3 and 4
+   * specifically, so the checklist follows the level rather than listing a
+   * requirement that does not apply and leaving somebody to work that out.
+   */
+  const needsFoundationalProof =
+    qualification.nqfLevel === 3 || qualification.nqfLevel === 4;
+
   const byComponent = ["knowledge", "practical", "workplace", "general"]
     .map((component) => ({
       component,
@@ -108,6 +126,12 @@ export default async function StatementPage({
         <p className="text-xs uppercase tracking-widest">
           {provider.legalName || tenant.displayName}
         </p>
+        {/* The template opens with the provider's letterhead and address. */}
+        {provider.address && provider.address.length > 0 ? (
+          <p className="mt-0.5 text-xs text-neutral-700">
+            {provider.address.join(" · ")}
+          </p>
+        ) : null}
         <h1 className="mt-1 text-lg font-bold">Statement of Results</h1>
         <p className="mt-1 text-xs">
           {studyUnit
@@ -190,6 +214,53 @@ export default async function StatementPage({
         </section>
       ))}
 
+      {/*
+        The wording the QCTO template prints under its own module tables.
+        "Competent" is the C of C/NYC written out; saying so removes the
+        question rather than leaving an assessment centre to assume it.
+      */}
+      <p className="mb-6 text-xs text-neutral-600">
+        Achievement is recorded as Competent or Not Yet Competent (C/NYC).
+      </p>
+
+      {/*
+        Admission to the EISA, which the QCTO template asks for as a yes/no
+        with the date of the next sitting beside it.
+
+        Yes is not a formality here. This statement cannot be issued at all
+        unless every internal assessment criterion in scope has been achieved -
+        the same calculation the readiness screen shows - so the answer is
+        settled before the document exists. A whole-qualification statement is
+        the one that grants admission; one issued for a single study unit
+        records progress and does not.
+      */}
+      <section className="mb-6 break-inside-avoid border-y-2 border-black py-3">
+        <table className="w-full border-collapse text-left">
+          <tbody>
+            <tr>
+              <th className="w-64 py-1 pr-4 align-top font-semibold">
+                Learner has gained admission to the EISA
+              </th>
+              <td className="py-1 font-bold">
+                {studyUnit
+                  ? "Not applicable — this statement covers one study unit"
+                  : "Yes"}
+              </td>
+            </tr>
+            <tr>
+              <th className="py-1 pr-4 align-top font-semibold">
+                Date of next EISA
+              </th>
+              <td className="py-1">
+                {nextEisa
+                  ? `${formatDate(nextEisa.date)}${nextEisa.name ? ` — ${nextEisa.name}` : ""}`
+                  : "Not yet scheduled"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section className="mt-8 break-inside-avoid border-t-2 border-black pt-4">
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">
           Confirmation
@@ -219,22 +290,107 @@ export default async function StatementPage({
               <td className="py-1.5 font-mono">{record.verificationReference}</td>
             </tr>
             <tr className="border-b border-neutral-300">
+              <th className="py-1.5 pr-4 font-semibold">Valid until</th>
+              <td className="py-1.5">
+                {validUntil.toLocaleDateString("en-ZA", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </td>
+            </tr>
+            {/*
+              Named and designated, not just signed. The QCTO template asks for
+              "Name of Principal/Academic Manager" and a designation, because
+              whoever signs is making the confirmation above in their own name.
+            */}
+            <tr className="border-b border-neutral-300">
               <th className="py-1.5 pr-4 align-top font-semibold">
-                Signed for the provider
+                Name of Principal / Academic Manager
               </th>
               <td className="py-6"></td>
             </tr>
+            <tr className="border-b border-neutral-300">
+              <th className="py-1.5 pr-4 align-top font-semibold">
+                Designation
+              </th>
+              <td className="py-6"></td>
+            </tr>
+            <tr className="border-b border-neutral-300">
+              <th className="py-1.5 pr-4 align-top font-semibold">Signature</th>
+              <td className="py-6"></td>
+            </tr>
+            <tr className="border-b border-neutral-300">
+              <th className="py-1.5 pr-4 align-top font-semibold">
+                Stamp of the institution
+              </th>
+              <td className="py-10"></td>
+            </tr>
           </tbody>
         </table>
+      </section>
 
-        <p className="mt-4 text-xs text-neutral-600">
+      {/*
+        What the QCTO asks to be attached to each statement sent to it. Printed
+        as a checklist because that is how it is used: somebody assembling an
+        envelope, ticking things off.
+      */}
+      <section className="mt-8 break-inside-avoid">
+        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">
+          To be attached to each statement sent to the QCTO
+        </h2>
+        <ul className="space-y-1.5">
+          <li className="flex gap-2">
+            <span className="mt-0.5 inline-block h-3 w-3 shrink-0 border border-black" />
+            <span>The learner&rsquo;s identity document</span>
+          </li>
+          {needsFoundationalProof ? (
+            <li className="flex gap-2">
+              <span className="mt-0.5 inline-block h-3 w-3 shrink-0 border border-black" />
+              <span>
+                Proof of passing Mathematics and English, required at NQF levels
+                3 and 4. Either a Grade 12 certificate (or equivalent) showing
+                pass marks for both, or a Foundational Learning Competence
+                Statement of Results reporting Competent for Numeracy and
+                Literacy — or a combination of the two.
+              </span>
+            </li>
+          ) : null}
+        </ul>
+      </section>
+
+      <section className="mt-8 break-inside-avoid border-t border-black pt-4 text-xs text-neutral-700">
+        {/*
+          The QCTO's own disclaimers, which say what this document is not. They
+          matter: a learner holding a Statement of Results has something that
+          looks like a certificate and is not one, and only the QCTO can issue
+          the certificate itself.
+        */}
+        <p>
+          <span className="font-semibold">
+            This Statement of Results is not an Occupational Certificate.
+          </span>{" "}
+          The learner must comply with the requirements of the Knowledge,
+          Practical and Workplace components of the qualification in order to be
+          admitted to the External Integrated Summative Assessment. This
+          Statement of Results is valid for a period of two years from the date
+          of issue.
+        </p>
+        <p className="mt-2">
+          The Quality Council for Trades and Occupations will issue the
+          Occupational Certificate upon successful completion of the External
+          Integrated Summative Assessment, and having met the requirements of
+          the qualification.
+        </p>
+        <p className="mt-2">
+          Learners must bring this Statement of Results together with their
+          identity document when writing the EISA.
+        </p>
+        <p className="mt-2">
           This statement can be checked at any time by entering the verification
           reference above at {tenant.displayName}. A withdrawn statement reports
-          itself as withdrawn rather than as unknown.
-        </p>
-        <p className="mt-2 text-xs text-neutral-600">
-          To be presented at the assessment centre together with the
-          learner&rsquo;s identity document.
+          itself as withdrawn rather than as unknown, and one past its two years
+          reports itself as expired.
         </p>
       </section>
     </main>

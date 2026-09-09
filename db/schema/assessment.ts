@@ -851,7 +851,32 @@ export const statementsOfResults = pgTable(
         provider: {
           legalName: string;
           accreditationNumber: string | null;
+          /**
+           * The address as it stood at issue. The QCTO's own template opens
+           * with the provider's letterhead and address, and a statement in
+           * somebody's hand must keep saying where it came from after the
+           * provider moves.
+           */
+          address?: string[] | null;
         };
+        /**
+         * The next External Integrated Summative Assessment as it was
+         * scheduled at issue, which the QCTO template asks for by name.
+         *
+         * Frozen like everything else here: a learner holding a statement that
+         * names a date is holding what they were told, even after the sitting
+         * is rescheduled. Null when no sitting was on the calendar.
+         */
+        nextEisa?: { name: string; date: string } | null;
+        /**
+         * When this statement stops being current.
+         *
+         * "This SoR is valid for a period of two years from date of issue" -
+         * the QCTO template's own words. Stored rather than computed at read
+         * time so that a change to the rule cannot silently re-date every
+         * statement already in circulation.
+         */
+        validUntil?: string | null;
         modules: {
           code: string;
           title: string;

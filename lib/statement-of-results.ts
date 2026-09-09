@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, or } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   curriculumModules,
+  eisaSittings,
   organisations,
   qualifications,
   statementsOfResults,
@@ -131,6 +132,45 @@ async function studyUnitScope(
       moduleCodes: new Set(rows.map((row) => row.code)),
     };
   });
+}
+
+/**
+ * How long a Statement of Results stands.
+ *
+ * "This SoR is valid for a period of two years from date of issue", in the
+ * QCTO's own template. It is not decoration: an assessment centre handed a
+ * three-year-old statement is being shown a claim about a curriculum that may
+ * since have been replaced, and the platform said nothing about it.
+ */
+export const STATEMENT_VALID_YEARS = 2;
+
+export function validUntilFor(issuedAt: Date): Date {
+  const until = new Date(issuedAt);
+  until.setFullYear(until.getFullYear() + STATEMENT_VALID_YEARS);
+  return until;
+}
+
+/** The provider's address as printed lines, empty when none is recorded. */
+function addressLines(
+  address: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    country?: string;
+  } | null,
+): string[] {
+  if (!address) return [];
+  return [
+    address.line1,
+    address.line2,
+    [address.city, address.province].filter(Boolean).join(", "),
+    address.postalCode,
+    address.country,
+  ]
+    .map((line) => (line ?? "").trim())
+    .filter((line) => line.length > 0);
 }
 
 export async function issueStatementOfResults(
@@ -282,9 +322,37 @@ export async function issueStatementOfResults(
       .select({
         legalName: organisations.legalName,
         accreditationNumber: organisations.accreditationNumber,
+        physicalAddress: organisations.physicalAddress,
       })
       .from(organisations)
       .where(eq(organisations.id, session.organisationId));
+
+    /**
+     * The next EISA on the calendar, which the QCTO's template asks for by
+     * name: "Date of Next EISA".
+     *
+     * A sitting with no qualification applies to all of them, so both are
+     * considered and the soonest wins. Null when nothing is scheduled, which
+     * is honest - the alternative is a blank the reader cannot distinguish
+     * from an omission.
+     */
+    const [nextSitting] = await tx
+      .select({
+        name: eisaSittings.name,
+        sittingDate: eisaSittings.sittingDate,
+      })
+      .from(eisaSittings)
+      .where(
+        and(
+          or(
+            eq(eisaSittings.qualificationId, qualificationId),
+            isNull(eisaSittings.qualificationId),
+          ),
+          gte(eisaSittings.sittingDate, new Date().toISOString().slice(0, 10)),
+        ),
+      )
+      .orderBy(asc(eisaSittings.sittingDate))
+      .limit(1);
 
     const modules = readiness.components
       .flatMap((component) => component.modules)
@@ -336,7 +404,12 @@ export async function issueStatementOfResults(
           provider: {
             legalName: provider?.legalName ?? "",
             accreditationNumber: provider?.accreditationNumber ?? null,
+            address: addressLines(provider?.physicalAddress ?? null),
           },
+          nextEisa: nextSitting
+            ? { name: nextSitting.name, date: nextSitting.sittingDate }
+            : null,
+          validUntil: validUntilFor(new Date()).toISOString(),
           modules,
         },
         issuedById: session.userId,
@@ -473,6 +546,16 @@ export type StatementVerification = {
   moduleCount?: number;
   revokedAt?: Date | null;
   revokedReason?: string | null;
+  /**
+   * When it stops standing, and whether it already has.
+   *
+   * Distinct from withdrawal, and the distinction matters to whoever is
+   * holding it at the door: a withdrawn statement was taken back, an expired
+   * one was never taken back and simply ran out. Both are reasons not to admit
+   * the learner, and neither should read as "valid".
+   */
+  validUntil?: Date | null;
+  expired?: boolean;
 };
 
 /**
@@ -507,9 +590,23 @@ export async function verifyStatement(
   const found = rows[0];
   if (!found) return { found: false, valid: false };
 
+  /**
+   * Statements issued before the validity period was recorded fall back to two
+   * years from their own issue date, which is the rule that always applied -
+   * the QCTO's template said so before the platform stored it. Treating them
+   * as valid for ever would be the wrong way round.
+   */
+  const validUntil = found.statement.validUntil
+    ? new Date(found.statement.validUntil)
+    : validUntilFor(found.issuedAt);
+
+  const expired = validUntil.getTime() < Date.now();
+
   return {
     found: true,
-    valid: found.revokedAt === null,
+    valid: found.revokedAt === null && !expired,
+    validUntil,
+    expired,
     learnerName: `${found.statement.learner.firstName} ${found.statement.learner.lastName}`,
     qualificationTitle: found.statement.qualification.title,
     issuedBy: found.statement.provider.legalName,

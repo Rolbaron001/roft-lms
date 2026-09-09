@@ -9,12 +9,13 @@
  * has a test.
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   competencies,
   competencyFrameworks,
   organisations,
+  statementsOfResults,
   studyUnits,
   userRoles,
   users,
@@ -1031,6 +1032,109 @@ describe("the Statement of Results", () => {
   it("returns nothing for a reference that does not exist", async () => {
     expect(await verifyStatement("ROFT-AAAAA-AAAAA-AAAAA-AAAAA")).toMatchObject({
       found: false,
+      valid: false,
+    });
+  });
+
+  /**
+   * "This SoR is valid for a period of two years from date of issue" - the
+   * QCTO's own template, which the platform said nothing about until now. An
+   * assessment centre checking a three-year-old reference was told it was
+   * valid.
+   *
+   * The date is moved on the stored record rather than by waiting two years.
+   */
+  it("reports a statement past its two years as expired, not withdrawn", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    const issued = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    if (!issued.ok) throw new Error("expected the statement to issue");
+
+    expect(await verifyStatement(issued.reference)).toMatchObject({
+      valid: true,
+      expired: false,
+    });
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    await withPlatformScope("ageing a statement for the test", (tx) =>
+      tx
+        .update(statementsOfResults)
+        .set({
+          statement: sql`jsonb_set(statement, '{validUntil}', to_jsonb(${yesterday.toISOString()}::text))`,
+        })
+        .where(eq(statementsOfResults.id, issued.statementId)),
+    );
+
+    const checked = await verifyStatement(issued.reference);
+
+    expect(checked.found).toBe(true);
+    expect(checked.expired).toBe(true);
+    expect(checked.valid).toBe(false);
+    // Expiry is not withdrawal. Saying "withdrawn" would accuse the learner of
+    // something that did not happen.
+    expect(checked.revokedAt).toBeNull();
+  });
+
+  /**
+   * Statements issued before the field existed have no `validUntil` stored.
+   * They fall back to two years from their own issue date, because that was
+   * always the rule - treating them as valid for ever would be the wrong way
+   * round.
+   */
+  it("falls back to two years from issue when none was recorded", async () => {
+    const imported = await importCurriculum(admin, finishable(`sor-${suffix()}`));
+    const before = await qualificationReadiness(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    const criterionIds = before.components
+      .flatMap((c) => c.modules)
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.criteria)
+      .map((c) => c.criterionId);
+    await achieve(criterionIds, criterionIds.map(() => "competent" as const));
+
+    const issued = await issueStatementOfResults(
+      admin,
+      imported.qualificationId,
+      learner.userId,
+    );
+    if (!issued.ok) throw new Error("expected the statement to issue");
+
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+
+    await withPlatformScope("ageing a statement for the test", (tx) =>
+      tx
+        .update(statementsOfResults)
+        .set({
+          issuedAt: threeYearsAgo,
+          statement: sql`statement - 'validUntil'`,
+        })
+        .where(eq(statementsOfResults.id, issued.statementId)),
+    );
+
+    expect(await verifyStatement(issued.reference)).toMatchObject({
+      found: true,
+      expired: true,
       valid: false,
     });
   });

@@ -88,13 +88,27 @@ export default async function VerifyPage({
           </button>
         </form>
 
-        {result ? (
+        {/*
+          Shown whenever somebody has entered a reference, which is not what
+          this used to do.
+          
+          The gate was `result`, and `result` is the certificate - so a
+          Statement of Results reference produced no box at all. Not a wrong
+          answer: no answer. Somebody at an assessment centre typed a valid
+          reference off a learner's document and the page sat there as though
+          they had not pressed the button, and the statement branch below could
+          never run.
+
+          A badge has its own box beneath this one, so it is the one case that
+          keeps this hidden (`verifyBadge` returns null when there is none).
+        */}
+        {reference && !badge ? (
           <section
             className="mt-6 rounded-lg border-2 bg-[var(--surface)] p-6"
             style={{
-              borderColor: result.valid
+              borderColor: (statement?.found ? statement : result)?.valid
                 ? "var(--success)"
-                : result.found
+                : (statement?.found ?? result?.found)
                   ? "var(--danger)"
                   : "var(--border)",
             }}
@@ -137,19 +151,42 @@ export default async function VerifyPage({
                     </div>
                   </dl>
                 </>
-              ) : (
+              ) : statement.revokedAt ? (
                 <>
                   <h2 className="font-semibold" style={{ color: "var(--danger)" }}>
                     Statement of Results withdrawn
                   </h2>
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Withdrawn on{" "}
-                    {statement.revokedAt?.toLocaleDateString("en-ZA")}.{" "}
+                    {statement.revokedAt.toLocaleDateString("en-ZA")}.{" "}
                     {statement.revokedReason}
                   </p>
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Do not accept this document. Contact the provider named on
                     it if the learner believes this is a mistake.
+                  </p>
+                </>
+              ) : (
+                /*
+                  Expiry is not withdrawal, and saying "withdrawn" for a
+                  statement nobody withdrew accuses a learner of something that
+                  did not happen. A Statement of Results stands for two years
+                  from issue - the QCTO's own rule - and then simply runs out.
+                */
+                <>
+                  <h2 className="font-semibold" style={{ color: "var(--danger)" }}>
+                    Statement of Results expired
+                  </h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    A Statement of Results is valid for two years from the date
+                    it was issued. This one was issued on{" "}
+                    {statement.issuedAt?.toLocaleDateString("en-ZA")} and
+                    expired on {statement.validUntil?.toLocaleDateString("en-ZA")}.
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Nothing is wrong with the learner&rsquo;s achievement — it
+                    is the document that has run out. The provider named on it
+                    can issue a current one.
                   </p>
                 </>
               )
@@ -162,7 +199,7 @@ export default async function VerifyPage({
                   so a 1 is a 7 or a J, and an O is a Q or a D.
                 </p>
               </>
-            ) : result.valid ? (
+            ) : result?.valid ? (
               <>
                 <h2
                   className="font-semibold"
