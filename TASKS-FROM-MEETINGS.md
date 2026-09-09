@@ -175,19 +175,108 @@ the Tracker.
 
 ---
 
-## Questions for Heidi before starting 2 and 3
+## Heidi's answers, 9 September
 
-Each of these changes the data model, so they are worth asking before building
-rather than after.
+### 1 · A part qualification is a thing in its own right — settled
 
-1. **Is a learner enrolled on a part qualification, or on the full one and
-   awarded a part?** This decides whether a part qualification is a thing you
-   enrol onto or a view over the parent.
-2. **Does a skills programme derived from a full qualification share the
-   parent's modules, or hold its own copies?** Sharing keeps one criterion
-   ledger; copying allows them to drift apart deliberately.
-3. **Do the 21 and 5 working days run from the enrolment date or from proof of
-   payment?** The SOP starts the process at payment; the notes describe the
-   window as statutory.
-4. **Should the platform derive part qualification codes** from the parent's
-   curriculum code and a numeric suffix, or are they always entered as given?
+> "Each full qual and each part-qual and each skills programme has its own
+> identification number, so the enrolment is per programme ID number per
+> learner."
+
+So a part qualification is enrolled onto directly, not awarded out of the full
+one. Whoever buys a place on a part qualification is enrolled for **that**, and
+the full qualification is not involved. Same for a skills programme.
+
+**What this settles:** `kind` on a qualification, each row enrolable in its own
+right, and the parent link records where a part came from rather than being the
+route a learner travels.
+
+### 2 · Not yet answered — my question was the problem
+
+I asked whether a derived programme "shares the parent's modules or holds its
+own copies", which is an implementation question wearing a business suit. Heidi
+reasonably said she did not understand it. Re-asked in the section below.
+
+**What we can infer meanwhile**, from the meeting notes rather than guessing: a
+part qualification sits "under the same curriculum code" as its parent and
+"does not generate a separate curriculum document". Both point at one shared
+curriculum with the part selecting a subset of its modules, rather than a copy.
+Worth confirming before building on it, because it is the difference between
+one criterion ledger and two.
+
+### 3 · The clock starts at induction — settled, and better than expected
+
+> "From the induction date, which at Curiosa is the start of training… The QCTO
+> uses the enrolment form and rollout schedule as evidence for the induction
+> when it conducts monitoring and evaluation visits."
+
+Not the enrolment date and not proof of payment. **The induction date.**
+
+**What already exists, which makes this cheaper than it looked:**
+
+- `induction` is already a cohort session kind — "the opening session, dated and
+  attended, but outside the lecture count". So the induction date is not a new
+  field to invent; it is the date of that session.
+- The **rollout schedule** already exists: `lib/cohorts.ts` writes which step
+  opens in which week.
+- The folder import already recognises documents named "rollout" and
+  "induction" as their own kinds.
+
+**What is missing:** the deadline itself, and the enrolment form. Heidi names
+both the enrolment form and the rollout schedule as the evidence a QCTO monitor
+asks for, and the platform holds no enrolment form at all.
+
+### 4 · Codes are assigned elsewhere, never derived — settled
+
+> "The curriculum codes are mostly derived from the Organising Framework for
+> Occupations (OFO), but if there is not an associated occupation in the OFO for
+> the skills programme then the QCTO assigns a curriculum code which will always
+> start with 9."
+
+So the platform must never compute a code. It records what the official
+document says. `ofoCode` already exists on a qualification alongside
+`curriculumCode`.
+
+One thing worth using: a curriculum code beginning with 9 means the QCTO
+assigned it because no OFO occupation matched — which is a fact about the
+qualification worth surfacing rather than a rule to enforce.
+
+---
+
+## Still to ask Heidi
+
+### The module question, asked properly this time
+
+Ignore the previous wording. What I need to know is this:
+
+> A learner completes a part qualification — say 118710, which contains some of
+> the Commercial Cleaner modules. Later they enrol for the full qualification,
+> 118709, which contains those same modules.
+>
+> **Do they have to do those modules again, or does the work already count?**
+
+If it counts, the platform holds one set of modules and a part qualification
+selects from it — one criterion ledger, one place a module is ever marked
+complete. If they must repeat it, they are genuinely separate modules that
+happen to share a name.
+
+Everything in the notes points at "it counts", but it decides the shape of the
+data and is cheaper asked than rebuilt.
+
+### And two that follow from her answer about induction
+
+- **Is the induction date always the cohort's induction session**, or can a
+  learner be inducted separately from their cohort — a late joiner, say?
+- **Does the platform need to produce the enrolment form**, or does Curiosa
+  create it outside and file the completed one? The SOP says the provider
+  creates a form per client and sends it to each learner; the platform
+  currently has no such artefact either way.
+
+---
+
+## What I explained back to Heidi
+
+**"Entered as given"** meant: does somebody type the code in from the official
+document, or does the platform work it out? Her answer settles it — typed in,
+because only the QCTO or the OFO can say what it is.
+
