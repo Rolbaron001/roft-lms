@@ -156,6 +156,12 @@ the Tracker.
 - **Design restraint.** Heidi praised the clean layout and colour scheme and
   said she does not want cluttered or gaudy design. Treat that as a standing
   constraint on everything above.
+- **No QCTO or SAQA logo, anywhere, ever.** Heidi raised it on 9 September as a
+  regulatory prohibition, pre-emptively rather than because she had seen one.
+  Checked: none exists. The only images the platform ships are the tenant's own
+  logo, ROFT's, and unused Next.js template files. Naming a regulator in text is
+  a different thing and stays - the platform has to be able to say that a
+  certificate comes from the QCTO.
 - **The management session.** Value chain and statutory process for skills
   programmes, deferred by agreement to its own meeting.
 - Power supply, folder organisation and scheduling — not platform work.

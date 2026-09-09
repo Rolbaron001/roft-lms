@@ -328,6 +328,23 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
   const lines = text
     .split("\n")
     .map((line) => line.replace(/\s+/g, " ").trim())
+    // Bullets come off before anything is matched.
+    //
+    // Every pattern in this file is anchored to the start of a line, and a
+    // skills programme curriculum bullets almost everything: its topic
+    // elements, its internal assessment criteria, its module lists. With the
+    // bullet still attached none of them matched, so the document parsed with
+    // its modules found, every element and criterion missing, and no problem
+    // reported - because nothing in the parser knew to expect any.
+    //
+    // Only characters that never begin a code, and only when followed by
+    // space. A bare hyphen is left alone: a wrapped line can begin with one.
+    .map((line) =>
+      line
+        .replace(/^[•▪●◦‣·*]\s*/, "")
+        .replace(/^[-–—]\s+/, "")
+        .trim(),
+    )
     .filter(
       (line) =>
         line.length > 0 &&
@@ -382,11 +399,22 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
     // which is why a document could yield fifteen complete modules and three
     // sets of credits. Each field is taken from whichever reading has it.
     const richer = weight(parsed) > weight(existing) ? parsed : existing;
+    const thinner = richer === parsed ? existing : parsed;
 
+    // The occurrence that heads the specification wins on credits and level,
+    // and only falls back to the other when it states neither.
+    //
+    // These documents contradict themselves. In 121150 the two summary lists
+    // give KM01 four credits and the header of its actual specification gives
+    // twelve. The specification is the authority - a summary is a table of
+    // contents that somebody forgot to update - so the reading with the
+    // content beneath it is preferred. The fallback still matters, because
+    // 121151 does the opposite: its summary states credits its body header
+    // omits.
     byCode.set(parsed.code, {
       ...richer,
-      credits: existing.credits || parsed.credits,
-      nqfLevel: existing.nqfLevel || parsed.nqfLevel,
+      credits: richer.credits || thinner.credits,
+      nqfLevel: richer.nqfLevel || thinner.nqfLevel,
       // A title truncated by a line break is a shorter title, not a better one.
       title:
         parsed.title.length > existing.title.length
@@ -566,9 +594,12 @@ function parseTopics(
       // is loosest because a module's elements carry its number too — KM01's
       // topics are KM0101 and its elements KT0101, and only the prefix
       // separates them.
-      const attempts = [plan.topic, topicPatternFor(region), ownNumber].filter(
-        (pattern): pattern is RegExp => Boolean(pattern),
-      );
+      const attempts = [
+        PREFIXED_TOPIC,
+        plan.topic,
+        topicPatternFor(region),
+        ownNumber,
+      ].filter((pattern): pattern is RegExp => Boolean(pattern));
 
       for (const pattern of attempts) {
         const found = collectTopics(region, component, pattern, moduleNumber);
@@ -586,6 +617,78 @@ function parseTopics(
 }
 
 /**
+ * One entry per topic, where a document names the same topic twice.
+ *
+ * A skills programme curriculum lists its topics once as a summary under the
+ * module's purpose and again as the numbered heading that carries the content.
+ * Both match, so the same topic arrives twice: once empty, once full. Left
+ * alone that doubles the topic count and puts the empty copy first, which is
+ * the one every later reader would have used.
+ *
+ * The fuller copy wins rather than the later one. A document that happens to
+ * put its detail first is then read correctly too, and "keep whichever one
+ * actually has the content" needs no assumption about document order.
+ */
+function mergeRepeatedTopics(topics: ParsedTopic[]): ParsedTopic[] {
+  const byCode = new Map<string, ParsedTopic>();
+
+  for (const topic of topics) {
+    const existing = byCode.get(topic.code);
+    if (!existing) {
+      byCode.set(topic.code, topic);
+      continue;
+    }
+
+    const weigh = (entry: ParsedTopic) =>
+      entry.elements.length + entry.criteria.length;
+
+    if (weigh(topic) > weigh(existing)) {
+      // Keep the title and weight already read, where the fuller copy lacks
+      // them - a numbered heading sometimes wraps and loses its percentage.
+      byCode.set(topic.code, {
+        ...topic,
+        title: topic.title || existing.title,
+        weightPercent: topic.weightPercent ?? existing.weightPercent,
+      });
+    } else if (weigh(topic) === weigh(existing)) {
+      byCode.set(topic.code, {
+        ...existing,
+        title: existing.title || topic.title,
+        weightPercent: existing.weightPercent ?? topic.weightPercent,
+      });
+    }
+  }
+
+  return [...byCode.values()];
+}
+
+/**
+ * A topic that carries its module's code in front of its own.
+ *
+ * Skills programme curriculum documents write topics as "KM-05-KT01: Title
+ * (25%)" rather than the bare "KT0101" a full qualification's curriculum uses.
+ * The bare form was the only one recognised, so a skills programme parsed with
+ * its modules found and every topic, element and criterion missing - and
+ * reported no problem, because nothing in the parser knew to expect any.
+ *
+ * Tried before the others because it is the most specific: a code that names
+ * its own module cannot be mistaken for one belonging to another.
+ *
+ * The leading number is optional because the same topic appears twice in these
+ * documents - once in a bulleted summary and again as a numbered heading like
+ * "1.2.1. KM-05-KT01: ...". Both are matched and the duplicate is dropped
+ * downstream by code.
+ *
+ * The percentage is optional too, and that is not a relaxation for its own
+ * sake. A knowledge topic carries one - "KM-05-KT01: ... (25%)" - and a
+ * practical or work experience topic does not: "PM-06-PS01: Prepare for
+ * assessment". Requiring it read every practical module's *activities* as its
+ * topics instead, which produced thirteen topics where the document has four.
+ */
+const PREFIXED_TOPIC =
+  /^(?:\d+(?:\.\d+)*\.?\s+)?([A-Z]{2}-?\d{2}-[A-Z]{2}\d{2})[:.]?\s+(.+?)(?:\s*\((\d{1,3})\s*%\))?\s*$/;
+
+/**
  * Whether a topic code can belong to this module.
  *
  * A four-digit code carries its module's number in the middle two: KM0501 and
@@ -595,6 +698,12 @@ function parseTopics(
  * read into module 05 on the grounds that nothing better turned up.
  */
 function belongsHere(code: string, moduleNumber: string): boolean {
+  // "KM-05-KT01" says which module it belongs to in front of its own number,
+  // and says it unambiguously. Checked first, because the four-digit rule
+  // below would read the "05" out of the wrong half of it.
+  const prefixed = /^[A-Z]{2}-?(\d{2})-[A-Z]{2}\d{2}$/.exec(code);
+  if (prefixed) return prefixed[1] === moduleNumber;
+
   const parts = /^[A-Z]{2}(\d{2})\d{2}$/.exec(code);
   return !parts || parts[1] === moduleNumber;
 }
@@ -716,7 +825,7 @@ function collectTopics(
     if (last) last.description = `${last.description} ${line}`.trim();
   }
 
-  return topics;
+  return mergeRepeatedTopics(topics);
 }
 
 /** What a person should look at before accepting any of this. */

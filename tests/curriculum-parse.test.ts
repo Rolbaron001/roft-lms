@@ -247,4 +247,108 @@ describe("parseCurriculumText", () => {
       );
     });
   });
+  /**
+   * A skills programme curriculum, which is a third house style again.
+   *
+   * Read against SP220320 Assessment Practitioner, a real QCTO document. It
+   * differs from both qualification curricula in three ways, and each one used
+   * to lose content silently:
+   *
+   *   Topics carry their module's code - "KM-05-KT01" - where a qualification
+   *   curriculum writes the bare "KT0101".
+   *
+   *   Only knowledge topics carry a percentage. Practical and work experience
+   *   topics have none, so requiring one read a module's activities as its
+   *   topics instead.
+   *
+   *   Almost everything is bulleted, and every pattern in the parser is
+   *   anchored to the start of a line.
+   *
+   * Before this was handled the document parsed with its three modules found,
+   * every topic element and every criterion missing, and no problem reported.
+   * That is the failure worth guarding against: not a refusal, but a confident
+   * and empty answer.
+   */
+  describe("SP220320, a skills programme", () => {
+    let parsed: ParsedCurriculum;
+
+    beforeAll(async () => {
+      parsed = await parseFixture("sp220320-curriculum.pdf");
+    });
+
+    /**
+     * The QCTO assigns a curriculum code beginning with 9 where no occupation
+     * in the Organising Framework matches the skills programme.
+     */
+    it("reads the curriculum code the QCTO assigned", () => {
+      expect(parsed.qualification?.curriculumCode).toBe("900096-000-00-00");
+    });
+
+    it("finds all three modules, with their components and credits", () => {
+      expect(parsed.modules).toHaveLength(3);
+
+      expect(
+        parsed.modules.find((m) => m.component === "knowledge")?.credits,
+      ).toBe(4);
+      expect(
+        parsed.modules.find((m) => m.component === "practical")?.credits,
+      ).toBe(8);
+      expect(
+        parsed.modules.find((m) => m.component === "workplace")?.credits,
+      ).toBe(8);
+    });
+
+    it("reads the module-prefixed topics of the knowledge module", () => {
+      const knowledge = parsed.modules.find((m) => m.component === "knowledge");
+
+      expect(knowledge?.topics.map((t) => t.code)).toEqual([
+        "KM-05-KT01",
+        "KM-05-KT02",
+        "KM-05-KT03",
+        "KM-05-KT04",
+      ]);
+      expect(knowledge?.topics.every((t) => t.weightPercent === 25)).toBe(true);
+    });
+
+    /**
+     * The topic is named twice - once in a bulleted summary under the module's
+     * purpose, once as the numbered heading that carries the content. Both
+     * match, and the copy with the content is the one kept.
+     */
+    it("keeps one entry per topic, and keeps the one with the content", () => {
+      const first = parsed.modules.find((m) => m.component === "knowledge")
+        ?.topics[0];
+
+      expect(first?.title).toBe("Assessment practices, methods and concepts");
+      expect(first?.elements.length).toBeGreaterThan(0);
+    });
+
+    it("reads the elements and criteria that used to be lost to bullets", () => {
+      const knowledge = parsed.modules.find((m) => m.component === "knowledge");
+
+      // Nineteen topic elements and eight criteria are in the document.
+      expect(
+        knowledge?.topics.reduce((n, t) => n + t.elements.length, 0),
+      ).toBe(19);
+      expect(knowledge?.topics.reduce((n, t) => n + t.criteria.length, 0)).toBe(
+        8,
+      );
+    });
+
+    /**
+     * A practical topic has no percentage. Requiring one read PA0101 and its
+     * siblings - the activities inside a skill - as the skills themselves,
+     * turning four topics into thirteen.
+     */
+    it("reads practical topics that carry no percentage", () => {
+      const practical = parsed.modules.find((m) => m.component === "practical");
+
+      expect(practical?.topics.map((t) => t.code)).toEqual([
+        "PM-06-PS01",
+        "PM-06-PS02",
+        "PM-06-PS03",
+        "PM-06-PS04",
+      ]);
+    });
+  });
 });
