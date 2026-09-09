@@ -134,6 +134,23 @@ export const organisations = pgTable(
       { label: string | null; items: string[] }[]
     >(),
 
+    /**
+     * What this provider calls things, where it differs from the default.
+     *
+     * Only the words the platform owns, or that the sector uses without any
+     * body owning them - see lib/terms.ts. A term a regulator defines is not
+     * in the registry and cannot be stored here, because a provider who
+     * renamed "qualification" would have broken their own QCTO submission
+     * without the platform saying a word.
+     *
+     * Stored as overrides rather than a full vocabulary, so a term added to
+     * the platform later reaches a provider who customised theirs in March
+     * instead of arriving blank. Same reasoning as `navigation` above.
+     */
+    terminology: jsonb("terminology").$type<
+      Record<string, { one: string; many: string }>
+    >(),
+
     namingConvention: jsonb("naming_convention").$type<{
       pattern: string;
       artefactCodes: Record<string, string>;

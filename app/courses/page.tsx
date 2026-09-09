@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCourses } from "@/lib/authoring";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { vocabulary } from "@/lib/terms";
 
 const COMPONENT_LABELS: Record<string, string> = {
   knowledge: "Knowledge",
@@ -12,6 +13,7 @@ const COMPONENT_LABELS: Record<string, string> = {
 
 export default async function CoursesPage() {
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("course:read");
   const courses = await listCourses(session);
 
@@ -20,7 +22,7 @@ export default async function CoursesPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Courses</h1>
+        <h1 className="text-xl font-semibold">{words.many("course")}</h1>
         {canAuthor ? (
           <Link
             href="/courses/new"

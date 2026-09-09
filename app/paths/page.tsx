@@ -3,9 +3,11 @@ import { requirePermission, requireTenant } from "@/lib/request";
 import { listLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { NewPathForm } from "./new-path-form";
+import { vocabulary } from "@/lib/terms";
 
 export default async function PathsPage() {
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("course:read");
   const paths = await listLearningPaths(session);
 
@@ -14,7 +16,7 @@ export default async function PathsPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Programmes</h1>
+        <h1 className="text-xl font-semibold">{words.many("programme")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
           Several courses chained into a sequence — a new starter programme, or
           a full competency framework roll-out. A learner is given the next

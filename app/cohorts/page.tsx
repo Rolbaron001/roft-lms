@@ -8,6 +8,7 @@ import { NewCohort } from "./new-cohort";
 import { RosterForm } from "@/app/people/roster-form";
 import { Card } from "@/components/ui";
 import { extensionState } from "@/lib/extensions";
+import { vocabulary } from "@/lib/terms";
 
 /**
  * The cohorts a provider is running.
@@ -17,6 +18,7 @@ import { extensionState } from "@/lib/extensions";
  */
 export default async function CohortsPage() {
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("enrolment:read_all");
 
   // A cohort usually arrives as a spreadsheet of names, so the same import that
@@ -34,7 +36,7 @@ export default async function CohortsPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Cohorts</h1>
+        <h1 className="text-xl font-semibold">{words.many("cohort")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
           A group working through a programme together, on one schedule. Every
           deadline is held as a number of days from the start date, so moving an

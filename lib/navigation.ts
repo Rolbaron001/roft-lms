@@ -1,4 +1,5 @@
 import type { Permission } from "./rbac";
+import type { TermKey, Vocabulary } from "./terms";
 
 /**
  * The catalogue of pages, and how they are arranged by default.
@@ -12,7 +13,16 @@ import type { Permission } from "./rbac";
  */
 export type NavItem = {
   href: string;
+  /** The standard word. Used when the provider has not renamed the term. */
   label: string;
+  /**
+   * The renameable term this item is named after, where it is named after one.
+   *
+   * Only the plural is used here, because every one of these is a list. An
+   * item with no term - Home, Mail, Settings - is not something a provider
+   * renames, so it keeps its label.
+   */
+  term?: TermKey;
   permission?: Permission;
   /** Shown when the person holds any one of these. */
   anyPermission?: Permission[];
@@ -36,8 +46,8 @@ export const NAV: NavSection[] = [
   {
     label: "Learning",
     items: [
-      { href: "/courses", label: "Courses", permission: "course:read" },
-      { href: "/paths", label: "Programmes", permission: "course:author" },
+      { href: "/courses", label: "Courses", term: "course", permission: "course:read" },
+      { href: "/paths", label: "Programmes", term: "programme", permission: "course:author" },
       {
         href: "/qualifications",
         label: "Qualifications",
@@ -62,7 +72,7 @@ export const NAV: NavSection[] = [
     label: "People",
     items: [
       { href: "/people", label: "People", permission: "user:invite" },
-      { href: "/cohorts", label: "Cohorts", permission: "enrolment:read_all" },
+      { href: "/cohorts", label: "Cohorts", term: "cohort", permission: "enrolment:read_all" },
       { href: "/tracker", label: "Tracker", permission: "enrolment:read_all" },
       // Reached by learners, coaches and staff alike, so it is gated on any
       // one of the three permissions rather than a single role's.
@@ -169,12 +179,27 @@ export const NAV: NavSection[] = [
  */
 export function arrangeNavigation(
   saved: { label: string | null; items: string[] }[] | null,
+  /**
+   * The provider's own words. Applied to item labels here rather than at each
+   * screen, so the bar and the pages cannot disagree about what a thing is
+   * called.
+   */
+  words?: Vocabulary,
 ): NavSection[] {
-  if (!saved || saved.length === 0) return NAV;
+  const named = words
+    ? NAV.map((section) => ({
+        label: section.label,
+        items: section.items.map((item) =>
+          item.term ? { ...item, label: words.many(item.term) } : item,
+        ),
+      }))
+    : NAV;
+
+  if (!saved || saved.length === 0) return named;
 
   const known = new Map<string, NavItem>();
   const defaultHeading = new Map<string, string | null>();
-  for (const section of NAV) {
+  for (const section of named) {
     for (const item of section.items) {
       known.set(item.href, item);
       defaultHeading.set(item.href, section.label);

@@ -11,6 +11,8 @@ import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
 import { MailTest } from "./mail-test";
+import { TerminologyForm } from "./terminology-form";
+import { TERMS, TERM_KEYS } from "@/lib/terms";
 import { mailIsConfigured } from "@/lib/mail";
 import {
   extensionOffered,
@@ -98,6 +100,27 @@ export default async function SettingsPage() {
             description="Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived."
           >
             <MailTest configured={mailIsConfigured()} />
+          </Card>
+        </div>
+      ) : null}
+
+      {canBrand ? (
+        <div className="mt-6">
+          <Card
+            title="What you call things"
+            description="Use your own vocabulary. A provider outside South Africa may not say programme, and a provider inside it may not say course — the platform should not insist."
+          >
+            <TerminologyForm
+              terms={TERM_KEYS.map((key) => ({
+                key,
+                defaultOne: TERMS[key].one,
+                defaultMany: TERMS[key].many,
+                note: TERMS[key].note,
+                definedBy: TERMS[key].definedBy,
+                currentOne: tenant.terminology?.[key]?.one ?? "",
+                currentMany: tenant.terminology?.[key]?.many ?? "",
+              }))}
+            />
           </Card>
         </div>
       ) : null}

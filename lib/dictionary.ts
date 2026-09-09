@@ -75,6 +75,23 @@ export const DEFINED_BY_MEANING: Record<DefinedBy, string> = {
  * Case-insensitive lookup by term or abbreviation, so both "EISA" and its
  * full name find the same entry.
  */
+/**
+ * Every term a regulator owns the meaning of.
+ *
+ * Used to stop a provider renaming one of their own words to a regulator's.
+ * Calling a course a "Qualification" is not a translation, it is a claim, and
+ * the platform would then print it on a screen a learner reads.
+ *
+ * Read from the dictionary rather than kept as a second list, so a term
+ * reclassified in a later release is honoured here without anybody
+ * remembering to come and change this too.
+ */
+export function authorityTerms(): string[] {
+  return getDictionary()
+    .entries.filter((entry) => entry.definedBy === "authority")
+    .map((entry) => entry.term);
+}
+
 export function lookup(query: string): DictionaryEntry | undefined {
   const needle = query.trim().toLowerCase();
   if (!needle) return undefined;

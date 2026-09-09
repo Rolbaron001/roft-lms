@@ -1,6 +1,7 @@
 import { eq, or } from "drizzle-orm";
 import { withPlatformScope } from "@/db/client";
 import { organisations } from "@/db/schema";
+import type { TermOverrides } from "./terms";
 
 /**
  * Working out which client a request belongs to.
@@ -32,6 +33,8 @@ export type TenantIdentity = {
   timezone: string;
   /** How this provider arranged their menu, or null for the built-in one. */
   navigation: { label: string | null; items: string[] }[] | null;
+  /** What this provider calls things, where it differs from the default. */
+  terminology: TermOverrides | null;
   status: (typeof organisations.$inferSelect)["status"];
 };
 
@@ -172,6 +175,7 @@ export async function resolveTenant(
           accentColour: organisations.accentColour,
           timezone: organisations.timezone,
           navigation: organisations.navigation,
+          terminology: organisations.terminology,
           status: organisations.status,
         })
         .from(organisations)

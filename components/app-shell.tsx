@@ -4,6 +4,7 @@ import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
 import { arrangeNavigation } from "@/lib/navigation";
+import { vocabulary } from "@/lib/terms";
 import { TenantLogo } from "./tenant-logo";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -36,18 +37,21 @@ export async function AppShell({
   // Filtered by permission rather than by role, so a link never appears for a
   // page the person would be refused. A section left with nothing in it is
   // dropped by the menu rather than shown empty.
-  const sections = arrangeNavigation(tenant.navigation ?? null).map((section) => ({
-    label: section.label,
-    items: section.items
-      .filter((item) =>
-        item.permission
-          ? session.permissions.includes(item.permission)
-          : (item.anyPermission ?? []).some((permission) =>
-              session.permissions.includes(permission),
-            ),
-      )
-      .map((item) => ({ href: item.href, label: item.label })),
-  })).filter((section) => section.items.length > 0);
+  const words = vocabulary(tenant.terminology);
+  const sections = arrangeNavigation(tenant.navigation ?? null, words)
+    .map((section) => ({
+      label: section.label,
+      items: section.items
+        .filter((item) =>
+          item.permission
+            ? session.permissions.includes(item.permission)
+            : (item.anyPermission ?? []).some((permission) =>
+                session.permissions.includes(permission),
+              ),
+        )
+        .map((item) => ({ href: item.href, label: item.label })),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <div
