@@ -1,5 +1,5 @@
 /**
- * Renames that have to happen before the schema is pushed.
+ * Renames and index reshapes that have to happen before the schema is pushed.
  *
  * `drizzle-kit push` compares the schema against the database and has no way
  * to know that a column which disappeared and one that appeared are the same
@@ -52,6 +52,41 @@ const RENAMES: Rename[] = [
     from: "enabled",
     to: "available",
     why: "Enabled used to mean switched on. Switched on is now per sitting and lives on the session; this column is the person's standing permission for themselves, which is a different thing and had to stop sharing a name with it.",
+  },
+];
+
+/**
+ * Index definitions `drizzle-kit push` will not change on its own.
+ *
+ * Push compares indexes by name. An index that already exists under the right
+ * name is left alone even when its definition has changed underneath it, which
+ * was proved here rather than assumed: adding `where kind = 'full'` to the
+ * curriculum-code index in the schema and running push produced no complaint
+ * and no change, and the database kept the unconditional unique index.
+ *
+ * That particular one is not cosmetic. A part qualification carries its
+ * parent's curriculum code - 118710 and 118709 share one - so an unconditional
+ * unique index on (organisation, curriculum code) makes it impossible to
+ * record the second one. Dropping and recreating by hand is the only way it
+ * lands, so it is done here where it runs on every deploy.
+ */
+type Reshape = {
+  name: string;
+  table: string;
+  /** Recognises the definition we want, so a matching index is left alone. */
+  wanted: RegExp;
+  create: string;
+  why: string;
+};
+
+const RESHAPES: Reshape[] = [
+  {
+    name: "qualifications_org_curriculum_code_idx",
+    table: "qualifications",
+    wanted: /where \(kind = 'full'/i,
+    create:
+      "create unique index qualifications_org_curriculum_code_idx on public.qualifications (organisation_id, curriculum_code) where kind = 'full'",
+    why: "A part qualification shares its parent's curriculum code, so only full qualifications can be unique on it.",
   },
 ];
 
@@ -120,6 +155,43 @@ async function main() {
         ? "Nothing to rename; the schema is already current."
         : `${applied} rename${applied === 1 ? "" : "s"} applied.`,
     );
+
+    let reshaped = 0;
+
+    for (const reshape of RESHAPES) {
+      const [existing] = await sql<{ indexdef: string }[]>`
+        select indexdef from pg_indexes
+        where schemaname = 'public' and indexname = ${reshape.name}
+      `;
+
+      const [table] = await sql<{ exists: boolean }[]>`
+        select exists (
+          select 1 from information_schema.tables
+          where table_schema = 'public' and table_name = ${reshape.table}
+        ) as exists
+      `;
+
+      if (!table.exists) {
+        // A fresh database. The push creates the table and its indexes.
+        continue;
+      }
+
+      if (existing && reshape.wanted.test(existing.indexdef)) {
+        continue;
+      }
+
+      console.log(`Reshaping index ${reshape.name}
+  ${reshape.why}`);
+      await sql.unsafe(`drop index if exists "${reshape.name}"`);
+      await sql.unsafe(reshape.create);
+      reshaped += 1;
+    }
+
+    if (reshaped > 0) {
+      console.log(
+        `${reshaped} index${reshaped === 1 ? "" : "es"} reshaped.`,
+      );
+    }
   } finally {
     await sql.end({ timeout: 5 });
   }

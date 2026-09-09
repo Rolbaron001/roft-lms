@@ -14,6 +14,7 @@ import {
   lessons,
   exitLevelOutcomeCriteria,
   exitLevelOutcomes,
+  qualificationModules,
   qualifications,
   studyUnitModules,
   studyUnits,
@@ -61,6 +62,23 @@ export class AuthoringError extends Error {
 
 export const qualificationInput = z.object({
   title: z.string().trim().min(3).max(300),
+  /**
+   * What this is on the sub-framework: a full qualification, a part
+   * qualification, or an occupational skills programme.
+   *
+   * Read from the SAQA document where one is imported - it states the type
+   * outright - and chosen on the form otherwise. Defaults to full, which is
+   * what every qualification recorded before this field existed is.
+   */
+  kind: z.enum(["full", "part", "skills_programme"]).optional(),
+  /**
+   * The full qualification a part is drawn from.
+   *
+   * Only meaningful for a part or a harvested skills programme. A part carries
+   * no curriculum of its own; this is where its modules, criteria and study
+   * units are found.
+   */
+  parentQualificationId: z.string().uuid().optional(),
   description: z.string().trim().max(4000).optional(),
   saqaId: z.string().trim().max(50).optional(),
   curriculumCode: z.string().trim().max(50).optional(),
@@ -99,12 +117,47 @@ export async function createQualification(
   assertSessionCan(session, "qualification:manage");
   const parsed = qualificationInput.parse(input);
 
+  const kind = parsed.kind ?? "full";
+
+  // A full qualification has no parent, whatever the form sent. Recording one
+  // would make its curriculum ambiguous: two places to look, and a readiness
+  // check that silently reads the wrong one.
+  const parentQualificationId =
+    kind === "full" ? null : (parsed.parentQualificationId ?? null);
+
+  if (parentQualificationId) {
+    const [parent] = await withTenant(session.organisationId, (tx) =>
+      tx
+        .select({ kind: qualifications.kind })
+        .from(qualifications)
+        .where(eq(qualifications.id, parentQualificationId)),
+    );
+
+    if (!parent) {
+      throw new AuthoringError(
+        "That parent qualification does not exist.",
+        "not_found",
+      );
+    }
+
+    // One level only. A part of a part would have to resolve its curriculum by
+    // walking a chain, and nothing in the sub-framework produces one.
+    if (parent.kind !== "full") {
+      throw new AuthoringError(
+        "A part qualification is drawn from a full qualification, not from another part.",
+        "invalid_input",
+      );
+    }
+  }
+
   return withTenant(session.organisationId, async (tx) => {
     const [created] = await tx
       .insert(qualifications)
       .values({
         organisationId: session.organisationId,
         title: parsed.title,
+        kind,
+        parentQualificationId,
         description: parsed.description ?? null,
         saqaId: parsed.saqaId ?? null,
         curriculumCode: parsed.curriculumCode ?? null,
@@ -146,13 +199,30 @@ export async function listQualifications(session: AuthenticatedSession) {
         nqfLevel: qualifications.nqfLevel,
         totalCredits: qualifications.totalCredits,
         status: qualifications.status,
+        kind: qualifications.kind,
+        parentQualificationId: qualifications.parentQualificationId,
         // Correlated subqueries are written as literal SQL with explicit
         // aliases. Interpolating column references into a raw fragment emits
         // them unqualified, which Postgres rejects as ambiguous once two
         // tables in scope share a column name.
+        /**
+         * How many modules this is assessed against.
+         *
+         * Its own curriculum for a full qualification; its selected subset for
+         * a part, which draws from its parent's curriculum and would otherwise
+         * report zero modules for ever.
+         */
         moduleCount: sql<number>`(
-          select count(*)::int from curriculum_modules cm
-          where cm.qualification_id = qualifications.id
+          case when qualifications.parent_qualification_id is null
+            then (
+              select count(*)::int from curriculum_modules cm
+              where cm.qualification_id = qualifications.id
+            )
+            else (
+              select count(*)::int from qualification_modules qm
+              where qm.qualification_id = qualifications.id
+            )
+          end
         )`,
       })
       .from(qualifications)
@@ -524,29 +594,61 @@ export async function addAssessmentCriterion(
   });
 }
 
+/**
+ * The modules a qualification is assessed against.
+ *
+ * Part-aware, because every caller means the same thing by it: the modules
+ * this qualification covers. For a full qualification that is its own
+ * curriculum; for a part it is the subset it selects from its parent's, since
+ * a part has no curriculum of its own to list.
+ *
+ * The alternative - leaving this reading the curriculum directly and fixing
+ * each caller - would have every screen show a part as having no modules until
+ * somebody remembered it, which is the sort of omission nobody notices until a
+ * learner is looking at an empty page.
+ */
 export async function listCurriculumModules(
   session: AuthenticatedSession,
   qualificationId: string,
 ) {
   assertSessionCan(session, "course:read");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
-      .select({
-        id: curriculumModules.id,
-        component: curriculumModules.component,
-        code: curriculumModules.code,
-        title: curriculumModules.title,
-        credits: curriculumModules.credits,
-        criterionCount: sql<number>`(
-          select count(*)::int from assessment_criteria ac
-          where ac.curriculum_module_id = curriculum_modules.id
-        )`,
-      })
-      .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId))
-      .orderBy(asc(curriculumModules.sortOrder)),
-  );
+  const columns = {
+    id: curriculumModules.id,
+    component: curriculumModules.component,
+    code: curriculumModules.code,
+    title: curriculumModules.title,
+    credits: curriculumModules.credits,
+    criterionCount: sql<number>`(
+      select count(*)::int from assessment_criteria ac
+      where ac.curriculum_module_id = curriculum_modules.id
+    )`,
+  };
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [entry] = await tx
+      .select({ parentId: qualifications.parentQualificationId })
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+
+    if (!entry?.parentId) {
+      return tx
+        .select(columns)
+        .from(curriculumModules)
+        .where(eq(curriculumModules.qualificationId, qualificationId))
+        .orderBy(asc(curriculumModules.sortOrder));
+    }
+
+    return tx
+      .select(columns)
+      .from(qualificationModules)
+      .innerJoin(
+        curriculumModules,
+        eq(curriculumModules.id, qualificationModules.curriculumModuleId),
+      )
+      .where(eq(qualificationModules.qualificationId, qualificationId))
+      .orderBy(asc(curriculumModules.sortOrder));
+  });
 }
 
 // ---------------------------------------------------------------------------

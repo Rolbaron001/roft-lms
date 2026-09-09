@@ -202,7 +202,39 @@ export function FromDocument() {
               .
             </p>
 
-            {found.existing ? (
+            {/*
+              A part qualification matching an existing code is the ordinary
+              case rather than a clash: its curriculum document is the parent's,
+              byte for byte, and the match is how the parent is found at all.
+              The refusal below is for a full qualification being imported twice.
+            */}
+            {found.part ? (
+              <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm">
+                <p>
+                  Its document says this is a{" "}
+                  <strong>
+                    {found.details.kind === "part"
+                      ? "part qualification"
+                      : "skills programme"}
+                  </strong>{" "}
+                  drawn from <strong>{found.part.parent.title}</strong>. Nothing
+                  will be copied: it shares that qualification&rsquo;s
+                  curriculum, and takes{" "}
+                  {found.part.modules.filter((entry) => entry.found).length} of
+                  its modules.
+                </p>
+                {found.part.modules.length > 0 ? (
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {found.part.modules
+                      .map(
+                        (entry) =>
+                          `${entry.code}${entry.found ? "" : " (not found)"}`,
+                      )
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : found.existing ? (
               <p
                 role="alert"
                 className="mt-3 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2 text-sm text-[var(--danger)]"
@@ -372,16 +404,22 @@ export function FromDocument() {
             <button
               type="submit"
               formAction={create}
-              disabled={createPending || Boolean(found.existing)}
+              disabled={
+                createPending || Boolean(found.existing && !found.part)
+              }
               className="mt-5 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               style={{ background: "var(--brand-primary)" }}
             >
-              {createPending ? "Creating…" : "Create it, with this curriculum"}
+              {createPending
+                ? "Creating…"
+                : found.part
+                  ? "Create it, drawing on its parent's curriculum"
+                  : "Create it, with this curriculum"}
             </button>
             <p className="mt-2 text-xs text-[var(--muted)]">
-              Every document you supplied is filed against the qualification, so
-              a moderator can open the source of any criterion — and so the
-              readiness gate is satisfied before material is authored.
+              {found.part
+                ? "Its own Qualification Document is filed against it. The curriculum document and the assessment specification are not: they belong to the qualification it comes from, and are already filed there."
+                : "Every document you supplied is filed against the qualification, so a moderator can open the source of any criterion — and so the readiness gate is satisfied before material is authored."}
             </p>
           </div>
         ) : null}

@@ -44,8 +44,16 @@ export async function createQualificationAction(
   const session = await requireSession();
 
   try {
+    const kind = String(formData.get("kind") ?? "full");
+    const parent = String(formData.get("parentQualificationId") ?? "");
+
     await createQualification(session, {
       title: String(formData.get("title") ?? ""),
+      kind:
+        kind === "part" || kind === "skills_programme" ? kind : "full",
+      // Blank means none, which is right for a full qualification and for a
+      // skills programme that stands on its own rather than being harvested.
+      parentQualificationId: parent || undefined,
       curriculumCode: String(formData.get("curriculumCode") ?? "") || undefined,
       saqaId: String(formData.get("saqaId") ?? "") || undefined,
       nqfLevel: formData.get("nqfLevel")

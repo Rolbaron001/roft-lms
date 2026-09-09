@@ -35,12 +35,24 @@ type Qualification = {
   saqaId: string | null;
   nqfLevel: number | null;
   totalCredits: number | null;
+  kind: "full" | "part" | "skills_programme";
+  parentQualificationId: string | null;
   modules: Module[];
+};
+
+const KIND_LABELS: Record<Qualification["kind"], string> = {
+  full: "Full qualification",
+  part: "Part qualification",
+  skills_programme: "Skills programme",
 };
 
 /** What is inside, said on the row itself so it need not be opened to find out. */
 function summarise(qualification: Qualification): string {
-  if (qualification.modules.length === 0) return "No modules yet";
+  if (qualification.modules.length === 0) {
+    return qualification.parentQualificationId
+      ? "No modules chosen yet"
+      : "No modules yet";
+  }
 
   const criteria = qualification.modules.reduce(
     (total, module) => total + module.criterionCount,
@@ -99,6 +111,32 @@ export function QualificationsManager({
   // default, four qualifications bury the list of qualifications itself.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
+  // Held in state because the rest of the form reads it: the parent picker is
+  // meaningless for a full qualification and required for a part, and the
+  // curriculum-code hint says opposite things in the two cases.
+  const [newKind, setNewKind] = useState<Qualification["kind"]>("full");
+
+  /**
+   * A part shows what it came out of, and a full qualification shows what came
+   * out of it. Both directions, because the two questions get asked from
+   * opposite ends: "what is this?" from the part, and "what else can a learner
+   * do with this?" from the full one.
+   */
+  function parentOf(qualification: Qualification): string | null {
+    if (!qualification.parentQualificationId) return null;
+    return (
+      qualifications.find(
+        (row) => row.id === qualification.parentQualificationId,
+      )?.title ?? null
+    );
+  }
+
+  function partsOfRow(qualification: Qualification) {
+    return qualifications.filter(
+      (row) => row.parentQualificationId === qualification.id,
+    );
+  }
+
   function toggle(id: string) {
     setExpanded((open) => {
       const next = new Set(open);
@@ -124,6 +162,47 @@ export function QualificationsManager({
                   {qualification.title}
                 </Link>
               </h2>
+              {qualification.kind !== "full" ? (
+                <p className="mt-1 text-xs">
+                  <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[var(--muted)]">
+                    {KIND_LABELS[qualification.kind]}
+                  </span>{" "}
+                  {parentOf(qualification) ? (
+                    <span className="text-[var(--muted)]">
+                      drawn from{" "}
+                      <Link
+                        href={`/qualifications/${qualification.parentQualificationId}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {parentOf(qualification)}
+                      </Link>
+                      , whose curriculum it shares
+                    </span>
+                  ) : (
+                    <span className="text-[var(--muted)]">
+                      standing on its own, with its own curriculum
+                    </span>
+                  )}
+                </p>
+              ) : null}
+
+              {partsOfRow(qualification).length > 0 ? (
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Parts drawn from this:{" "}
+                  {partsOfRow(qualification).map((part, index) => (
+                    <span key={part.id}>
+                      {index > 0 ? ", " : ""}
+                      <Link
+                        href={`/qualifications/${part.id}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {part.title}
+                      </Link>
+                    </span>
+                  ))}
+                </p>
+              ) : null}
+
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {[
                   qualification.curriculumCode
@@ -183,7 +262,8 @@ export function QualificationsManager({
                       </span>
                     </div>
 
-                    {openCriterionFor === module.id ? (
+                    {qualification.parentQualificationId ? null : openCriterionFor ===
+                      module.id ? (
                       <form action={criterionAction} className="mt-3 space-y-2">
                         <input
                           type="hidden"
@@ -235,7 +315,9 @@ export function QualificationsManager({
               </ul>
             ) : (
               <p className="mt-4 text-sm text-[var(--muted)]">
-                No curriculum modules yet.
+                {qualification.parentQualificationId
+                  ? "No modules chosen from the parent's curriculum yet."
+                  : "No curriculum modules yet."}
               </p>
             )}
 
@@ -244,7 +326,21 @@ export function QualificationsManager({
               <Message state={moduleState} />
             </div>
 
-            {openModuleFor === qualification.id ? (
+            {qualification.parentQualificationId ? (
+              <p className="mt-3 text-sm">
+                <Link
+                  href={`/qualifications/${qualification.id}/modules`}
+                  className="font-medium text-[var(--brand-accent)] hover:underline"
+                >
+                  Choose which of the parent&rsquo;s modules this takes
+                </Link>
+                <span className="mt-1 block text-xs text-[var(--muted)]">
+                  Modules are not added here. This draws from its parent&rsquo;s
+                  curriculum, so a learner&rsquo;s work against a module counts
+                  once wherever they met it.
+                </span>
+              </p>
+            ) : openModuleFor === qualification.id ? (
               <form action={moduleAction} className="mt-4 space-y-2">
                 <input
                   type="hidden"
@@ -323,11 +419,72 @@ export function QualificationsManager({
           </label>
 
           <label className="block space-y-1.5">
+            <span className="block text-sm font-medium">What this is</span>
+            <select
+              name="kind"
+              value={newKind}
+              onChange={(event) =>
+                setNewKind(event.target.value as Qualification["kind"])
+              }
+              className={inputClass}
+            >
+              <option value="full">Full qualification</option>
+              <option value="part">Part qualification</option>
+              <option value="skills_programme">
+                Occupational skills programme
+              </option>
+            </select>
+            <span className="block text-xs text-[var(--muted)]">
+              The SAQA document says which. Look for{" "}
+              <em>Qualification Type</em> on its first page.
+            </span>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="block text-sm font-medium">
+              Drawn from{" "}
+              <span className="font-normal text-[var(--muted)]">
+                {newKind === "part" ? "" : "(optional)"}
+              </span>
+            </span>
+            <select
+              name="parentQualificationId"
+              disabled={newKind === "full"}
+              required={newKind === "part"}
+              defaultValue=""
+              className={`${inputClass} disabled:opacity-50`}
+            >
+              <option value="">
+                {newKind === "full"
+                  ? "Not applicable"
+                  : "Nothing — it stands on its own"}
+              </option>
+              {qualifications
+                .filter((row) => row.kind === "full")
+                .map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.title}
+                  </option>
+                ))}
+            </select>
+            <span className="block text-xs text-[var(--muted)]">
+              {newKind === "full"
+                ? "A full qualification carries its own curriculum."
+                : "It shares that qualification's curriculum and takes a subset of its modules — you choose which, once it exists."}
+            </span>
+          </label>
+
+          <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
               Curriculum code{" "}
               <span className="font-normal text-[var(--muted)]">(optional)</span>
             </span>
             <input name="curriculumCode" className={inputClass} />
+            <span className="block text-xs text-[var(--muted)]">
+              {newKind === "full"
+                ? "As written on the curriculum document. Never worked out — only the QCTO or the OFO can say what it is."
+                : "The same code as the qualification it comes from. They share one curriculum, so they share its code."}
+            </span>
           </label>
 
           <label className="block space-y-1.5">

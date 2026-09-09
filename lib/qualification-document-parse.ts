@@ -22,9 +22,105 @@ export type ParsedQualificationDocument = {
   title: string | null;
   nqfLevel: number | null;
   totalCredits: number | null;
+  /**
+   * What the document says this is, under QUALIFICATION TYPE.
+   *
+   * Stated outright rather than inferred: 118709 reads "Occupational
+   * Certificate" and 118710 reads "Part-Qualification". Null when the header
+   * could not be read at all, which is different from "full" and is why this
+   * is not defaulted here.
+   */
+  kind: "full" | "part" | "skills_programme" | null;
+  /**
+   * The module codes the QUALIFICATION RULES section lists.
+   *
+   * For a full qualification this restates its own curriculum. For a part it
+   * is the whole point: it names which of the parent's modules this takes, and
+   * nothing else in any document says so.
+   */
+  moduleCodes: string[];
+  /**
+   * The curriculum code this document states for itself.
+   *
+   * "The curriculum title and code are: Commercial Cleaner: 811201-000-00."
+   * Worth reading because the curriculum document does not always carry its own
+   * code in a form the reader can find - the Commercial Cleaner one does not -
+   * and this sentence is unambiguous.
+   */
+  curriculumCode: string | null;
+  /**
+   * The curriculum a part draws on, taken from the prefix its module codes
+   * share.
+   *
+   * This is how a part is attached to its parent, and it took reading the real
+   * documents to get right. A part does **not** repeat its parent's curriculum
+   * code: 118709 states 811201-000-00 and 118710 states 811201-000-01, the
+   * numeric suffix Heidi described. But every module 118710 lists is written
+   * "811201-000-00-KM-01" - the parent's prefix - because they are the
+   * parent's modules. The modules say where the curriculum is; the header does
+   * not.
+   *
+   * Null for a full qualification, whose module prefix is its own code.
+   */
+  parentCurriculumCode: string | null;
   exitLevelOutcomes: ParsedExitLevelOutcome[];
   notes: string[];
 };
+
+/**
+ * A module code as the SAQA document writes it, which is not always as the
+ * curriculum document writes it.
+ *
+ * 118710 contains "811201-000-00--WM-01" with a doubled hyphen, twice. A
+ * transcription slip in a registered document is not something the platform
+ * can have corrected, so it collapses runs of hyphens before matching. Codes
+ * are compared, never generated, so this only ever loosens a comparison.
+ */
+export function normaliseModuleCode(code: string): string {
+  return code.replace(/-{2,}/g, "-").trim().toUpperCase();
+}
+
+/**
+ * What two documents agree on when they write the same module differently.
+ *
+ * The SAQA document writes "811201-000-00-KM-01". The curriculum document,
+ * which is where the platform's modules actually come from, writes "KM01". The
+ * component and the number are the only part both carry, so that is the key
+ * the two are matched on - "KM01" either way.
+ *
+ * Falls back to the whole code where there is no such suffix, which is what a
+ * non-QCTO module looks like: a tenant running ordinary corporate training has
+ * codes of its own shape, and those match each other exactly or not at all.
+ */
+export function moduleKey(code: string): string {
+  const match = /(KM|PM|WM)\s*-?\s*([0-9]{1,3})\s*$/i.exec(code.trim());
+  if (!match) return normaliseModuleCode(code);
+  return `${match[1].toUpperCase()}${match[2].padStart(2, "0")}`;
+}
+
+/** "The curriculum title and code are: Commercial Cleaner: 811201-000-00." */
+const CURRICULUM_CODE =
+  /curriculum title and code are\s*:\s*.*?:\s*([0-9]{4,8}(?:-[0-9]{2,4})+)/i;
+
+/**
+ * "811201-000-00-KM-01 Introduction to the World of Work, Level 1, 6 Credits."
+ *
+ * Taken apart rather than matched whole, because these lines are damaged in
+ * two different ways across three documents that are otherwise identical.
+ * 118710 writes "811201-000-00--WM-01" with a doubled hyphen; 118711 writes
+ * "811201-000-00-KM-0 1Introduction", with a space inside the number and the
+ * title welded onto it. Both are the registered document as published, so the
+ * reader accommodates them rather than losing a module over a typesetting
+ * slip.
+ */
+const RULE_MODULE =
+  /^([0-9]{4,8}-[0-9]{2,4}-[0-9]{2,4})-+(KM|PM|WM)-?\s*([0-9])\s*([0-9])?/i;
+
+/** The type sits under "FIELD SUBFIELD" and is the first thing on its line. */
+const PART_TYPE = /^Part-?Qualification\b/i;
+const SKILLS_PROGRAMME_TYPE = /^(?:Occupational\s+)?Skills\s+Programme\b/i;
+/** Where the header stops and the prose starts. */
+const END_OF_HEADER = /^PURPOSE AND RATIONALE/i;
 
 /** "SAQA QUAL ID QUALIFICATION TITLE" then "121151 Advanced Occupational…". */
 const SAQA_HEADER = /SAQA\s+QUAL\s+ID/i;
@@ -86,9 +182,70 @@ export function parseQualificationDocument(
     title: null,
     nqfLevel: null,
     totalCredits: null,
+    kind: null,
+    moduleCodes: [],
+    curriculumCode: null,
+    parentCurriculumCode: null,
     exitLevelOutcomes: [],
     notes: [],
   };
+
+  // --- what this is -------------------------------------------------------
+  // Read only from the header block. The word "part-qualification" appears
+  // dozens of times in the prose of a part's own document, and once in the
+  // copyright boilerplate of every document including a full qualification's
+  // - "All qualifications and part qualifications registered on the National
+  // Qualifications Framework are public property" - so a document-wide search
+  // would classify 118709 as a part.
+  const headerEnd = lines.findIndex((line) => END_OF_HEADER.test(line));
+  const header = lines.slice(0, headerEnd === -1 ? 40 : headerEnd);
+
+  if (header.some((line) => SKILLS_PROGRAMME_TYPE.test(line))) {
+    result.kind = "skills_programme";
+  } else if (header.some((line) => PART_TYPE.test(line))) {
+    result.kind = "part";
+  } else if (header.length > 0) {
+    result.kind = "full";
+  }
+
+  // --- the modules it is made up of ---------------------------------------
+  // Taken from anywhere in the document rather than from under the
+  // QUALIFICATION RULES heading, because the heading does not survive text
+  // extraction intact - it arrives wrapped into the sentence above it. The
+  // codes themselves are unambiguous enough to stand on their own.
+  const codeLine = lines.find((line) => CURRICULUM_CODE.test(line));
+  if (codeLine) {
+    result.curriculumCode = CURRICULUM_CODE.exec(codeLine)![1];
+  }
+
+  const prefixes = new Set<string>();
+  const seen = new Set<string>();
+  for (const line of lines) {
+    const match = RULE_MODULE.exec(line);
+    if (!match) continue;
+    prefixes.add(match[1].toUpperCase());
+
+    // Padded to two digits, which is what every module code in every one of
+    // these documents uses. A single digit here means the extraction lost the
+    // second one, not that the code is genuinely short.
+    const number = `${match[3]}${match[4] ?? ""}`.padStart(2, "0");
+    const code = normaliseModuleCode(
+      `${match[1]}-${match[2].toUpperCase()}-${number}`,
+    );
+    if (seen.has(code)) continue;
+    seen.add(code);
+    result.moduleCodes.push(code);
+  }
+
+  // Where the curriculum lives, for a part. Only when every module agrees: two
+  // prefixes would mean a document drawing on two curricula, which is not a
+  // part qualification and is not something to guess at.
+  if (result.kind !== "full" && prefixes.size === 1) {
+    const [prefix] = prefixes;
+    if (prefix !== result.curriculumCode?.toUpperCase()) {
+      result.parentCurriculumCode = prefix;
+    }
+  }
 
   // --- identity -----------------------------------------------------------
   const headerAt = lines.findIndex((line) => SAQA_HEADER.test(line));

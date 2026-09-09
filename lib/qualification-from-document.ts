@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { qualifications } from "@/db/schema";
+import { curriculumModules, qualifications } from "@/db/schema";
 import { readPdfText, readDocxText, OfficeReadError } from "./office";
 import {
   parseCurriculumText,
@@ -8,9 +8,12 @@ import {
   type ParsedQualification,
 } from "./curriculum-parse";
 import {
+  moduleKey,
   parseQualificationDocument,
   type ParsedExitLevelOutcome,
 } from "./qualification-document-parse";
+import { createQualification, listCurriculumModules } from "./authoring";
+import { selectModules } from "./part-qualifications";
 import {
   importCurriculum,
   type CurriculumFileInput,
@@ -75,7 +78,28 @@ export type ModuleSummary = {
 
 export type DocumentReading = {
   /** The header fields, merged across whichever documents were supplied. */
-  details: ParsedQualification & { saqaId: string | null };
+  details: ParsedQualification & {
+    saqaId: string | null;
+    /**
+     * What the SAQA document says this is. "full" when no SAQA document was
+     * supplied, because a folder of curriculum material with nothing to say
+     * otherwise is a full qualification.
+     */
+    kind: "full" | "part" | "skills_programme";
+  };
+  /**
+   * For a part: the full qualification it will be attached to, and which of
+   * that qualification's modules its own document lists.
+   *
+   * Null for a full qualification. Also null for a part whose parent has not
+   * been imported yet - which is not a failure, but it does mean the part
+   * cannot be created until the parent is, and `notes` says so.
+   */
+  part: {
+    parent: { id: string; title: string };
+    /** Matched against the parent's curriculum, so a missed code shows here. */
+    modules: { code: string; found: boolean }[];
+  } | null;
   modules: ModuleSummary[];
   exitLevelOutcomes: ParsedExitLevelOutcome[];
   notes: string[];
@@ -177,8 +201,19 @@ export async function readQualificationSources(
   // appears in neither anywhere else, so it is registration-only.
   const details = {
     saqaId: registration?.saqaId ?? null,
+    // Only the SAQA document states this. Without one, a folder of curriculum
+    // material is a full qualification - which is what every import did before
+    // this field existed, so the default changes nothing already working.
+    kind: registration?.kind ?? "full",
     title: registration?.title ?? curriculum.qualification.title,
-    curriculumCode: curriculum.qualification.curriculumCode,
+    // The curriculum document is the first authority on its own code, but it
+    // does not always print one the reader can find - Commercial Cleaner's does
+    // not. The SAQA document states it in a sentence ("The curriculum title and
+    // code are: Commercial Cleaner: 811201-000-00.") and is the fallback.
+    curriculumCode:
+      curriculum.qualification.curriculumCode ??
+      registration?.curriculumCode ??
+      null,
     nqfLevel: registration?.nqfLevel ?? curriculum.qualification.nqfLevel,
     totalCredits:
       registration?.totalCredits ?? curriculum.qualification.totalCredits,
@@ -202,15 +237,107 @@ export async function readQualificationSources(
         const [row] = await tx
           .select({ id: qualifications.id, title: qualifications.title })
           .from(qualifications)
-          .where(eq(qualifications.curriculumCode, details.curriculumCode!));
+          // The curriculum belongs to the full qualification; a part
+          // shares the code without owning it.
+          .where(
+            and(
+              eq(qualifications.curriculumCode, details.curriculumCode!),
+              eq(qualifications.kind, "full"),
+            ),
+          );
         return row ?? null;
       })
     : null;
+
+  /**
+   * A part qualification is attached to the qualification that already carries
+   * this curriculum code, and takes the modules its own document lists.
+   *
+   * `existing` finding something is the ordinary case here rather than a
+   * clash: 118710's curriculum document is byte-identical to 118709's, so a
+   * part is imported from the parent's own curriculum and the match is how the
+   * parent is found at all.
+   */
+  let part: DocumentReading["part"] = null;
+
+  if (details.kind !== "full") {
+    /**
+     * A part is attached by its module codes, not by its own curriculum code.
+     *
+     * The real documents settle this. 118709 states its curriculum code as
+     * 811201-000-00 and 118710 states 811201-000-01 - the numeric suffix - so
+     * the two headers do not match and never will. But every module 118710
+     * lists is written 811201-000-00-KM-01: the parent's prefix, because they
+     * are the parent's modules.
+     */
+    const parentCode = registration?.parentCurriculumCode ?? null;
+
+    const parent = parentCode
+      ? await withTenant(session.organisationId, async (tx) => {
+          const [row] = await tx
+            .select({ id: qualifications.id, title: qualifications.title })
+            .from(qualifications)
+            .where(
+              and(
+                eq(qualifications.curriculumCode, parentCode),
+                eq(qualifications.kind, "full"),
+              ),
+            );
+          return row ?? null;
+        })
+      : existing;
+
+    if (!parent) {
+      notes.push(
+        "This is a part qualification, but the full qualification it comes from is not on the platform yet. Import that one first — a part carries no curriculum of its own, so there is nothing to attach it to until the parent exists.",
+      );
+    } else {
+      /**
+       * Matched on the component and number alone, because the two documents
+       * write the same module differently. The SAQA document says
+       * "811201-000-00-KM-01"; the curriculum document, which is where the
+       * platform's modules come from, says "KM01". Comparing them whole finds
+       * nothing, every time.
+       */
+      const inParent = new Set(
+        (
+          await withTenant(session.organisationId, (tx) =>
+            tx
+              .select({ code: curriculumModules.code })
+              .from(curriculumModules)
+              .where(eq(curriculumModules.qualificationId, parent.id)),
+          )
+        ).map((entry) => moduleKey(entry.code)),
+      );
+
+      const listed = registration?.moduleCodes ?? [];
+
+      part = {
+        parent,
+        modules: listed.map((code) => ({
+          code,
+          found: inParent.has(moduleKey(code)),
+        })),
+      };
+
+      const missing = part.modules.filter((entry) => !entry.found);
+      if (listed.length === 0) {
+        notes.push(
+          "Its Qualification Rules section named no modules, so nothing can be selected automatically. Choose them by hand once it exists.",
+        );
+      } else if (missing.length > 0) {
+        notes.push(
+          `${missing.length} of the ${listed.length} modules its document lists were not found in the parent's curriculum: ${missing.map((entry) => entry.code).join(", ")}. The rest will be selected; check these by hand.`,
+        );
+      }
+    }
+  }
 
   const outcomes = registration?.exitLevelOutcomes ?? [];
 
   return {
     details,
+    part,
     modules: curriculum.modules.map(summarise),
     exitLevelOutcomes: outcomes,
     notes,
@@ -264,6 +391,95 @@ export type ConfirmedDetails = {
 };
 
 /**
+ * Creates a part qualification against the parent that already holds the
+ * curriculum, and records which of its modules the part takes.
+ *
+ * Nothing curricular is written. The only new rows are the qualification
+ * itself and its module selection, which is the whole difference between a
+ * part and a full qualification: it is a subset of something that already
+ * exists, not a thing of its own.
+ *
+ * Its SAQA document is filed against it, because that document is the part's
+ * alone - it states its own SAQA ID, its own credit total and its own module
+ * list. The curriculum document and the assessment specification are not: they
+ * are the parent's, byte for byte, and filing a second copy under the part
+ * would suggest there were two.
+ */
+async function createPartFromDocuments(
+  session: AuthenticatedSession,
+  documents: SourceDocuments,
+  confirmed: ConfirmedDetails,
+  reading: DocumentReading,
+): Promise<{ qualificationId: string; summary: ImportSummary }> {
+  const part = reading.part!;
+
+  const created = await createQualification(session, {
+    title: confirmed.title,
+    kind: reading.details.kind === "part" ? "part" : "skills_programme",
+    parentQualificationId: part.parent.id,
+    curriculumCode: confirmed.curriculumCode || undefined,
+    saqaId: confirmed.saqaId || undefined,
+    nqfLevel: confirmed.nqfLevel,
+    totalCredits: confirmed.totalCredits,
+  });
+
+  const wanted = part.modules
+    .filter((entry) => entry.found)
+    .map((entry) => entry.code);
+
+  const parentModules = await listCurriculumModules(session, part.parent.id);
+  const byCode = new Map(
+    parentModules.map((entry) => [moduleKey(entry.code), entry.id]),
+  );
+
+  const ids = wanted
+    .map((code) => byCode.get(moduleKey(code)))
+    .filter((id): id is string => Boolean(id));
+
+  if (ids.length > 0) {
+    await selectModules(session, created.id, ids);
+  }
+
+  const warnings: string[] = [...reading.notes];
+
+  if (documents.qualification) {
+    try {
+      await uploadProgrammeDocument(
+        session,
+        {
+          kind: "qualification_document",
+          title: "Qualification Document",
+          qualificationId: created.id,
+        },
+        documents.qualification,
+      );
+    } catch (error) {
+      warnings.push(
+        `The Qualification Document was not filed: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    }
+  }
+
+  return {
+    qualificationId: created.id,
+    summary: {
+      qualificationId: created.id,
+      created: true,
+      exitLevelOutcomes: 0,
+      studyUnits: 0,
+      modules: ids.length,
+      topics: 0,
+      elements: 0,
+      criteria: 0,
+      warnings: [
+        `Created as a part of "${part.parent.title}", taking ${ids.length} of its ${parentModules.length} modules. Its curriculum is the parent's — nothing was copied, so a learner's work against a module counts once wherever they met it.`,
+        ...warnings,
+      ],
+    },
+  };
+}
+
+/**
  * Writes the qualification, its outcomes and its whole curriculum, then files
  * every document that produced it.
  *
@@ -283,6 +499,27 @@ export async function createQualificationFromDocuments(
   // curriculum is what the file says, not what a form could be edited to
   // claim; only the handful of header fields are the person's to correct.
   const reading = await readQualificationSources(session, documents);
+
+  /**
+   * A part qualification takes a different path entirely: nothing is imported.
+   *
+   * Its curriculum document is the parent's - the same file, filed twice - so
+   * reading it in again would produce a second copy of one curriculum, two
+   * ledgers where a criterion is marked complete, and a learner who did the
+   * work under one qualification getting no credit for it under the other.
+   * What is created instead is the part itself and the list of which of the
+   * parent's modules it takes.
+   */
+  if (reading.part) {
+    return createPartFromDocuments(session, documents, confirmed, reading);
+  }
+
+  if (reading.details.kind !== "full") {
+    throw new QualificationImportError(
+      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, but the full qualification it comes from is not on the platform. Import that one first — this one shares its curriculum and has none of its own.`,
+      "not_a_curriculum",
+    );
+  }
 
   if (reading.existing) {
     throw new QualificationImportError(

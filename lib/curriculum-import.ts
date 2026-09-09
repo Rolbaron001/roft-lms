@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
@@ -263,7 +263,16 @@ export async function importCurriculum(
       ? await tx
           .select({ id: qualifications.id })
           .from(qualifications)
-          .where(eq(qualifications.curriculumCode, file.curriculumCode))
+          // Scoped to the full qualification: a part shares its parent's
+          // curriculum code, so an unscoped lookup would now be a coin toss
+          // between the qualification that owns the curriculum and a part
+          // that merely draws from it.
+          .where(
+            and(
+              eq(qualifications.curriculumCode, file.curriculumCode),
+              eq(qualifications.kind, "full"),
+            ),
+          )
       : [];
 
     const weights = file.componentWeights

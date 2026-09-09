@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   index,
@@ -60,6 +61,21 @@ export const contentType = pgEnum("content_type", [
  * statutory exports need. For ordinary corporate training it is optional —
  * a course can stand alone.
  */
+/**
+ * Full qualification, part qualification, or occupational skills programme.
+ *
+ * Three things the OQSF treats differently and the platform used to treat as
+ * one. They differ in what documents exist for them, how long a provider has
+ * to notify the QCTO of an enrolment, and how they end - a qualification in an
+ * external assessment set by an assessment quality partner, a skills programme
+ * in a FISA set and moderated by the provider itself.
+ */
+export const qualificationKind = pgEnum("qualification_kind", [
+  "full",
+  "part",
+  "skills_programme",
+]);
+
 export const qualifications = pgTable(
   "qualifications",
   {
@@ -69,6 +85,33 @@ export const qualifications = pgTable(
       .references(() => organisations.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
+
+    /**
+     * What this is, in the sub-framework's own terms.
+     *
+     * The SAQA document states it outright - "Occupational Certificate"
+     * against 118709, "Part-Qualification" against 118710 - so it is read from
+     * the document rather than guessed or asked for.
+     *
+     * Each kind is enrolled onto in its own right. Heidi was explicit: "each
+     * full qual and each part-qual and each skills programme has its own
+     * identification number, so the enrolment is per programme ID number per
+     * learner." A part qualification is not a view over its parent.
+     */
+    kind: qualificationKind("kind").notNull().default("full"),
+
+    /**
+     * The full qualification a part is drawn from, where there is one.
+     *
+     * Provenance rather than a route: a learner enrols on the part directly.
+     * What the link carries is the curriculum, because a part does not have
+     * one of its own - the curriculum document and the assessment
+     * specification filed under 118710 are byte-identical to 118709's.
+     *
+     * Null for a full qualification, and for a skills programme that stands
+     * alone rather than being harvested from a qualification.
+     */
+    parentQualificationId: uuid("parent_qualification_id"),
 
     // Statutory identifiers. Null for a non-accredited internal programme.
     saqaId: text("saqa_id"),
@@ -143,10 +186,34 @@ export const qualifications = pgTable(
   },
   (t) => [
     index("qualifications_org_idx").on(t.organisationId),
-    uniqueIndex("qualifications_org_curriculum_code_idx").on(
+    /**
+     * One *full* qualification per curriculum code - not one row per code.
+     *
+     * A part qualification may carry its parent's curriculum code. The
+     * published documents give the parts a numeric suffix - 118709 states
+     * 811201-000-00 and 118710 states 811201-000-01 - but nothing requires
+     * that, every module 118710 lists is written with the parent's prefix,
+     * and a provider transcribing a part by hand will reasonably enter the
+     * code the curriculum document in front of them shows.
+     *
+     * An unqualified unique index turns that into a constraint violation
+     * rather than a warning, so the condition narrows it to the qualification
+     * that owns the curriculum while leaving the database enforcing the rule
+     * that matters: one curriculum, one owner.
+     */
+    uniqueIndex("qualifications_org_curriculum_code_idx")
+      .on(t.organisationId, t.curriculumCode)
+      .where(sql`kind = 'full'`),
+    /**
+     * What is actually unique per row. Each full qualification, part
+     * qualification and skills programme carries its own SAQA identifier, and
+     * that is what a learner is enrolled against.
+     */
+    uniqueIndex("qualifications_org_saqa_id_idx").on(
       t.organisationId,
-      t.curriculumCode,
+      t.saqaId,
     ),
+    index("qualifications_parent_idx").on(t.parentQualificationId),
   ],
 );
 
@@ -155,6 +222,57 @@ export const qualifications = pgTable(
  * Workplace Experience module as named in the official curriculum document.
  * This is the statutory unit — courses are the delivery vehicle for it.
  */
+/**
+ * Which of a parent's modules a part qualification takes.
+ *
+ * The subset, and nothing more. A part qualification does not own modules and
+ * does not copy them: 118710 draws nine of Commercial Cleaner's, carrying the
+ * parent's own codes - 811201-000-00-KM-01 and its siblings - and their credits
+ * sum to exactly the 47 its SAQA document states.
+ *
+ * Copying them was the alternative and it would have been wrong twice. A
+ * learner's work against KM-01 counts once, wherever they met it, which only
+ * holds if there is one KM-01. And a curriculum reimported to correct a
+ * criterion would fix the full qualification while leaving every part on the
+ * old text.
+ *
+ * A skills programme harvested from a qualification uses this too - its own
+ * document says the modules "are harvested from this qualification" and gives
+ * them the parent's codes.
+ */
+export const qualificationModules = pgTable(
+  "qualification_modules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** The part qualification or skills programme doing the selecting. */
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+
+    /** A module of the parent's curriculum. */
+    curriculumModuleId: uuid("curriculum_module_id")
+      .notNull()
+      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("qualification_modules_qualification_idx").on(t.qualificationId),
+    // A module is selected once. Twice would double its credits in every
+    // total the platform computes.
+    uniqueIndex("qualification_modules_once_idx").on(
+      t.qualificationId,
+      t.curriculumModuleId,
+    ),
+  ],
+);
+
 export const curriculumModules = pgTable(
   "curriculum_modules",
   {

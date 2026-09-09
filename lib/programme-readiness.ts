@@ -3,6 +3,7 @@ import { withTenant } from "@/db/client";
 import {
   assessmentCriteria,
   curriculumModules,
+  qualificationModules,
   programmeDocuments,
   qualifications,
   studyUnits,
@@ -72,7 +73,12 @@ export async function programmeReadiness(
 ): Promise<ProgrammeReadiness> {
   return withTenant(session.organisationId, async (tx) => {
     const [qualification] = await tx
-      .select({ id: qualifications.id, title: qualifications.title })
+      .select({
+        id: qualifications.id,
+        title: qualifications.title,
+        kind: qualifications.kind,
+        parentId: qualifications.parentQualificationId,
+      })
       .from(qualifications)
       .where(eq(qualifications.id, qualificationId));
 
@@ -80,12 +86,26 @@ export async function programmeReadiness(
       throw new Error("No such qualification.");
     }
 
+    /**
+     * Where the curriculum lives, which is not always here.
+     *
+     * A part qualification has no curriculum document of its own - the one
+     * filed under 118710 is byte-identical to 118709's, because it is the same
+     * document. Its modules, criteria and study units all belong to the parent
+     * too. So readiness reads the parent for everything curricular, and every
+     * part of a ready qualification is ready with it.
+     *
+     * Asking a part for its own curriculum was not a stricter check, it was an
+     * impossible one: no part qualification could ever have passed this gate.
+     */
+    const curriculumOwner = qualification.parentId ?? qualificationId;
+
     const held = await tx
       .select({ kind: programmeDocuments.kind })
       .from(programmeDocuments)
       .where(
         and(
-          eq(programmeDocuments.qualificationId, qualificationId),
+          eq(programmeDocuments.qualificationId, curriculumOwner),
           inArray(
             programmeDocuments.kind,
             REQUIRED_DOCUMENTS.map((document) => document.kind),
@@ -95,10 +115,22 @@ export async function programmeReadiness(
 
     const have = new Set(held.map((row) => row.kind));
 
-    const modules = await tx
-      .select({ id: curriculumModules.id })
-      .from(curriculumModules)
-      .where(eq(curriculumModules.qualificationId, qualificationId));
+    // The modules this qualification is actually assessed against: its own
+    // curriculum for a full qualification, its selected subset for a part.
+    const modules =
+      qualification.kind === "full" || !qualification.parentId
+        ? await tx
+            .select({ id: curriculumModules.id })
+            .from(curriculumModules)
+            .where(eq(curriculumModules.qualificationId, qualificationId))
+        : await tx
+            .select({ id: curriculumModules.id })
+            .from(qualificationModules)
+            .innerJoin(
+              curriculumModules,
+              eq(curriculumModules.id, qualificationModules.curriculumModuleId),
+            )
+            .where(eq(qualificationModules.qualificationId, qualificationId));
 
     const criteria = modules.length
       ? await tx
@@ -115,7 +147,7 @@ export async function programmeReadiness(
     const units = await tx
       .select({ id: studyUnits.id })
       .from(studyUnits)
-      .where(eq(studyUnits.qualificationId, qualificationId));
+      .where(eq(studyUnits.qualificationId, curriculumOwner));
 
     const gaps: ReadinessGap[] = [];
 

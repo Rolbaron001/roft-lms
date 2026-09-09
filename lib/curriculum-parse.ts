@@ -124,11 +124,20 @@ const MODULE_HEADER =
  * They are optional here. What a module is missing is reported for the
  * reviewer to fill in; it is not grounds for pretending the module is absent.
  */
+/**
+ * "Cr" is included because Commercial Cleaner uses it throughout: every one of
+ * its twenty-two module headers reads "NQF level 1, Cr 6". Without it the
+ * document imported with credits on exactly one module out of twenty-two - the
+ * one that happened to spell the word out - and a qualification worth 120
+ * credits recorded five.
+ */
 const LEVEL_ANYWHERE = /\bNQF\s*Level[:\s\-]*(\d{1,2})\b/i;
-const CREDITS_ANYWHERE = /\bCredits?(?:\s*Value)?[:\s\-]*(\d{1,3})\b/i;
+const CREDITS_ANYWHERE =
+  /\b(?:Credits?(?:\s*Value)?|Cr)[:\s\-]*(\d{1,3})\b/i;
 
 /** Where a title stops and the header's other fields begin. */
-const TITLE_ENDS_AT = /[,.]?\s*(?:NQF\s*Level|Credits?(?:\s*Value)?)\b/i;
+const TITLE_ENDS_AT =
+  /[,.]?\s*(?:NQF\s*Level|Credits?(?:\s*Value)?|Cr\b)/i;
 
 /**
  * The front-matter table every curriculum document opens with:
@@ -149,6 +158,9 @@ const QUALIFICATION_CREDITS =
   /Total number of credits for the qualification[:\s]+([0-9]{1,4})/i;
 const COMPONENT_CREDITS =
   /Total number of credits for [^:]*Modules[:\s]+([0-9]{1,4})/gi;
+/** Strips the boilerplate off a match so only the component name is left. */
+const COMPONENT_CREDITS_LABEL =
+  /Total number of credits for|Modules[:\s]+[0-9]{1,4}|\bthe\b/gi;
 
 /** The running header repeated on every page, e.g. `441601-001-00-00-00 HRM Administrator 12`. */
 const PAGE_HEADER = /^[\d-]{10,}:?\s+.*\s+\d{1,4}$/;
@@ -307,18 +319,36 @@ export function parseQualificationDetails(lines: string[]): ParsedQualification 
   if (stated) {
     result.totalCredits = Number(stated[1]);
   } else {
-    // Not every document prints a qualification total, but all of them print
-    // one per component. Adding those up is the document's own arithmetic
-    // rather than an assumption of ours.
+    /**
+     * Not every document prints a qualification total, but all of them print
+     * one per component. Adding those up is the document's own arithmetic
+     * rather than an assumption of ours.
+     *
+     * Only the first of each, though. A curriculum that carries part
+     * qualifications restates the three totals for every one of them: the
+     * Commercial Cleaner document prints fifteen such lines, three for itself
+     * and three for each of its four parts, and adding all of them made a
+     * 120-credit qualification come out at 308. The first three are the
+     * qualification's own, because a document states itself before it states
+     * what is carved out of it.
+     */
     const joined = lines.join("\n");
     COMPONENT_CREDITS.lastIndex = 0;
-    let total = 0;
-    let found = 0;
+    const perComponent = new Map<string, number>();
     for (const match of joined.matchAll(COMPONENT_CREDITS)) {
-      total += Number(match[1]);
-      found += 1;
+      const component = match[0]
+        .replace(COMPONENT_CREDITS_LABEL, "")
+        .toLowerCase()
+        .trim();
+      if (perComponent.has(component)) continue;
+      perComponent.set(component, Number(match[1]));
     }
-    if (found > 0) result.totalCredits = total;
+    if (perComponent.size > 0) {
+      result.totalCredits = [...perComponent.values()].reduce(
+        (sum, credits) => sum + credits,
+        0,
+      );
+    }
   }
 
   return result;
