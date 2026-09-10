@@ -356,22 +356,45 @@ works as it is and must not change. Offline is *additional functionality for
 tenants that need it* — off by default, invisible to every tenant that does not
 turn it on, and adding nothing to the path an online learner already takes.
 
-#### What should work offline, and what should not
+#### Answered by Heidi, 10 September
 
-Not everything should. The honest scope is narrower than "the LMS, offline", and
-the narrowing is what makes it buildable and defensible.
-
-| | Offline | Why |
+| Question | Answer | What it changes |
 |---|---|---|
-| Reading study material | **Yes** | The main thing a ranger in the field needs. |
-| The rollout schedule and what is due | **Yes** | Small, and useless if it needs a signal. |
-| Workbook answers — formative | **Yes** | Captured on the device, marked when it syncs. |
-| Workplace evidence: photos, notes, sign-off entries | **Yes** | This is what field work produces. |
-| **Summative assessments** | **No** | Facilitator-led sessions are compulsory and summatives are invigilated. A summative taken unsupervised on a phone over a fortnight is not defensible to the QCTO, and the invigilation already built exists precisely because that matters. |
-| Marking, moderation, anything needing a second person | **No** | Requires somebody else to be there. |
+| Android or Apple? | **Android** | Removes the biggest risk. Chrome on Android does not evict an installed site's storage the way iOS Safari does, and storage can be marked persistent. **No native app is needed.** |
+| How long between connections? | **A fortnight** | Sizes the problem: a fortnight of material held, and a fortnight of evidence queued. |
+| QCTO-accredited? | **Not yet, but they want it to be. Cater for both.** | The one that changes the design. See below. |
+| Reading or evidence capture? | **Both** | Photographs are what fill a phone. Compression on the device before it is stored, and a visible size budget. |
 
-Worth putting to Heidi as a regulatory question rather than a technical one, but
-I am fairly confident of it.
+#### What works offline depends on whether the programme is accredited
+
+"Cater for both" is not a request for two builds. It is a request for the scope
+to be a **property of the programme**, because the same platform has to serve a
+ranger programme that is not accredited today and the same programme once it is.
+
+| | Not accredited | Accredited |
+|---|---|---|
+| Reading study material | Yes | Yes |
+| The rollout schedule and what is due | Yes | Yes |
+| Workbook answers, formative | Yes | Yes |
+| Workplace evidence: photographs, notes, sign-off entries | Yes | Yes |
+| **Summative assessment** | **Provider's own rules, so yes if they want it** | **No.** Facilitator-led sessions are compulsory and summatives are invigilated. One taken unsupervised on a phone over a fortnight is not defensible at a monitoring visit. |
+| Marking, moderation, anything needing a second person | No | No |
+
+Three things follow, and the third is the one that will bite:
+
+1. **The strict shape is the default.** A programme is treated as accredited
+   unless somebody says otherwise. Getting that the wrong way round means the
+   permissive setting arrives by accident.
+2. **Relaxing it is a deliberate, recorded act**, with the same audit trail as
+   any other decision that would be asked about later.
+3. **Accreditation arrives partway through.** A programme that allows offline
+   summatives today may be accredited next year, and work already done under the
+   looser rule does not retrospectively become defensible. When the switch is
+   flipped, the platform should say plainly what was captured under the old rule
+   and how much of it there is - so somebody can decide what to do about it
+   rather than discover it at a visit. Whether that work needs re-assessing is
+   Heidi's call, not the platform's, but the platform must be able to show her
+   the list.
 
 #### How I would build it
 
@@ -402,30 +425,27 @@ app.
    Last-write-wins is wrong for assessment evidence: it discards somebody's work
    without telling anyone. An offline submission arriving for something already
    submitted is **held for a person to resolve**, not merged.
-3. **The browser can throw the data away.** iOS Safari evicts storage from sites
-   it considers unused, and a fortnight offline is exactly that. Android is
-   safer. This is the single biggest technical risk and it turns on what devices
-   the rangers actually carry.
+3. **Storage, which is now a sizing problem rather than a survival one.**
+   Android was the answer, so the fortnight-long eviction risk that could have
+   forced a native app is off the table: an installed site can ask for
+   persistent storage and keep it. What remains is capacity. Heidi says the work
+   is both reading and evidence capture, and photographs are what fill a phone -
+   so images are compressed on the device before they are stored, the learner
+   can see what is held and how much room it takes, and the platform refuses to
+   start a download it cannot finish rather than filling the phone and failing
+   halfway.
 
-#### What I need to know before building
+#### Still open
 
-Each of these changes the design, so they are worth asking before rather than
-discovering after:
-
-- **What devices do the rangers use — Android or iPhone?** The storage-eviction
-  risk is materially different, and on iOS it may force a real app after all.
-- **How long between connections?** A fortnight was mentioned. A week and a
-  month are different problems.
-- **Is their programme QCTO-accredited, or non-credit-bearing?** If it is
-  accredited, summatives must be invigilated and the scope above holds. If it is
-  not, the rules are the provider's own and more can go offline.
-- **Is it mostly reading, or mostly evidence capture?** Photographs and video are
-  what fill a phone; text barely registers.
+- **Does Curiosa want offline summatives on the unaccredited ranger
+  programme at all?** The platform will allow it; whether they use it is theirs
+  to decide, and the answer changes nothing structural.
+- **The spike is on hold at Roland's request** (10 September) while he
+  considers the offline question further. **Nothing here has been started, and
+  no offline code exists.**
 
 **Size:** large, and it should be scoped and priced on its own rather than
 absorbed. But it is additive, and none of it touches what is already working.
-
----
 
 ---
 
