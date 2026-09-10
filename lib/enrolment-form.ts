@@ -1,7 +1,14 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
-import { learnerProfiles, users } from "@/db/schema";
+import {
+  cohortMembers,
+  cohortSessions,
+  cohorts,
+  courses,
+  learnerProfiles,
+  users,
+} from "@/db/schema";
 import {
   isValidCode,
   ratingRequiredFor,
@@ -455,4 +462,59 @@ export function identityDisagreements(learner: {
   }
 
   return problems;
+}
+
+/**
+ * What the platform already knows, so the form does not ask for it again.
+ *
+ * Roland's instruction was that the learner "inherits cohort details like
+ * induction dates automatically". So this is shown on the form as fact rather
+ * than as an empty field: the programme they are on, the cohort they belong to,
+ * and the induction date the twenty-one-day clock runs from.
+ *
+ * The induction date comes from the cohort's induction session rather than from
+ * a field somebody types, because that session is already dated and attended,
+ * and two places to record one date is one place too many.
+ */
+export async function inheritedFor(
+  session: AuthenticatedSession,
+  learnerId: string,
+) {
+  if (learnerId !== session.userId) {
+    assertSessionCan(session, "enrolment:read_all");
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    const rows = await tx
+      .select({
+        cohortId: cohorts.id,
+        cohortName: cohorts.name,
+        programme: courses.title,
+      })
+      .from(cohortMembers)
+      .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+      .innerJoin(courses, eq(courses.id, cohorts.courseId))
+      .where(
+        and(
+          eq(cohortMembers.userId, learnerId),
+          isNull(cohortMembers.leftAt),
+        ),
+      );
+
+    if (rows.length === 0) return [];
+
+    const inductions = await tx
+      .select({
+        cohortId: cohortSessions.cohortId,
+        on: cohortSessions.scheduledDate,
+      })
+      .from(cohortSessions)
+      .where(eq(cohortSessions.kind, "induction"));
+
+    return rows.map((row) => ({
+      ...row,
+      inductionOn:
+        inductions.find((i) => i.cohortId === row.cohortId)?.on ?? null,
+    }));
+  });
 }

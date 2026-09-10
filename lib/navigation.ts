@@ -82,6 +82,16 @@ export const NAV: NavSection[] = [
         anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
       },
       { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
+      /*
+        A learner reaches their own; a coordinator reaches anybody's with
+        ?learner=. Gated on the learner's own permission so it appears for
+        everybody who has one to fill in, which is the point of it.
+      */
+      {
+        href: "/enrolment-form",
+        label: "Enrolment form",
+        anyPermission: ["report:own", "enrolment:read_all"],
+      },
     ],
   },
 

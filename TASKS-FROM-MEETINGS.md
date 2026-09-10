@@ -291,7 +291,7 @@ says what it is, so nobody is left stuck.
 `learnerExemptions` now carries the date the source was awarded, so a moderator
 can see the arithmetic rather than trust it.
 
-### 7 · The enrolment form, on the platform — **new, 9 September**
+### 7 · The enrolment form, on the platform — **built, 10 September**
 
 > "The LMS should automate the enrolment form process so learners complete
 > fields directly on the platform, inheriting cohort details like induction
@@ -307,12 +307,42 @@ lines and postcode), phone, cell, fax, province code, STATSSA area code, POPIA
 agreement and its date, expected completion date, assessment centre code, FLC
 and its statement number.
 
-**To build:** the fields and their two code lists; a learner-facing form that
-inherits everything the cohort already knows; POPIA consent with its date; and
-the completed form as a document the platform produces and files, since Heidi
-named it as evidence a QCTO monitor asks for.
+**Built:** the fields, the QCTO's code lists verbatim from the data-loading
+specification, and a learner-facing form that inherits what the platform already
+knows - name, identity number, date of birth, programme, cohort, induction date -
+rather than asking for it again. POPIA consent with its date, and the date
+frozen so a later edit cannot quietly rewrite when somebody agreed.
 
-**Size:** large. Task 4 depends on it.
+Written in a learner's words rather than the QCTO's: the return calls it
+`HomeLanguageCode`, the form asks what language you speak at home and offers
+languages. The code is what is submitted and is never shown.
+
+Three rules out of the specification are enforced rather than trusted:
+
+- A **disability rating** is required as soon as any difficulty is recorded.
+  Only "none" leaves it blank, and the question is only asked of somebody it
+  applies to.
+- **Gender must match the identity number's own indicator.** A South African ID
+  carries the date of birth and the gender inside it, so the platform finds the
+  disagreement without asking anybody. It is almost always a mistyped digit.
+- **The leading zero.** Heidi raised this on 9 September as what makes their
+  submissions manual: Excel turns `01` into `1` the moment a cell is not
+  explicitly text, and the loader rejects the file. `forSpreadsheet` quotes
+  exactly the fields where a leading zero carries meaning.
+
+Saving never refuses for incompleteness - a form filled in over two sittings has
+to be saveable half-done - but always refuses a code the QCTO would reject. What
+is missing is reported instead, in a person's words.
+
+Verified in a browser: twelve outstanding at the start, the ID mismatch caught
+on sight, and every one cleared in a single pass with the codes stored as text.
+
+**Still to do here:** the completed form as a **document** the platform produces
+and files. The template machinery from task 9 is the right home for it - a
+fourth document kind - and Heidi named the form as evidence a QCTO monitor asks
+for, so it needs to exist as a printable artefact rather than only as a screen.
+
+**Task 4's LEISA export is now unblocked.**
 
 ### 8 · Workbook and assessment finishing — **done, 10 September**
 
