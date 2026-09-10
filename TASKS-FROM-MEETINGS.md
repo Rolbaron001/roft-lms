@@ -1,17 +1,167 @@
-# Task list from the RJ & HE meetings
+# What the LMS must do, and what is left — full review, 10 September 2026
 
-Drawn from the meetings of **8 September** and **9 September 2026**
-(`Meetings/RJ & HE - LMS – 2026_09_08 10_55 SAST…docx` and
-`Meetings/RJ & HE – 2026_09_09 10_28 SAST…docx`), checked against what the
-platform already does rather than taken at face value. Where something already
-exists it says so, because "add X" when X is half-built is how the same work
-gets done twice.
+A review of the whole picture, asked for by Roland on 10 September before more
+is built: the design document, all eleven meeting records from 10 August to
+9 September, the consolidated requirements register of 31 August, the fourteen
+Standard Operating Procedures, and the running platform checked module by
+module.
 
-Ordered by what unblocks the most.
+Supersedes the earlier task list. Where something exists it says so, and where
+something exists **but cannot be reached from a screen** it says that too,
+because those are not the same thing and only one of them is a feature.
 
 ---
 
-## The rule that governs all of it
+## First, a correction: workbooks are built
+
+Roland flagged this and he was right to. In the previous version of this list I
+said a formative workbook "is a different shape and does not have that path".
+**That was wrong.** Checked properly:
+
+| Asked for | State |
+|---|---|
+| Workbooks completed in the platform, not emailed | **Built.** `parseWorkbook` reads a Word workbook into an onscreen paper; a person confirms what was read before anything is committed. |
+| Multiple choice, matching, true/false, true/false with justification, short answer, essay, scenario, oral | **All built.** `item_type` carries eleven types; `paper_mode` carries `oral`. |
+| Rubrics attached to assessments | **Built.** `rubricId` on an item, chosen levels recorded per dimension. |
+| More than one version of a summative held at once | **Built.** `attempt_policy` of `fixed`, `rotate` or `random`, so a re-sit draws V2. |
+| Uploaded documents parsed into questions | **Built,** with an AI extension only as fallback where the rule parser found nothing. |
+| Learner does it on screen | **Built.** `/learn/[id]/assessment/[id]` and `/learn/[id]/paper/[id]`. |
+
+So the decision minuted on 17 and 28 August has been honoured. Two things are
+genuinely wrong, and both are small — see W1 and W2 below.
+
+**Why I got it wrong:** I read the copy on the qualification screen, which says
+workbooks "are written in Word and Excel, and stay that way", and treated it as
+a statement of how the platform works. It is stale text I wrote before the
+capture path existed. A sentence on a screen is not evidence of what the code
+does, and I should have checked the code.
+
+---
+
+## The five decisions outstanding on 31 August — all now built
+
+The register of 31 August listed five things minuted as decisions and not yet
+built. Every one is now in:
+
+| Decision | Meeting | State today |
+|---|---|---|
+| Statements of Results per study unit | 27 Aug | Built, with tests. |
+| Accreditation number per qualification | 27 Aug | Built, falling back to the provider's and saying which was used. |
+| Project tracker inside the platform | 27 Aug | Built. `/tracker`, with the cohort grid. |
+| Workbooks become platform activities | 17, 28 Aug | Built. See above. |
+| Digital competency badges | 28 Aug | Built. Design, assignment, issue and public verification. |
+
+---
+
+## Gaps found by this review
+
+Ordered by how wrong they make the platform, not by size.
+
+### W1 · Per-section facilitator comments have no screen — **built but unreachable**
+
+The register asked for "per-section facilitator commenting, so feedback is
+developmental and attached to the work it refers to" (28 August, Expected).
+
+`commentOnSection` and `sectionComments` both exist in `lib/marking.ts`, with an
+audit action. **Neither is referenced anywhere in `app/`.** A facilitator cannot
+write one and a learner cannot read one.
+
+By the rule I have been working to — a tested library with no screen is a
+feature that does not exist — this is not built. It is also the smallest item
+on this list: the hard part is done.
+
+**Size:** small.
+
+### W2 · The qualification screen tells users the wrong thing
+
+> "The handbooks, workbooks, marking memoranda and workplace sign-off sheets are
+> written in Word and Excel, and stay that way."
+
+True of handbooks and sign-off sheets. **False of workbooks and assessments,**
+and it contradicts a decision minuted twice. It is also what misled me. Correct
+the copy.
+
+**Size:** trivial.
+
+### W3 · Tracker statuses do not match the client's
+
+The client's own vocabulary, from the consolidated workbook: Submitted,
+Competent, Not Yet Competent, Remediation, **Redo**, **Absent first attempt**,
+**Transferred**, Left the programme.
+
+The platform's grid has: not started, draft, submitted, competent, not yet
+competent, remediation, absent, left.
+
+Missing **Redo** as distinct from Remediation, and **Transferred**. And `absent`
+does not distinguish a first attempt, which is the distinction the client
+actually records.
+
+**Size:** small.
+
+### W4 · "Logbook" is still the word on screen
+
+The client's term is **workplace experience sign-off**, not logbook (27 August).
+
+The *process* is right and better than the wording suggests: the learner logs,
+the coach signs, the assessor verifies, and a database trigger stops a learner
+being their own coach. Only the word is wrong, and it appears on the course
+editor, the module form and the learner's evidence screen.
+
+Worth doing properly rather than by find-and-replace: the terminology feature
+built for task 1 is the right home for it, and "logbook" is not in the
+renameable registry. Another tenant may well call it a logbook.
+
+**Size:** small.
+
+### W5 · Learner demographics are incomplete — blocks the LEISA
+
+Twelve of roughly forty-three fields the statutory return needs. Covered in
+full as task 7 below.
+
+### W6 · Non-credit-bearing certificates have no route
+
+Raised in the SOP: they follow a separate route, currently prepared externally
+on three days' notice. Nothing in the platform distinguishes them.
+
+**Size:** small. **Priority:** confirm it is still wanted before building.
+
+### W7 · Course versioning is built but its promise is not kept
+
+`createNewVersion` exists and is reachable. The design document says publishing
+a new version "does flag anyone still mid-course, or anyone whose role requires
+refresher training, to move to the current version". Nothing does that flagging.
+
+**Size:** small. **Priority:** low until a tenant is running long enough to
+re-version a course.
+
+---
+
+## Design-document items never raised in a meeting — a decision is needed
+
+These are in `Design/ROFT_LMS_Design.docx` and have never come up in eleven
+meetings with Curiosa. They are not oversights, but neither were they ever
+explicitly dropped, and each is large enough that discovering it late would
+hurt. **Each needs an in-or-out decision rather than an implementation.**
+
+| Item | State | Note |
+|---|---|---|
+| Single sign-on (SAML / OAuth) | Nothing | Design calls it a priority integration. Curiosa has never asked; their learners use platform logins. |
+| HRIS connection for automatic enrolment | Nothing | Suits an internal training department, not a commercial provider. Probably not Curiosa. |
+| Metrics API for a client's own BI tooling | Nothing | Exports to spreadsheet and PDF exist, which may be enough. |
+| SCORM / cmi5 import | Content types exist; no importer | Would matter to a tenant bringing courses from another LMS. |
+| Course-level discussion threads | Nothing | The design pairs it with mentoring. Never raised. |
+| O\*NET / ESCO benchmarking | Nothing | Design already calls it "configuration, not a fixed dependency". |
+| Offline use for field learners | Nothing | Raised 10 August for rangers. The one item that changes the shape of the platform: local storage, conflict resolution, and an answer for evidence captured on a device unseen for a fortnight. **Scope on its own; do not attach to anything.** |
+| Interface in local languages, Zulu first | Nothing | Raised 28 August. The terminology work makes the mechanism cheaper than it was. |
+
+**Now closed:** the design's open question of *course against programme* — the
+client uses "programme" for everything and found the distinction artificial.
+Configurable labels were named as the smaller change, and that is what task 1
+built.
+
+---
+
+## The rule that governs how all of this gets built
 
 **`Design/` is reference material — specifications and worked examples of
 functionality to build. It is not a data source and it is not a layout to
@@ -23,134 +173,90 @@ does not fix how every tenant's version looks. **Users must be able to create or
 upload their own templates, and the platform must use theirs.**
 
 The one exception is a form a regulator mandates. A QCTO submission goes in the
-QCTO's format because the QCTO says so — Roland in the 9 September meeting: the
-LMS "will store these records and export them in the exact template format when
-required for QCTO submissions". That is prescribed from outside and is not the
-platform imposing taste on a tenant.
+QCTO's format because the QCTO says so — Roland, 9 September: the LMS "will
+store these records and export them in the exact template format when required
+for QCTO submissions". That is prescribed from outside, not the platform
+imposing taste on a tenant.
 
 ---
 
-## 1. Flexible terminology, per tenant — **done**
+## Tasks
 
-A per-tenant vocabulary: ten renameable terms, tenant overrides, one helper
-every screen reads its nouns through, and a Settings screen.
+### 1 · Flexible terminology, per tenant — **done**
 
-Built on the split already in `lib/dictionary.ts`: a term a regulator defines
-(`authority`) cannot be renamed, because a tenant who renamed "qualification"
-would have changed the wording on their own QCTO submission without anybody
-telling them. "Course", "Programme", "Cohort", "Facilitator" are fair game;
-"Qualification", "EISA", "NQF", "credit", "Exit Level Outcome" are not.
+Ten renameable terms, tenant overrides, one helper every screen reads its nouns
+through, a Settings screen. Built on the split in `lib/dictionary.ts`: a term a
+regulator defines cannot be renamed, because a tenant who renamed
+"qualification" would have changed the wording on their own QCTO submission.
 
-**Outstanding:** the string sweep. The registry and the screen are done; not
-every user-facing sentence reads through the helper yet.
+**Outstanding:** the string sweep — not every sentence reads through the helper
+yet. Add "workplace experience sign-off" to the registry while doing it (W4).
 
----
+### 2 · Part qualifications — **done**
 
-## 2. Part qualifications — **done**
+`kind`, a parent link, and a module selection so a part draws a subset of the
+parent's curriculum rather than copying it. Readiness, criterion coverage, EISA
+readiness and every module count run over the subset. The importer reads kind,
+parent and module list out of the SAQA document.
 
-`kind` (full · part · skills programme), a parent link, and a module selection
-so a part draws a subset of the parent's curriculum rather than copying it.
-Readiness, criterion coverage, EISA readiness and every module count run over
-the subset. The importer reads the kind, the parent and the module list out of
-the SAQA document.
-
-Built against the real Commercial Cleaner documents. See
-`PART-QUALIFICATIONS-AND-TEMPLATES.md` for what they settled and what they
-corrected.
-
-**Confirmed by Heidi on 9 September:** part qualifications "do not have their
-own separate curriculum documents; instead, their modules are specified within
-the curriculum document of the full qualification." That is what was built.
+Confirmed by Heidi on 9 September: parts "do not have their own separate
+curriculum documents; instead, their modules are specified within the curriculum
+document of the full qualification."
 
 **Outstanding:** a screen to change a qualification's kind or parent after
-creation. It is set at creation and read from the document on import, which
-covers both routes in; correcting a mistake means the form.
+creation.
 
----
+### 3 · Occupational skills programmes — **mostly done**
 
-## 3. Occupational skills programmes — **mostly done**
+Covered by the `kind` work, including one that stands alone with no parent.
 
-The `kind` work covers it, including a skills programme that stands alone with
-no parent and carries its own curriculum.
+**Outstanding: FISA.** Provider-set and provider-moderated rather than set by an
+assessment quality partner, with its own instrument structure, confidentiality
+agreements and pre-moderator reports. Templates are in `Design/Templates/`. Its
+own body of work.
 
-**Outstanding: FISA.** A different assessment shape from the EISA the platform
-models — provider-set and provider-moderated rather than set by an assessment
-quality partner, with its own instrument structure, confidentiality agreements
-and pre-moderator reports. Templates are in `Design/Templates/`. Its own body of
-work.
+### 4 · Statutory notification, the LEISA export, and late joiners
 
----
+The clock runs from the **induction date** — Heidi, 9 September. 21 working days
+for a full or part qualification, 5 for a skills programme.
 
-## 4. Statutory notification, the LEISA export, and late joiners
+**Late joiners, new on 9 September.** A learner joining after the cohort starts
+needs their own induction, their own enrolment form, and their **own LEISA**
+submitted alongside the cohort's. So the induction date is not always the
+cohort's session and the deadline is per learner.
 
-**Deadlines:** 21 working days for a full or part qualification, 5 for a skills
-programme. The clock runs from the **induction date**, which Heidi confirmed on
-9 September is the start of training at Curiosa, and which the QCTO checks
-against the enrolment form and rollout schedule at a monitoring visit.
+**What exists:** working-day arithmetic; `induction` as a session kind; the
+rollout schedule; enforced enrolment documents. No deadline, no export, no
+late-joiner path, no acknowledgement record.
 
-**Late joiners — new on 9 September, and they change the shape of this.**
-A learner can join after a cohort has started (within 21 days). When they do
-they need:
+**To build:** a due date per enrolment from that learner's induction; a view of
+what is approaching and overdue; a LEISA export in the QCTO's workbook shape
+with the right recipient for the kind; a separate LEISA for a late joiner;
+record the acknowledgement.
 
-- **their own induction**, separate from the cohort's;
-- **their own enrolment form**;
-- **their own LEISA spreadsheet**, submitted to the QCTO alongside the main
-  cohort's rather than folded into it.
+**The export has awkward mechanics Heidi flagged specifically:** pre-formatted
+cells, a leading apostrophe to preserve leading zeros, strict two-digit codes
+(`01`, `02`). An export writing `1` where the sheet wants `'01` is rejected.
+References: `Design/Templates/data-loading-specification-document.pdf` and
+`STATSSA_AreaCodes.xls`.
 
-So the induction date is *not* always the cohort's induction session, and the
-notification deadline is per learner, not per cohort. That was an open question
-from 8 September and is now answered.
+**Depends on task 7. Size:** large.
 
-**What exists:** `lib/working-days.ts` does the arithmetic. `induction` is
-already a cohort session kind. The rollout schedule exists. Required learner
-documents are enforced. There is no deadline, no LEISA export, no late-joiner
-path and no acknowledgement record.
-
-**What to build:**
-
-- A notification due date **per enrolment**, from that learner's induction date,
-  21 or 5 working days according to kind.
-- A view of what is approaching and what is overdue. This is the kind of
-  deadline only ever noticed late.
-- A **LEISA export** in the QCTO's own workbook shape, with the right recipient
-  for the kind (`learnerenrolments@` vs `splearnerenrolments@`). Building the
-  file is the platform's job; sending it stays a person's.
-- A **separate LEISA for a late joiner**, not merged into the cohort's.
-- Record that the acknowledgement came back, as the SOP asks.
-
-**The export has awkward mechanics, and Heidi flagged them specifically.** The
-QCTO's data-loading specification requires pre-formatted cells, a leading
-apostrophe to preserve leading zeros, and strict two-digit codes (`01`, `02`)
-for fields like socio-economic status. An export that writes `1` where the
-sheet wants `'01` will be rejected. `Design/Templates/data-loading-specification-document.pdf`
-and `STATSSA_AreaCodes.xls` are the references.
-
-**Blocked on nothing now** — the templates are in `Design/Templates/`. It needs
-the learner fields first (task 7).
-
-**Size:** large.
-
----
-
-## 5. Check the platform against the enrolment SOP end to end
+### 5 · Check the platform against the enrolment SOP end to end
 
 Reviewing a document is not the same as checking the platform matches it. The
 SOP has specifics the platform may or may not enforce — an ID with multiple
 certification dates is unacceptable, an illegible one is unacceptable, forms are
 QA'd before capture, details go into both the LMS *and* the Tracker.
 
-Confirmed on 9 September: enrolment starts after the client is invoiced and
-proof of payment is received, and cohorts run at 5–10 learners minimum to be
-cost-effective.
+Confirmed 9 September: enrolment starts after invoicing and proof of payment;
+cohorts run at 5–10 learners minimum.
 
-**Size:** small. A read-through against the screens, then a short list of gaps.
+**Size:** small.
 
----
+### 6 · CAT and RPL: the three-year rule — **new, 9 September**
 
-## 6. CAT and RPL: the three-year rule — **new, 9 September**
-
-Heidi answered the module question, and the answer corrects an assumption in
-what was built:
+Heidi's answer corrects an assumption already built on:
 
 > "Learners only complete modules required for their current enrolment. If a
 > learner previously completed an identical module elsewhere, **Credit
@@ -158,144 +264,84 @@ what was built:
 > years, while **Recognition of Prior Learning** applies for courses completed
 > more than three years ago."
 
-So completion does **not** travel silently between enrolments. There is one
-module in the curriculum, but a learner's achievement of it is transferred by a
-person, on the record, under one of two routes — and a date decides which.
+Completion does not travel silently between enrolments. There is one module in
+the curriculum, but a learner's achievement of it is transferred by a person, on
+the record, and a date decides the route.
 
-**What exists, and it is most of it.** `recordCreditTransfer` grants a CAT
+**What exists:** both routes, well built. `recordCreditTransfer` grants a CAT
 exemption with a written mapping, an approver and an audit trail; RPL has
 application, advisory, judgement and moderation. `creditTransfers.awardedOn`
-already records when the source qualification was awarded.
+records when the source was awarded.
 
-**What is missing:** nothing uses `awardedOn` to decide the route. A coordinator
-can record a CAT against a ten-year-old certificate and the platform accepts it.
+**Missing:** nothing uses `awardedOn` to decide the route, so a CAT can be
+recorded today against a ten-year-old certificate.
 
-**What to build:**
+**To build:** compare `awardedOn` against the approval date; refuse a CAT beyond
+three years and point at RPL, because a transfer under the wrong route is a
+finding at a monitoring visit; show which route granted each exemption, with the
+date the source was awarded.
 
-- Compare `awardedOn` against the approval date. Within three years, CAT is the
-  right route. Beyond it, say so and point at RPL.
-- Refuse a CAT beyond three years rather than warn — the distinction is the
-  QCTO's, and a transfer recorded under the wrong route is a finding at a
-  monitoring visit. RPL is available and is not a harder path, only a different
-  one.
-- Say which route granted an exemption wherever exemptions are shown, with the
-  date the source was awarded. A learner recognised under RPL should not read as
-  somebody who skipped work.
+**Size:** small.
 
-**Size:** small. The machinery exists; this is the rule on top of it.
-
----
-
-## 7. The enrolment form, on the platform — **new, 9 September**
+### 7 · The enrolment form, on the platform — **new, 9 September**
 
 > "The LMS should automate the enrolment form process so learners complete
 > fields directly on the platform, inheriting cohort details like induction
 > dates automatically."
 
-Settled: the platform holds the form. Not a Word document emailed around and
-filed back. This also answers the 8 September question about whether Curiosa
-creates it outside.
-
-**What exists:** twelve of the roughly forty-three fields a LEISA needs —
-national ID, date of birth, gender, equity code, disability code, names, email,
-OFO code.
+**Held today:** national ID, date of birth, gender, equity code, disability
+code, names, email, OFO code.
 
 **Not held, and needed:** middle name, title, nationality code, home language
 code, citizen/resident status, socio-economic status, disability rating,
-immigrant status, home address (three lines and postcode), postal address
-(three lines and postcode), phone, cell, fax, province code, STATSSA area code,
-POPIA agreement and its date, expected completion date, assessment centre code,
-FLC and its statement number.
+immigrant status, home address (three lines and postcode), postal address (three
+lines and postcode), phone, cell, fax, province code, STATSSA area code, POPIA
+agreement and its date, expected completion date, assessment centre code, FLC
+and its statement number.
 
-**What to build:**
+**To build:** the fields and their two code lists; a learner-facing form that
+inherits everything the cohort already knows; POPIA consent with its date; and
+the completed form as a document the platform produces and files, since Heidi
+named it as evidence a QCTO monitor asks for.
 
-- The fields, with the two code lists imported (`STATSSA_AreaCodes.xls` and the
-  data-loading specification's own tables).
-- A learner-facing form that inherits everything the cohort already knows —
-  induction date, programme, employer — so the learner fills in only what is
-  theirs.
-- POPIA consent captured with its date, since the LEISA asks for both.
-- The completed form as a document the platform can produce and file, because
-  Heidi named it as evidence a QCTO monitor asks for.
+**Size:** large. Task 4 depends on it.
 
-This is the front half of the LEISA pipeline and task 4 depends on it.
+### 8 · Workbook and assessment finishing — **rescoped**
 
-**Size:** large.
+Not the rebuild the previous version of this list implied. What is left:
 
----
+- **W1**, per-section facilitator comments: give them a screen. The library is
+  written.
+- **W2**, correct the qualification screen's copy.
+- **W3**, add Redo and Transferred to the tracker statuses, and distinguish an
+  absent first attempt.
 
-## 8. Workbooks and assessments onscreen — **new, 9 September**
+**Size:** small, all three.
 
-> "Workbooks and assessments must be rendered onscreen rather than uploaded as
-> standalone files."
-
-Heidi asked whether the platform would turn formative and summative workbooks
-into interactive onscreen activities. Roland confirmed the direction: learners
-work on screen; the platform can also be used to build the online material from
-the source documents.
-
-**This contradicts what the platform currently tells users.** The qualification
-screen says handbooks, workbooks and marking memoranda "are written in Word and
-Excel, and stay that way — they are print artefacts a facilitator annotates and
-a moderator marks up." True of handbooks and sign-off sheets; **no longer true
-of workbooks and assessments.** That copy needs correcting either way.
-
-**What exists, and it is more than it looks.** Onscreen assessment is real:
-quizzes, matching items, true-or-false-with-justification, practical tasks and
-workplace logbooks are all content types, and `markResponses` marks them. The
-capture path reads an assessment paper into onscreen items with a rule parser
-first and an AI extension only where the parser found nothing.
-
-**What is missing:** the same path for a **workbook**. Capture is built around
-assessment papers. A formative workbook is a different shape — activities with
-model answers and a facilitator's guidance rather than marked questions.
-
-**What to build:**
-
-- Extend capture to read a workbook into onscreen activities.
-- A learner-facing workbook view that records what they did, so a facilitator
-  and a moderator can see it without a Word file.
-- Correct the copy on the qualification screen.
-
-**Size:** large.
-
----
-
-## 9. Tenant document templates — **new, from Roland, 10 September**
+### 9 · Tenant document templates — **new, from Roland, 10 September**
 
 The platform must produce documents, and **a tenant must be able to supply the
-template it uses**. The QCTO templates in `Design/Templates/` are examples of
-what must be producible, not the layout every provider gets.
+template it uses**.
 
-**What exists:** nothing. There is no template table, no merge-field mechanism,
-and no way for a tenant to substitute their own version of anything.
+**What exists:** nothing. No template table, no merge-field mechanism, no way
+for a tenant to substitute their own version of anything.
 
-**Where this already bites.** The Statement of Results was reconciled against
+**Where it already bites:** the Statement of Results was reconciled against
 `QCTO SoR Template.docx` on 9 September and the result is a fixed layout in
 code. Most of its *content* is right and should stay fixed — the two-year
-validity, the "this is not an Occupational Certificate" disclaimer and the
-attachments list come from the QCTO, not from taste. But the shape of the
-document, its wording and its letterhead are a tenant's, and today a tenant
-cannot change any of it.
+validity, the "not an Occupational Certificate" disclaimer, the attachments
+list all come from the QCTO. But the shape, the wording and the letterhead are a
+tenant's, and today a tenant cannot change any of it.
 
-**What to build:**
+**To build:** a tenant template library (upload a `.docx`, or start from the
+platform's default); merge fields the platform fills, with a visible list of
+what can be placed; documents produced through the tenant's template where one
+is set; **a protected core**, so a tenant may restyle a Statement of Results but
+may not quietly drop the sentence saying it is not a certificate; and
+regulator-mandated submissions kept outside it, because the LEISA workbook is
+the QCTO's format and is not a tenant template.
 
-- A tenant-owned template library: upload a `.docx`, or start from the
-  platform's default and edit it.
-- Merge fields the platform fills — learner, qualification, modules and
-  results, provider, dates, verification reference — with a visible list of what
-  is available, so somebody building a template knows what they can place.
-- Documents produced through the tenant's template where one is set, and the
-  platform's default where none is.
-- **A protected core.** Where a statement carries something a regulator
-  requires, the platform still puts it there. A tenant may restyle a Statement
-  of Results; they may not quietly drop the sentence saying it is not a
-  certificate.
-- Regulator-mandated submissions stay outside this: the LEISA workbook is the
-  QCTO's format and is not a tenant template.
-
-**Size:** large, and it touches every document the platform issues —
-certificates, statements, the enrolment form, workplace agreements, reports.
+**Size:** large, and it touches every document the platform issues.
 
 ---
 
@@ -303,49 +349,47 @@ certificates, statements, the enrolment form, workplace agreements, reports.
 
 - **Design restraint.** Heidi praised the clean layout and colour scheme and
   said she does not want cluttered or gaudy design. Standing constraint.
-- **No QCTO or SAQA logo, anywhere, ever.** Heidi raised it on 9 September as a
-  regulatory prohibition, pre-emptively rather than because she had seen one.
-  Checked: none exists. Naming a regulator in text is a different thing and
-  stays — the platform has to be able to say a certificate comes from the QCTO.
-- **Folder organisation.** The 9 September meeting agreed to create
-  `Design/Part Qualifications/`, move `Skills Programmes/` up, and add
-  `Design/Templates/`. Done, by Heidi. Not platform work.
+- **No QCTO or SAQA logo, anywhere, ever.** Heidi, 9 September, raised
+  pre-emptively as a regulatory prohibition. Checked: none exists. Naming a
+  regulator in text is different and stays — the platform has to be able to say
+  a certificate comes from the QCTO.
+- **Folder organisation.** Agreed 9 September and done by Heidi. Not platform
+  work.
 - **The management session.** Value chain and statutory process for skills
   programmes, deferred by agreement to its own meeting.
+- **Badges are a retention measure, not decoration.** Certification delays have
+  measurably hurt learner retention; that is why they were agreed.
 
 ---
 
-## Carried over, not from these meetings
+## Carried over
 
-- **Outbound mail still refuses the login** (`535`). Awaiting Linda's
-  confirmation of the current credentials. Testable from Settings → Outbound
-  mail.
+- **Outbound mail refuses the login** (`535`). Awaiting Linda.
 - **The `tools` container cannot resolve DNS.** Harmless today; breaks off-site
   backups.
-- **Off-site storage for backups.** Still outstanding.
-- **The Commercial Cleaner curriculum imports thin.** Its modules and topics
-  land; the topic content and internal assessment criteria do not. Same shape as
-  the `Cr 6` credits gap — one house style the reader does not know. See
-  `PART-QUALIFICATIONS-AND-TEMPLATES.md`.
+- **Off-site storage for backups.** Outstanding.
+- **The Commercial Cleaner curriculum imports thin.** Modules and topics land;
+  topic content and internal assessment criteria do not. Same shape as the
+  `Cr 6` credits gap — one house style the reader does not know.
 
 ---
 
-## Settled by Heidi, worth keeping
+## Settled, worth keeping in view
 
-**Enrolment is per programme ID.** "Each full qual and each part-qual and each
-skills programme has its own identification number, so the enrolment is per
-programme ID number per learner." A part qualification is enrolled onto
-directly; the full qualification is not involved.
+**Enrolment is per programme ID.** Each full qualification, part qualification
+and skills programme has its own number, and enrolment is per programme ID per
+learner. A part is enrolled onto directly; the full qualification is not
+involved.
 
 **The clock starts at induction**, not at enrolment or proof of payment. The
 QCTO uses the enrolment form and rollout schedule as evidence of it.
 
-**Codes are assigned, never derived.** "The curriculum codes are mostly derived
-from the Organising Framework for Occupations, but if there is not an associated
-occupation in the OFO for the skills programme then the QCTO assigns a
-curriculum code which will always start with 9." So the platform records what
-the official document says and never computes a code. A code beginning with 9 is
-a fact worth surfacing, not a rule to enforce.
+**Codes are assigned, never derived.** Mostly from the OFO; where no occupation
+matches, the QCTO assigns one beginning with 9. The platform records what the
+document says and never computes a code.
 
-**A part qualification's modules live in the parent's curriculum document.**
-Confirmed 9 September, and it is what the byte-identical files already proved.
+**The provider issues Statements of Results only.** Qualification certificates
+come from the QCTO and the platform must not imply otherwise.
+
+**Facilitator-led sessions are compulsory** for credit-bearing programmes. The
+platform must not imply self-study alone is sufficient.
