@@ -616,3 +616,90 @@ export async function verifyStatement(
     revokedReason: found.revokedReason,
   };
 }
+
+// ---------------------------------------------------------------------------
+// What a tenant's own template is filled from
+// ---------------------------------------------------------------------------
+
+/**
+ * One issued statement, flattened into the fields a template can place.
+ *
+ * Read from the frozen record rather than recomputed, exactly as the printed
+ * page is. A curriculum can be reimported and a module renamed after issue; the
+ * statement in somebody's hand must keep saying what it said when it was
+ * signed, and a template filled from live data would quietly stop matching it.
+ *
+ * The module table is rendered rather than handed over as a list, because a
+ * placeholder is a string substitution and a provider laying out a document
+ * should not have to write a loop. `modules` is the finished table.
+ */
+export type StatementSnapshot =
+  (typeof statementsOfResults.$inferSelect)["statement"];
+
+export function templateValuesFor(record: {
+  statement: StatementSnapshot;
+  issuedAt: Date;
+  verificationReference: string;
+}): Record<string, string> {
+  const { learner, qualification, provider, studyUnit, modules } =
+    record.statement;
+
+  const date = (value: string | Date | null | undefined) =>
+    value
+      ? new Date(value).toLocaleDateString("en-ZA", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+
+  const rows = modules
+    .map(
+      (module: StatementSnapshot["modules"][number]) =>
+        `${module.code}\t${module.title}\t${module.credits ?? ""}\t${module.result}\t${date(module.achievedAt)}`,
+    )
+    .join("\n");
+
+  return {
+    "learner.fullName": `${learner.firstName} ${learner.lastName}`.trim(),
+    "learner.firstName": learner.firstName,
+    "learner.lastName": learner.lastName,
+    "learner.nationalId": learner.nationalId ?? "",
+
+    "qualification.title": qualification.title,
+    "qualification.saqaId": qualification.saqaId ?? "",
+    "qualification.curriculumCode": qualification.curriculumCode ?? "",
+    "qualification.nqfLevel": qualification.nqfLevel
+      ? String(qualification.nqfLevel)
+      : "",
+    "qualification.credits": qualification.totalCredits
+      ? String(qualification.totalCredits)
+      : "",
+    "qualification.assessmentQualityPartner":
+      qualification.assessmentQualityPartner ?? "",
+
+    "studyUnit.title": studyUnit
+      ? `${studyUnit.code}: ${studyUnit.title}`
+      : "",
+
+    "statement.validUntil": date(
+      record.statement.validUntil ?? validUntilFor(record.issuedAt),
+    ),
+    // A statement for one study unit records progress; it is the
+    // whole-qualification one that admits a learner to the assessment.
+    "statement.admittedToEisa": studyUnit ? "Not applicable" : "Yes",
+    "statement.nextEisa": record.statement.nextEisa
+      ? date(record.statement.nextEisa.date)
+      : "Not yet scheduled",
+
+    modules: rows,
+
+    "provider.name": provider.legalName,
+    "provider.address": (provider.address ?? []).join(", "),
+    "provider.accreditationNumber":
+      qualification.accreditationNumber ?? provider.accreditationNumber ?? "",
+
+    "document.issuedOn": date(record.issuedAt),
+    "document.reference": record.verificationReference,
+  };
+}

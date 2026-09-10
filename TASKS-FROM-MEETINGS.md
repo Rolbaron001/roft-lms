@@ -320,30 +320,68 @@ Not the rebuild the previous version of this list implied. W1, W2 and W3 above
 are all in, and W1 turned out to be twice the size reported: the learner had no
 screen for reading a marked workbook back at all.
 
-### 9 · Tenant document templates — **new, from Roland, 10 September**
+### 9 · Tenant document templates — **first half done, 10 September**
 
-The platform must produce documents, and **a tenant must be able to supply the
-template it uses**.
+The platform must produce documents, and a tenant must be able to supply the
+template it uses. Roland: "the templates cannot be prescriptive of exactly how a
+document must look."
 
-**What exists:** nothing. No template table, no merge-field mechanism, no way
-for a tenant to substitute their own version of anything.
+**The design, and it is the whole of it.** A document has two halves. The
+**template** is the tenant's: their letterhead, their wording, the fields they
+place and the order they place them in. The **statutory block** is the
+platform's: rendered after the template from `STATUTORY_BLOCKS`, and never
+handed to a tenant to edit. A provider may restyle a Statement of Results; they
+cannot drop the sentence saying it is not an Occupational Certificate, because
+that sentence is the QCTO's and the person it protects is a learner standing at
+an assessment centre.
 
-**Where it already bites:** the Statement of Results was reconciled against
-`QCTO SoR Template.docx` on 9 September and the result is a fixed layout in
-code. Most of its *content* is right and should stay fixed — the two-year
-validity, the "not an Occupational Certificate" disclaimer, the attachments
-list all come from the QCTO. But the shape, the wording and the letterhead are a
-tenant's, and today a tenant cannot change any of it.
+Not editable-but-guarded. **Not editable at all**, because a tenant cannot
+delete what they were never given.
 
-**To build:** a tenant template library (upload a `.docx`, or start from the
-platform's default); merge fields the platform fills, with a visible list of
-what can be placed; documents produced through the tenant's template where one
-is set; **a protected core**, so a tenant may restyle a Statement of Results but
-may not quietly drop the sentence saying it is not a certificate; and
-regulator-mandated submissions kept outside it, because the LEISA workbook is
-the QCTO's format and is not a tenant template.
+**Built:**
 
-**Size:** large, and it touches every document the platform issues.
+- `document_templates`, versioned. A new version supersedes rather than
+  overwrites, because a document already issued was rendered from the template
+  as it stood and somebody asking a year later needs that version. One active
+  per kind per tenant, enforced by a partial unique index so drafts and old
+  versions can accumulate without deleting anything.
+- `lib/document-fields.ts` — pure, no database, so the browser form can import
+  the field list without dragging the Postgres driver into the bundle. Every
+  field carries a real example, because "what does `qualification.nqfLevel`
+  actually look like" is the first question anybody has.
+- `lib/document-templates.ts` — save, activate, revert, resolve, fill. An
+  unknown placeholder is **refused on save**: it would render as nothing, and a
+  blank space on a learner's certificate is not a failure anybody notices until
+  it is in their hand.
+- Settings → Your own documents. Shows the fields that can be placed **and the
+  sentences the platform adds anyway**, so a provider does not write their own
+  copy of them and end up saying everything twice.
+- The Statement of Results renders through it. With a template the platform's
+  layout, its confirmation wording and its signature block all step aside; two
+  signature blocks on one page is worse than none.
+
+Verified in a browser end to end: platform layout → save a template → the
+statement changes to the provider's layout with fields merged and no
+placeholders left → the statutory sentence still there → revert → platform
+layout back.
+
+**Still to do:**
+
+- **Certificates and the workplace statement** read the same way. The registry
+  and the machinery already cover them; only the two pages need wiring.
+- **Upload a `.docx` rather than write the template here.** Roland asked for
+  "create and/or upload"; this is the create half. The upload half needs a
+  decision rather than only work - see below.
+- **A starter template per kind**, so a provider begins from the platform's own
+  wording rather than an empty box.
+
+**The decision worth taking before the upload half.** Filling a Word file needs
+a templating library and produces a `.docx` the platform cannot lay the
+statutory block into reliably - Word documents do not have a dependable "after
+the end" the way a page does. So the protected core would become a check on
+save ("your file must contain this text") rather than something the tenant never
+touches, which is weaker. Worth Roland deciding whether that trade is worth it,
+or whether writing the template in the platform is enough.
 
 ### 10 · Offline use for field learners — **new, decided 10 September, urgent**
 
@@ -437,9 +475,12 @@ app.
 
 #### Still open
 
-- **Does Curiosa want offline summatives on the unaccredited ranger
-  programme at all?** The platform will allow it; whether they use it is theirs
-  to decide, and the answer changes nothing structural.
+**Answered 10 September: Curiosa does not want offline summatives on the
+unaccredited ranger programme.** Roland: "It is (might be) purely a Tenant
+client need." So the permissive setting exists for a tenant that asks for it and
+is never turned on for Curiosa - which is the right way round, and is what the
+default already does. Nothing changes in the design; the case is now known to be
+hypothetical rather than imminent, so it should cost nothing extra to carry.
 - **The spike is on hold at Roland's request** (10 September) while he
   considers the offline question further. **Nothing here has been started, and
   no offline code exists.**

@@ -14,6 +14,8 @@ import { MailTest } from "./mail-test";
 import { TerminologyForm } from "./terminology-form";
 import { TERMS, TERM_KEYS } from "@/lib/terms";
 import { mailIsConfigured } from "@/lib/mail";
+import { listTemplates } from "@/lib/document-templates";
+import { TemplateForm } from "./template-form";
 import {
   extensionOffered,
   extensionState,
@@ -57,6 +59,13 @@ export default async function SettingsPage() {
 
   // What the editor starts from: this provider's arrangement if they have one,
   // otherwise the built-in one, with labels rather than hrefs alone.
+  /**
+   * A tenant's own versions of the documents the platform issues. Read only
+   * where somebody may change them; for everybody else the section does not
+   * appear at all rather than appearing and refusing.
+   */
+  const templates = canManageSettings ? await listTemplates(session) : [];
+
   const menu = arrangeNavigation(tenant.navigation ?? null).map((section) => ({
     label: section.label,
     items: section.items.map((item) => ({
@@ -121,6 +130,17 @@ export default async function SettingsPage() {
                 currentMany: tenant.terminology?.[key]?.many ?? "",
               }))}
             />
+          </Card>
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div className="mt-6">
+          <Card
+            title="Your own documents"
+            description="The platform issues Statements of Results, certificates and workplace statements. How each one reads and looks is yours: write your own version and the platform produces it from that instead of its own layout. What a regulator requires is added after yours and is not editable, because that part is not the provider's to change."
+          >
+            <TemplateForm templates={templates} />
           </Card>
         </div>
       ) : null}

@@ -6,6 +6,11 @@ import {
   validUntilFor,
 } from "@/lib/statement-of-results";
 import { describeAccreditation } from "@/lib/accreditation";
+import {
+  activeTemplate,
+  fillTemplate,
+} from "@/lib/document-templates";
+import { templateValuesFor } from "@/lib/statement-of-results";
 import { PrintButton } from "@/components/print-button";
 import { WithdrawDocument } from "@/components/withdraw-document";
 import { withdrawStatementAction } from "./actions";
@@ -76,6 +81,19 @@ export default async function StatementPage({
   const needsFoundationalProof =
     qualification.nqfLevel === 3 || qualification.nqfLevel === 4;
 
+  /**
+   * The provider's own layout, where they have supplied one.
+   *
+   * Null is the ordinary answer and not a failure: every tenant had the
+   * platform's layout before templates existed and most will keep it. What
+   * follows the template either way is the statutory block below, which is the
+   * platform's and is not theirs to remove.
+   */
+  const template = await activeTemplate(session, "statement_of_results");
+  const rendered = template
+    ? fillTemplate(template.body, templateValuesFor(record))
+    : null;
+
   const byComponent = ["knowledge", "practical", "workplace", "general"]
     .map((component) => ({
       component,
@@ -122,6 +140,16 @@ export default async function StatementPage({
         </div>
       ) : null}
 
+      {/*
+        The provider's own layout where they have one, the platform's where they
+        do not. Whitespace is preserved rather than interpreted as markup: a
+        template is the provider's words, and letting it carry markup would let
+        one tenant's document break another tenant's page.
+      */}
+      {rendered !== null ? (
+        <article className="whitespace-pre-wrap">{rendered}</article>
+      ) : (
+      <>
       <header className="mb-6 border-b-2 border-black pb-4">
         <p className="text-xs uppercase tracking-widest">
           {provider.legalName || tenant.displayName}
@@ -261,17 +289,27 @@ export default async function StatementPage({
         </table>
       </section>
 
+      </>
+      )}
+
       <section className="mt-8 break-inside-avoid border-t-2 border-black pt-4">
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">
           Confirmation
         </h2>
-        <p className="mb-4">
-          The Skills Development Provider named above confirms that the learner
-          named above has achieved all internal assessment criteria for all
-          modules in the curriculum document for this qualification, and is
-          therefore eligible to be entered for the External Integrated Summative
-          Assessment.
-        </p>
+        {/*
+          The provider's own words about what they are confirming. A tenant
+          with a template has written their own version above, so repeating
+          ours underneath would read as two providers signing one document.
+        */}
+        {rendered === null ? (
+          <p className="mb-4">
+            The Skills Development Provider named above confirms that the
+            learner named above has achieved all internal assessment criteria
+            for all modules in the curriculum document for this qualification,
+            and is therefore eligible to be entered for the External Integrated
+            Summative Assessment.
+          </p>
+        ) : null}
 
         <table className="w-full border-collapse text-left">
           <tbody>
@@ -303,29 +341,39 @@ export default async function StatementPage({
               Named and designated, not just signed. The QCTO template asks for
               "Name of Principal/Academic Manager" and a designation, because
               whoever signs is making the confirmation above in their own name.
+
+              Rendered only where the provider has no template of their own; one
+              that does will carry its own signature block, and two on one page
+              is worse than none.
             */}
-            <tr className="border-b border-neutral-300">
-              <th className="py-1.5 pr-4 align-top font-semibold">
-                Name of Principal / Academic Manager
-              </th>
-              <td className="py-6"></td>
-            </tr>
-            <tr className="border-b border-neutral-300">
-              <th className="py-1.5 pr-4 align-top font-semibold">
-                Designation
-              </th>
-              <td className="py-6"></td>
-            </tr>
-            <tr className="border-b border-neutral-300">
-              <th className="py-1.5 pr-4 align-top font-semibold">Signature</th>
-              <td className="py-6"></td>
-            </tr>
-            <tr className="border-b border-neutral-300">
-              <th className="py-1.5 pr-4 align-top font-semibold">
-                Stamp of the institution
-              </th>
-              <td className="py-10"></td>
-            </tr>
+            {rendered === null ? (
+              <>
+                <tr className="border-b border-neutral-300">
+                  <th className="py-1.5 pr-4 align-top font-semibold">
+                    Name of Principal / Academic Manager
+                  </th>
+                  <td className="py-6"></td>
+                </tr>
+                <tr className="border-b border-neutral-300">
+                  <th className="py-1.5 pr-4 align-top font-semibold">
+                    Designation
+                  </th>
+                  <td className="py-6"></td>
+                </tr>
+                <tr className="border-b border-neutral-300">
+                  <th className="py-1.5 pr-4 align-top font-semibold">
+                    Signature
+                  </th>
+                  <td className="py-6"></td>
+                </tr>
+                <tr className="border-b border-neutral-300">
+                  <th className="py-1.5 pr-4 align-top font-semibold">
+                    Stamp of the institution
+                  </th>
+                  <td className="py-10"></td>
+                </tr>
+              </>
+            ) : null}
           </tbody>
         </table>
       </section>

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -688,5 +689,101 @@ export const mailAttachments = pgTable(
   (t) => [
     index("mail_attachments_org_idx").on(t.organisationId),
     index("mail_attachments_message_idx").on(t.messageId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Document templates
+// ---------------------------------------------------------------------------
+
+/**
+ * Which document a template is for.
+ *
+ * Mirrors `DOCUMENT_KINDS` in lib/document-fields.ts, which is the pure copy a
+ * browser form imports. Two lists rather than one because a client component
+ * that reached in here would drag the Postgres driver into the bundle with it;
+ * a test asserts they stay in step.
+ */
+export const documentTemplateKind = pgEnum("document_template_kind", [
+  "statement_of_results",
+  "certificate",
+  "workplace_statement",
+]);
+
+export const documentTemplateStatus = pgEnum("document_template_status", [
+  "draft",
+  "active",
+  "archived",
+]);
+
+/**
+ * A tenant's own version of a document the platform produces.
+ *
+ * The platform serves many providers, so it cannot dictate how a Statement of
+ * Results looks: the letterhead, the wording and the order are the provider's.
+ * What it can dictate is that the sentences a regulator requires appear on it,
+ * and those are rendered from `STATUTORY_BLOCKS` after the template rather than
+ * being written into it. A tenant cannot delete what they were never given to
+ * edit.
+ *
+ * A tenant with no template gets the platform's built-in layout, which is what
+ * every tenant had before this table existed. Nothing changes for them.
+ */
+export const documentTemplates = pgTable(
+  "document_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    kind: documentTemplateKind("kind").notNull(),
+    /** The provider's own name for it, shown in their list. */
+    name: text("name").notNull(),
+
+    /**
+     * The template itself: text with {{ placeholders }} the platform fills.
+     *
+     * Held as the provider's own markup rather than as an uploaded file, so
+     * that the placeholders can be checked when it is saved rather than
+     * discovered blank on a learner's document.
+     */
+    body: text("body").notNull(),
+
+    status: documentTemplateStatus("status").notNull().default("draft"),
+
+    /**
+     * Superseded rather than overwritten.
+     *
+     * A document already issued was rendered from the template as it stood, and
+     * somebody asking a year later why a certificate reads the way it does
+     * needs the version that produced it, not the one that replaced it.
+     */
+    version: integer("version").notNull().default(1),
+    supersedesId: uuid("supersedes_id"),
+
+    createdById: uuid("created_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("document_templates_org_idx").on(t.organisationId),
+    index("document_templates_kind_idx").on(t.organisationId, t.kind),
+    /**
+     * One active template per kind, per tenant.
+     *
+     * Partial, because drafts and archived versions accumulate by design and
+     * only one of them can be the one documents are produced from. Without the
+     * condition, keeping last year's version would mean deleting it.
+     */
+    uniqueIndex("document_templates_active_idx")
+      .on(t.organisationId, t.kind)
+      .where(sql`status = 'active'`),
   ],
 );
