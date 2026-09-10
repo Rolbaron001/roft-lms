@@ -787,3 +787,109 @@ export const documentTemplates = pgTable(
       .where(sql`status = 'active'`),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// The statutory learner record
+// ---------------------------------------------------------------------------
+
+/**
+ * What a QCTO learner enrolment return needs, and nothing else does.
+ *
+ * The LEISA workbook has forty-three columns. Twelve of them the platform
+ * already held on `users` - name, identity number, date of birth, equity,
+ * disability, nationality, POPIA consent - because the platform itself uses
+ * them. The rest exist for one annual submission and are read nowhere else:
+ * a fax number, a postal address, a STATSSA area code.
+ *
+ * Held here rather than added to `users` for that reason. `users` is on the
+ * path of every request, and widening it by twenty-two columns that only an
+ * export reads would make every page in the platform carry a learner's postal
+ * address around with it. The split is by purpose, not by tidiness.
+ *
+ * One row per learner, created when the enrolment form is first filled in.
+ * Absent is the ordinary state for anybody who is not a learner.
+ */
+export const learnerProfiles = pgTable(
+  "learner_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /**
+     * For a learner with no South African identity number: a passport, a work
+     * permit or an asylum permit, and which of those it is.
+     */
+    alternateId: text("alternate_id"),
+    alternateIdType: text("alternate_id_type"),
+
+    title: text("title"),
+    middleName: text("middle_name"),
+
+    // Coded exactly as the data-loading specification defines them. See
+    // lib/learner-codes.ts, which carries the allowed values and their labels.
+    homeLanguageCode: text("home_language_code"),
+    citizenResidentStatusCode: text("citizen_resident_status_code"),
+    socioeconomicStatusCode: text("socioeconomic_status_code"),
+    /** Required whenever a disability status other than "none" is recorded. */
+    disabilityRating: text("disability_rating"),
+    immigrantStatus: text("immigrant_status"),
+
+    homeAddress1: text("home_address_1"),
+    homeAddress2: text("home_address_2"),
+    homeAddress3: text("home_address_3"),
+    homeAddressPostalCode: text("home_address_postal_code"),
+
+    postalAddress1: text("postal_address_1"),
+    postalAddress2: text("postal_address_2"),
+    postalAddress3: text("postal_address_3"),
+    postalAddressPostalCode: text("postal_address_postal_code"),
+
+    phoneNumber: text("phone_number"),
+    cellPhoneNumber: text("cell_phone_number"),
+    faxNumber: text("fax_number"),
+
+    /** Where the learner works, which is not always where they live. */
+    provinceCode: text("province_code"),
+    statssaAreaCode: text("statssa_area_code"),
+
+    /**
+     * Foundational Learning Competence, and the statement number that proves
+     * it. Required at NQF levels 3 and 4, which is why the Statement of Results
+     * asks for the same evidence.
+     */
+    flc: text("flc"),
+    flcStatementNumber: text("flc_statement_number"),
+
+    /** The employer named on the form, which the cohort does not always know. */
+    employerName: text("employer_name"),
+
+    /**
+     * When the learner last confirmed their own details.
+     *
+     * The QCTO monitors ask for the enrolment form as evidence, and a form
+     * nobody has looked at since 2024 is evidence of very little. Recorded so a
+     * coordinator can see whose details are stale rather than assuming.
+     */
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    confirmedById: uuid("confirmed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("learner_profiles_org_idx").on(t.organisationId),
+    /** One per learner. A second would be two answers to the same question. */
+    uniqueIndex("learner_profiles_user_idx").on(t.userId),
+  ],
+);

@@ -461,8 +461,9 @@ Three things follow, and the third is the one that will bite:
 
 #### How I would build it
 
-**A Progressive Web App layer, switched on per tenant.** Not a separate mobile
-app.
+**Decided 10 September: an installable web app, switched on per tenant.** Not a
+separate mobile app. Roland approved the approach; the work itself is still
+queued behind task 7.
 
 - **No app store, no second codebase.** The learner opens the same site and
   installs it to their home screen. A separate React Native app would double the
