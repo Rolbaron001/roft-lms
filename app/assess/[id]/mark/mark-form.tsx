@@ -35,32 +35,32 @@ export function MarkForm({
   );
 
   /**
-   * Questions in their original order, gathered under the section each belongs
-   * to. The index is kept from the flat list so question numbering still reads
-   * 1 to 40 across the whole paper rather than restarting in every section.
+   * Questions gathered under the section each belongs to.
+   *
+   * Driven by the paper's own section order rather than by where the section
+   * changes as the items are walked. That distinction is not academic: item
+   * sort order restarts at zero in every section, so the flat list interleaves
+   * them - A, C, B, D across two sections - and an adjacency-based grouping
+   * produced four groups and four comment boxes for two sections.
+   *
+   * The index is kept from the flat list so question numbering still reads 1
+   * to 40 across the whole paper rather than restarting in each section.
    */
-  const grouped = paper.items.reduce<
+  const numbered = paper.items.map((item, index) => ({ item, index }));
+
+  const grouped = [
+    ...paper.sections.map((section) => ({
+      key: section.id,
+      section,
+      items: numbered.filter((row) => row.item.sectionId === section.id),
+    })),
+    // A paper with no sections at all, or an item that belongs to none.
     {
-      key: string;
-      section: MarkedPaper["sections"][number] | null;
-      items: { item: MarkedItem; index: number }[];
-    }[]
-  >((groups, item, index) => {
-    const key = item.sectionId ?? "__none__";
-    const last = groups[groups.length - 1];
-
-    if (last && last.key === key) {
-      last.items.push({ item, index });
-      return groups;
-    }
-
-    groups.push({
-      key,
-      section: paper.sections.find((s) => s.id === item.sectionId) ?? null,
-      items: [{ item, index }],
-    });
-    return groups;
-  }, []);
+      key: "__none__",
+      section: null,
+      items: numbered.filter((row) => row.item.sectionId === null),
+    },
+  ].filter((group) => group.items.length > 0);
 
   return (
     <div className="space-y-6">
