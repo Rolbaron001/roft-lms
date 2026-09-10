@@ -540,3 +540,71 @@ export async function verifyByReference(
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// What a tenant's own template is filled from
+// ---------------------------------------------------------------------------
+
+/**
+ * One certificate, flattened into the fields a template can place.
+ *
+ * Read from the certificate's own frozen columns rather than recomputed. A
+ * competency can be renamed or a course retitled after issue; the certificate
+ * in somebody's hand must keep saying what it said when it was signed.
+ *
+ * Deliberately narrower than a Statement of Results. A certificate carries no
+ * SAQA identifier, no curriculum code and no credit total, because it is the
+ * provider's own award - a qualification certificate comes from the QCTO. The
+ * field list says so rather than offering fields that would print blank.
+ */
+export function certificateTemplateValues(input: {
+  certificate: {
+    title: string;
+    competenciesAttested: { code: string; name: string; level?: string }[];
+    issuedAt: Date;
+    expiresAt: Date | null;
+    verificationReference: string;
+  };
+  holder: { firstName: string; lastName: string; nationalId?: string | null };
+  provider: {
+    legalName: string;
+    address?: string[] | null;
+    accreditationNumber?: string | null;
+  };
+}): Record<string, string> {
+  const date = (value: Date | null | undefined) =>
+    value
+      ? value.toLocaleDateString("en-ZA", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+
+  const competencies = input.certificate.competenciesAttested
+    .map((entry) =>
+      [entry.code, entry.name, entry.level].filter(Boolean).join("  "),
+    )
+    .join("\n");
+
+  return {
+    "learner.fullName":
+      `${input.holder.firstName} ${input.holder.lastName}`.trim(),
+    "learner.firstName": input.holder.firstName,
+    "learner.lastName": input.holder.lastName,
+    "learner.nationalId": input.holder.nationalId ?? "",
+
+    "certificate.title": input.certificate.title,
+    "certificate.awardedOn": date(input.certificate.issuedAt),
+    "certificate.expiresOn": date(input.certificate.expiresAt),
+
+    competencies,
+
+    "provider.name": input.provider.legalName,
+    "provider.address": (input.provider.address ?? []).join(", "),
+    "provider.accreditationNumber": input.provider.accreditationNumber ?? "",
+
+    "document.issuedOn": date(input.certificate.issuedAt),
+    "document.reference": input.certificate.verificationReference,
+  };
+}

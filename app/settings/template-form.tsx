@@ -6,6 +6,7 @@ import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LABELS,
   DOCUMENT_KIND_NOTES,
+  STARTER_TEMPLATES,
   STATUTORY_BLOCKS,
   type DocumentKind,
 } from "@/lib/document-fields";
@@ -106,20 +107,27 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
 
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">The document</span>
+          {/*
+            A provider with no template of their own starts from the platform's
+            own wording rather than an empty box. An empty textarea beside a
+            list of forty field names is a worse invitation than it looks: the
+            first thing anybody does is guess at a layout, and the second is
+            discover they left out the reference.
+          */}
           <textarea
             name="body"
-            rows={14}
-            defaultValue={showing?.body ?? ""}
-            placeholder={
-              "STATEMENT OF RESULTS\n\n{{ provider.name }}\n{{ provider.address }}\n\nIssued to {{ learner.fullName }}, identity number {{ learner.nationalId }}\nfor {{ qualification.title }} (SAQA {{ qualification.saqaId }}).\n\n{{ modules }}\n\nIssued on {{ document.issuedOn }}. Reference {{ document.reference }}."
-            }
+            rows={16}
+            defaultValue={showing?.body ?? STARTER_TEMPLATES[kind]}
             className={`${inputClass} font-mono text-xs`}
             key={showing?.id ?? kind}
           />
           <span className="block text-xs text-[var(--muted)]">
             Write it as you want it to read. Anything in double braces is
             replaced with the learner&rsquo;s own details when the document is
-            produced. Your layout is kept exactly as you type it.
+            produced, and your spacing is kept exactly as you type it.
+            {showing
+              ? null
+              : " This is the platform's own wording, for you to cut down into yours."}
           </span>
         </label>
 

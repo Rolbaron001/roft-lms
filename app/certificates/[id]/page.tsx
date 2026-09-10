@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
-import { CertificateError, getCertificate } from "@/lib/certificates";
+import {
+  certificateTemplateValues,
+  CertificateError,
+  getCertificate,
+} from "@/lib/certificates";
+import {
+  activeTemplate,
+  fillTemplate,
+  providerDetails,
+} from "@/lib/document-templates";
 import { AppShell } from "@/components/app-shell";
 import { TenantLogo } from "@/components/tenant-logo";
 import { PrintButton } from "@/components/print-button";
@@ -34,6 +43,26 @@ export default async function CertificatePage({
 
   const { certificate, holder } = detail;
   const revoked = certificate.revokedAt !== null;
+
+  /**
+   * The provider's own layout, where they have one.
+   *
+   * Their logo stays above it either way. A template is plain text, so it
+   * cannot carry an image - and a letterhead is the main reason a provider
+   * wants their own document in the first place, so the platform supplies it
+   * from their branding rather than making them do without.
+   */
+  const template = await activeTemplate(session, "certificate");
+  const rendered = template
+    ? fillTemplate(
+        template.body,
+        certificateTemplateValues({
+          certificate,
+          holder,
+          provider: await providerDetails(session),
+        }),
+      )
+    : null;
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -81,6 +110,10 @@ export default async function CertificatePage({
           </div>
         ) : null}
 
+        {rendered !== null ? (
+          <div className="whitespace-pre-wrap text-left text-sm">{rendered}</div>
+        ) : (
+          <>
         <p
           className="text-xs font-semibold uppercase tracking-[0.2em]"
           style={{ color: "var(--brand-accent)" }}
@@ -152,6 +185,8 @@ export default async function CertificatePage({
         <p className="mt-1 font-mono text-sm font-medium">
           {certificate.verificationReference}
         </p>
+          </>
+        )}
       </article>
 
         {/*

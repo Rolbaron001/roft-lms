@@ -320,7 +320,7 @@ Not the rebuild the previous version of this list implied. W1, W2 and W3 above
 are all in, and W1 turned out to be twice the size reported: the learner had no
 screen for reading a marked workbook back at all.
 
-### 9 · Tenant document templates — **first half done, 10 September**
+### 9 · Tenant document templates — **done, 10 September**
 
 The platform must produce documents, and a tenant must be able to supply the
 template it uses. Roland: "the templates cannot be prescriptive of exactly how a
@@ -365,23 +365,48 @@ statement changes to the provider's layout with fields merged and no
 placeholders left → the statutory sentence still there → revert → platform
 layout back.
 
-**Still to do:**
+**All three documents now read through it.** The Statement of Results, the
+certificate and the Statement of Work Experience. Each keeps what is not the
+provider's: the statement keeps its statutory block and its verification
+reference, the certificate keeps the sentence saying it is not a national
+qualification, and the workplace statement keeps the attestation and the
+signature hash that makes the coach's sign-off checkable.
 
-- **Certificates and the workplace statement** read the same way. The registry
-  and the machinery already cover them; only the two pages need wiring.
-- **Upload a `.docx` rather than write the template here.** Roland asked for
-  "create and/or upload"; this is the create half. The upload half needs a
-  decision rather than only work - see below.
-- **A starter template per kind**, so a provider begins from the platform's own
-  wording rather than an empty box.
+**Starter templates.** A provider with no template of their own opens the
+platform's own wording, already laid out, rather than an empty box. An empty
+textarea beside a list of forty field names is a worse invitation than it looks:
+the first thing anybody does is guess at a layout, and the second is discover
+they left out the reference. Tested so that every starter saves without
+complaint, carries the reference, and does not repeat the statutory sentences -
+a starter that did would teach every provider to duplicate them.
 
-**The decision worth taking before the upload half.** Filling a Word file needs
-a templating library and produces a `.docx` the platform cannot lay the
-statutory block into reliably - Word documents do not have a dependable "after
-the end" the way a page does. So the protected core would become a check on
-save ("your file must contain this text") rather than something the tenant never
-touches, which is weaker. Worth Roland deciding whether that trade is worth it,
-or whether writing the template in the platform is enough.
+**A correction found while wiring the other two.** The field list offered
+`qualification.saqaId`, `curriculumCode` and a credit total on a *certificate*,
+and a certificate holds none of those - it is the provider's own award, and a
+qualification certificate comes from the QCTO. That was exactly the fault the
+platform refuses a tenant for: a field that renders blank on a printed document
+and is noticed by the person holding it. Each document now offers only what it
+actually carries.
+
+**The letterhead, which was the real reason to want Word.** A template is plain
+text and cannot hold an image, so the certificate renders the tenant's own logo
+above it from their branding. The provider's legal name, address and
+accreditation number are fields, read from the organisation rather than from the
+cached tenant identity - that cache carries what a browser needs, and a legal
+address is not it.
+
+**Decided 10 September: no `.docx` upload.** Writing the template in the
+platform is the answer, and it is the stronger one. Filling a Word file needs a
+templating library, and a `.docx` has no dependable "after the end" to put the
+statutory block into - so the protected core would weaken from "a tenant never
+touches it" to "your file must contain this text, checked on save", which a
+determined person defeats and which fails in a way nobody sees until a document
+is issued.
+
+The pressure for Word will come from a tenant wanting **their letterhead**
+rather than from needing Word itself, and that is better answered by letting
+them place their own logo and address on the document than by handing over the
+whole file.
 
 ### 10 · Offline use for field learners — **new, decided 10 September, urgent**
 

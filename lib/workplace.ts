@@ -845,3 +845,91 @@ export async function workplaceSetupData(session: AuthenticatedSession) {
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// What a tenant's own template is filled from
+// ---------------------------------------------------------------------------
+
+/**
+ * One signed logbook, flattened into the fields a template can place.
+ *
+ * The client's term for this document is a **workplace experience sign-off**
+ * rather than a logbook, and the field names follow theirs rather than the
+ * table's - `workplace.signedOn`, not `logbook.coachSignedAt`. A provider
+ * building their own version should meet their own vocabulary, not the
+ * platform's schema.
+ */
+export function workplaceTemplateValues(input: {
+  logbook: { hoursClaimed: number | null; coachSignedAt: Date | null };
+  agreement: {
+    employerName: string | null;
+    employerAddress: string | null;
+    coachName: string | null;
+    coachDesignation: string | null;
+  } | null;
+  module: { code: string; title: string; credits: number | null } | null;
+  learner: {
+    firstName: string;
+    lastName: string;
+    nationalId: string | null;
+  } | null;
+  entries: {
+    kind: string;
+    code: string;
+    description: string;
+    completedAt: Date | string | null;
+  }[];
+  provider: {
+    legalName: string;
+    address: string[];
+    accreditationNumber: string | null;
+  };
+  reference: string;
+}): Record<string, string> {
+  const date = (value: Date | string | null | undefined) =>
+    value
+      ? new Date(value).toLocaleDateString("en-ZA", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+
+  const entries = input.entries
+    .map((entry) =>
+      [entry.code, entry.description, date(entry.completedAt)]
+        .filter(Boolean)
+        .join("\t"),
+    )
+    .join("\n");
+
+  return {
+    "learner.fullName":
+      `${input.learner?.firstName ?? ""} ${input.learner?.lastName ?? ""}`.trim(),
+    "learner.firstName": input.learner?.firstName ?? "",
+    "learner.lastName": input.learner?.lastName ?? "",
+    "learner.nationalId": input.learner?.nationalId ?? "",
+
+    "module.code": input.module?.code ?? "",
+    "module.title": input.module?.title ?? "",
+    "module.credits": input.module?.credits ? String(input.module.credits) : "",
+
+    "workplace.employer": input.agreement?.employerName ?? "",
+    "workplace.employerAddress": input.agreement?.employerAddress ?? "",
+    "workplace.coach": input.agreement?.coachName ?? "",
+    "workplace.coachDesignation": input.agreement?.coachDesignation ?? "",
+    "workplace.hours": input.logbook.hoursClaimed
+      ? String(input.logbook.hoursClaimed)
+      : "",
+    "workplace.signedOn": date(input.logbook.coachSignedAt),
+
+    entries,
+
+    "provider.name": input.provider.legalName,
+    "provider.address": input.provider.address.join(", "),
+    "provider.accreditationNumber": input.provider.accreditationNumber ?? "",
+
+    "document.issuedOn": date(input.logbook.coachSignedAt),
+    "document.reference": input.reference,
+  };
+}

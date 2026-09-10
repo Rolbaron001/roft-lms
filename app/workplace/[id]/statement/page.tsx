@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
-import { getLogbook } from "@/lib/workplace";
+import { getLogbook, workplaceTemplateValues } from "@/lib/workplace";
+import {
+  activeTemplate,
+  fillTemplate,
+  providerDetails,
+} from "@/lib/document-templates";
 
 function formatDate(value: Date | null | undefined): string {
   if (!value) return "—";
@@ -47,6 +52,27 @@ export default async function StatementPage({
 
   const { logbook, agreement, module, learner, entries } = view;
 
+  /**
+   * The provider's own layout, where they have one. The signature block below
+   * stays either way: it carries the hash that makes the coach's attestation
+   * checkable, and that is the platform's, not the provider's.
+   */
+  const template = await activeTemplate(session, "workplace_statement");
+  const rendered = template
+    ? fillTemplate(
+        template.body,
+        workplaceTemplateValues({
+          logbook,
+          agreement,
+          module,
+          learner,
+          entries,
+          provider: await providerDetails(session),
+          reference: logbook.coachSignatureHash ?? "",
+        }),
+      )
+    : null;
+
   const byKind = new Map<string, typeof entries>();
   for (const entry of entries) {
     byKind.set(entry.kind, [...(byKind.get(entry.kind) ?? []), entry]);
@@ -54,6 +80,15 @@ export default async function StatementPage({
 
   return (
     <main className="mx-auto max-w-3xl bg-white px-10 py-10 text-[13px] leading-relaxed text-black print:px-0 print:py-0">
+      {/*
+        The provider's own layout where they have one, the platform's where they
+        do not. The attestation and the signature hash below stay either way:
+        they are what makes the coach's sign-off checkable.
+      */}
+      {rendered !== null ? (
+        <article className="whitespace-pre-wrap">{rendered}</article>
+      ) : (
+        <>
       <header className="mb-6 border-b-2 border-black pb-4">
         <p className="text-xs uppercase tracking-widest">
           {tenant.displayName}
@@ -131,6 +166,8 @@ export default async function StatementPage({
           </table>
         </section>
       ))}
+        </>
+      )}
 
       <section className="mt-8 break-inside-avoid border-t-2 border-black pt-4">
         <h2 className="mb-2 text-sm font-bold uppercase tracking-wide">

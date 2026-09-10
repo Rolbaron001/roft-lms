@@ -1,6 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { documentTemplates } from "@/db/schema";
+import { documentTemplates, organisations } from "@/db/schema";
 import {
   DOCUMENT_KINDS,
   STATUTORY_BLOCKS,
@@ -276,4 +276,49 @@ export function fillTemplate(
 /** The sentences the platform adds after the template, whatever it says. */
 export function statutoryBlocksFor(kind: DocumentKind): string[] {
   return STATUTORY_BLOCKS[kind];
+}
+
+/**
+ * The provider's own details, for the three fields every document carries.
+ *
+ * Read here rather than from the cached tenant identity, which carries what a
+ * browser needs - display name, colours, logo - and deliberately not the legal
+ * name, the address or the accreditation number. Those belong on a document
+ * and nowhere else, and putting them in a cache that every page reads would be
+ * carrying them further than they need to go.
+ */
+export async function providerDetails(session: AuthenticatedSession): Promise<{
+  legalName: string;
+  address: string[];
+  accreditationNumber: string | null;
+}> {
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        legalName: organisations.legalName,
+        displayName: organisations.displayName,
+        accreditationNumber: organisations.accreditationNumber,
+        physicalAddress: organisations.physicalAddress,
+      })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+
+    const a = row?.physicalAddress ?? null;
+
+    return {
+      legalName: row?.legalName || row?.displayName || "",
+      address: a
+        ? [
+            a.line1,
+            a.line2,
+            [a.city, a.province].filter(Boolean).join(", "),
+            a.postalCode,
+            a.country,
+          ]
+            .map((line) => (line ?? "").trim())
+            .filter((line) => line.length > 0)
+        : [],
+      accreditationNumber: row?.accreditationNumber ?? null,
+    };
+  });
 }

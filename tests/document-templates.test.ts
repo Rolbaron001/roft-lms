@@ -19,6 +19,7 @@ import { documentTemplates, organisations, userRoles, users } from "@/db/schema"
 import {
   DOCUMENT_FIELDS,
   DOCUMENT_KINDS,
+  STARTER_TEMPLATES,
   STATUTORY_BLOCKS,
   placeholdersIn,
   unknownPlaceholders,
@@ -52,11 +53,22 @@ function sessionFor(roles: Role[], userId: string): AuthenticatedSession {
   };
 }
 
+/**
+ * Deliberately built from the fields every kind of document has - the learner,
+ * the provider and the document's own reference - so one body can be saved
+ * against all three.
+ *
+ * It cannot mention the qualification: a certificate carries no SAQA
+ * identifier, no curriculum code and no title of one, because it is the
+ * provider's own award rather than a national qualification. An earlier version
+ * of this fixture used `qualification.title` and was refused for a certificate,
+ * which is the guard doing its job.
+ */
 const BODY = [
-  "STATEMENT OF RESULTS",
+  "STATEMENT",
   "",
   "{{ provider.name }}",
-  "Issued to {{ learner.fullName }} for {{ qualification.title }}.",
+  "Issued to {{ learner.fullName }}.",
   "Reference {{ document.reference }}.",
 ].join("\n");
 
@@ -123,7 +135,7 @@ describe("what a provider may change", () => {
 
     expect(active).not.toBeNull();
     expect(active!.name).toBe("Ours, 2026");
-    expect(active!.body).toContain("STATEMENT OF RESULTS");
+    expect(active!.body).toContain("STATEMENT");
   });
 
   /**
@@ -320,5 +332,65 @@ describe("the two lists that have to stay in step", () => {
     expect(placeholdersIn("{{ a.b }} then {{c.d}}")).toEqual(["a.b", "c.d"]);
     expect(unknownPlaceholders("statement_of_results", "{{ learner.fullName }}"))
       .toEqual([]);
+  });
+});
+
+describe("what a provider starts from", () => {
+  /**
+   * An empty textarea beside a list of forty field names is a worse invitation
+   * than it looks. Each starter is the platform's own wording, already laid
+   * out, for a provider to cut down into theirs.
+   */
+  it("offers a starting point for every document", () => {
+    for (const kind of DOCUMENT_KINDS) {
+      expect(STARTER_TEMPLATES[kind].length).toBeGreaterThan(100);
+    }
+  });
+
+  /**
+   * The starter is what a provider will save first, so if it used a field the
+   * platform cannot fill, the very first save would be refused - and the
+   * refusal would look like the platform's fault, because it would be.
+   */
+  it("uses only fields the platform can actually fill", () => {
+    for (const kind of DOCUMENT_KINDS) {
+      expect(unknownPlaceholders(kind, STARTER_TEMPLATES[kind])).toEqual([]);
+    }
+  });
+
+  it("saves without complaint, which is the point of it", async () => {
+    for (const kind of DOCUMENT_KINDS) {
+      const saved = await saveTemplate(admin, {
+        kind,
+        name: `Starter ${kind}`,
+        body: STARTER_TEMPLATES[kind],
+        activate: false,
+      });
+      expect(saved.id).toBeTruthy();
+    }
+  });
+
+  /**
+   * A starter that repeated the statutory sentences would teach every provider
+   * to duplicate them, and the finished document would say everything twice.
+   */
+  it("does not repeat what the platform adds anyway", () => {
+    for (const kind of DOCUMENT_KINDS) {
+      for (const block of STATUTORY_BLOCKS[kind]) {
+        // Compared on the opening clause: the whole sentence is long enough
+        // that an incidental match is not credible.
+        expect(STARTER_TEMPLATES[kind]).not.toContain(block.slice(0, 45));
+      }
+    }
+  });
+
+  /**
+   * The reference is what makes a document checkable, and it is the thing
+   * somebody laying out their own version forgets. Every starter carries it.
+   */
+  it("carries the verification reference on every document", () => {
+    for (const kind of DOCUMENT_KINDS) {
+      expect(STARTER_TEMPLATES[kind]).toContain("{{ document.reference }}");
+    }
   });
 });

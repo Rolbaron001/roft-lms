@@ -148,13 +148,32 @@ export const DOCUMENT_FIELDS: Record<DocumentKind, DocumentField[]> = {
     ...PROVIDER_FIELDS,
     ...DOCUMENT_META_FIELDS,
   ],
+  /**
+   * A certificate carries less than a Statement of Results, and the list says
+   * so rather than offering fields the platform cannot fill.
+   *
+   * It has no SAQA identifier, no curriculum code and no credit total, because
+   * a certificate is the provider's own award: a qualification certificate
+   * comes from the QCTO. Offering `qualification.saqaId` here would have been
+   * exactly the fault the platform refuses a tenant for - a field that renders
+   * blank on a printed document and is noticed by the person holding it.
+   */
   certificate: [
     ...LEARNER_FIELDS,
-    ...QUALIFICATION_FIELDS,
+    {
+      key: "certificate.title",
+      label: "What the certificate is for",
+      example: "Introduction to Commercial Cleaning",
+    },
     {
       key: "certificate.awardedOn",
       label: "Date awarded",
       example: "1 August 2026",
+    },
+    {
+      key: "certificate.expiresOn",
+      label: "Expires on, where it does",
+      example: "1 August 2029",
     },
     {
       key: "competencies",
@@ -167,15 +186,39 @@ export const DOCUMENT_FIELDS: Record<DocumentKind, DocumentField[]> = {
   ],
   workplace_statement: [
     ...LEARNER_FIELDS,
-    ...QUALIFICATION_FIELDS,
-    { key: "workplace.employer", label: "Employer", example: "Acme Mining Services" },
-    { key: "workplace.coach", label: "Workplace coach", example: "Sipho Dlamini" },
-    { key: "workplace.from", label: "From", example: "3 March 2026" },
-    { key: "workplace.to", label: "To", example: "28 August 2026" },
     {
-      key: "modules",
-      label: "The work experience modules signed off",
-      example: "A table of the modules and the dates they were signed",
+      key: "module.code",
+      label: "Work experience module code",
+      example: "811201-000-00-WM-01",
+    },
+    {
+      key: "module.title",
+      label: "Module title",
+      example: "Procedures for Completing Before Shift Duties",
+    },
+    { key: "module.credits", label: "Credits", example: "4" },
+    { key: "workplace.employer", label: "Employer", example: "Acme Mining Services" },
+    {
+      key: "workplace.employerAddress",
+      label: "Employer's address",
+      example: "12 Reef Road, Boksburg",
+    },
+    { key: "workplace.coach", label: "Workplace coach", example: "Sipho Dlamini" },
+    {
+      key: "workplace.coachDesignation",
+      label: "Coach's designation",
+      example: "Site Supervisor",
+    },
+    { key: "workplace.hours", label: "Hours completed", example: "160" },
+    {
+      key: "workplace.signedOn",
+      label: "Date the coach signed",
+      example: "28 August 2026",
+    },
+    {
+      key: "entries",
+      label: "The work experience recorded",
+      example: "A list of what the learner did, by kind",
       repeating: true,
     },
     ...PROVIDER_FIELDS,
@@ -204,6 +247,110 @@ export const STATUTORY_BLOCKS: Record<DocumentKind, string[]> = {
   workplace_statement: [
     "This statement records workplace experience signed off by the coach named on it. It is not an assessment decision and does not on its own confirm competence.",
   ],
+};
+
+/**
+ * What a provider starts from, rather than an empty box.
+ *
+ * An empty textarea and a list of forty field names is a worse invitation than
+ * it looks: the first thing anybody does is guess at a layout, and the second
+ * is discover they have left out the reference. So each of these is the
+ * platform's own wording, already laid out and already carrying the fields that
+ * matter, for a provider to edit down into their own.
+ *
+ * They deliberately do **not** repeat anything in `STATUTORY_BLOCKS`. Those are
+ * printed after whatever the template says, and a starter that included them
+ * would teach every provider to duplicate them.
+ */
+export const STARTER_TEMPLATES: Record<DocumentKind, string> = {
+  statement_of_results: [
+    "{{ provider.name }}",
+    "{{ provider.address }}",
+    "",
+    "STATEMENT OF RESULTS",
+    "",
+    "Issued to      {{ learner.fullName }}",
+    "Identity no    {{ learner.nationalId }}",
+    "",
+    "Qualification  {{ qualification.title }}",
+    "SAQA ID        {{ qualification.saqaId }}",
+    "Curriculum     {{ qualification.curriculumCode }}",
+    "NQF level      {{ qualification.nqfLevel }}",
+    "Credits        {{ qualification.credits }}",
+    "",
+    "MODULES COMPLETED",
+    "{{ modules }}",
+    "",
+    "Admitted to the EISA   {{ statement.admittedToEisa }}",
+    "Date of next EISA      {{ statement.nextEisa }}",
+    "",
+    "The provider named above confirms that the learner named above has",
+    "achieved all internal assessment criteria for all modules in the",
+    "curriculum document for this qualification.",
+    "",
+    "Issued on      {{ document.issuedOn }}",
+    "Valid until    {{ statement.validUntil }}",
+    "Reference      {{ document.reference }}",
+    "Accreditation  {{ provider.accreditationNumber }}",
+    "",
+    "",
+    "Name of Principal / Academic Manager   ____________________________",
+    "",
+    "Designation                            ____________________________",
+    "",
+    "Signature                              ____________________________",
+  ].join("\n"),
+
+  certificate: [
+    "{{ provider.name }}",
+    "{{ provider.address }}",
+    "",
+    "CERTIFICATE OF COMPLETION",
+    "",
+    "This is to certify that",
+    "",
+    "        {{ learner.fullName }}",
+    "",
+    "has completed",
+    "",
+    "        {{ certificate.title }}",
+    "",
+    "WHAT THIS ATTESTS TO",
+    "{{ competencies }}",
+    "",
+    "Awarded on     {{ certificate.awardedOn }}",
+    "Reference      {{ document.reference }}",
+    "Accreditation  {{ provider.accreditationNumber }}",
+    "",
+    "",
+    "Signed for {{ provider.name }}   ____________________________",
+  ].join("\n"),
+
+  workplace_statement: [
+    "{{ provider.name }}",
+    "",
+    "STATEMENT OF WORK EXPERIENCE",
+    "",
+    "Learner        {{ learner.fullName }}",
+    "Identity no    {{ learner.nationalId }}",
+    "",
+    "Module         {{ module.code }} {{ module.title }}",
+    "Credits        {{ module.credits }}",
+    "",
+    "Employer       {{ workplace.employer }}",
+    "Address        {{ workplace.employerAddress }}",
+    "Coach          {{ workplace.coach }}, {{ workplace.coachDesignation }}",
+    "Hours          {{ workplace.hours }}",
+    "",
+    "WHAT WAS DONE",
+    "{{ entries }}",
+    "",
+    "Signed off on  {{ workplace.signedOn }}",
+    "Reference      {{ document.reference }}",
+    "",
+    "",
+    "Workplace coach   ____________________________",
+  ].join("\n"),
 };
 
 /** Every field key a template of this kind may use. */
