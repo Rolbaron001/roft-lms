@@ -136,30 +136,28 @@ re-version a course.
 
 ---
 
-## Design-document items never raised in a meeting — a decision is needed
+## Design-document items — decided 10 September 2026
 
-These are in `Design/ROFT_LMS_Design.docx` and have never come up in eleven
-meetings with Curiosa. They are not oversights, but neither were they ever
-explicitly dropped, and each is large enough that discovering it late would
-hurt. **Each needs an in-or-out decision rather than an implementation.**
+Eight items sat in `Design/ROFT_LMS_Design.docx` that had never come up in
+eleven meetings with Curiosa and had never been explicitly dropped. Roland
+decided them on 10 September. **Recorded so they are not re-litigated every time
+somebody reads the design document.** Heidi to flag any she disagrees with.
 
-| Item | State | Note |
+| Item | Decision | Reasoning |
 |---|---|---|
-| Single sign-on (SAML / OAuth) | Nothing | Design calls it a priority integration. Curiosa has never asked; their learners use platform logins. |
-| HRIS connection for automatic enrolment | Nothing | Suits an internal training department, not a commercial provider. Probably not Curiosa. |
-| Metrics API for a client's own BI tooling | Nothing | Exports to spreadsheet and PDF exist, which may be enough. |
-| SCORM / cmi5 import | Content types exist; no importer | Would matter to a tenant bringing courses from another LMS. |
-| Course-level discussion threads | Nothing | The design pairs it with mentoring. Never raised. |
-| O\*NET / ESCO benchmarking | Nothing | Design already calls it "configuration, not a fixed dependency". |
-| Offline use for field learners | Nothing | Raised 10 August for rangers. The one item that changes the shape of the platform: local storage, conflict resolution, and an answer for evidence captured on a device unseen for a fortnight. **Scope on its own; do not attach to anything.** |
-| Interface in local languages, Zulu first | Nothing | Raised 28 August. The terminology work makes the mechanism cheaper than it was. |
+| Single sign-on (SAML / OAuth) | **Out for now** | For corporate tenants with an IT department. Curiosa's learners are individuals, not one company's staff. It is an authentication adapter and can be added later without disturbing anything. |
+| HRIS connection for automatic enrolment | **Out** | Built for internal training departments. Curiosa sells training to clients. |
+| Metrics API for a client's own BI tooling | **Out for now** | Spreadsheet and PDF exports already exist. Revisit if a corporate tenant asks. |
+| SCORM / cmi5 import | **Out, but keep visible** | Curiosa authors its own material. Most likely of these to come up in a sales conversation with a tenant that already holds a content library — so it should be quoted for, not assumed. |
+| Course-level discussion threads | **Out** | Curiosa's model is facilitator-led live sessions; discussion happens there. |
+| O\*NET / ESCO benchmarking | **Out** | Reads as ROFT advisory work rather than LMS work. The design already calls it optional configuration. |
+| **Offline use for field learners** | **IN — and urgent** | See task 10. The ranger programme client was the catalyst for building the LMS now, and ROFT cannot respond to them until the platform can serve them. |
+| Interface in Zulu and other local languages | **Deferred, not dropped** | A genuine differentiator in this market. The terminology work makes the mechanism cheaper, though this is every sentence rather than only the nouns. |
 
-**Now closed:** the design's open question of *course against programme* — the
+**Also closed:** the design's open question of *course against programme*. The
 client uses "programme" for everything and found the distinction artificial.
 Configurable labels were named as the smaller change, and that is what task 1
 built.
-
----
 
 ## The rule that governs how all of this gets built
 
@@ -342,6 +340,88 @@ regulator-mandated submissions kept outside it, because the LEISA workbook is
 the QCTO's format and is not a tenant template.
 
 **Size:** large, and it touches every document the platform issues.
+
+### 10 · Offline use for field learners — **new, decided 10 September, urgent**
+
+The ranger programme client was the catalyst for building the LMS now, and ROFT
+cannot respond to them until the platform can serve them. This is the one item
+on the list with a client waiting behind it.
+
+**The constraint Roland set, and it shapes everything below:** the platform
+works as it is and must not change. Offline is *additional functionality for
+tenants that need it* — off by default, invisible to every tenant that does not
+turn it on, and adding nothing to the path an online learner already takes.
+
+#### What should work offline, and what should not
+
+Not everything should. The honest scope is narrower than "the LMS, offline", and
+the narrowing is what makes it buildable and defensible.
+
+| | Offline | Why |
+|---|---|---|
+| Reading study material | **Yes** | The main thing a ranger in the field needs. |
+| The rollout schedule and what is due | **Yes** | Small, and useless if it needs a signal. |
+| Workbook answers — formative | **Yes** | Captured on the device, marked when it syncs. |
+| Workplace evidence: photos, notes, sign-off entries | **Yes** | This is what field work produces. |
+| **Summative assessments** | **No** | Facilitator-led sessions are compulsory and summatives are invigilated. A summative taken unsupervised on a phone over a fortnight is not defensible to the QCTO, and the invigilation already built exists precisely because that matters. |
+| Marking, moderation, anything needing a second person | **No** | Requires somebody else to be there. |
+
+Worth putting to Heidi as a regulatory question rather than a technical one, but
+I am fairly confident of it.
+
+#### How I would build it
+
+**A Progressive Web App layer, switched on per tenant.** Not a separate mobile
+app.
+
+- **No app store, no second codebase.** The learner opens the same site and
+  installs it to their home screen. A separate React Native app would double the
+  code and the maintenance for a capability one tenant needs.
+- **Gated by a tenant flag.** The service worker is registered only for a tenant
+  with offline enabled. Nothing is cached, nothing is queued, and no behaviour
+  differs for anybody else — which is the constraint Roland set.
+- **A deliberate download, not a silent cache.** Before going out, the learner
+  taps "make this available offline" for their current study unit. They can see
+  what is held and how much room it takes. Silent caching of everything is how a
+  phone fills up and a learner loses trust in it.
+- **Work queues locally and uploads on reconnect.** Answers and evidence sit in
+  the browser's own database until there is a signal.
+
+#### The three things that will actually go wrong
+
+1. **The device clock cannot be trusted.** Evidence captured offline claims a
+   date, and a phone's clock can be wrong or set deliberately. So the server
+   records **both** — when the device says it was captured and when the server
+   received it — and shows both wherever the date matters. Never one silently
+   standing in for the other.
+2. **The same learner on two devices, or a change made while they were away.**
+   Last-write-wins is wrong for assessment evidence: it discards somebody's work
+   without telling anyone. An offline submission arriving for something already
+   submitted is **held for a person to resolve**, not merged.
+3. **The browser can throw the data away.** iOS Safari evicts storage from sites
+   it considers unused, and a fortnight offline is exactly that. Android is
+   safer. This is the single biggest technical risk and it turns on what devices
+   the rangers actually carry.
+
+#### What I need to know before building
+
+Each of these changes the design, so they are worth asking before rather than
+discovering after:
+
+- **What devices do the rangers use — Android or iPhone?** The storage-eviction
+  risk is materially different, and on iOS it may force a real app after all.
+- **How long between connections?** A fortnight was mentioned. A week and a
+  month are different problems.
+- **Is their programme QCTO-accredited, or non-credit-bearing?** If it is
+  accredited, summatives must be invigilated and the scope above holds. If it is
+  not, the rules are the provider's own and more can go offline.
+- **Is it mostly reading, or mostly evidence capture?** Photographs and video are
+  what fill a phone; text barely registers.
+
+**Size:** large, and it should be scoped and priced on its own rather than
+absorbed. But it is additive, and none of it touches what is already working.
+
+---
 
 ---
 
