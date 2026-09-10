@@ -30,6 +30,11 @@ import {
  * are read at a glance by people who have used them for years; spelling them
  * out would make the grid wider and no clearer.
  */
+/**
+ * The client's own words, from the consolidated cohort workbook they run
+ * today. Kept short because these sit in grid cells, and abbreviated only
+ * where the abbreviation is theirs: C and NYC are what an assessor writes.
+ */
 const GRID_LABEL: Record<string, string> = {
   not_started: "—",
   draft: "Started",
@@ -37,7 +42,10 @@ const GRID_LABEL: Record<string, string> = {
   competent: "C",
   not_yet_competent: "NYC",
   remediation: "Remediation",
+  redo: "Redo",
   absent: "Absent",
+  absent_first_attempt: "Absent 1st",
+  transferred: "Transferred",
   left: "Left",
 };
 

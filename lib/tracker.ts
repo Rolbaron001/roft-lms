@@ -14,6 +14,7 @@ import {
   courses,
   curriculumModules,
   qualifications,
+  reassessmentAuthorisations,
   studyUnits,
   sessionWorkbooks,
   users,
@@ -217,6 +218,15 @@ export async function activeProgrammes(
  * first. The cost is a slightly heavier query; the benefit is that the grid
  * cannot be stale.
  */
+/**
+ * The client's own vocabulary, from the consolidated cohort workbook.
+ *
+ * Three of these were missing and the grid was quietly answering a different
+ * question from the one Curiosa asks of their spreadsheet. `remediation` and
+ * `redo` are not the same thing - one is fixing what was wrong, the other is
+ * doing it again - and `transferred` and `left` are told to the QCTO
+ * differently.
+ */
 export type GridStatus =
   | "not_started"
   | "draft"
@@ -224,7 +234,10 @@ export type GridStatus =
   | "competent"
   | "not_yet_competent"
   | "remediation"
+  | "redo"
   | "absent"
+  | "absent_first_attempt"
+  | "transferred"
   | "left";
 
 export type GridCell = {
@@ -279,6 +292,7 @@ export async function cohortGrid(
         firstName: users.firstName,
         lastName: users.lastName,
         leftAt: cohortMembers.leftAt,
+        departureReason: cohortMembers.departureReason,
       })
       .from(cohortMembers)
       .innerJoin(users, eq(users.id, cohortMembers.userId))
@@ -303,6 +317,7 @@ export async function cohortGrid(
           userId: learner.userId,
           name: `${learner.firstName} ${learner.lastName}`,
           leftAt: learner.leftAt ? learner.leftAt.toISOString() : null,
+        departureReason: learner.departureReason ?? null,
           cells: [],
         })),
       };
@@ -394,6 +409,22 @@ export async function cohortGrid(
         ),
       );
 
+    // Learners authorised to sit an assessment again. Read per cohort rather
+    // than per learner so the grid is one query wider rather than one query
+    // per cell.
+    const reassessments =
+      assessmentIds.length > 0
+        ? await tx
+            .select({
+              userId: reassessmentAuthorisations.userId,
+              assessmentId: reassessmentAuthorisations.assessmentId,
+            })
+            .from(reassessmentAuthorisations)
+            .where(
+              inArray(reassessmentAuthorisations.assessmentId, assessmentIds),
+            )
+        : [];
+
     const ordered = [...columns].sort((a, b) => {
       const left = dueBy.get(a.id);
       const right = dueBy.get(b.id);
@@ -419,7 +450,10 @@ export async function cohortGrid(
           if (learner.leftAt) {
             return {
               assessmentId: column.id,
-              status: "left" as const,
+              status:
+                learner.departureReason === "transferred"
+                  ? ("transferred" as const)
+                  : ("left" as const),
               on: learner.leftAt.toISOString().slice(0, 10),
             };
           }
@@ -438,9 +472,13 @@ export async function cohortGrid(
                 row.userId === learner.userId,
             );
             if (absent) {
+              // No submission at all, so the sitting they missed was their
+              // first. That is the distinction the client records, and it
+              // matters: a first-attempt absence is rescheduled, a later one
+              // is a pattern.
               return {
                 assessmentId: column.id,
-                status: "absent" as const,
+                status: "absent_first_attempt" as const,
                 on: absent.date,
               };
             }
@@ -464,8 +502,17 @@ export async function cohortGrid(
             };
           }
 
-          const status: GridStatus =
-            submission.status === "draft"
+          // Authorised to sit it again, which is a redo rather than a
+          // remediation: remediation fixes what was wrong with the work in
+          // hand, a redo replaces it.
+          const authorised = reassessments.find(
+            (row) =>
+              row.assessmentId === column.id && row.userId === learner.userId,
+          );
+
+          const status: GridStatus = authorised
+            ? "redo"
+            : submission.status === "draft"
               ? "draft"
               : submission.status === "referred_back"
                 ? "remediation"

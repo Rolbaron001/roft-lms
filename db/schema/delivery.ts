@@ -434,6 +434,21 @@ export const cohorts = pgTable(
   ],
 );
 
+/**
+ * Why a learner is no longer in a cohort.
+ *
+ * Two outcomes the client tracks separately and the platform could not tell
+ * apart, because both were recorded as nothing more than a date. A transferred
+ * learner is still in training somewhere and their record follows them; one
+ * who left is gone, and the QCTO is told something different about each.
+ */
+export const departureReason = pgEnum("departure_reason", [
+  /** Moved to another cohort. */
+  "transferred",
+  /** Left the programme. */
+  "left",
+]);
+
 export const cohortMembers = pgTable(
   "cohort_members",
   {
@@ -453,6 +468,16 @@ export const cohortMembers = pgTable(
       .defaultNow(),
     /** Set rather than deleted, so a register a year old still reads true. */
     leftAt: timestamp("left_at", { withTimezone: true }),
+    /**
+     * Why they left, which the tracker needs and a date cannot say.
+     *
+     * The client records "Transferred" and "Left the programme" as different
+     * things, and they are: a transferred learner is still in training
+     * somewhere and their record follows them, while one who left is gone.
+     * Reported to the QCTO differently too. Null on a row written before this
+     * column existed, and on anybody still in the cohort.
+     */
+    departureReason: departureReason("departure_reason"),
   },
   (t) => [
     uniqueIndex("cohort_members_unique_idx").on(t.cohortId, t.userId),

@@ -256,12 +256,21 @@ export default async function QualificationPage({
       <section className="mb-8">
         <h2 className="mb-2 font-semibold">Programme documents</h2>
         <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-          The handbooks, workbooks, marking memoranda and workplace sign-off
-          sheets are written in Word and Excel, and stay that way — they are
-          print artefacts a facilitator annotates and a moderator marks up.
-          What the platform holds is the authoritative copy, attached to the
-          part of the curriculum it serves and hashed so it can be proved
-          unchanged.
+          Filed here are the authoritative copies: the source documents this
+          qualification is built from, each attached to the part of the
+          curriculum it serves and hashed so it can be proved unchanged.
+        </p>
+        <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
+          <span className="font-medium text-[var(--foreground)]">
+            A workbook or an assessment filed here is a record, not the thing a
+            learner works on.
+          </span>{" "}
+          Those are read in and presented on screen, so a learner answers in the
+          platform and a facilitator marks and comments there. Upload the Word
+          document under Capture rather than here, and it becomes the questions
+          themselves. Handbooks, guides and workplace sign-off sheets are
+          different: they stay as documents, because a facilitator annotates
+          them and a coach signs them on paper.
         </p>
 
         <Card>

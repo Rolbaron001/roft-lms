@@ -42,12 +42,14 @@ import {
   submitAttempt,
 } from "@/lib/papers";
 import {
+  commentOnSection,
   getFeedback,
   getMarkedPaper,
   markItem,
   MarkingError,
   proposeCriterionOutcomes,
   returnFeedback,
+  sectionComments,
   tagItemCriteria,
 } from "@/lib/marking";
 import { permissionsFor, type Role } from "@/lib/rbac";
@@ -149,6 +151,7 @@ async function buildPaper(purpose: "formative" | "summative") {
   return {
     assessmentId: assessment.id,
     itemIds: [first.id, second.id],
+    sectionId: section.id,
   };
 }
 
@@ -1028,5 +1031,96 @@ describe("a learner's own record", () => {
       await createPerson(`stranger-${suffix()}@mark.test`, ["learner"]),
     );
     await expect(portfolioRecord(stranger, submissionId)).rejects.toThrow();
+  });
+});
+
+/**
+ * Feedback attached to the part of the work it is about.
+ *
+ * The client asked for this so that feedback is developmental: "your
+ * referencing is inconsistent" under the section it applies to can be acted
+ * on, while the same sentence at the foot of twenty questions is a riddle.
+ *
+ * It was written, audited and unreachable - no screen wrote one and no screen
+ * read one - which is why the access rule below had never been exercised
+ * either.
+ */
+describe("comments on a section of the work", () => {
+  it("saves one and reads it back with the section's title", async () => {
+    const built = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(built.assessmentId);
+
+    await commentOnSection(assessor, {
+      submissionId,
+      sectionId: built.sectionId,
+      comments:
+        "Your definitions are sound. Work on showing the steps rather than only the answer.",
+    });
+
+    const comments = await sectionComments(assessor, submissionId);
+
+    expect(comments).toHaveLength(1);
+    expect(comments[0].sectionId).toBe(built.sectionId);
+    expect(comments[0].comments).toContain("showing the steps");
+    // The title, because a learner shown "comments on 3f2a-91bc" has been
+    // shown nothing.
+    expect(comments[0].title.length).toBeGreaterThan(0);
+  });
+
+  it("replaces the comment rather than starting a thread", async () => {
+    const built = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(built.assessmentId);
+
+    await commentOnSection(assessor, {
+      submissionId,
+      sectionId: built.sectionId,
+      comments: "A first reading of this section, written in haste.",
+    });
+    await commentOnSection(assessor, {
+      submissionId,
+      sectionId: built.sectionId,
+      comments: "On reflection, the argument does hold. Well reasoned.",
+    });
+
+    const comments = await sectionComments(assessor, submissionId);
+    expect(comments).toHaveLength(1);
+    expect(comments[0].comments).toContain("On reflection");
+  });
+
+  it("refuses an empty comment", async () => {
+    const built = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(built.assessmentId);
+
+    await expect(
+      commentOnSection(assessor, {
+        submissionId,
+        sectionId: built.sectionId,
+        comments: "  ",
+      }),
+    ).rejects.toThrow();
+  });
+
+  /**
+   * The rule that had never been enforced. Being inside the tenant is not
+   * sufficient: every other learner in the cohort is inside the tenant too,
+   * and a submission id is not an access rule.
+   */
+  it("lets the learner read their own and nobody else's", async () => {
+    const built = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(built.assessmentId);
+
+    await commentOnSection(assessor, {
+      submissionId,
+      sectionId: built.sectionId,
+      comments: "Clear work. Keep the same structure in the next section.",
+    });
+
+    const own = await sectionComments(learner, submissionId);
+    expect(own).toHaveLength(1);
+
+    const somebodyElse = { ...learner, userId: assessor.userId, permissions: [] };
+    await expect(
+      sectionComments(somebodyElse, submissionId),
+    ).rejects.toThrow(/belongs to someone else/);
   });
 });

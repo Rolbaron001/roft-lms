@@ -44,6 +44,7 @@ export class RecognitionError extends Error {
       | "needs_moderation"
       | "over_limit"
       | "already_exempt"
+      | "too_old_for_cat"
       | "closed",
   ) {
     super(message);
@@ -462,6 +463,37 @@ export async function moderateRplJudgement(
 // Credit transfer
 // ---------------------------------------------------------------------------
 
+/**
+ * How recent a completion has to be for Credit Accumulation and Transfer.
+ *
+ * Heidi Els, 9 September 2026: "Credit Accumulation and Transfer is applied
+ * for completions within the last three years, while Recognition of Prior
+ * Learning applies for courses completed more than three years ago."
+ *
+ * Not a preference and not a rounding. The two routes carry different
+ * evidence, and a transfer recorded under the wrong one is a finding at a
+ * monitoring visit rather than an untidy record.
+ */
+export const CAT_YEARS = 3;
+
+/**
+ * Whether a completion is recent enough to transfer.
+ *
+ * Measured against the day the transfer is approved rather than against today,
+ * so a decision made in March is judged as it stood in March however long
+ * afterwards somebody reads it back.
+ */
+export function withinCreditTransferWindow(
+  awardedOn: string,
+  approvedOn: string,
+): boolean {
+  const cutoff = new Date(approvedOn);
+  cutoff.setFullYear(cutoff.getFullYear() - CAT_YEARS);
+  // Compared as dates on both sides, so a time zone cannot move the boundary
+  // by a day in either direction.
+  return awardedOn >= cutoff.toISOString().slice(0, 10);
+}
+
 const transferInput = z.object({
   learnerId: z.string().uuid(),
   curriculumModuleId: z.string().uuid(),
@@ -497,6 +529,23 @@ export async function recordCreditTransfer(
 ) {
   assertSessionCan(session, "recognition:manage");
   const parsed = transferInput.parse(input);
+
+  /**
+   * Refused rather than warned about.
+   *
+   * A warning would leave the wrong route recorded and the exemption granted,
+   * and nobody reads a warning twice. RPL is not a harder path, only a
+   * different one, and the message says so rather than leaving somebody stuck.
+   */
+  if (
+    parsed.awardedOn &&
+    !withinCreditTransferWindow(parsed.awardedOn, parsed.approvedOn)
+  ) {
+    throw new RecognitionError(
+      `That was awarded on ${parsed.awardedOn}, more than ${CAT_YEARS} years before this approval. Credit Accumulation and Transfer covers completions within ${CAT_YEARS} years; beyond that the route is Recognition of Prior Learning, which assesses what the learner can still do rather than what they once passed. Open an RPL application instead.`,
+      "too_old_for_cat",
+    );
+  }
 
   const transfer = await withTenant(session.organisationId, async (tx) => {
     // Checked before the insert rather than left to the unique index. The
@@ -592,6 +641,10 @@ export async function learnerExemptions(
         source: moduleExemptions.source,
         grantedOn: moduleExemptions.grantedOn,
         sourceQualification: creditTransfers.sourceQualification,
+        // When the source was awarded, which is what decides whether the
+        // transfer route was the right one. Shown rather than only checked, so
+        // a moderator can see the arithmetic instead of trusting it.
+        sourceAwardedOn: creditTransfers.awardedOn,
         mapping: creditTransfers.mapping,
         rationale: rplJudgements.rationale,
       })

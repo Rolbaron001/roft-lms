@@ -1,7 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { markItemAction, returnFeedbackAction, type MarkState } from "./actions";
+import {
+  commentOnSectionAction,
+  markItemAction,
+  returnFeedbackAction,
+  type MarkState,
+  type SectionState,
+} from "./actions";
 import type { MarkedItem, MarkedPaper, RubricView } from "@/lib/marking";
 
 /**
@@ -27,6 +33,34 @@ export function MarkForm({
     markItemAction,
     {},
   );
+
+  /**
+   * Questions in their original order, gathered under the section each belongs
+   * to. The index is kept from the flat list so question numbering still reads
+   * 1 to 40 across the whole paper rather than restarting in every section.
+   */
+  const grouped = paper.items.reduce<
+    {
+      key: string;
+      section: MarkedPaper["sections"][number] | null;
+      items: { item: MarkedItem; index: number }[];
+    }[]
+  >((groups, item, index) => {
+    const key = item.sectionId ?? "__none__";
+    const last = groups[groups.length - 1];
+
+    if (last && last.key === key) {
+      last.items.push({ item, index });
+      return groups;
+    }
+
+    groups.push({
+      key,
+      section: paper.sections.find((s) => s.id === item.sectionId) ?? null,
+      items: [{ item, index }],
+    });
+    return groups;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -62,17 +96,39 @@ export function MarkForm({
         </p>
       ) : null}
 
-      {paper.items.map((item, index) => (
-        <Question
-          key={item.itemId}
-          item={item}
-          index={index}
-          submissionId={paper.submissionId}
-          rubric={item.rubricId ? rubrics[item.rubricId] : undefined}
-          mark={mark}
-          marking={marking}
-          justMarked={state.marked === item.itemId}
-        />
+      {/*
+        Grouped by section where the paper has sections, so a comment on the
+        section sits under the questions it is about. A paper with no sections
+        - an older one, or a short quiz - renders exactly as it did.
+      */}
+      {grouped.map((group) => (
+        <div key={group.key} className="space-y-6">
+          {group.section ? (
+            <h3 className="pt-2 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+              {group.section.title}
+            </h3>
+          ) : null}
+
+          {group.items.map(({ item, index }) => (
+            <Question
+              key={item.itemId}
+              item={item}
+              index={index}
+              submissionId={paper.submissionId}
+              rubric={item.rubricId ? rubrics[item.rubricId] : undefined}
+              mark={mark}
+              marking={marking}
+              justMarked={state.marked === item.itemId}
+            />
+          ))}
+
+          {group.section ? (
+            <SectionComment
+              submissionId={paper.submissionId}
+              section={group.section}
+            />
+          ) : null}
+        </div>
       ))}
 
       {paper.purpose === "formative" ? (
@@ -327,5 +383,72 @@ function FeedbackPanel({
         ) : null}
       </form>
     </section>
+  );
+}
+
+/**
+ * A comment on one section of the learner's work.
+ *
+ * Saved on its own, as each question is, because a facilitator writes these
+ * while reading rather than at the end. It sits below the questions it refers
+ * to so the connection is visible rather than remembered.
+ */
+function SectionComment({
+  submissionId,
+  section,
+}: {
+  submissionId: string;
+  section: { id: string; title: string; comment: string | null };
+}) {
+  const [state, save, saving] = useActionState<SectionState, FormData>(
+    commentOnSectionAction,
+    {},
+  );
+
+  return (
+    <form
+      action={save}
+      className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--background)] p-4"
+    >
+      <input type="hidden" name="submissionId" value={submissionId} />
+      <input type="hidden" name="sectionId" value={section.id} />
+
+      <label className="block space-y-1.5">
+        <span className="block text-sm font-medium">
+          Your comment on {section.title}
+        </span>
+        <textarea
+          name="comments"
+          rows={3}
+          defaultValue={section.comment ?? ""}
+          placeholder="What went well here, and what to do differently next time."
+          className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30"
+        />
+      </label>
+
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium disabled:opacity-60"
+        >
+          {saving ? "Saving…" : section.comment ? "Update comment" : "Save comment"}
+        </button>
+
+        {state.error ? (
+          <span role="alert" className="text-sm text-[var(--danger)]">
+            {state.error}
+          </span>
+        ) : null}
+        {state.saved === section.id ? (
+          <span className="text-sm text-[var(--success)]">Saved.</span>
+        ) : null}
+        {!state.error && !state.saved && section.comment ? (
+          <span className="text-xs text-[var(--muted)]">
+            The learner sees this with their feedback.
+          </span>
+        ) : null}
+      </div>
+    </form>
   );
 }

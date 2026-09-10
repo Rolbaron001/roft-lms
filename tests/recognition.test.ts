@@ -15,6 +15,7 @@ import {
   openRplApplication,
   recordAdvisory,
   recordCreditTransfer,
+  withinCreditTransferWindow,
   recordRplJudgement,
 } from "@/lib/recognition";
 import { permissionsFor, type Role } from "@/lib/rbac";
@@ -334,6 +335,54 @@ describe("credit transfer", () => {
         approvedOn: "2026-03-21",
       }),
     ).rejects.toThrow();
+  });
+
+  /**
+   * Heidi Els, 9 September 2026: Credit Accumulation and Transfer covers
+   * completions within three years; beyond that the route is Recognition of
+   * Prior Learning.
+   *
+   * Refused rather than warned about, because a warning leaves the wrong route
+   * recorded and the exemption granted. A transfer under the wrong route is a
+   * finding at a monitoring visit.
+   */
+  it("refuses a transfer of something awarded more than three years ago", async () => {
+    await expect(
+      recordCreditTransfer(coordinator, {
+        learnerId,
+        curriculumModuleId: modules[1],
+        sourceQualification: "National Certificate in Business Administration",
+        awardedOn: "2020-01-15",
+        mapping:
+          "Unit standards 8648 and 110023 of the source qualification cover every internal assessment criterion in this module, at the same NQF level.",
+        approvedOn: "2026-03-21",
+      }),
+    ).rejects.toMatchObject({ reason: "too_old_for_cat" });
+  });
+
+  /** And says what to do instead, rather than only refusing. */
+  it("points at RPL when it refuses", async () => {
+    await expect(
+      recordCreditTransfer(coordinator, {
+        learnerId,
+        curriculumModuleId: modules[1],
+        sourceQualification: "National Certificate in Business Administration",
+        awardedOn: "2020-01-15",
+        mapping:
+          "Unit standards 8648 and 110023 of the source qualification cover every internal assessment criterion in this module, at the same NQF level.",
+        approvedOn: "2026-03-21",
+      }),
+    ).rejects.toThrow(/Recognition of Prior Learning/);
+  });
+
+  /**
+   * Measured against the approval date, not against today. A decision made in
+   * March is judged as it stood in March, however long afterwards it is read.
+   */
+  it("accepts one awarded just inside the window", async () => {
+    expect(withinCreditTransferWindow("2023-03-22", "2026-03-21")).toBe(true);
+    expect(withinCreditTransferWindow("2023-03-21", "2026-03-21")).toBe(true);
+    expect(withinCreditTransferWindow("2023-03-20", "2026-03-21")).toBe(false);
   });
 
   it("records one with a mapping and grants the exemption", async () => {

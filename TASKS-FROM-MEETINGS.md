@@ -57,46 +57,55 @@ built. Every one is now in:
 
 Ordered by how wrong they make the platform, not by size.
 
-### W1 · Per-section facilitator comments have no screen — **built but unreachable**
+### W1 · Per-section facilitator comments — **done, 10 September**
 
 The register asked for "per-section facilitator commenting, so feedback is
 developmental and attached to the work it refers to" (28 August, Expected).
+`commentOnSection` and `sectionComments` existed in `lib/marking.ts`, audited,
+and were referenced from no screen at all.
 
-`commentOnSection` and `sectionComments` both exist in `lib/marking.ts`, with an
-audit action. **Neither is referenced anywhere in `app/`.** A facilitator cannot
-write one and a learner cannot read one.
+**What the fix turned up is larger than the gap reported.** Wiring the write
+side showed that the read side had nowhere to go either: a learner's assessment
+screen showed "Scored 12 of 20" and nothing else, while the overall comment, the
+criteria of concern and every section comment sat unread in the database.
+Feedback that is written and never delivered is worse than none, because the
+facilitator believes the learner has it.
 
-By the rule I have been working to — a tested library with no screen is a
-feature that does not exist — this is not built. It is also the smallest item
-on this list: the hard part is done.
+Now:
 
-**Size:** small.
+- The marking screen groups questions under their section, with a comment box
+  beneath the questions it refers to. Saved on its own, as each question is,
+  because a facilitator writes these while reading.
+- The learner's screen shows what came back: the marks, the overall comment,
+  each section's comment under its own heading, and the criteria worth going
+  back over, said as developmental rather than as a verdict.
+- `sectionComments` is guarded the way `getFeedback` beside it always was. It
+  had no ownership check, so any signed-in person could read any learner's
+  feedback given a submission id. Being inside the tenant is not an access rule:
+  every other learner in the cohort is inside the tenant too.
 
-### W2 · The qualification screen tells users the wrong thing
+### W2 · The qualification screen's copy — **done, 10 September**
 
-> "The handbooks, workbooks, marking memoranda and workplace sign-off sheets are
-> written in Word and Excel, and stay that way."
+It said workbooks and marking memoranda "are written in Word and Excel, and stay
+that way". True of handbooks and sign-off sheets, false of workbooks and
+assessments, and contradicting a decision minuted twice. It now says what is
+actually true: a workbook filed there is a record, and the one a learner works
+on is read in under Capture and presented on screen.
 
-True of handbooks and sign-off sheets. **False of workbooks and assessments,**
-and it contradicts a decision minuted twice. It is also what misled me. Correct
-the copy.
+### W3 · Tracker statuses — **done, 10 September**
 
-**Size:** trivial.
+Three of the client's own statuses had no counterpart:
 
-### W3 · Tracker statuses do not match the client's
-
-The client's own vocabulary, from the consolidated workbook: Submitted,
-Competent, Not Yet Competent, Remediation, **Redo**, **Absent first attempt**,
-**Transferred**, Left the programme.
-
-The platform's grid has: not started, draft, submitted, competent, not yet
-competent, remediation, absent, left.
-
-Missing **Redo** as distinct from Remediation, and **Transferred**. And `absent`
-does not distinguish a first attempt, which is the distinction the client
-actually records.
-
-**Size:** small.
+- **Redo**, now distinct from Remediation. Remediation fixes what was wrong with
+  the work in hand; a redo replaces it, and is derived from an authorised
+  reassessment.
+- **Transferred**, now distinct from Left. `cohortMembers` recorded only a date,
+  so a learner who moved to another cohort and one who left the programme were
+  the same row. A `departureReason` column tells them apart, which matters
+  because the QCTO is told something different about each.
+- **Absent first attempt**, which is the distinction the client actually
+  records. An absence with no submission behind it is a missed first sitting;
+  that is rescheduled, where a later absence is a pattern.
 
 ### W4 · "Logbook" is still the word on screen
 
@@ -111,7 +120,7 @@ Worth doing properly rather than by find-and-replace: the terminology feature
 built for task 1 is the right home for it, and "logbook" is not in the
 renameable registry. Another tenant may well call it a logbook.
 
-**Size:** small.
+**Size:** small. **Do it with the task 1 string sweep.**
 
 ### W5 · Learner demographics are incomplete — blocks the LEISA
 
@@ -252,7 +261,7 @@ cohorts run at 5–10 learners minimum.
 
 **Size:** small.
 
-### 6 · CAT and RPL: the three-year rule — **new, 9 September**
+### 6 · CAT and RPL: the three-year rule — **done, 10 September**
 
 Heidi's answer corrects an assumption already built on:
 
@@ -271,15 +280,16 @@ exemption with a written mapping, an approver and an audit trail; RPL has
 application, advisory, judgement and moderation. `creditTransfers.awardedOn`
 records when the source was awarded.
 
-**Missing:** nothing uses `awardedOn` to decide the route, so a CAT can be
-recorded today against a ten-year-old certificate.
+**What was missing, and is now in:** `withinCreditTransferWindow` compares the
+date the source was awarded against the date the transfer is approved, not
+against today, so a decision made in March is judged as it stood in March
+however long afterwards it is read back. A transfer of anything older is
+**refused**, not warned about: a warning leaves the wrong route recorded and the
+exemption granted, and nobody reads a warning twice. The refusal names RPL and
+says what it is, so nobody is left stuck.
 
-**To build:** compare `awardedOn` against the approval date; refuse a CAT beyond
-three years and point at RPL, because a transfer under the wrong route is a
-finding at a monitoring visit; show which route granted each exemption, with the
-date the source was awarded.
-
-**Size:** small.
+`learnerExemptions` now carries the date the source was awarded, so a moderator
+can see the arithmetic rather than trust it.
 
 ### 7 · The enrolment form, on the platform — **new, 9 September**
 
@@ -304,17 +314,11 @@ named it as evidence a QCTO monitor asks for.
 
 **Size:** large. Task 4 depends on it.
 
-### 8 · Workbook and assessment finishing — **rescoped**
+### 8 · Workbook and assessment finishing — **done, 10 September**
 
-Not the rebuild the previous version of this list implied. What is left:
-
-- **W1**, per-section facilitator comments: give them a screen. The library is
-  written.
-- **W2**, correct the qualification screen's copy.
-- **W3**, add Redo and Transferred to the tracker statuses, and distinguish an
-  absent first attempt.
-
-**Size:** small, all three.
+Not the rebuild the previous version of this list implied. W1, W2 and W3 above
+are all in, and W1 turned out to be twice the size reported: the learner had no
+screen for reading a marked workbook back at all.
 
 ### 9 · Tenant document templates — **new, from Roland, 10 September**
 

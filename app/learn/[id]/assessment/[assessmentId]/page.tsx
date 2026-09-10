@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { AssessmentError, getAssessmentForLearner } from "@/lib/assessment";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
+import { getFeedback, sectionComments } from "@/lib/marking";
 import { AppShell } from "@/components/app-shell";
 import { QuizForm } from "./quiz-form";
 import { EvidenceForm } from "./evidence-form";
@@ -42,6 +43,17 @@ export default async function TakeAssessmentPage({
     : null;
 
   const latest = view.attempts[0];
+
+  /**
+   * What the facilitator wrote back.
+   *
+   * Until now this screen showed a learner their mark and nothing else, while
+   * the overall comment, the criteria of concern and every per-section comment
+   * sat in the database unread. Feedback that is written and never delivered is
+   * worse than none: the facilitator believes the learner has it.
+   */
+  const feedback = latest ? await getFeedback(session, latest.id) : null;
+  const sections = feedback ? await sectionComments(session, latest.id) : [];
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -84,6 +96,70 @@ export default async function TakeAssessmentPage({
                 ? "Reviewed and moderated."
                 : "Recorded."}
           </p>
+
+          {feedback ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <h3 className="text-sm font-semibold">
+                Feedback from your facilitator
+              </h3>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                {feedback.marksAwarded} of {feedback.marksAvailable} marks
+                {feedback.returnedAt ? (
+                  <>
+                    {" · returned "}
+                    {feedback.returnedAt.toLocaleDateString("en-ZA", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </>
+                ) : null}
+              </p>
+
+              <p className="mt-3 whitespace-pre-wrap text-sm">
+                {feedback.comments}
+              </p>
+
+              {sections.length > 0 ? (
+                <ul className="mt-4 space-y-3">
+                  {sections.map((section) => (
+                    <li
+                      key={section.sectionId}
+                      className="rounded-md border border-[var(--border)] px-4 py-3"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                        {section.title}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm">
+                        {section.comments}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {feedback.criteriaOfConcern.length > 0 ? (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    Worth going back over
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {feedback.criteriaOfConcern.map((criterion) => (
+                      <li key={criterion.code} className="text-sm">
+                        <span className="font-mono text-xs">
+                          {criterion.code}
+                        </span>{" "}
+                        {criterion.description}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-[var(--muted)]">
+                    This is developmental. Nothing here counts against you.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

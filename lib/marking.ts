@@ -217,6 +217,8 @@ async function marksFromRubric(
 
 export type MarkedItem = {
   itemId: string;
+  /** Which section of the paper this question sits in, where the paper has any. */
+  sectionId: string | null;
   stem: string;
   points: number;
   awarded: number | null;
@@ -244,6 +246,19 @@ export type MarkedPaper = {
   assessmentTitle: string;
   learnerId: string;
   items: MarkedItem[];
+  /**
+   * The paper's sections, in order, each with the facilitator's comment on it.
+   *
+   * Carried here rather than fetched separately by the screen, because a
+   * comment box that does not know which questions it sits under is the whole
+   * problem: feedback attached to the work it refers to is developmental,
+   * and the same sentence at the foot of twenty questions is a riddle.
+   */
+  sections: {
+    id: string;
+    title: string;
+    comment: string | null;
+  }[];
   marksAwarded: number;
   marksAvailable: number;
   percentage: number;
@@ -279,14 +294,30 @@ async function readMarkedPaper(
     .from(assessments)
     .where(eq(assessments.id, submission.assessmentId));
 
-  const sectionIds = submission.paperId
-    ? (
-        await tx
-          .select({ id: assessmentSections.id })
-          .from(assessmentSections)
-          .where(eq(assessmentSections.paperId, submission.paperId))
-      ).map((section) => section.id)
+  const paperSections = submission.paperId
+    ? await tx
+        .select({
+          id: assessmentSections.id,
+          title: assessmentSections.title,
+        })
+        .from(assessmentSections)
+        .where(eq(assessmentSections.paperId, submission.paperId))
+        .orderBy(asc(assessmentSections.sortOrder))
     : [];
+
+  const sectionIds = paperSections.map((section) => section.id);
+
+  const comments = await tx
+    .select({
+      sectionId: sectionFeedback.sectionId,
+      comments: sectionFeedback.comments,
+    })
+    .from(sectionFeedback)
+    .where(eq(sectionFeedback.submissionId, submissionId));
+
+  const commentBySection = new Map(
+    comments.map((row) => [row.sectionId, row.comments]),
+  );
 
   const items = await tx
     .select()
@@ -326,6 +357,7 @@ async function readMarkedPaper(
 
     return {
       itemId: item.id,
+      sectionId: item.sectionId ?? null,
       stem: item.stem,
       points: item.points,
       awarded:
@@ -356,6 +388,11 @@ async function readMarkedPaper(
     assessmentTitle: assessment.title,
     learnerId: submission.userId,
     items: marked,
+    sections: paperSections.map((section) => ({
+      id: section.id,
+      title: section.title,
+      comment: commentBySection.get(section.id) ?? null,
+    })),
     marksAwarded,
     marksAvailable,
     percentage:
@@ -642,21 +679,51 @@ export async function commentOnSection(
   });
 }
 
-/** Every section comment on one submission. */
+/**
+ * Every section comment on one submission.
+ *
+ * Guarded the same way `getFeedback` is, and for the same reason: a learner may
+ * read their own feedback and nobody else's. Being inside the tenant is not
+ * sufficient - every other learner in the cohort is inside the tenant too, and
+ * a submission id is guessable enough that "they would have to know it" is not
+ * an access rule.
+ */
 export async function sectionComments(
   session: AuthenticatedSession,
   submissionId: string,
 ) {
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    const [submission] = await tx
+      .select({ userId: assessmentSubmissions.userId })
+      .from(assessmentSubmissions)
+      .where(eq(assessmentSubmissions.id, submissionId));
+
+    if (!submission) throw new MarkingError("No such attempt.", "not_found");
+
+    if (
+      submission.userId !== session.userId &&
+      !session.permissions.includes("assessment:assess")
+    ) {
+      throw new MarkingError("That belongs to someone else.", "not_permitted");
+    }
+
+    // Joined to the section so the reader gets a title. A learner shown
+    // "comments on 3f2a-91bc" has been shown nothing.
+    return tx
       .select({
         sectionId: sectionFeedback.sectionId,
+        title: assessmentSections.title,
         comments: sectionFeedback.comments,
         updatedAt: sectionFeedback.updatedAt,
       })
       .from(sectionFeedback)
-      .where(eq(sectionFeedback.submissionId, submissionId)),
-  );
+      .innerJoin(
+        assessmentSections,
+        eq(assessmentSections.id, sectionFeedback.sectionId),
+      )
+      .where(eq(sectionFeedback.submissionId, submissionId))
+      .orderBy(asc(assessmentSections.sortOrder));
+  });
 }
 
 export async function getFeedback(
