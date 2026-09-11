@@ -206,6 +206,21 @@ export const organisations = pgTable(
     holidayCalendar: text("holiday_calendar").notNull().default("ZA"),
 
     /**
+     * Whether this provider's learners may work offline.
+     *
+     * Off, and off is the whole point. Roland set the constraint on
+     * 10 September: "the platform works as it is and must not change. Offline
+     * is additional functionality for tenants that need it - off by default,
+     * invisible to every tenant that does not turn it on, and adding nothing
+     * to the path an online learner already takes."
+     *
+     * So this flag gates everything: the service worker is not registered, no
+     * manifest is served, nothing is cached and nothing is queued for a tenant
+     * that has not asked for it.
+     */
+    offlineEnabled: boolean("offline_enabled").notNull().default(false),
+
+    /**
      * Statutory retention window. Personal identifiers may be anonymised on
      * request once this has elapsed; achievement records are kept permanently.
      */

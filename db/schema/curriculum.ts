@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -99,6 +100,32 @@ export const qualifications = pgTable(
      * learner." A part qualification is not a view over its parent.
      */
     kind: qualificationKind("kind").notNull().default("full"),
+
+    /**
+     * Whether a summative may be taken offline on this programme.
+     *
+     * False, and the default matters more than the setting. Heidi's answer on
+     * 10 September was "not accredited yet, but they want it to be - cater for
+     * both", which is not a request for two builds: it makes the scope a
+     * property of the programme.
+     *
+     * A programme is therefore treated as accredited unless somebody says
+     * otherwise. Getting that the wrong way round would mean the permissive
+     * setting arrives by accident, and an unsupervised summative taken on a
+     * phone over a fortnight is not defensible at a monitoring visit.
+     *
+     * Relaxing it is a deliberate, recorded act - see lib/offline.ts, which
+     * also lists what was captured under the looser rule if the programme is
+     * later accredited.
+     */
+    offlineSummativesAllowed: boolean("offline_summatives_allowed")
+      .notNull()
+      .default(false),
+
+    /** When the permissive setting was last turned on, and by whom. */
+    offlineSummativesAllowedAt: timestamp("offline_summatives_allowed_at", {
+      withTimezone: true,
+    }),
 
     /**
      * The full qualification a part is drawn from, where there is one.

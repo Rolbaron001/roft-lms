@@ -5,6 +5,7 @@ import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
 import { arrangeNavigation } from "@/lib/navigation";
 import { vocabulary } from "@/lib/terms";
+import { OfflineRegistration } from "./offline-registration";
 import { TenantLogo } from "./tenant-logo";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -63,6 +64,13 @@ export async function AppShell({
         } as React.CSSProperties
       }
     >
+      {/*
+        Only for a tenant that asked for offline. Not rendered at all otherwise,
+        so an ordinary tenant's learner has no path to registering anything -
+        and the server refuses to serve /sw.js to them as well.
+      */}
+      {tenant.offlineEnabled ? <OfflineRegistration /> : null}
+
       <header
         className="border-b-4 text-white"
         style={{

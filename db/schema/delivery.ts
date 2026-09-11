@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   index,
   integer,
@@ -1189,6 +1190,111 @@ export const statutoryNotificationLearners = pgTable(
     uniqueIndex("statutory_notification_learners_unique_idx").on(
       t.notificationId,
       t.userId,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Offline capture
+// ---------------------------------------------------------------------------
+
+export const offlineSubmissionState = pgEnum("offline_submission_state", [
+  /** Received from a device and not yet applied. */
+  "queued",
+  /** Applied to the real record. */
+  "accepted",
+  /**
+   * Something changed while the learner was away, so a person has to decide.
+   * Never merged automatically: last-write-wins silently discards somebody's
+   * work, which is the one outcome assessment evidence cannot tolerate.
+   */
+  "held",
+  /** A person resolved it by discarding this copy. */
+  "discarded",
+]);
+
+/**
+ * Work captured on a device with no signal, waiting to be applied.
+ *
+ * Two dates, always, and never one standing in for the other.
+ *
+ * `capturedAt` is what the device said. `receivedAt` is when the server heard
+ * it. A phone's clock can be wrong by accident or set wrong on purpose, and
+ * evidence whose date cannot be checked is evidence somebody will challenge at
+ * a monitoring visit. Holding both means the platform never has to guess which
+ * one it meant, and a reader can see the gap for themselves.
+ *
+ * Only written for a tenant with offline enabled. For everybody else this table
+ * stays empty and nothing in their path touches it.
+ */
+export const offlineSubmissions = pgTable(
+  "offline_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** What kind of work this is: an answer, a photograph, a sign-off entry. */
+    kind: text("kind").notNull(),
+
+    /** What it belongs to, in the table its kind implies. */
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+
+    /** The work itself, as the device recorded it. */
+    payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
+
+    /**
+     * The device's own idempotency key.
+     *
+     * A phone that uploads, loses signal before hearing the reply, and retries
+     * must not create the work twice. The device generates this once when the
+     * work is captured and sends the same one on every attempt.
+     */
+    deviceKey: text("device_key").notNull(),
+
+    /** When the device said it happened. Not to be trusted on its own. */
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+    /** When the server actually heard about it. This one is ours. */
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
+    state: offlineSubmissionState("state").notNull().default("queued"),
+
+    /** Why it is held, in words a coordinator can act on. */
+    heldReason: text("held_reason"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedById: uuid("resolved_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * Whether this was captured while the programme allowed offline
+     * summatives.
+     *
+     * Recorded at the time, because accreditation arrives partway through. When
+     * a programme is later accredited, work done under the looser rule does not
+     * retrospectively become defensible - and somebody has to be able to see a
+     * list of it rather than discover it at a visit.
+     */
+    underRelaxedRule: boolean("under_relaxed_rule").notNull().default(false),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("offline_submissions_org_idx").on(t.organisationId),
+    index("offline_submissions_state_idx").on(t.organisationId, t.state),
+    /** The idempotency guarantee: one device key, one piece of work. */
+    uniqueIndex("offline_submissions_device_key_idx").on(
+      t.organisationId,
+      t.deviceKey,
     ),
   ],
 );

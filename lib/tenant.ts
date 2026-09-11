@@ -35,6 +35,14 @@ export type TenantIdentity = {
   navigation: { label: string | null; items: string[] }[] | null;
   /** What this provider calls things, where it differs from the default. */
   terminology: TermOverrides | null;
+  /**
+   * Whether this provider's learners may work offline.
+   *
+   * Carried on the tenant identity because it gates things that happen before
+   * any page renders: whether a manifest is served at all, and whether the
+   * service worker is ever registered.
+   */
+  offlineEnabled: boolean;
   status: (typeof organisations.$inferSelect)["status"];
 };
 
@@ -176,6 +184,7 @@ export async function resolveTenant(
           timezone: organisations.timezone,
           navigation: organisations.navigation,
           terminology: organisations.terminology,
+          offlineEnabled: organisations.offlineEnabled,
           status: organisations.status,
         })
         .from(organisations)
