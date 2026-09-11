@@ -141,6 +141,16 @@ export const NAV: NavSection[] = [
         anyPermission: ["report:team", "report:tenant"],
       },
       { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+      /*
+        Its own entry rather than a tab inside Statutory: this one has a clock
+        on it. A coordinator needs to see that something is overdue without
+        first deciding to go and look.
+      */
+      {
+        href: "/statutory/notify",
+        label: "Enrolment notification",
+        permission: "report:statutory",
+      },
     ],
   },
 

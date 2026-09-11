@@ -478,6 +478,21 @@ export const cohortMembers = pgTable(
      * column existed, and on anybody still in the cohort.
      */
     departureReason: departureReason("departure_reason"),
+
+    /**
+     * This learner's own induction, when it is not the cohort's.
+     *
+     * Heidi, 9 September: a learner joining after the cohort starts "needs
+     * their own induction, their own enrolment form, and their own LEISA
+     * submitted alongside the cohort's". The statutory clock runs from the
+     * induction date, so for a late joiner it runs from a different day to
+     * everybody else's - and the deadline is therefore per learner, not per
+     * cohort.
+     *
+     * Null for anybody inducted with the cohort, which is the ordinary case;
+     * the cohort's own induction session answers for them.
+     */
+    inductionOn: date("induction_on"),
   },
   (t) => [
     uniqueIndex("cohort_members_unique_idx").on(t.cohortId, t.userId),
@@ -1058,5 +1073,122 @@ export const sittingIncidents = pgTable(
   (t) => [
     index("sitting_incidents_sitting_idx").on(t.sittingId),
     index("sitting_incidents_org_idx").on(t.organisationId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Statutory notification of enrolment
+// ---------------------------------------------------------------------------
+
+/**
+ * Why the QCTO was told, when, and what they said back.
+ *
+ * A provider must notify the QCTO that learners have been enrolled, within
+ * twenty-one working days of induction for a full or part qualification and
+ * five for a skills programme (Heidi, 9 September). Missing it is not a
+ * paperwork slip: the learners are not registered, so their results have
+ * nowhere to go.
+ *
+ * One row per submission rather than per learner, because that is what is
+ * actually sent - a workbook covering a cohort. A late joiner gets their own
+ * row covering one person, which is exactly what Heidi described.
+ *
+ * The acknowledgement is here because a submission nobody confirmed receiving
+ * is not evidence of anything, and a monitor asks for it.
+ */
+export const statutoryNotificationStatus = pgEnum(
+  "statutory_notification_status",
+  ["draft", "submitted", "acknowledged", "rejected"],
+);
+
+export const statutoryNotifications = pgTable(
+  "statutory_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /**
+     * The cohort this covers, where it covers one.
+     *
+     * Null for a late joiner's own submission, which belongs to a learner
+     * rather than to a cohort's intake.
+     */
+    cohortId: uuid("cohort_id").references(() => cohorts.id, {
+      onDelete: "cascade",
+    }),
+
+    /** Shown to a reader so a list of submissions can be scanned. */
+    title: text("title").notNull(),
+
+    /**
+     * The day the clock started: the induction this submission answers for.
+     * Held rather than derived so that a later change to a session's date
+     * cannot silently move a deadline that has already been met.
+     */
+    inductionOn: date("induction_on").notNull(),
+
+    /** The working-day deadline, computed from the induction and the kind. */
+    dueOn: date("due_on").notNull(),
+
+    status: statutoryNotificationStatus("status").notNull().default("draft"),
+
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    submittedById: uuid("submitted_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * What came back. A reference the QCTO issued, and when. Both, because a
+     * reference without a date cannot be placed in a sequence of events.
+     */
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    acknowledgementReference: text("acknowledgement_reference"),
+
+    /** Why it was rejected, where it was. Kept so the next attempt is better. */
+    rejectionReason: text("rejection_reason"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("statutory_notifications_org_idx").on(t.organisationId),
+    index("statutory_notifications_due_idx").on(t.organisationId, t.dueOn),
+  ],
+);
+
+/**
+ * Which learners a submission covered.
+ *
+ * Held explicitly rather than recomputed from cohort membership, because
+ * membership changes. A learner who left in March was still on the January
+ * submission, and the record of what was sent has to stay true to what was
+ * sent.
+ */
+export const statutoryNotificationLearners = pgTable(
+  "statutory_notification_learners",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => statutoryNotifications.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    index("statutory_notification_learners_org_idx").on(t.organisationId),
+    uniqueIndex("statutory_notification_learners_unique_idx").on(
+      t.notificationId,
+      t.userId,
+    ),
   ],
 );
