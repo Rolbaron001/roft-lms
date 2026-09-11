@@ -1,5 +1,5 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq, inArray } from "drizzle-orm";
 import { withPlatformScope } from "@/db/client";
 import { assessments, organisations, users } from "@/db/schema";
 import {
@@ -334,4 +334,18 @@ describe("cleanup", () => {
     );
     expect(true).toBe(true);
   });
+});
+
+/**
+ * Every organisation this file made, removed again.
+ *
+ * Without it each run leaves its fixtures behind: a dev database had picked up
+ * about a hundred and fifty orphan tenants from `sched-*`, `default-badge-*`
+ * and friends before anybody noticed. The cascade takes the users, cohorts and
+ * everything else down with the organisation.
+ */
+afterAll(async () => {
+  await withPlatformScope("test teardown", (tx) =>
+    tx.delete(organisations).where(inArray(organisations.id, [organisationId])),
+  );
 });

@@ -9,7 +9,7 @@
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   competencies,
@@ -58,6 +58,9 @@ const ZIP = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00]);
 const WEBP = new Uint8Array([
   ...Buffer.from("RIFF"), 0x24, 0x00, 0x00, 0x00, ...Buffer.from("WEBP"),
 ]);
+
+/** Tenants a single test makes for itself, cleared with the rest. */
+const extraOrganisations: string[] = [];
 
 let organisationId: string;
 let author: AuthenticatedSession;
@@ -154,7 +157,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await withPlatformScope("media test teardown", (tx) =>
-    tx.delete(organisations).where(eq(organisations.id, organisationId)),
+    tx
+      .delete(organisations)
+      .where(inArray(organisations.id, [organisationId, ...extraOrganisations])),
   );
 });
 
@@ -449,6 +454,7 @@ describe("reading somebody else's file", () => {
         role: "tenant_admin",
       });
 
+      extraOrganisations.push(organisation.id);
       return { organisationId: organisation.id, userId: user.id };
     });
 

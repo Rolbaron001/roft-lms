@@ -14,7 +14,8 @@
  * learner at all. Both are tested, because both are the kind of rule that gets
  * quietly dropped in a rewrite and produces a plausible wrong number.
  */
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { inArray } from "drizzle-orm";
 import { withPlatformScope } from "@/db/client";
 import {
   cohortMembers,
@@ -35,6 +36,9 @@ import {
 } from "@/lib/scheduling";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
+
+/** Tenants a single test makes for itself, cleared with the rest. */
+const extraOrganisations: string[] = [];
 
 let organisationId: string;
 let courseId: string;
@@ -526,6 +530,7 @@ describe("across tenants", () => {
         userId: person.id,
         role: "tenant_admin",
       });
+      extraOrganisations.push(organisation.id);
       return { organisationId: organisation.id, userId: person.id };
     });
 
@@ -568,4 +573,18 @@ describe("across tenants", () => {
     const register = await sessionRegister(admin, lecture.id);
     expect(register.lines[0].status).toBe("present");
   });
+});
+
+/**
+ * Every organisation this file made, removed again.
+ *
+ * Without it each run leaves its fixtures behind: a dev database had picked up
+ * about a hundred and fifty orphan tenants from `sched-*`, `default-badge-*`
+ * and friends before anybody noticed. The cascade takes the users, cohorts and
+ * everything else down with the organisation.
+ */
+afterAll(async () => {
+  await withPlatformScope("test teardown", (tx) =>
+    tx.delete(organisations).where(inArray(organisations.id, [organisationId, ...extraOrganisations])),
+  );
 });

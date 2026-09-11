@@ -7,7 +7,7 @@
  * Deduplication is what separates a useful reminder from that.
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   competencies,
@@ -43,6 +43,9 @@ import { mailIsConfigured, renderEmail } from "@/lib/mail";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 import { referencePrefix } from "@/lib/platform";
+
+/** Tenants a single test makes for itself, cleared with the rest. */
+const extraOrganisations: string[] = [];
 
 let organisationId: string;
 let competencyId: string;
@@ -167,7 +170,9 @@ let managerSession: AuthenticatedSession;
 
 afterAll(async () => {
   await withPlatformScope("notification teardown", (tx) =>
-    tx.delete(organisations).where(eq(organisations.id, organisationId)),
+    tx
+      .delete(organisations)
+      .where(inArray(organisations.id, [organisationId, ...extraOrganisations])),
   );
 });
 
@@ -298,6 +303,7 @@ describe("the scheduled sweep", () => {
           status: "active",
         })
         .returning({ id: organisations.id });
+      extraOrganisations.push(organisation.id);
       return organisation.id;
     });
 
