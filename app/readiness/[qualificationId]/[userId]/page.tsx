@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
 import { qualificationReadiness, type Component } from "@/lib/eisa";
 import { listStatementsFor } from "@/lib/statement-of-results";
 import { AppShell, Card } from "@/components/app-shell";
@@ -40,6 +41,9 @@ export default async function LearnerReadinessPage({
 }) {
   const { qualificationId, userId } = await params;
   const tenant = await requireTenant();
+  // Curiosa say "workplace experience sign-off" rather than "logbook", and
+  // another provider says the opposite. The word is the tenant's to choose.
+  const words = vocabulary(tenant.terminology);
   const session = await requireSession();
 
   // The permission check lives in the engine: a learner may see their own,
@@ -98,8 +102,8 @@ export default async function LearnerReadinessPage({
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {readiness.achievedCriteria} of {readiness.totalCriteria} internal
-              assessment criteria achieved, and work experience proved by signed
-              logbook.
+              assessment criteria achieved, and work experience proved by a
+              signed {words.lowerOne("workplaceRecord")}.
               {readiness.eisaEligible
                 ? " A Statement of Results can be issued."
                 : " Every one of them is required — there is no pass mark."}
@@ -190,7 +194,7 @@ export default async function LearnerReadinessPage({
                     <div className="text-right text-sm">
                       <p className="tabular-nums">
                         {module.route === "logbook"
-                          ? "Logbook"
+                          ? words.one("workplaceRecord")
                           : `${module.achievedCount} / ${module.totalCount} criteria`}
                       </p>
                       {module.complete ? (
@@ -208,7 +212,8 @@ export default async function LearnerReadinessPage({
                   {module.route === "logbook" ? (
                     <div className="mt-3 text-sm">
                       <p className="text-[var(--muted)]">
-                        Work experience is proved by a logbook signed by the
+                        Work experience is proved by a{" "}
+                        {words.lowerOne("workplaceRecord")} signed by the
                         workplace coach and accepted by an assessor, not by
                         assessment criteria. The curriculum defines none for
                         this module.
@@ -219,7 +224,7 @@ export default async function LearnerReadinessPage({
                             href={`/workplace/${module.logbook.id}`}
                             className="underline underline-offset-2"
                           >
-                            Open the logbook
+                            Open the {words.lowerOne("workplaceRecord")}
                           </Link>
                           {module.logbook.coachSignedAt
                             ? ` · signed by the coach ${formatDate(module.logbook.coachSignedAt)}`
@@ -227,7 +232,8 @@ export default async function LearnerReadinessPage({
                         </p>
                       ) : (
                         <p className="mt-2" style={{ color: "var(--danger)" }}>
-                          No logbook has been opened for this module.
+                          No {words.lowerOne("workplaceRecord")} has been
+                          opened for this module.
                         </p>
                       )}
                     </div>

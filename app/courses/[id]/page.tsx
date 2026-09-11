@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
 import {
@@ -19,6 +20,7 @@ export default async function CoursePage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("course:read");
 
   const canAuthorHere = session.permissions.includes("course:author");
@@ -97,6 +99,7 @@ export default async function CoursePage({
 
       <div className="mt-6">
         <CourseEditor
+          workplaceRecordWord={words.one("workplaceRecord")}
           courseId={id}
           status={detail.course.status}
           sections={detail.sections.map((section) => ({

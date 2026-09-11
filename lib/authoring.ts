@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
@@ -10,6 +10,7 @@ import {
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
+  enrolments,
   lessonCriteria,
   lessons,
   exitLevelOutcomeCriteria,
@@ -21,6 +22,7 @@ import {
   topicElementAlignment,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -1284,6 +1286,54 @@ export async function publishCourse(
       })
       .where(eq(courses.id, courseId));
 
+    /**
+     * Anybody still part-way through the version this one replaces is told.
+     *
+     * The design document promises that publishing a new version "does flag
+     * anyone still mid-course... to move to the current version". The
+     * versioning itself was built and the flagging was not, so a learner could
+     * carry on to the end of superseded material and nobody would know.
+     *
+     * Only those who have not finished. Somebody who completed the old version
+     * completed it - their record is accurate and telling them to start again
+     * would be wrong, not helpful.
+     */
+    const [published] = await tx
+      .select({
+        supersedes: courses.supersedesCourseId,
+        title: courses.title,
+        version: courses.version,
+      })
+      .from(courses)
+      .where(eq(courses.id, courseId));
+
+    if (published?.supersedes) {
+      const stillGoing = await tx
+        .select({ userId: enrolments.userId })
+        .from(enrolments)
+        .where(
+          and(
+            eq(enrolments.courseId, published.supersedes),
+            isNull(enrolments.completedAt),
+          ),
+        );
+
+      for (const learner of stillGoing) {
+        await raise(tx, {
+          organisationId: session.organisationId,
+          userId: learner.userId,
+          kind: "course.new_version",
+          subject: `${published.title} has been updated`,
+          body: `You are part-way through an earlier version. Version ${published.version} is now the current one, and you may be asked to move across to it.`,
+          linkPath: `/learn/${courseId}`,
+          entityType: "course",
+          entityId: courseId,
+          // One message per learner per version, however often this runs.
+          dedupeKey: `course.new_version:${courseId}:${learner.userId}`,
+        });
+      }
+    }
+
     await recordAudit(tx, {
       organisationId: session.organisationId,
       actorId: session.userId,
@@ -1296,6 +1346,7 @@ export async function publishCourse(
         status: "published",
         criteriaCovered: report.criteria.length,
         competenciesTagged: report.competencyCount,
+        supersedes: published?.supersedes ?? null,
       },
     });
   });

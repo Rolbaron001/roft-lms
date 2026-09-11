@@ -577,6 +577,22 @@ export const certificates = pgTable(
       sql`right(replace(verification_reference, '-', ''), 20)`,
     ),
     title: text("title").notNull(),
+
+    /**
+     * Whether this certificate carries NQF credits.
+     *
+     * Raised in Curiosa's enrolment SOP: non-credit-bearing certificates follow
+     * a separate route, and are currently prepared outside the platform on
+     * three days' notice. Nothing here distinguished them, which meant an
+     * attendance certificate and a qualification looked alike on the record -
+     * and only one of them belongs in a statutory return.
+     *
+     * True by default, because the certificates the platform issues today all
+     * follow an assessed enrolment. A short course or an attendance
+     * certificate is the exception and has to say so.
+     */
+    creditBearing: boolean("credit_bearing").notNull().default(true),
+
     /** The specific competencies this certificate attests to, frozen at issue. */
     competenciesAttested: jsonb("competencies_attested")
       .notNull()

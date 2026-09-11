@@ -43,7 +43,8 @@ export type NotificationKind =
   | "assessment.referred_back"
   | "assessment.decided"
   | "certificate.issued"
-  | "programme.step_unlocked";
+  | "programme.step_unlocked"
+  | "course.new_version";
 
 export type RaiseInput = {
   organisationId: string;

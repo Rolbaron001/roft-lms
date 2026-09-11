@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
 import { AuthoringError, getCourse } from "@/lib/authoring";
 import { listCourseAssessments } from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
@@ -13,6 +14,7 @@ export default async function CourseAssessmentsPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("assessment:author");
 
   let detail;
@@ -45,6 +47,7 @@ export default async function CourseAssessmentsPage({
       </div>
 
       <AssessmentManager
+        workplaceRecordWord={words.one("workplaceRecord")}
         courseId={id}
         assessments={assessments.map((row) => ({
           id: row.id,

@@ -52,6 +52,8 @@ const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
 
 export function CourseEditor({
+  /** What this provider calls a workplace experience sign-off. */
+  workplaceRecordWord,
   courseId,
   status,
   sections,
@@ -61,6 +63,7 @@ export function CourseEditor({
   canAuthor,
   canPublish,
 }: {
+  workplaceRecordWord: string;
   courseId: string;
   status: string;
   sections: Section[];
@@ -186,7 +189,7 @@ export function CourseEditor({
                           <option value="live_session">Live session</option>
                           <option value="practical_task">Practical task</option>
                           <option value="workplace_logbook">
-                            Workplace logbook
+                            {workplaceRecordWord}
                           </option>
                         </select>
 

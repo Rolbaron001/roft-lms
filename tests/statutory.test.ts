@@ -535,3 +535,51 @@ describe("WSP and ATR", () => {
     expect(csv).toContain("Certificates issued");
   });
 });
+
+/**
+ * W6: a certificate that carries no credits is not a statutory achievement.
+ *
+ * Curiosa's enrolment SOP treats non-credit-bearing certificates as a separate
+ * route, prepared outside the platform. Nothing here distinguished them, so an
+ * attendance certificate would have been reported to the NLRD as an
+ * achievement on the learner's national record - a false statutory claim that
+ * no test was asking about.
+ */
+describe("certificates that carry no credits", () => {
+  it("are left out of the NLRD achievements", async () => {
+    const { withPlatformScope } = await import("@/db/client");
+    const { certificates } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const { buildNlrdDataset } = await import("@/lib/statutory");
+
+    const before = await buildNlrdDataset(admin);
+    const countBefore = before.achievements.length;
+
+    /**
+     * Demote one that is actually in the list. A first version of this test
+     * picked any certificate in the tenant and happened to choose a revoked
+     * one, which was never an achievement - so the count did not move and the
+     * test failed for a reason that had nothing to do with credits.
+     */
+    expect(countBefore).toBeGreaterThan(0);
+    const reference = before.achievements[0].verificationReference;
+
+    await withPlatformScope("demote certificate", (tx) =>
+      tx
+        .update(certificates)
+        .set({ creditBearing: false })
+        .where(eq(certificates.verificationReference, reference)),
+    );
+
+    const after = await buildNlrdDataset(admin);
+    expect(after.achievements.length).toBe(countBefore - 1);
+
+    // Put it back, so the rest of the file sees what it expects.
+    await withPlatformScope("restore certificate", (tx) =>
+      tx
+        .update(certificates)
+        .set({ creditBearing: true })
+        .where(eq(certificates.verificationReference, reference)),
+    );
+  });
+});

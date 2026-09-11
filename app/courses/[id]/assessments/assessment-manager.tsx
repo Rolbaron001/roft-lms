@@ -170,9 +170,12 @@ function PublishForm({
 }
 
 export function AssessmentManager({
+  /** What this provider calls a workplace experience sign-off. */
+  workplaceRecordWord,
   courseId,
   assessments,
 }: {
+  workplaceRecordWord: string;
   courseId: string;
   assessments: Assessment[];
 }) {
@@ -264,7 +267,7 @@ export function AssessmentManager({
               <option value="practical_observation">
                 Practical observation
               </option>
-              <option value="workplace_logbook">Workplace logbook</option>
+              <option value="workplace_logbook">{workplaceRecordWord}</option>
             </select>
           </label>
 

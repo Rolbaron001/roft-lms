@@ -292,6 +292,11 @@ export async function buildNlrdDataset(
     // ------------------------------------------------------ Achievements (29)
     // An achievement is a live certificate: a completed, judged and where
     // required moderated outcome. Nothing weaker is reportable.
+    //
+    // And nothing that carries no credits. Curiosa's SOP treats
+    // non-credit-bearing certificates as a separate route, and an attendance
+    // certificate reported to the NLRD as an achievement would be a false
+    // statutory claim on the learner's national record.
     const issued = await tx
       .select({
         certificateId: certificates.id,
@@ -307,7 +312,12 @@ export async function buildNlrdDataset(
       .from(certificates)
       .innerJoin(users, eq(users.id, certificates.userId))
       .innerJoin(enrolments, eq(enrolments.id, certificates.enrolmentId))
-      .where(isNull(certificates.revokedAt))
+      .where(
+        and(
+          isNull(certificates.revokedAt),
+          eq(certificates.creditBearing, true),
+        ),
+      )
       .orderBy(desc(certificates.issuedAt));
 
     const achievements: AchievementRecord[] = [];

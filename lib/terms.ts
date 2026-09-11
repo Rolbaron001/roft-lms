@@ -35,7 +35,8 @@ export type TermKey =
   | "learner"
   | "facilitator"
   | "assessor"
-  | "moderator";
+  | "moderator"
+  | "workplaceRecord";
 
 export type TermShape = {
   /** One of the thing, as a provider would write it at the start of a line. */
@@ -112,6 +113,20 @@ export const TERMS: Record<TermKey, TermShape> = {
     one: "Moderator",
     many: "Moderators",
     note: "The person checking a sample of those judgements.",
+    definedBy: "practice",
+  },
+  /**
+   * Curiosa call this workplace experience sign-off, not a logbook (27 August).
+   *
+   * Renameable rather than simply corrected, because both words are in use and
+   * neither belongs to anybody: another provider really does call it a
+   * logbook, and the QCTO curriculum documents say "logbook" in places. What
+   * was wrong was not the word but that the platform insisted on it.
+   */
+  workplaceRecord: {
+    one: "Workplace experience sign-off",
+    many: "Workplace experience sign-offs",
+    note: "The record of work a learner did, that a coach signs and an assessor accepts.",
     definedBy: "practice",
   },
 };

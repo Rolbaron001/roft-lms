@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
 import { myLogbooks } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
 
@@ -23,6 +24,10 @@ export default async function WorkplacePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
   const logbooks = await myLogbooks(session);
+  // The client calls this a workplace experience sign-off rather than a
+  // logbook (27 August). Both words are in use in the sector, so it is the
+  // tenant's to choose rather than the platform's to insist on.
+  const words = vocabulary(tenant.terminology);
 
   const isCoach = session.permissions.includes("workplace:sign");
   const canManage = session.permissions.includes("workplace:manage");
@@ -57,8 +62,11 @@ export default async function WorkplacePage() {
           style={{ borderColor: "var(--brand-accent)" }}
         >
           <p className="text-sm font-semibold">
-            {waiting} {waiting === 1 ? "logbook is" : "logbooks are"} waiting for
-            your signature.
+            {waiting}{" "}
+            {waiting === 1
+              ? `${words.lowerOne("workplaceRecord")} is`
+              : `${words.lowerMany("workplaceRecord")} are`}{" "}
+            waiting for your signature.
           </p>
         </div>
       ) : null}
@@ -67,8 +75,8 @@ export default async function WorkplacePage() {
         <Card>
           <p className="text-sm text-[var(--muted)]">
             {canManage
-              ? "No work experience logbooks yet. Set one up above: an agreement naming the learner, the employer and the coach, then a logbook for each work experience module."
-              : "No work experience logbooks yet. An administrator opens one once a workplace agreement is in place naming the learner, the employer and the coach."}
+              ? `No ${words.lowerMany("workplaceRecord")} yet. Set one up above: an agreement naming the learner, the employer and the coach, then one for each work experience module.`
+              : `No ${words.lowerMany("workplaceRecord")} yet. An administrator opens one once a workplace agreement is in place naming the learner, the employer and the coach.`}
           </p>
         </Card>
       ) : (

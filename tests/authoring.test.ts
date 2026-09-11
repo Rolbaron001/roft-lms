@@ -634,3 +634,116 @@ describe("listing", () => {
   });
 });
 
+
+/**
+ * W7: publishing a new version tells the people still on the old one.
+ *
+ * The design document promises that publishing "does flag anyone still
+ * mid-course... to move to the current version". The versioning was built and
+ * the flagging was not, so a learner could work to the end of superseded
+ * material with nobody the wiser. Found by the functional review rather than by
+ * a failing test - nothing was asserting the promise.
+ */
+describe("a new version tells the people still on the old one", () => {
+  it("notifies a learner part-way through, and leaves a finisher alone", async () => {
+    const { createNewVersion, publishCourse } = await import("@/lib/authoring");
+    const { myNotifications } = await import("@/lib/notifications");
+    const { withPlatformScope } = await import("@/db/client");
+    const { courses, enrolments } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const { users, userRoles } = await import("@/db/schema");
+
+    // Its own two learners: the shared fixture has one user standing in for
+    // both author and learner, and this test needs to tell two people apart.
+    const made = await withPlatformScope("version learners", async (tx) => {
+      const ids: string[] = [];
+      for (const email of ["midway@version.test", "finished@version.test"]) {
+        const [person] = await tx
+          .insert(users)
+          .values({
+            organisationId,
+            email,
+            firstName: "Version",
+            lastName: "Learner",
+            status: "active",
+          })
+          .returning({ id: users.id });
+        await tx
+          .insert(userRoles)
+          .values({ organisationId, userId: person.id, role: "learner" });
+        ids.push(person.id);
+      }
+      return ids;
+    });
+
+    const learnerId = made[0];
+    const secondLearnerId = made[1];
+
+    // A published course with two learners: one mid-way, one finished. Built
+    // through the authoring helpers rather than by inserting rows, so it is a
+    // course the publisher will actually accept.
+    const course = await createCourse(author, { title: "Versioned Course" });
+    const section = await addSection(author, {
+      courseId: course.id,
+      title: "Section one",
+    });
+    await addLesson(author, { sectionId: section.id, title: "Lesson one" });
+    await tagCourseCompetency(author, course.id, competencyId);
+
+    const firstPublish = await publishCourse(author, course.id);
+    expect(firstPublish.ok).toBe(true);
+
+    await withPlatformScope("version enrolments", (tx) =>
+      tx.insert(enrolments).values([
+        { organisationId, userId: learnerId, courseId: course.id },
+        {
+          organisationId,
+          userId: secondLearnerId,
+          courseId: course.id,
+          completedAt: new Date(),
+        },
+      ]),
+    );
+
+    // The new version, with the same shape so it is publishable too.
+    const draft = await createNewVersion(author, course.id);
+    const draftSection = await addSection(author, {
+      courseId: draft.id,
+      title: "Section one",
+    });
+    await addLesson(author, {
+      sectionId: draftSection.id,
+      title: "Lesson one",
+    });
+
+    const result = await publishCourse(author, draft.id);
+
+    if (result.ok) {
+      const forLearner = await myNotifications(
+        sessionFor(["learner"], learnerId),
+      );
+      const versionMessages = forLearner.filter(
+        (n) => n.kind === "course.new_version",
+      );
+      expect(versionMessages.length).toBeGreaterThan(0);
+      expect(versionMessages[0].subject).toContain("Versioned Course");
+
+      // The learner who finished keeps an accurate record and is left alone.
+      const forFinisher = await myNotifications(
+        sessionFor(["learner"], secondLearnerId),
+      );
+      expect(
+        forFinisher.filter((n) => n.kind === "course.new_version"),
+      ).toHaveLength(0);
+    } else {
+      // If the fixture cannot be published the test proves nothing; say so
+      // rather than passing quietly.
+      throw new Error(`Fixture could not publish: ${result.reasons.join(" ")}`);
+    }
+
+    await withPlatformScope("version teardown", (tx) =>
+      tx.delete(courses).where(eq(courses.id, course.id)),
+    );
+  });
+});
