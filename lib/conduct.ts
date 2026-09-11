@@ -11,6 +11,7 @@ import {
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise, usersWithRole } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { dateInZone } from "./timezone";
 import { addWorkingDays } from "./working-days";
@@ -787,6 +788,29 @@ export async function lodgeGrievance(
       entityId: created.id,
       after: { learnerId: created.learnerId, acknowledgeBy: created.acknowledgeBy },
     });
+
+    /**
+     * A grievance has an acknowledgement deadline, and it starts today.
+     *
+     * Told to the people who can act on it. A deadline the platform computes
+     * and then keeps to itself is a deadline that gets missed - and a missed
+     * acknowledgement on a grievance is the kind of thing that turns a
+     * complaint into a bigger complaint.
+     */
+    for (const managerId of await usersWithRole(tx, "tenant_admin")) {
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: managerId,
+        kind: "grievance.lodged",
+        subject: "A grievance has been lodged",
+        body: `It has to be acknowledged by ${created.acknowledgeBy}.`,
+        linkPath: "/conduct",
+        entityType: "grievance",
+        entityId: created.id,
+        dedupeKey: `grievance.lodged:${created.id}:${managerId}`,
+        channels: ["in_app", "email"],
+      });
+    }
 
     return created;
   });

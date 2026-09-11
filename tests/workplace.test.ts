@@ -489,3 +489,79 @@ describe("the entries table", () => {
     expect(count).toBe(3);
   });
 });
+
+/**
+ * The handoffs, which until 11 September told nobody.
+ *
+ * Every step here changed a status and waited for the right person to open the
+ * right screen. That is a poor assumption everywhere and an impossible one for
+ * the coach: they are the employer's supervisor rather than provider staff,
+ * they hold a single permission, and they have no reason to visit the platform
+ * unless something tells them to.
+ *
+ * Found by the functional review, not by a failing test - the workflow was
+ * correct at every step and simply silent.
+ */
+describe("telling the next person it is their turn", () => {
+  it("tells the coach when a learner submits, and by email", async () => {
+    const { myNotifications } = await import("@/lib/notifications");
+
+    const { logbook } = await freshLogbook();
+    await submitToCoach(learner, logbook.id, 10);
+
+    const forCoach = await myNotifications(coach);
+    const wanted = forCoach.filter(
+      (n) => n.kind === "workplace.signature_wanted",
+    );
+
+    expect(wanted.length).toBeGreaterThan(0);
+    expect(wanted[0].subject).toContain("waiting for your signature");
+  });
+
+  it("tells the learner and the assessors when the coach signs", async () => {
+    const { myNotifications } = await import("@/lib/notifications");
+
+    const { logbook, entries } = await freshLogbook();
+    for (const entry of entries) {
+      await setEntryCompleted(learner, entry.entryId, true);
+    }
+
+    // A logbook will not sign without the evidence file its entry demands,
+    // which is the point of the rule and not something to work around here.
+    const evidenceEntry = entries.find((entry) => entry.code === "SE01")!;
+    await uploadLogbookEvidence(learner, evidenceEntry.entryId, [
+      { filename: "report.txt", bytes: new TextEncoder().encode("A report.") },
+    ]);
+
+    await submitToCoach(learner, logbook.id, 120);
+    await coachSignOff(coach, logbook.id, { outcome: "signed" });
+
+    const forAssessor = await myNotifications(assessor);
+    expect(
+      forAssessor.filter((n) => n.kind === "workplace.signed").length,
+    ).toBeGreaterThan(0);
+
+    const forLearner = await myNotifications(learner);
+    expect(
+      forLearner.filter((n) => n.kind === "workplace.signed").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("tells the learner when the coach sends it back", async () => {
+    const { myNotifications } = await import("@/lib/notifications");
+
+    const { logbook } = await freshLogbook();
+    await submitToCoach(learner, logbook.id, 10);
+    await coachSignOff(coach, logbook.id, {
+      outcome: "returned",
+      comments: "Please add the dates you were on site.",
+    });
+
+    const forLearner = await myNotifications(learner);
+    const returned = forLearner.filter((n) => n.kind === "workplace.returned");
+
+    expect(returned.length).toBeGreaterThan(0);
+    // The coach's own words, not a generic message.
+    expect(returned[0].body).toContain("dates you were on site");
+  });
+});

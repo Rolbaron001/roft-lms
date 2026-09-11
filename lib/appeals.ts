@@ -11,6 +11,7 @@ import {
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise, usersWithRole } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { dateInZone } from "./timezone";
 import { withinWorkingDays } from "./working-days";
@@ -184,6 +185,33 @@ export async function lodgeAppeal(
         inTime: timing.inTime,
       },
     });
+
+    /**
+     * An appeal has a clock on it, and the clock starts now.
+     *
+     * Nobody was told before: the appeal changed a status and waited for
+     * somebody to open the appeals screen. An acknowledgement deadline that
+     * depends on a person deciding to go and look is not a deadline the
+     * platform can be said to manage.
+     */
+    for (const managerId of await usersWithRole(tx, "tenant_admin")) {
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: managerId,
+        kind: "appeal.lodged",
+        subject: timing.inTime
+          ? "An appeal has been lodged"
+          : "An appeal has been lodged, out of time",
+        body: timing.inTime
+          ? `Grounds: ${created.ground}. It has to be acknowledged, and the clock runs from today.`
+          : `Grounds: ${created.ground}. It was lodged after the deadline of ${timing.deadline} and accepted with a reason, which is part of the record.`,
+        linkPath: `/appeals/${created.id}`,
+        entityType: "appeal",
+        entityId: created.id,
+        dedupeKey: `appeal.lodged:${created.id}:${managerId}`,
+        channels: ["in_app", "email"],
+      });
+    }
 
     return created;
   });

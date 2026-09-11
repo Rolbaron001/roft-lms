@@ -316,6 +316,10 @@ describe("the scheduled sweep", () => {
       // A tenant with no cohorts has no schedule to raise anything from.
       stepsOpened: 0,
       stepsDue: 0,
+      // Added 11 September. The QCTO enrolment notification has the hardest
+      // deadline the platform tracks and previously alerted nobody at all.
+      statutoryDueSoon: 0,
+      statutoryOverdue: 0,
     });
 
     await withPlatformScope("quiet teardown", (tx) =>

@@ -107,10 +107,34 @@ export async function notificationDue(
   asAt: string,
 ): Promise<LearnerDue[]> {
   assertSessionCan(session, "enrolment:read_all");
+  return dueWithin(session.organisationId, asAt);
+}
 
-  const holidays = await holidaysForTenant(session.organisationId, asAt);
+/**
+ * The same question, asked by the nightly sweep rather than by a person.
+ *
+ * The sweep has no session to check, which is why this is split out rather
+ * than given a fake one: a permission check against an invented session is
+ * worse than no check, because it looks like a check.
+ */
+export async function statutoryWatch(
+  organisationId: string,
+  now: Date,
+): Promise<LearnerDue[]> {
+  const asAt = now.toISOString().slice(0, 10);
+  const all = await dueWithin(organisationId, asAt);
+  return all.filter(
+    (row) => row.state === "overdue" || row.state === "due_soon",
+  );
+}
 
-  return withTenant(session.organisationId, async (tx) => {
+async function dueWithin(
+  organisationId: string,
+  asAt: string,
+): Promise<LearnerDue[]> {
+  const holidays = await holidaysForTenant(organisationId, asAt);
+
+  return withTenant(organisationId, async (tx) => {
     const members = await tx
       .select({
         userId: cohortMembers.userId,

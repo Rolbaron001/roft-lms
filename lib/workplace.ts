@@ -15,6 +15,7 @@ import {
   workplaceLogbooks,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise, usersWithRole } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -460,7 +461,7 @@ export async function submitToCoach(
   assertSessionCan(session, "workplace:log");
 
   return withTenant(session.organisationId, async (tx) => {
-    const { logbook } = await loadLogbook(tx, logbookId);
+    const { logbook, agreement } = await loadLogbook(tx, logbookId);
 
     if (logbook.learnerId !== session.userId) {
       throw new WorkplaceError("That is not your logbook.", "not_permitted");
@@ -482,6 +483,32 @@ export async function submitToCoach(
         updatedAt: new Date(),
       })
       .where(eq(workplaceLogbooks.id, logbookId));
+
+    /**
+     * Tell the coach, who is the one person here with no reason to log in.
+     *
+     * A workplace coach is the employer's supervisor rather than the
+     * provider's staff - they hold one permission and visit the platform to do
+     * exactly this. Before the review of 11 September, submitting changed a
+     * status and told nobody, so a signature could wait indefinitely on
+     * somebody who had no way of knowing it was wanted.
+     *
+     * Emailed as well as shown in the app, for the same reason.
+     */
+    if (agreement?.coachId) {
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: agreement.coachId,
+        kind: "workplace.signature_wanted",
+        subject: "Work experience is waiting for your signature",
+        body: `${session.firstName} ${session.lastName} has submitted their work experience record for you to sign off.`,
+        linkPath: `/workplace/${logbookId}`,
+        entityType: "workplace_logbook",
+        entityId: logbookId,
+        dedupeKey: `workplace.signature_wanted:${logbookId}:${logbook.submittedAt ?? "first"}`,
+        channels: ["in_app", "email"],
+      });
+    }
 
     await recordAudit(tx, {
       organisationId: session.organisationId,
@@ -545,6 +572,22 @@ export async function coachSignOff(
         entityId: logbookId,
         after: { comments: decision.comments ?? null },
       });
+
+      // The learner has to act on this, so the learner is told.
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: logbook.learnerId,
+        kind: "workplace.returned",
+        subject: "Your work experience record has been sent back",
+        body:
+          decision.comments?.trim() ||
+          "Your coach has asked for changes before signing.",
+        linkPath: `/workplace/${logbookId}`,
+        entityType: "workplace_logbook",
+        entityId: logbookId,
+        dedupeKey: `workplace.returned:${logbookId}:${Date.now()}`,
+      });
+
       return;
     }
 
@@ -628,6 +671,41 @@ export async function coachSignOff(
         employer: agreement.employerName,
         signatureHash,
       },
+    });
+
+    /**
+     * Signed, so it is the assessor's turn.
+     *
+     * To the assessors as a group rather than to a named one: work experience
+     * is not allocated to an individual assessor the way an assessment is, and
+     * a record sitting unaccepted because the one person it was addressed to is
+     * on leave is the failure this is meant to prevent.
+     */
+    for (const assessorId of await usersWithRole(tx, "assessor")) {
+      await raise(tx, {
+        organisationId: session.organisationId,
+        userId: assessorId,
+        kind: "workplace.signed",
+        subject: "Signed work experience is ready to accept",
+        body: `${agreement.coachName} at ${agreement.employerName} has signed off a learner's work experience.`,
+        linkPath: `/workplace/${logbookId}`,
+        entityType: "workplace_logbook",
+        entityId: logbookId,
+        dedupeKey: `workplace.signed:${logbookId}:${assessorId}`,
+      });
+    }
+
+    // And the learner, who has been waiting on somebody else.
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: logbook.learnerId,
+      kind: "workplace.signed",
+      subject: "Your work experience has been signed off",
+      body: `${agreement.coachName} has signed your work experience record. An assessor checks it next.`,
+      linkPath: `/workplace/${logbookId}`,
+      entityType: "workplace_logbook",
+      entityId: logbookId,
+      dedupeKey: `workplace.signed:${logbookId}:${logbook.learnerId}`,
     });
   });
 }

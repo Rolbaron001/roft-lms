@@ -44,7 +44,23 @@ export type NotificationKind =
   | "assessment.decided"
   | "certificate.issued"
   | "programme.step_unlocked"
-  | "course.new_version";
+  | "course.new_version"
+  /**
+   * Handoffs that previously told nobody.
+   *
+   * Each of these is a point where the platform works out that somebody else
+   * now has to act. Until the functional review of 11 September they all simply
+   * changed a status and waited for the right person to open the right screen.
+   * The workplace one mattered most: a coach is the employer's supervisor
+   * rather than provider staff, so they have no reason to log in at all.
+   */
+  | "workplace.signature_wanted"
+  | "workplace.signed"
+  | "workplace.returned"
+  | "appeal.lodged"
+  | "grievance.lodged"
+  | "statutory.due_soon"
+  | "statutory.overdue";
 
 export type RaiseInput = {
   organisationId: string;
@@ -99,7 +115,12 @@ export async function raise(
 /** Everyone in the tenant holding a role, for notifications aimed at a job. */
 export async function usersWithRole(
   tx: TenantDatabase,
-  role: "assessor" | "moderator" | "tenant_admin" | "line_manager",
+  role:
+    | "assessor"
+    | "moderator"
+    | "tenant_admin"
+    | "line_manager"
+    | "skills_development_facilitator",
 ): Promise<string[]> {
   const rows = await tx
     .select({ userId: userRoles.userId })
@@ -222,6 +243,9 @@ export type SweepResult = {
   /** Steps on a cohort schedule that opened today, or fell due today. */
   stepsOpened: number;
   stepsDue: number;
+  /** Learners whose QCTO enrolment notification is close, or past. */
+  statutoryDueSoon: number;
+  statutoryOverdue: number;
 };
 
 /**
@@ -241,6 +265,8 @@ export async function sweepTenant(
     awaitingModerator: 0,
     stepsOpened: 0,
     stepsDue: 0,
+    statutoryDueSoon: 0,
+    statutoryOverdue: 0,
   };
 
   await withTenant(organisationId, async (tx) => {
@@ -450,6 +476,66 @@ export async function sweepTenant(
           });
           result.stepsDue += 1;
         }
+      }
+    }
+  });
+
+  /**
+   * The QCTO enrolment notification, which has the hardest deadline here.
+   *
+   * Outside the transaction above because it needs the tenant's public holiday
+   * calendar, and because it reads across cohorts rather than down one.
+   *
+   * Missing this one is not a paperwork slip: the learners are not registered,
+   * so when they finish there is nowhere for their results to go. It was built
+   * on 11 September with a screen and no alert at all, which made it exactly
+   * the kind of obligation that only gets noticed late.
+   */
+  await withTenant(organisationId, async (tx) => {
+    const { statutoryWatch } = await import("./statutory-notification");
+    const watch = await statutoryWatch(organisationId, now);
+
+    if (watch.length === 0) return;
+
+    const staff = [
+      ...new Set([
+        ...(await usersWithRole(tx, "tenant_admin")),
+        ...(await usersWithRole(tx, "skills_development_facilitator")),
+      ]),
+    ];
+
+    const overdue = watch.filter((row) => row.state === "overdue");
+    const soon = watch.filter((row) => row.state === "due_soon");
+
+    for (const userId of staff) {
+      if (overdue.length > 0) {
+        await raise(tx, {
+          organisationId,
+          userId,
+          kind: "statutory.overdue",
+          subject: `${overdue.length} QCTO enrolment ${overdue.length === 1 ? "notification is" : "notifications are"} overdue`,
+          body: "Submit them anyway. A late notification with an explanation is a different problem to one nobody made.",
+          linkPath: "/statutory/notify",
+          // One a week, not one a night: an overdue item stays overdue, and a
+          // nightly repeat of the same bad news teaches people to ignore it.
+          dedupeKey: `statutory.overdue:${weekBucket(now)}:${userId}`,
+          channels: ["in_app", "email"],
+        });
+        result.statutoryOverdue += overdue.length;
+      }
+
+      if (soon.length > 0) {
+        await raise(tx, {
+          organisationId,
+          userId,
+          kind: "statutory.due_soon",
+          subject: `${soon.length} QCTO enrolment ${soon.length === 1 ? "notification is" : "notifications are"} due within a week`,
+          body: "The clock runs from induction, and public holidays do not count.",
+          linkPath: "/statutory/notify",
+          dedupeKey: `statutory.due_soon:${weekBucket(now)}:${userId}`,
+          channels: ["in_app", "email"],
+        });
+        result.statutoryDueSoon += soon.length;
       }
     }
   });
