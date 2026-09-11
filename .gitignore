@@ -50,3 +50,6 @@ next-env.d.ts
 
 # Scratch scripts used while working. Never committed.
 zz-*
+
+# The record a purge writes of what it removed. Local, not shared.
+purged-tenants-*.txt
