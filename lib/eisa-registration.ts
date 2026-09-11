@@ -14,6 +14,7 @@ import { recordAudit } from "./audit";
 import { qualificationReadiness } from "./eisa";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { addWorkingDays } from "./working-days";
+import { holidaysForTenant } from "./tenant-holidays";
 
 /**
  * Entering learners for the external assessment.
@@ -324,7 +325,11 @@ export async function registrationDue(
   // Ten working days is the point at which somebody has to start rather than
   // intend to. Earlier than that and a warning is noise; later and there is
   // not time to chase an identity number.
-  const soon = addWorkingDays(asAt, 10);
+  const soon = addWorkingDays(
+    asAt,
+    10,
+    await holidaysForTenant(session.organisationId, asAt),
+  );
 
   return sittings.flatMap((sitting) =>
     running

@@ -14,6 +14,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { dateInZone } from "./timezone";
 import { addWorkingDays } from "./working-days";
+import { holidaysForTenant } from "./tenant-holidays";
 
 /**
  * Learner discipline, abscondment and grievances.
@@ -536,7 +537,11 @@ export async function closeDisciplinaryCase(
         closedById: session.userId,
         // The right to appeal runs from being told, so the deadline is set when
         // the outcome is recorded and re-set if it is given later.
-        appealBy: addWorkingDays(today, DAYS_TO_APPEAL_SANCTION),
+        appealBy: addWorkingDays(
+          today,
+          DAYS_TO_APPEAL_SANCTION,
+          await holidaysForTenant(session.organisationId, today),
+        ),
         updatedAt: new Date(),
       })
       .where(eq(disciplinaryCases.id, parsed.caseId))
@@ -575,6 +580,10 @@ export async function recordOutcomeGiven(
         appealBy: addWorkingDays(
           dateInZone(now, timeZone),
           DAYS_TO_APPEAL_SANCTION,
+          await holidaysForTenant(
+            session.organisationId,
+            dateInZone(now, timeZone),
+          ),
         ),
         updatedAt: now,
       })
@@ -762,7 +771,11 @@ export async function lodgeGrievance(
         occurredOn: parsed.occurredOn ?? null,
         desiredOutcome: parsed.desiredOutcome || null,
         lodgedOn: today,
-        acknowledgeBy: addWorkingDays(today, DAYS_TO_ACKNOWLEDGE_GRIEVANCE),
+        acknowledgeBy: addWorkingDays(
+          today,
+          DAYS_TO_ACKNOWLEDGE_GRIEVANCE,
+          await holidaysForTenant(session.organisationId, today),
+        ),
       })
       .returning();
 
@@ -885,7 +898,11 @@ export async function decideGrievance(
       .set({
         meetingHeldOn: input.meetingHeldOn,
         decidedOn: today,
-        decisionDueBy: addWorkingDays(input.meetingHeldOn, DAYS_TO_DECIDE_GRIEVANCE),
+        decisionDueBy: addWorkingDays(
+          input.meetingHeldOn,
+          DAYS_TO_DECIDE_GRIEVANCE,
+          await holidaysForTenant(session.organisationId, input.meetingHeldOn),
+        ),
         decision,
         decisionGivenAt: new Date(),
         status: "decided",

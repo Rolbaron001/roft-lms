@@ -193,6 +193,19 @@ export const organisations = pgTable(
     timezone: text("timezone").notNull().default("Africa/Johannesburg"),
 
     /**
+     * Whose public holidays the provider's working-day deadlines observe.
+     *
+     * A statutory clock counted in working days has to skip public holidays,
+     * and which days those are is a fact about the country rather than about
+     * the platform. South Africa is the default because that is where the
+     * first tenants are; it is a column rather than a constant so a provider
+     * elsewhere is not silently given the wrong calendar.
+     *
+     * See lib/public-holidays.ts for the calendars the platform can compute.
+     */
+    holidayCalendar: text("holiday_calendar").notNull().default("ZA"),
+
+    /**
      * Statutory retention window. Personal identifiers may be anonymised on
      * request once this has elapsed; achievement records are kept permanently.
      */

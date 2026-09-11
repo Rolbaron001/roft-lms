@@ -14,6 +14,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { dateInZone } from "./timezone";
 import { withinWorkingDays } from "./working-days";
+import { holidaysForTenant } from "./tenant-holidays";
 
 /**
  * Appeals.
@@ -117,6 +118,10 @@ export async function lodgeAppeal(
     from: parsed.triggeredOn,
     done: today,
     count: DAYS_TO_LODGE,
+    holidays: await holidaysForTenant(
+      session.organisationId,
+      parsed.triggeredOn,
+    ),
   });
 
   if (!timing.inTime && !parsed.lateAcceptanceReason) {
