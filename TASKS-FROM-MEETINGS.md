@@ -107,7 +107,7 @@ Three of the client's own statuses had no counterpart:
   records. An absence with no submission behind it is a missed first sitting;
   that is rescheduled, where a later absence is a pattern.
 
-### W4 · "Logbook" is still the word on screen
+### W4 · "Logbook" is still the word on screen — **done, 11 September**
 
 The client's term is **workplace experience sign-off**, not logbook (27 August).
 
@@ -127,14 +127,14 @@ renameable registry. Another tenant may well call it a logbook.
 Twelve of roughly forty-three fields the statutory return needs. Covered in
 full as task 7 below.
 
-### W6 · Non-credit-bearing certificates have no route
+### W6 · Non-credit-bearing certificates have no route — **done, 11 September**
 
 Raised in the SOP: they follow a separate route, currently prepared externally
 on three days' notice. Nothing in the platform distinguishes them.
 
 **Size:** small. **Priority:** confirm it is still wanted before building.
 
-### W7 · Course versioning is built but its promise is not kept
+### W7 · Course versioning is built but its promise is not kept — **done, 11 September**
 
 `createNewVersion` exists and is reachable. The design document says publishing
 a new version "does flag anyone still mid-course, or anyone whose role requires
@@ -222,7 +222,7 @@ assessment quality partner, with its own instrument structure, confidentiality
 agreements and pre-moderator reports. Templates are in `Design/Templates/`. Its
 own body of work.
 
-### 4 · Statutory notification, the LEISA export, and late joiners
+### 4 · Statutory notification, the LEISA export, and late joiners — **built, 11 September**
 
 The clock runs from the **induction date** — Heidi, 9 September. 21 working days
 for a full or part qualification, 5 for a skills programme.
@@ -438,7 +438,7 @@ rather than from needing Word itself, and that is better answered by letting
 them place their own logo and address on the document than by handing over the
 whole file.
 
-### 10 · Offline use for field learners — **new, decided 10 September, urgent**
+### 10 · Offline use for field learners — **foundation built, 11 September**
 
 The ranger programme client was the catalyst for building the LMS now, and ROFT
 cannot respond to them until the platform can serve them. This is the one item
@@ -543,6 +543,65 @@ hypothetical rather than imminent, so it should cost nothing extra to carry.
 
 **Size:** large, and it should be scoped and priced on its own rather than
 absorbed. But it is additive, and none of it touches what is already working.
+
+---
+
+---
+
+## The functional review of 11 September
+
+Roland asked for the platform to be checked against nine questions - who, what,
+where, when, how, how long, with what, for what purpose, what happens next -
+first broadly and then for every role that uses it, with anything missing built
+rather than listed.
+
+Ten roles were driven through every screen in the application against a live
+database. No screen errored for any role and no screen was unreachable by
+everybody, so what follows is not about broken features. Every one of these was
+found by reading the platform against what it promised, and every existing test
+passed both before and after each fix.
+
+### Found and fixed
+
+**Working-day deadlines ignored public holidays.** `lib/working-days.ts` took
+holidays as an argument and said so in its own comment; nothing passed any. Six
+deadlines - appeals twice, grievances twice, the EISA warning, and the new
+statutory clock - counted Christmas Day as a working day. The error ran in the
+dangerous direction: it made every deadline land *earlier* than the law allows,
+so the platform would have told a learner their appeal window had closed while
+it was still open.
+
+**Nothing told the next person it was their turn.** The largest finding, across
+five workflows. Each worked out that somebody else had to act, changed a status,
+and told nobody. Worst for the workplace coach, who is the employer's supervisor
+rather than provider staff, holds one permission, and has no reason to log in at
+all - a signature could wait indefinitely on somebody with no way of knowing it
+was wanted.
+
+**Non-credit-bearing certificates were reportable to the NLRD.** The SOP treats
+them as a separate route; the platform did not distinguish them, so an
+attendance certificate would have gone to SAQA as an achievement on somebody's
+national record.
+
+**Publishing a new course version flagged nobody** (W7), though the design
+document promised it and the link to the superseded course was already stored.
+
+**"Logbook" was the platform's word, not the tenant's** (W4). Now renameable,
+because both words are in real use and the QCTO's own documents say logbook.
+
+**Nine test files leaked tenants.** About a hundred and fifty orphans had
+accumulated. Harmless, but unbounded.
+
+### Checked and found correct
+
+Worth recording, because each looked like a problem and was not:
+
+- `/records`, `/settings` and `/workplace` are reachable by everybody but gate
+  their *contents* by permission. A learner sees only documents deliberately
+  marked visible to all. That is better design than a blanket route gate, not
+  worse.
+- Tenant isolation held on every check.
+- No screen is orphaned: every route is reachable by at least one role.
 
 ---
 
