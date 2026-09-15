@@ -24,6 +24,7 @@ export const DOCUMENT_KINDS = [
   "statement_of_results",
   "certificate",
   "workplace_statement",
+  "enrolment_form",
 ] as const;
 
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
@@ -32,6 +33,7 @@ export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
   statement_of_results: "Statement of Results",
   certificate: "Certificate",
   workplace_statement: "Statement of Work Experience",
+  enrolment_form: "Learner Enrolment Form",
 };
 
 export const DOCUMENT_KIND_NOTES: Record<DocumentKind, string> = {
@@ -41,6 +43,8 @@ export const DOCUMENT_KIND_NOTES: Record<DocumentKind, string> = {
     "What the provider issues for its own programmes. A qualification certificate comes from the QCTO, not from here.",
   workplace_statement:
     "What a workplace coach signs to confirm the experience a learner completed.",
+  enrolment_form:
+    "The completed enrolment form, as a document. Heidi named this on 9 September as evidence a QCTO monitor asks for on a visit, alongside the rollout schedule - so it has to exist on paper, not only as a screen somebody filled in.",
 };
 
 /**
@@ -224,6 +228,43 @@ export const DOCUMENT_FIELDS: Record<DocumentKind, DocumentField[]> = {
     ...PROVIDER_FIELDS,
     ...DOCUMENT_META_FIELDS,
   ],
+
+  /**
+   * The enrolment form is a record of answers rather than an award, so its
+   * fields are the answers themselves - coded values rendered as the label a
+   * person reads, not as the code the QCTO receives. A monitor reading this
+   * wants to see what the learner said, and "Zul" is not that.
+   */
+  enrolment_form: [
+    ...LEARNER_FIELDS,
+    ...PROVIDER_FIELDS,
+    { key: "learner.dateOfBirth", label: "Date of birth", example: "20 February 1992" },
+    { key: "learner.gender", label: "Gender", example: "Female" },
+    { key: "learner.equity", label: "Population group", example: "Black African" },
+    { key: "learner.nationality", label: "Nationality", example: "South Africa" },
+    { key: "learner.disability", label: "Disability", example: "None" },
+    { key: "learner.disabilityRating", label: "Disability rating", example: "" },
+    { key: "form.homeLanguage", label: "Home language", example: "isiZulu" },
+    { key: "form.citizenship", label: "Citizenship or residence", example: "South African" },
+    { key: "form.employment", label: "Employment status", example: "Employed" },
+    { key: "form.immigrantStatus", label: "Immigrant status", example: "South African citizen" },
+    { key: "form.homeAddress", label: "Home address", example: "12 Kort Street, Braamfontein" },
+    { key: "form.homePostalCode", label: "Home postal code", example: "2196" },
+    { key: "form.postalAddress", label: "Postal address", example: "PO Box 41, Auckland Park" },
+    { key: "form.cellPhone", label: "Cell phone", example: "082 123 4567" },
+    { key: "form.phone", label: "Other phone", example: "011 555 0100" },
+    { key: "form.employer", label: "Employer", example: "Acme Mining Services" },
+    { key: "form.province", label: "Province of work", example: "Gauteng" },
+    { key: "form.statssaArea", label: "STATSSA area code", example: "798001" },
+    { key: "form.flc", label: "Foundational Learning Competence", example: "" },
+    { key: "form.flcStatementNumber", label: "FLC statement number", example: "" },
+    { key: "programme.title", label: "Programme", example: "Occupational Certificate: Commercial Cleaner" },
+    { key: "programme.cohort", label: "Cohort", example: "Intake 1, 2026" },
+    { key: "programme.inductionOn", label: "Induction date", example: "2 March 2026" },
+    { key: "form.popiaAgreedOn", label: "POPIA agreement date", example: "1 March 2026" },
+    { key: "form.confirmedOn", label: "Confirmed on", example: "2 March 2026" },
+    ...DOCUMENT_META_FIELDS,
+  ],
 };
 
 /**
@@ -246,6 +287,10 @@ export const STATUTORY_BLOCKS: Record<DocumentKind, string[]> = {
   ],
   workplace_statement: [
     "This statement records workplace experience signed off by the coach named on it. It is not an assessment decision and does not on its own confirm competence.",
+  ],
+  enrolment_form: [
+    "The learner named above confirmed these details, and agreed that they may be held and submitted to the Quality Council for Trades and Occupations for the purposes of their enrolment, as the Protection of Personal Information Act requires.",
+    "Where a detail here is wrong, tell the provider rather than correcting this printed copy: the record they submit is the one held on the platform.",
   ],
 };
 
@@ -350,6 +395,72 @@ export const STARTER_TEMPLATES: Record<DocumentKind, string> = {
     "",
     "",
     "Workplace coach   ____________________________",
+  ].join("\n"),
+  /**
+   * Laid out as a form somebody reads and signs, not as an award.
+   *
+   * Every answer the learner gave, in the order the enrolment form asks for
+   * them, so a monitor holding this beside the screen can follow it. The
+   * signature line at the foot is the point of printing it at all: the record
+   * on the platform is the one that gets submitted, and this is the copy the
+   * learner puts their name to.
+   */
+  enrolment_form: [
+    "{{ provider.name }}",
+    "{{ provider.address }}",
+    "",
+    "LEARNER ENROLMENT FORM",
+    "",
+    "Programme      {{ programme.title }}",
+    "Cohort         {{ programme.cohort }}",
+    "Induction      {{ programme.inductionOn }}",
+    "",
+    "THE LEARNER",
+    "",
+    "Full name      {{ learner.fullName }}",
+    "Identity no    {{ learner.nationalId }}",
+    "Date of birth  {{ learner.dateOfBirth }}",
+    "Gender         {{ learner.gender }}",
+    "Population     {{ learner.equity }}",
+    "Nationality    {{ learner.nationality }}",
+    "Home language  {{ form.homeLanguage }}",
+    "Citizenship    {{ form.citizenship }}",
+    "Disability     {{ learner.disability }}",
+    "               {{ learner.disabilityRating }}",
+    "",
+    "CONTACT AND ADDRESS",
+    "",
+    "Cell phone     {{ form.cellPhone }}",
+    "Other phone    {{ form.phone }}",
+    "Home address   {{ form.homeAddress }}",
+    "Postal code    {{ form.homePostalCode }}",
+    "Postal address {{ form.postalAddress }}",
+    "",
+    "WORK",
+    "",
+    "Employment     {{ form.employment }}",
+    "Employer       {{ form.employer }}",
+    "Province       {{ form.province }}",
+    "STATSSA area   {{ form.statssaArea }}",
+    "Immigrant      {{ form.immigrantStatus }}",
+    "",
+    "FOUNDATIONAL LEARNING COMPETENCE",
+    "",
+    "FLC            {{ form.flc }}",
+    "Statement no   {{ form.flcStatementNumber }}",
+    "",
+    "AGREEMENT",
+    "",
+    "POPIA agreed   {{ form.popiaAgreedOn }}",
+    "Confirmed on   {{ form.confirmedOn }}",
+    "",
+    "",
+    "Learner's signature   ____________________________   Date __________",
+    "",
+    "Checked by            ____________________________   Date __________",
+    "",
+    "Reference      {{ document.reference }}",
+    "Accreditation  {{ provider.accreditationNumber }}",
   ].join("\n"),
 };
 

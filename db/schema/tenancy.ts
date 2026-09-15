@@ -736,6 +736,8 @@ export const documentTemplateKind = pgEnum("document_template_kind", [
   "statement_of_results",
   "certificate",
   "workplace_statement",
+  /** The completed enrolment form, which a QCTO monitor asks to see. */
+  "enrolment_form",
 ]);
 
 export const documentTemplateStatus = pgEnum("document_template_status", [

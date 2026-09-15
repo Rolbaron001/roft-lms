@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import {
   isValidCode,
+  labelFor,
   ratingRequiredFor,
   type CodedField,
 } from "./learner-codes";
@@ -517,4 +518,129 @@ export async function inheritedFor(
         inductions.find((i) => i.cohortId === row.cohortId)?.on ?? null,
     }));
   });
+}
+
+/**
+ * The learner's answers, as the words a person reads rather than the codes the
+ * QCTO receives.
+ *
+ * `Zul` is what goes in the workbook; "isiZulu" is what belongs on a form
+ * somebody signs. A monitor reading the printed copy is checking that the
+ * learner answered, not that the platform can spell a code.
+ *
+ * Everything absent renders as an empty string rather than as "None" or a dash,
+ * because a printed form with a blank line reads as a question nobody answered,
+ * which is exactly what it is.
+ */
+export function documentValuesFor(view: {
+  learner: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    nationalId: string | null;
+    dateOfBirth: Date | null;
+    gender: string | null;
+    equityCode: string | null;
+    disabilityCode: string | null;
+    nationality: string | null;
+    consentGivenAt: Date | null;
+  };
+  profile: {
+    homeLanguageCode: string | null;
+    citizenResidentStatusCode: string | null;
+    socioeconomicStatusCode: string | null;
+    disabilityRating: string | null;
+    immigrantStatus: string | null;
+    homeAddress1: string | null;
+    homeAddress2: string | null;
+    homeAddress3: string | null;
+    homeAddressPostalCode: string | null;
+    postalAddress1: string | null;
+    postalAddress2: string | null;
+    postalAddress3: string | null;
+    phoneNumber: string | null;
+    cellPhoneNumber: string | null;
+    provinceCode: string | null;
+    statssaAreaCode: string | null;
+    flc: string | null;
+    flcStatementNumber: string | null;
+    employerName: string | null;
+    confirmedAt: Date | null;
+  };
+  inherited: {
+    programme: string | null;
+    cohortName: string | null;
+    inductionOn: string | null;
+  };
+}): Record<string, string> {
+  const { learner, profile, inherited } = view;
+
+  const date = (value: Date | null | undefined) =>
+    value
+      ? value.toLocaleDateString("en-ZA", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
+
+  /** A code turned into its label, or nothing at all if there is no code. */
+  const coded = (field: CodedField, value: string | null) =>
+    value ? labelFor(field, value) : "";
+
+  // Address lines joined with commas, because a form has one line for it and
+  // three empty lines where a learner gave one is worse than a short answer.
+  const address = (...parts: (string | null)[]) =>
+    parts.filter((part) => part && part.trim()).join(", ");
+
+  return {
+    "learner.fullName": `${learner.firstName} ${learner.lastName}`,
+    "learner.firstName": learner.firstName,
+    "learner.lastName": learner.lastName,
+    "learner.nationalId": learner.nationalId ?? "",
+    "learner.dateOfBirth": date(learner.dateOfBirth),
+    "learner.gender": coded("genderCode", learner.gender),
+    "learner.equity": coded("equityCode", learner.equityCode),
+    "learner.nationality": coded("nationalityCode", learner.nationality),
+    "learner.disability": coded("disabilityStatusCode", learner.disabilityCode),
+    "learner.disabilityRating": coded(
+      "disabilityRating",
+      profile.disabilityRating,
+    ),
+
+    "form.homeLanguage": coded("homeLanguageCode", profile.homeLanguageCode),
+    "form.citizenship": coded(
+      "citizenResidentStatusCode",
+      profile.citizenResidentStatusCode,
+    ),
+    "form.employment": coded(
+      "socioeconomicStatusCode",
+      profile.socioeconomicStatusCode,
+    ),
+    "form.immigrantStatus": coded("immigrantStatus", profile.immigrantStatus),
+    "form.homeAddress": address(
+      profile.homeAddress1,
+      profile.homeAddress2,
+      profile.homeAddress3,
+    ),
+    "form.homePostalCode": profile.homeAddressPostalCode ?? "",
+    "form.postalAddress": address(
+      profile.postalAddress1,
+      profile.postalAddress2,
+      profile.postalAddress3,
+    ),
+    "form.cellPhone": profile.cellPhoneNumber ?? "",
+    "form.phone": profile.phoneNumber ?? "",
+    "form.employer": profile.employerName ?? "",
+    "form.province": coded("provinceCode", profile.provinceCode),
+    "form.statssaArea": profile.statssaAreaCode ?? "",
+    "form.flc": profile.flc ?? "",
+    "form.flcStatementNumber": profile.flcStatementNumber ?? "",
+    "form.popiaAgreedOn": date(learner.consentGivenAt),
+    "form.confirmedOn": date(profile.confirmedAt),
+
+    "programme.title": inherited.programme ?? "",
+    "programme.cohort": inherited.cohortName ?? "",
+    "programme.inductionOn": inherited.inductionOn ?? "",
+  };
 }

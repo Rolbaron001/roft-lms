@@ -382,3 +382,183 @@ describe("whose form it is", () => {
     expect(view.profile.homeLanguageCode).toBe("Afr");
   });
 });
+
+/**
+ * The form as a document.
+ *
+ * Heidi named the enrolment form on 9 September as evidence a QCTO monitor
+ * asks for on a visit. It existed as a screen somebody filled in, and a screen
+ * is not what a monitor is handed.
+ *
+ * The thing worth testing is the translation: what goes in the QCTO's workbook
+ * is a code, and what belongs on a form somebody signs is a word.
+ */
+describe("the printed form", () => {
+  it("prints the words a person reads, not the codes the QCTO receives", async () => {
+    const { documentValuesFor } = await import("@/lib/enrolment-form");
+
+    const values = documentValuesFor({
+      learner: {
+        firstName: "Thandi",
+        lastName: "Mokoena",
+        email: "thandi@example.test",
+        nationalId: "9202204720083",
+        dateOfBirth: new Date("1992-02-20"),
+        gender: "F",
+        equityCode: "BA",
+        disabilityCode: "03",
+        nationality: "SA",
+        consentGivenAt: new Date("2026-03-01"),
+      },
+      profile: {
+        homeLanguageCode: "Zul",
+        citizenResidentStatusCode: "SA",
+        socioeconomicStatusCode: "01",
+        disabilityRating: "02",
+        immigrantStatus: "03",
+        homeAddress1: "12 Kort Street",
+        homeAddress2: "Braamfontein",
+        homeAddress3: null,
+        homeAddressPostalCode: "2196",
+        postalAddress1: null,
+        postalAddress2: null,
+        postalAddress3: null,
+        phoneNumber: null,
+        cellPhoneNumber: "0821234567",
+        provinceCode: "7",
+        statssaAreaCode: "798001",
+        flc: null,
+        flcStatementNumber: null,
+        employerName: "Acme Mining Services",
+        confirmedAt: new Date("2026-03-02"),
+      },
+      inherited: {
+        programme: "Hair Cutting Attendant",
+        cohortName: "Intake 1",
+        inductionOn: "2026-03-02",
+      },
+    });
+
+    // Codes become words.
+    expect(values["form.homeLanguage"]).toBe("isiZulu");
+    expect(values["learner.gender"]).toBe("Female");
+    expect(values["learner.equity"]).toBe("Black African");
+    expect(values["form.employment"]).toBe("Employed");
+    expect(values["form.province"]).toBe("Gauteng");
+    expect(values["learner.disability"]).toBe("Communication: talking, listening");
+    expect(values["form.immigrantStatus"]).toBe("South African citizen");
+
+    // And nothing anywhere is still a bare code.
+    expect(values["form.homeLanguage"]).not.toBe("Zul");
+    expect(values["form.employment"]).not.toBe("01");
+  });
+
+  it("joins an address onto one line rather than leaving blank ones", async () => {
+    const { documentValuesFor } = await import("@/lib/enrolment-form");
+
+    const values = documentValuesFor({
+      learner: {
+        firstName: "A", lastName: "B", email: "a@b.test", nationalId: null,
+        dateOfBirth: null, gender: null, equityCode: null,
+        disabilityCode: null, nationality: null, consentGivenAt: null,
+      },
+      profile: {
+        homeLanguageCode: null, citizenResidentStatusCode: null,
+        socioeconomicStatusCode: null, disabilityRating: null,
+        immigrantStatus: null,
+        homeAddress1: "12 Kort Street",
+        homeAddress2: null,
+        homeAddress3: "Johannesburg",
+        homeAddressPostalCode: null,
+        postalAddress1: null, postalAddress2: null, postalAddress3: null,
+        phoneNumber: null, cellPhoneNumber: null, provinceCode: null,
+        statssaAreaCode: null, flc: null, flcStatementNumber: null,
+        employerName: null, confirmedAt: null,
+      },
+      inherited: { programme: null, cohortName: null, inductionOn: null },
+    });
+
+    expect(values["form.homeAddress"]).toBe("12 Kort Street, Johannesburg");
+  });
+
+  /**
+   * A blank line on a printed form reads as a question nobody answered, which
+   * is exactly what it is. Writing "None" there would claim an answer was
+   * given.
+   */
+  it("leaves an unanswered question blank rather than inventing a word", async () => {
+    const { documentValuesFor } = await import("@/lib/enrolment-form");
+
+    const values = documentValuesFor({
+      learner: {
+        firstName: "A", lastName: "B", email: "a@b.test", nationalId: null,
+        dateOfBirth: null, gender: null, equityCode: null,
+        disabilityCode: null, nationality: null, consentGivenAt: null,
+      },
+      profile: {
+        homeLanguageCode: null, citizenResidentStatusCode: null,
+        socioeconomicStatusCode: null, disabilityRating: null,
+        immigrantStatus: null, homeAddress1: null, homeAddress2: null,
+        homeAddress3: null, homeAddressPostalCode: null,
+        postalAddress1: null, postalAddress2: null, postalAddress3: null,
+        phoneNumber: null, cellPhoneNumber: null, provinceCode: null,
+        statssaAreaCode: null, flc: null, flcStatementNumber: null,
+        employerName: null, confirmedAt: null,
+      },
+      inherited: { programme: null, cohortName: null, inductionOn: null },
+    });
+
+    expect(values["form.homeLanguage"]).toBe("");
+    expect(values["learner.gender"]).toBe("");
+    expect(values["form.popiaAgreedOn"]).toBe("");
+    expect(values["form.homeAddress"]).toBe("");
+  });
+
+  it("fills the platform's own layout with no placeholder left showing", async () => {
+    const { documentValuesFor } = await import("@/lib/enrolment-form");
+    const { fillTemplate } = await import("@/lib/document-templates");
+    const { STARTER_TEMPLATES } = await import("@/lib/document-fields");
+
+    const values = {
+      ...documentValuesFor({
+        learner: {
+          firstName: "Thandi", lastName: "Mokoena", email: "t@example.test",
+          nationalId: "9202204720083", dateOfBirth: new Date("1992-02-20"),
+          gender: "F", equityCode: "BA", disabilityCode: "N",
+          nationality: "SA", consentGivenAt: new Date("2026-03-01"),
+        },
+        profile: {
+          homeLanguageCode: "Zul", citizenResidentStatusCode: "SA",
+          socioeconomicStatusCode: "01", disabilityRating: null,
+          immigrantStatus: "03", homeAddress1: "12 Kort Street",
+          homeAddress2: null, homeAddress3: null,
+          homeAddressPostalCode: "2196", postalAddress1: null,
+          postalAddress2: null, postalAddress3: null, phoneNumber: null,
+          cellPhoneNumber: "0821234567", provinceCode: "7",
+          statssaAreaCode: "798001", flc: null, flcStatementNumber: null,
+          employerName: "Acme", confirmedAt: new Date("2026-03-02"),
+        },
+        inherited: {
+          programme: "Hair Cutting Attendant",
+          cohortName: "Intake 1",
+          inductionOn: "2026-03-02",
+        },
+      }),
+      "provider.name": "Curiosa Academy",
+      "provider.address": "14 Curiosity Lane",
+      "provider.accreditationNumber": "QCTO/SDP/2024/0113",
+      "document.issuedOn": "15 September 2026",
+      "document.reference": "ENROL-ABCD1234",
+    };
+
+    const body = fillTemplate(STARTER_TEMPLATES.enrolment_form, values);
+
+    expect(body).toContain("Curiosa Academy");
+    expect(body).toContain("Thandi Mokoena");
+    expect(body).toContain("isiZulu");
+    expect(body).toContain("Hair Cutting Attendant");
+    expect(body).toContain("Learner's signature");
+    // Nothing unresolved left on a document somebody signs.
+    expect(body).not.toMatch(/\{\{/);
+  });
+});

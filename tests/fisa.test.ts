@@ -216,7 +216,7 @@ describe("the checklist, as the templates print it", () => {
     expect(readyToSignOff({}).why).toContain("unanswered");
   });
 
-  it("will not sign off when 6.2 is answered no", () => {
+  it("will not sign off when 7.2 is answered no", () => {
     const answers: Record<string, ChecklistAnswer> = Object.fromEntries(
       itemsFor("moderator").map((i) => [i.code, "yes" as ChecklistAnswer]),
     );

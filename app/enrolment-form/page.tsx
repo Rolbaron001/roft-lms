@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import {
@@ -190,6 +191,22 @@ export default async function EnrolmentFormPage({
           </Card>
         </div>
       )}
+
+      {/*
+        The printable copy. Heidi named the enrolment form as evidence a QCTO
+        monitor asks for, and a screen is not what a monitor is handed.
+      */}
+      <p className="mb-6">
+        <Link
+          href={`/enrolment-form/document${onSomebodyElsesBehalf ? `?learner=${learnerId}` : ""}`}
+          className="text-sm underline underline-offset-2"
+        >
+          Print this form
+        </Link>
+        <span className="ml-2 text-sm text-[var(--muted)]">
+          for signing and filing.
+        </span>
+      </p>
 
       <EnrolmentForm
         learnerId={learnerId}
