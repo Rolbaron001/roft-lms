@@ -1464,6 +1464,27 @@ export const fisaInstruments = pgTable(
       onDelete: "set null",
     }),
 
+    /**
+     * And then it goes to the QCTO.
+     *
+     * Curiosa's enrolment procedure, for a skills programme: "Submit two FISA
+     * instruments and related documentation to the QCTO for approval." So the
+     * moderator's sign-off is not the end of it - internal pre-moderation makes
+     * the paper fit for purpose, and the QCTO approves it separately.
+     *
+     * Recorded rather than enforced. Whether a candidate may sit a paper the
+     * QCTO has not yet returned is a regulatory question, and guessing at it
+     * would be inventing a rule. The platform shows where each paper stands and
+     * leaves the judgement to somebody who knows.
+     */
+    qctoSubmittedAt: timestamp("qcto_submitted_at", { withTimezone: true }),
+    qctoSubmittedById: uuid("qcto_submitted_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    qctoApprovedAt: timestamp("qcto_approved_at", { withTimezone: true }),
+    /** Whatever reference the QCTO returns, which is the evidence it happened. */
+    qctoReference: text("qcto_reference"),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -871,3 +871,170 @@ export async function confidentialityDetails(
     return row;
   });
 }
+
+/**
+ * How many instruments the QCTO expects for a skills programme.
+ *
+ * Curiosa's enrolment procedure: "Submit two FISA instruments and related
+ * documentation to the QCTO for approval." Two, because a candidate who has to
+ * be reassessed cannot sit the same paper again - so a programme with one
+ * approved instrument has no second sitting to offer.
+ */
+export const INSTRUMENTS_EXPECTED = 2;
+
+export type QctoReadiness = {
+  signedOff: number;
+  submitted: number;
+  approved: number;
+  expected: number;
+  /** Said plainly, because it is the thing a coordinator has to act on. */
+  outstanding: string[];
+};
+
+/**
+ * Where a programme stands against the QCTO's expectation of two instruments.
+ *
+ * Reported rather than enforced. Whether a candidate may sit a paper the QCTO
+ * has not returned is a regulatory question the platform should not invent an
+ * answer to - so this says where things stand and leaves the judgement to
+ * somebody who knows.
+ */
+export async function qctoReadiness(
+  session: AuthenticatedSession,
+  qualificationId: string,
+): Promise<QctoReadiness> {
+  assertMayRead(session);
+
+  return withTenant(session.organisationId, async (tx) => {
+    const rows = await tx
+      .select({
+        status: fisaInstruments.status,
+        approvedAt: fisaInstruments.approvedAt,
+        qctoSubmittedAt: fisaInstruments.qctoSubmittedAt,
+        qctoApprovedAt: fisaInstruments.qctoApprovedAt,
+      })
+      .from(fisaInstruments)
+      .where(eq(fisaInstruments.qualificationId, qualificationId));
+
+    const live = rows.filter((row) => row.status !== "retired");
+    const signedOff = live.filter((row) => row.approvedAt).length;
+    const submitted = live.filter((row) => row.qctoSubmittedAt).length;
+    const approved = live.filter((row) => row.qctoApprovedAt).length;
+
+    const outstanding: string[] = [];
+
+    if (signedOff < INSTRUMENTS_EXPECTED) {
+      const short = INSTRUMENTS_EXPECTED - signedOff;
+      outstanding.push(
+        `${short} more ${short === 1 ? "instrument needs" : "instruments need"} to be written and pre-moderated. The QCTO expects ${INSTRUMENTS_EXPECTED}, so that a candidate being reassessed is not sat the same paper twice.`,
+      );
+    }
+
+    if (signedOff > submitted) {
+      const waiting = signedOff - submitted;
+      outstanding.push(
+        `${waiting} pre-moderated ${waiting === 1 ? "instrument has" : "instruments have"} not been sent to the QCTO yet.`,
+      );
+    }
+
+    if (submitted > approved) {
+      const waiting = submitted - approved;
+      outstanding.push(
+        `${waiting} ${waiting === 1 ? "instrument is" : "instruments are"} with the QCTO and have not come back approved.`,
+      );
+    }
+
+    return {
+      signedOff,
+      submitted,
+      approved,
+      expected: INSTRUMENTS_EXPECTED,
+      outstanding,
+    };
+  });
+}
+
+/** Records that a signed-off instrument went to the QCTO. */
+export async function recordQctoSubmission(
+  session: AuthenticatedSession,
+  instrumentId: string,
+) {
+  assertSessionCan(session, "report:statutory");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [instrument] = await tx
+      .select({ approvedAt: fisaInstruments.approvedAt })
+      .from(fisaInstruments)
+      .where(eq(fisaInstruments.id, instrumentId));
+
+    if (!instrument) throw new FisaError("No such FISA.", "not_found");
+
+    if (!instrument.approvedAt) {
+      throw new FisaError(
+        "Pre-moderate it first. Sending the QCTO a paper your own moderator has not signed off is the wrong way round.",
+        "wrong_state",
+      );
+    }
+
+    const [updated] = await tx
+      .update(fisaInstruments)
+      .set({
+        qctoSubmittedAt: new Date(),
+        qctoSubmittedById: session.userId,
+        updatedAt: new Date(),
+      })
+      .where(eq(fisaInstruments.id, instrumentId))
+      .returning();
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "fisa.sent_to_qcto",
+      entityType: "fisa_instrument",
+      entityId: instrumentId,
+    });
+
+    return updated;
+  });
+}
+
+/** Records what the QCTO sent back. */
+export async function recordQctoApproval(
+  session: AuthenticatedSession,
+  instrumentId: string,
+  reference: string,
+) {
+  assertSessionCan(session, "report:statutory");
+
+  if (!reference.trim()) {
+    throw new FisaError(
+      "An approval needs the reference the QCTO issued. Without it there is nothing to show a monitor.",
+      "invalid",
+    );
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [updated] = await tx
+      .update(fisaInstruments)
+      .set({
+        qctoApprovedAt: new Date(),
+        qctoReference: reference.trim(),
+        updatedAt: new Date(),
+      })
+      .where(eq(fisaInstruments.id, instrumentId))
+      .returning();
+
+    if (!updated) throw new FisaError("No such FISA.", "not_found");
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "fisa.qcto_approved",
+      entityType: "fisa_instrument",
+      entityId: instrumentId,
+      after: { reference: reference.trim() },
+    });
+
+    return updated;
+  });
+}

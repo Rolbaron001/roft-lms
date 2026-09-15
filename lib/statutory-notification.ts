@@ -459,9 +459,37 @@ export async function listNotifications(session: AuthenticatedSession) {
       })
       .from(statutoryNotificationLearners);
 
+    /**
+     * Which kinds of programme each submission covers, so the screen can name
+     * the address it goes to. A submission covering both a skills programme and
+     * a qualification has two addresses and has to be split - see
+     * lib/qcto-recipients.ts.
+     */
+    const kinds = await tx
+      .select({
+        notificationId: statutoryNotificationLearners.notificationId,
+        kind: qualifications.kind,
+      })
+      .from(statutoryNotificationLearners)
+      .leftJoin(
+        enrolments,
+        eq(enrolments.userId, statutoryNotificationLearners.userId),
+      )
+      .leftJoin(
+        qualifications,
+        eq(qualifications.id, enrolments.qualificationId),
+      );
+
     return rows.map((row) => ({
       ...row,
       learners: counts.filter((c) => c.notificationId === row.id).length,
+      kinds: [
+        ...new Set(
+          kinds
+            .filter((k) => k.notificationId === row.id)
+            .map((k) => k.kind as "full" | "part" | "skills_programme" | null),
+        ),
+      ],
     }));
   });
 }

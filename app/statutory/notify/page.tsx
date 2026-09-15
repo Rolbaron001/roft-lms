@@ -8,6 +8,7 @@ import {
 } from "@/lib/statutory-notification";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
+import { recipientsFor } from "@/lib/qcto-recipients";
 import {
   AcknowledgeForm,
   DraftForm,
@@ -202,6 +203,40 @@ export default async function NotifyPage() {
                         ) : null}
                       </div>
                     ) : null}
+
+                    {/*
+                      Where it actually goes. The procedure uses two different
+                      addresses depending on what the learners are enrolled on,
+                      and a workbook that is right in every cell but sent to the
+                      wrong address has not been submitted.
+                    */}
+                    <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--surface-2,transparent)] px-3 py-2">
+                      {recipientsFor(row.kinds).map((recipient) => (
+                        <p key={recipient.address} className="text-sm">
+                          <span className="text-[var(--muted)]">Send to </span>
+                          <span className="font-mono">{recipient.address}</span>
+                          {recipient.enclose ? (
+                            <span className="block text-xs text-[var(--muted)]">
+                              {recipient.enclose}
+                            </span>
+                          ) : null}
+                        </p>
+                      ))}
+                      {recipientsFor(row.kinds).length > 1 ? (
+                        <p
+                          className="mt-1 text-xs"
+                          style={{ color: "var(--danger)" }}
+                        >
+                          This submission covers both a skills programme and a
+                          qualification. They go to different addresses, so it
+                          has to be split and sent twice.
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        Ask for an acknowledgement, and record it here when it
+                        comes back.
+                      </p>
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <Link

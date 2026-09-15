@@ -649,3 +649,124 @@ describe("unanswered, on a partly filled report", () => {
     expect(missing.map((m) => m.code)).not.toContain("1.1");
   });
 });
+
+/**
+ * What the enrolment procedure requires of a skills programme, beyond the
+ * provider's own moderation.
+ *
+ * "Submit two FISA instruments and related documentation to the QCTO for
+ * approval." Found by the SOP check on 15 September: the platform stopped at
+ * internal sign-off and had no idea the QCTO saw the paper at all.
+ */
+describe("the QCTO's own approval", () => {
+  let instrumentId: string;
+
+  beforeAll(async () => {
+    const { recordQctoApproval, recordQctoSubmission, qctoReadiness } =
+      await import("@/lib/fisa");
+    void recordQctoApproval;
+    void recordQctoSubmission;
+    void qctoReadiness;
+
+    const instrument = await createInstrument(admin, {
+      qualificationId: skillsProgramme,
+      title: "QCTO approval FISA",
+    });
+    instrumentId = instrument.id;
+  });
+
+  it("refuses to send a paper the provider's own moderator has not signed off", async () => {
+    const { recordQctoSubmission } = await import("@/lib/fisa");
+
+    await expect(
+      recordQctoSubmission(admin, instrumentId),
+    ).rejects.toMatchObject({ reason: "wrong_state" });
+  });
+
+  it("expects two instruments, and says how many are short", async () => {
+    const { qctoReadiness } = await import("@/lib/fisa");
+    const readiness = await qctoReadiness(admin, skillsProgramme);
+
+    expect(readiness.expected).toBe(2);
+    expect(
+      readiness.outstanding.some((o) => o.includes("pre-moderated")),
+    ).toBe(true);
+    // And says why two, rather than only that two are wanted.
+    expect(readiness.outstanding.join(" ")).toContain("same paper twice");
+  });
+
+  it("records the submission and what came back", async () => {
+    const { recordQctoApproval, recordQctoSubmission } = await import(
+      "@/lib/fisa"
+    );
+    const { withPlatformScope } = await import("@/db/client");
+    const { fisaInstruments } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Sign it off internally first, which is the order the procedure implies.
+    await withPlatformScope("approve for qcto test", (tx) =>
+      tx
+        .update(fisaInstruments)
+        .set({ status: "approved", approvedAt: new Date() })
+        .where(eq(fisaInstruments.id, instrumentId)),
+    );
+
+    const sent = await recordQctoSubmission(admin, instrumentId);
+    expect(sent.qctoSubmittedAt).not.toBeNull();
+
+    const back = await recordQctoApproval(admin, instrumentId, "QCTO-FISA-2026-118");
+    expect(back.qctoApprovedAt).not.toBeNull();
+    expect(back.qctoReference).toBe("QCTO-FISA-2026-118");
+  });
+
+  it("refuses an approval with no reference", async () => {
+    const { recordQctoApproval } = await import("@/lib/fisa");
+
+    await expect(
+      recordQctoApproval(admin, instrumentId, "   "),
+    ).rejects.toMatchObject({ reason: "invalid" });
+  });
+
+  it("stops asking once both are approved", async () => {
+    const { qctoReadiness } = await import("@/lib/fisa");
+    const { withPlatformScope } = await import("@/db/client");
+    const { fisaInstruments } = await import("@/db/schema");
+    const { eq, and, isNull } = await import("drizzle-orm");
+
+    // A second instrument, taken all the way through.
+    const second = await createInstrument(admin, {
+      qualificationId: skillsProgramme,
+      title: "QCTO approval FISA, second paper",
+    });
+    await withPlatformScope("approve second", (tx) =>
+      tx
+        .update(fisaInstruments)
+        .set({
+          status: "approved",
+          approvedAt: new Date(),
+          qctoSubmittedAt: new Date(),
+          qctoApprovedAt: new Date(),
+          qctoReference: "QCTO-FISA-2026-119",
+        })
+        .where(eq(fisaInstruments.id, second.id)),
+    );
+
+    // Retire everything else on this programme so the count is about these two.
+    await withPlatformScope("retire the rest", (tx) =>
+      tx
+        .update(fisaInstruments)
+        .set({ status: "retired" })
+        .where(
+          and(
+            eq(fisaInstruments.qualificationId, skillsProgramme),
+            isNull(fisaInstruments.qctoApprovedAt),
+          ),
+        ),
+    );
+
+    const readiness = await qctoReadiness(admin, skillsProgramme);
+
+    expect(readiness.approved).toBe(2);
+    expect(readiness.outstanding).toEqual([]);
+  });
+});
