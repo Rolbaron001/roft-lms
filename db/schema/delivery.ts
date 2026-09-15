@@ -394,6 +394,35 @@ export const cohorts = pgTable(
     status: cohortStatus("status").notNull().default("planned"),
 
     /**
+     * Proof that this cohort has been paid for.
+     *
+     * Curiosa's enrolment procedure opens with it: the process "kicks in once
+     * the client has been invoiced and proof of payment has been received".
+     * The client, note, not the learner - a company buys places for a group
+     * and one payment covers the lot.
+     *
+     * Roland, 15 September: it can be either. A cohort a client paid for is
+     * settled here; a learner paying their own way supplies a proof of payment
+     * document against themselves instead. So a learner is covered if their
+     * cohort is paid for, or if they are, and the platform asks both questions
+     * rather than insisting on one shape of business.
+     *
+     * Reported, never enforced. A coordinator may have very good reasons to
+     * enrol somebody while the payment clears, and a platform that refuses
+     * would be telling a provider how to run its own commercial relationships.
+     */
+    invoicedAt: timestamp("invoiced_at", { withTimezone: true }),
+    paymentReceivedAt: timestamp("payment_received_at", {
+      withTimezone: true,
+    }),
+    /** Their reference, so it can be matched to what finance holds. */
+    paymentReference: text("payment_reference"),
+    paymentRecordedById: uuid("payment_recorded_by_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+
+    /**
      * The external assessment dates a provider plans a cohort around.
      *
      * Both matter and they are months apart: there are only three assessment

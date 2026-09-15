@@ -5,6 +5,7 @@ import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
 import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
 import { Feedback } from "./feedback";
+import { PaymentForm } from "./payment-form";
 import { cohortFeedback } from "@/lib/feedback";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
@@ -116,6 +117,35 @@ export default async function CohortPage({
           {active.length === 1 ? "learner" : "learners"}
         </p>
       </div>
+
+      {/*
+        The opening step of the enrolment procedure: "once the client has been
+        invoiced and proof of payment has been received". Shown here because
+        that payment covers the whole cohort - a learner paying their own way
+        supplies a proof of payment against themselves instead, and either
+        satisfies it.
+      */}
+      {canManage ? (
+        <div className="mb-6">
+          <Card
+            title="Invoicing and payment"
+            description={
+              detail.cohort.paymentReceivedAt
+                ? `Paid${detail.cohort.paymentReference ? ` · ${detail.cohort.paymentReference}` : ""}. Everybody on this cohort counts as paid for.`
+                : detail.cohort.invoicedAt
+                  ? "Invoiced, and no payment recorded against it yet."
+                  : "Nothing recorded. The enrolment procedure begins here."
+            }
+          >
+            <PaymentForm
+              cohortId={detail.cohort.id}
+              invoicedAt={detail.cohort.invoicedAt}
+              paymentReceivedAt={detail.cohort.paymentReceivedAt}
+              reference={detail.cohort.paymentReference}
+            />
+          </Card>
+        </div>
+      ) : null}
 
       {canManage ? (
         <div className="mb-6">

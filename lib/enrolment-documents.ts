@@ -1,7 +1,12 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
-import { enrolmentDocuments, users } from "@/db/schema";
+import {
+  cohortMembers,
+  cohorts,
+  enrolmentDocuments,
+  users,
+} from "@/db/schema";
 import { recordAudit } from "./audit";
 import { buildStorageKey, putObject } from "./storage";
 import { detectMedia } from "./media";
@@ -327,4 +332,177 @@ export async function learnerDocuments(
       .where(eq(enrolmentDocuments.userId, userId))
       .orderBy(desc(enrolmentDocuments.createdAt)),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Proof of payment
+// ---------------------------------------------------------------------------
+
+export type PaymentStanding = {
+  settled: boolean;
+  /** Where it was settled, so a coordinator knows which record to look at. */
+  by: "cohort" | "learner" | null;
+  /** The cohort that covers them, where one does. */
+  cohortName: string | null;
+  reference: string | null;
+  receivedAt: Date | null;
+  /** Said as a person would say it, for the screen. */
+  says: string;
+};
+
+/**
+ * Whether this learner's place has been paid for.
+ *
+ * Curiosa's enrolment procedure opens with it - the process begins "once the
+ * client has been invoiced and proof of payment has been received" - and
+ * Roland confirmed on 15 September that it can be either: a client buys places
+ * for a cohort, or a learner pays their own way.
+ *
+ * So both are asked, and either satisfies. Insisting on one shape would tell a
+ * provider how to run its commercial relationships, which is not the
+ * platform's business.
+ *
+ * The cohort is checked first because it is the commoner case and the cheaper
+ * question: one payment covering ten learners is one row, and a per-learner
+ * document only has to be looked for when no cohort covers them.
+ */
+export async function paymentStanding(
+  session: AuthenticatedSession,
+  userId: string,
+): Promise<PaymentStanding> {
+  return withTenant(session.organisationId, async (tx) => {
+    const covering = await tx
+      .select({
+        name: cohorts.name,
+        receivedAt: cohorts.paymentReceivedAt,
+        reference: cohorts.paymentReference,
+        invoicedAt: cohorts.invoicedAt,
+      })
+      .from(cohortMembers)
+      .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+      .where(
+        and(eq(cohortMembers.userId, userId), isNull(cohortMembers.leftAt)),
+      );
+
+    const paidCohort = covering.find((row) => row.receivedAt);
+
+    if (paidCohort) {
+      return {
+        settled: true,
+        by: "cohort" as const,
+        cohortName: paidCohort.name,
+        reference: paidCohort.reference,
+        receivedAt: paidCohort.receivedAt,
+        says: `Paid for by the client, against ${paidCohort.name}.`,
+      };
+    }
+
+    // Nobody's cohort covers them, so look for their own.
+    const [own] = await tx
+      .select({
+        verification: enrolmentDocuments.verification,
+        createdAt: enrolmentDocuments.createdAt,
+      })
+      .from(enrolmentDocuments)
+      .where(
+        and(
+          eq(enrolmentDocuments.userId, userId),
+          eq(enrolmentDocuments.kind, "proof_of_payment"),
+        ),
+      )
+      .orderBy(desc(enrolmentDocuments.createdAt));
+
+    if (own?.verification === "accepted") {
+      return {
+        settled: true,
+        by: "learner" as const,
+        cohortName: null,
+        reference: null,
+        receivedAt: own.createdAt,
+        says: "The learner supplied their own proof of payment.",
+      };
+    }
+
+    if (own) {
+      return {
+        settled: false,
+        by: null,
+        cohortName: null,
+        reference: null,
+        receivedAt: null,
+        says:
+          own.verification === "refused"
+            ? "The learner's proof of payment was refused."
+            : "The learner has supplied a proof of payment, not yet checked.",
+      };
+    }
+
+    const invoiced = covering.find((row) => row.invoicedAt);
+
+    return {
+      settled: false,
+      by: null,
+      cohortName: invoiced?.name ?? null,
+      reference: null,
+      receivedAt: null,
+      says: invoiced
+        ? `${invoiced.name} has been invoiced, but no payment is recorded against it yet.`
+        : "Nothing recorded: neither the cohort nor the learner has a payment against them.",
+    };
+  });
+}
+
+/**
+ * Records that a client has been invoiced for a cohort, and then that they
+ * have paid.
+ *
+ * Two dates rather than a flag, because the gap between them is the thing a
+ * coordinator chases, and a single "paid" tick would throw it away.
+ */
+export async function recordCohortPayment(
+  session: AuthenticatedSession,
+  cohortId: string,
+  input: { invoicedOn?: string; receivedOn?: string; reference?: string },
+) {
+  assertSessionCan(session, "enrolment:manage");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const fields: Record<string, unknown> = { updatedAt: new Date() };
+
+    if (input.invoicedOn) {
+      fields.invoicedAt = new Date(`${input.invoicedOn}T00:00:00Z`);
+    }
+    if (input.receivedOn) {
+      fields.paymentReceivedAt = new Date(`${input.receivedOn}T00:00:00Z`);
+      fields.paymentRecordedById = session.userId;
+    }
+    if (input.reference !== undefined) {
+      fields.paymentReference = input.reference.trim() || null;
+    }
+
+    const [updated] = await tx
+      .update(cohorts)
+      .set(fields)
+      .where(eq(cohorts.id, cohortId))
+      .returning();
+
+    if (!updated) {
+      throw new DocumentError("No such cohort.", "not_found");
+    }
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "cohort.payment_recorded",
+      entityType: "cohort",
+      entityId: cohortId,
+      after: {
+        invoicedAt: updated.invoicedAt,
+        paymentReceivedAt: updated.paymentReceivedAt,
+        reference: updated.paymentReference,
+      },
+    });
+
+    return updated;
+  });
 }
