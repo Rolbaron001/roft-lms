@@ -14,20 +14,18 @@
  * unlike every other moderation in the platform, which samples learner work
  * after the fact.
  *
- * Three things in the source documents are wrong and are recorded here as they
- * are rather than quietly corrected, in the same way the part-qualification
- * parser records what a curriculum document actually says:
+ * The templates were corrected on 15 September 2026 and this file follows the
+ * corrected numbering, so the platform and the paper agree.
  *
- *   The pre-moderator report numbers two different sections "5" - Technical
- *   Aspects and Overall Quality. Internally they are 5 and 6 so they can be
- *   told apart, and `printedAs` carries the number the paper shows.
+ * Before that the pre-moderator report numbered two different sections "5" -
+ * Technical Aspects and Overall Quality - and everything after it was a number
+ * short. The corrected paper runs 1 to 8, which makes Final Moderation section
+ * 7 and its two sign-off items 7.1 and 7.2. They were 6.1 and 6.2 here until
+ * the paper was fixed.
  *
- *   The examiner report still contains a previous drafter's placeholder text
- *   ("ELO 2: dufugohihjpo"), and a typo, "anove" for "above". Neither is
- *   reproduced; they are in the template, not in the checklist.
- *
- *   Item 1.1 on the moderator's report offers "n/a" where every other item
- *   offers only Yes or No. That one is honoured: see `allowsNotApplicable`.
+ * One oddity in the templates is deliberate and survives the correction: item
+ * 1.1 offers "n/a" where every other item offers only Yes or No. That is
+ * honoured rather than tidied - see `allowsNotApplicable`.
  *
  * Pure on purpose - no imports, no database - so the forms can use it in the
  * browser without dragging the Postgres driver in with them.
@@ -44,9 +42,13 @@ export type ChecklistItem = {
 };
 
 export type ChecklistSection = {
-  /** Our own number, so two sections numbered 5 can be told apart. */
+  /** The section number. */
   number: number;
-  /** What the paper prints, which is not always our number. */
+  /**
+   * What the paper prints. The same as `number` since the templates were
+   * corrected; kept as its own field because a provider using an older copy of
+   * the paper will still cite the number printed on theirs.
+   */
   printedAs: string;
   title: string;
   items: ChecklistItem[];
@@ -197,18 +199,19 @@ export const MODERATOR_SECTIONS: ChecklistSection[] = [
   { number: 5, printedAs: "5", title: "Technical aspects", items: TECHNICAL },
   {
     /**
-     * The paper numbers this "5" as well, immediately after Technical Aspects.
-     * Ours is 6 so the two can be told apart; `printedAs` keeps the paper's.
+     * Section 7 on the corrected paper. Section 6 is the overall quality
+     * judgement, which is a rating rather than a checklist and is recorded
+     * against the instrument itself.
      */
-    number: 6,
-    printedAs: "5",
+    number: 7,
+    printedAs: "7",
     title: "Final moderation",
     items: [
       {
-        code: "6.1",
+        code: "7.1",
         text: "This FISA has been approved as the final version by the Moderator (i.e. all final recommendations have been agreed upon by the examiner and moderator and have been applied)",
       },
-      { code: "6.2", text: "This FISA is signed off as 'fit-for-purpose'" },
+      { code: "7.2", text: "This FISA is signed off as 'fit-for-purpose'" },
     ],
   },
 ];
@@ -219,7 +222,7 @@ export const MODERATOR_SECTIONS: ChecklistSection[] = [
  * Separated out because they are not really checklist items: they are the gate.
  * Everything else on the report is a recommendation; these two are permission.
  */
-export const SIGN_OFF_CODES = ["6.1", "6.2"] as const;
+export const SIGN_OFF_CODES = ["7.1", "7.2"] as const;
 
 /** The overall judgement the moderator records, in the paper's own words. */
 export const QUALITY_RATINGS = [

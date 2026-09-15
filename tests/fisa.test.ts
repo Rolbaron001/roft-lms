@@ -191,19 +191,19 @@ afterAll(async () => {
 describe("the checklist, as the templates print it", () => {
   it("carries the examiner's four sections and the moderator's six", () => {
     expect(EXAMINER_SECTIONS.map((s) => s.number)).toEqual([1, 3, 4, 5]);
-    expect(MODERATOR_SECTIONS.map((s) => s.number)).toEqual([1, 3, 4, 5, 6]);
+    expect(MODERATOR_SECTIONS.map((s) => s.number)).toEqual([1, 3, 4, 5, 7]);
   });
 
   /**
-   * The pre-moderator report numbers two different sections "5". Recorded as
-   * the paper has it, with our own number kept distinct so they can be told
-   * apart - the same treatment the curriculum parser gives a document that
-   * contradicts itself.
+   * The pre-moderator report used to number two different sections "5", and the
+   * platform recorded that faithfully. The template was corrected on
+   * 15 September, so no number repeats any more and the printed numbers and our
+   * own agree.
    */
-  it("keeps the template's own duplicated section number", () => {
+  it("has no repeated section number", () => {
     const printed = MODERATOR_SECTIONS.map((s) => s.printedAs);
-    expect(printed).toEqual(["1", "3", "4", "5", "5"]);
-    expect(printed.filter((p) => p === "5")).toHaveLength(2);
+    expect(printed).toEqual(["1", "3", "4", "5", "7"]);
+    expect(new Set(printed).size).toBe(printed.length);
   });
 
   it("offers a third answer on 1.1 and nowhere else", () => {
@@ -220,11 +220,11 @@ describe("the checklist, as the templates print it", () => {
     const answers: Record<string, ChecklistAnswer> = Object.fromEntries(
       itemsFor("moderator").map((i) => [i.code, "yes" as ChecklistAnswer]),
     );
-    answers["6.2"] = "no";
+    answers["7.2"] = "no";
 
     const verdict = readyToSignOff(answers);
     expect(verdict.ready).toBe(false);
-    expect(verdict.why).toContain("6.2");
+    expect(verdict.why).toContain("7.2");
   });
 
   /**
