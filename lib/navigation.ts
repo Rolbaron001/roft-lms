@@ -26,6 +26,16 @@ export type NavItem = {
   permission?: Permission;
   /** Shown when the person holds any one of these. */
   anyPermission?: Permission[];
+  /**
+   * A capability the tenant has to have switched on.
+   *
+   * Separate from permission, because they answer different questions: a
+   * permission asks whether this person may, and this asks whether the feature
+   * exists here at all. Offline was reachable by URL and in no menu, so on a
+   * tenant that had switched it on there was no way for a learner to find the
+   * one page the whole feature is for.
+   */
+  feature?: "offline";
 };
 
 /**
@@ -172,15 +182,61 @@ export const NAV: NavSection[] = [
   // it when somebody has not. Left as its own link: it is opened all day.
   { label: null, items: [{ href: "/mail", label: "Mail", permission: "report:own" }] },
 
+  /*
+    Working without a signal. Only on a tenant that switched it on, and shown
+    to everybody there rather than gated on a permission: a learner going into
+    the field is the person who needs it most, and they hold the fewest rights.
+  */
   {
-    label: "Admin",
+    label: null,
     items: [
       {
+        href: "/offline",
+        label: "Offline",
+        permission: "report:own",
+        feature: "offline",
+      },
+    ],
+  },
+
+  /**
+   * Management: what the provider runs, as distinct from what it delivers.
+   *
+   * Roland, 15 September: a proper place for "things that are done by the
+   * administrative staff, assessors, moderators, updating, changing or
+   * creating templates that are held inside the system, but exported to
+   * clients, learners, other role-players".
+   *
+   * These were reachable before and several were badly buried - the document
+   * templates in particular sat inside Settings behind the branding and the
+   * clock, which is not where anybody would look for the layout of a Statement
+   * of Results. Gathered here by what they are for rather than by which screen
+   * happened to hold them.
+   */
+  {
+    label: "Management",
+    items: [
+      {
+        href: "/templates",
+        label: "Templates",
+        anyPermission: ["tenant:manage_branding", "tenant:manage_settings"],
+      },
+      {
+        href: "/records",
+        label: "Policies & documents",
+        permission: "records:read",
+      },
+      {
+        href: "/people",
+        label: "People & roles",
+        permission: "user:manage_roles",
+      },
+      {
         href: "/settings",
-        label: "Settings",
         // Reachable by anybody with something on it. An administrator sees the
         // tenant's branding, clock and filenames; everybody else sees their
         // own AI extension and nothing they cannot change.
+        label: "Settings",
         anyPermission: ["tenant:manage_branding", "extension:use"],
       },
       {

@@ -43,6 +43,10 @@ export async function AppShell({
     .map((section) => ({
       label: section.label,
       items: section.items
+        // A capability the tenant has not switched on has no link, whoever is
+        // looking. Checked before the permission, because "this does not exist
+        // here" comes before "you may not".
+        .filter((item) => (item.feature === "offline" ? tenant.offlineEnabled : true))
         .filter((item) =>
           item.permission
             ? session.permissions.includes(item.permission)

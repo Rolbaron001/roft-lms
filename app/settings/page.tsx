@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
 import { requireSession, requireTenant } from "@/lib/request";
@@ -14,8 +15,6 @@ import { MailTest } from "./mail-test";
 import { TerminologyForm } from "./terminology-form";
 import { TERMS, TERM_KEYS } from "@/lib/terms";
 import { mailIsConfigured } from "@/lib/mail";
-import { listTemplates } from "@/lib/document-templates";
-import { TemplateForm } from "./template-form";
 import {
   extensionOffered,
   extensionState,
@@ -59,13 +58,6 @@ export default async function SettingsPage() {
 
   // What the editor starts from: this provider's arrangement if they have one,
   // otherwise the built-in one, with labels rather than hrefs alone.
-  /**
-   * A tenant's own versions of the documents the platform issues. Read only
-   * where somebody may change them; for everybody else the section does not
-   * appear at all rather than appearing and refusing.
-   */
-  const templates = canManageSettings ? await listTemplates(session) : [];
-
   const menu = arrangeNavigation(tenant.navigation ?? null).map((section) => ({
     label: section.label,
     items: section.items.map((item) => ({
@@ -134,13 +126,28 @@ export default async function SettingsPage() {
         </div>
       ) : null}
 
+      {/*
+        Moved to its own screen on 15 September. Templates sat here underneath
+        the branding and the clock, which is not where anybody looks for the
+        layout of a Statement of Results. The signpost stays, because somebody
+        who knew where it used to be will come here first.
+      */}
       {canManageSettings ? (
         <div className="mt-6">
           <Card
             title="Your own documents"
-            description="The platform issues Statements of Results, certificates and workplace statements. How each one reads and looks is yours: write your own version and the platform produces it from that instead of its own layout. What a regulator requires is added after yours and is not editable, because that part is not the provider's to change."
+            description="How each document this provider issues reads and looks."
           >
-            <TemplateForm templates={templates} />
+            <p className="text-sm">
+              <Link href="/templates" className="underline underline-offset-2">
+                Templates
+              </Link>
+              <span className="text-[var(--muted)]">
+                {" "}
+                — now under Management, with every document the platform
+                produces and who receives each one.
+              </span>
+            </p>
           </Card>
         </div>
       ) : null}
