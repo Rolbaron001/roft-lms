@@ -213,14 +213,47 @@ document of the full qualification."
 **Outstanding:** a screen to change a qualification's kind or parent after
 creation.
 
-### 3 · Occupational skills programmes — **mostly done**
+### 3 · Occupational skills programmes — **done, 15 September**
 
 Covered by the `kind` work, including one that stands alone with no parent.
 
-**Outstanding: FISA.** Provider-set and provider-moderated rather than set by an
-assessment quality partner, with its own instrument structure, confidentiality
-agreements and pre-moderator reports. Templates are in `Design/Templates/`. Its
-own body of work.
+**FISA: built, 15 September.** Provider-set and provider-moderated rather than
+set by an assessment quality partner.
+
+The distinction that shapes it: an EISA is set and administered by the
+Assessment Quality Partner and the provider only registers learners. A FISA is
+written by the provider's own examiner and moderated by the provider's own
+moderator, so the provider owns the whole chain - which is why every link has to
+be evidenced. There is no external body whose involvement does that for them.
+
+Four rules, taken from the templates and enforced rather than remembered:
+
+- **The confidentiality agreement is the appointment.** Both templates are
+  undertakings before they are anything else, so an unsigned one confers
+  nothing, and replacing the person clears the signature with them.
+- **The examiner cannot be the moderator** - checked by account, and by identity
+  number where somebody external has no account.
+- **Moderation happens before anybody sits it.** Every other moderation in the
+  platform samples learner work afterwards; this one approves the instrument
+  beforehand, and a paper not signed off as fit for purpose cannot be sat.
+- **A signed-off paper cannot be edited.** A new version carries nothing
+  forward, because last version's "yes" is a judgement nobody made about this
+  paper.
+
+The checklist is verbatim from the two reports, faults included: the
+pre-moderator report numbers two different sections "5" and both are kept; item
+1.1 is the only one offering "n/a"; and competence level is free text because
+the examiner's own template has "L,H" in one cell.
+
+A FISA is also the only thing in the platform with a percentage pass mark.
+Everything else is every criterion or not yet competent. Curiosa's paper says
+70% (56 of 80), and the screen computes exactly that.
+
+Verified live end to end: create, appoint, the same-person refusal firing on a
+different name with the same identity number, the agreement document, the
+unsigned gate, read-only for anybody not appointed, hand-over, the sign-off gate
+refusing with "2 items are unanswered: 6.1, 6.2", and then approval flipping the
+paper to sittable and locking every answer.
 
 ### 4 · Statutory notification, the LEISA export, and late joiners — **built, 11 September**
 
