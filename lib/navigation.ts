@@ -120,6 +120,20 @@ export const NAV: NavSection[] = [
         label: "Prior learning",
         anyPermission: ["recognition:manage", "assessment:moderate"],
       },
+      /*
+        Its own entry beside the external one, because they are different
+        things: an EISA is set by the Assessment Quality Partner, a FISA is set
+        and moderated by the provider itself.
+      */
+      {
+        href: "/fisa",
+        label: "FISA",
+        anyPermission: [
+          "assessment:author",
+          "assessment:moderate",
+          "assessment:assess",
+        ],
+      },
       { href: "/eisa", label: "EISA entry", permission: "enrolment:read_all" },
       {
         href: "/readiness",

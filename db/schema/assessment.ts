@@ -19,6 +19,7 @@ import {
   courses,
   curriculumModules,
   curriculumTopicElements,
+  exitLevelOutcomes,
   publishStatus,
   qualifications,
   studyUnits,
@@ -1352,5 +1353,266 @@ export const oralAssessmentRecords = pgTable(
   (t) => [
     uniqueIndex("oral_assessment_records_submission_idx").on(t.submissionId),
     index("oral_assessment_records_org_idx").on(t.organisationId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// FISA: the provider's own final integrated summative assessment
+// ---------------------------------------------------------------------------
+
+export const fisaStatus = pgEnum("fisa_status", [
+  /** The examiner is still writing it. */
+  "draft",
+  /** With the moderator, who has not finished. */
+  "in_moderation",
+  /** Signed off as fit for purpose. Only now may a candidate sit it. */
+  "approved",
+  /** Superseded or withdrawn. Kept, because it may have been sat. */
+  "retired",
+]);
+
+export const fisaRole = pgEnum("fisa_role", ["examiner", "moderator"]);
+
+/**
+ * A FISA instrument: the paper a provider sets for its own skills programme.
+ *
+ * Distinct from an EISA and deliberately not folded into it. An EISA is set and
+ * administered by the Assessment Quality Partner and the provider only
+ * registers learners for a sitting; a FISA is written by the provider's own
+ * examiner and moderated by the provider's own moderator. The provider owns the
+ * whole chain, which is exactly why the chain has to be evidenced.
+ *
+ * The pass mark is a percentage, which is worth noticing because nothing else
+ * in this platform works that way. Internal competence is every criterion or
+ * not yet competent, with no mark to round up to. A FISA is an examination:
+ * Curiosa's own template says 70% (56 of 80), and the examiner's report shows a
+ * paper with two components scored differently - "Written: 60% and for
+ * Practical: Competent".
+ */
+export const fisaInstruments = pgTable(
+  "fisa_instruments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /**
+     * The skills programme this assesses.
+     *
+     * A qualification rather than a course, because the exit level outcomes the
+     * moderator maps against belong to the qualification.
+     */
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+
+    title: text("title").notNull(),
+
+    /**
+     * Versioned, because a paper that has been sat cannot be edited.
+     *
+     * A second version supersedes rather than replaces: the candidates who sat
+     * version 1 sat version 1, and their results have to keep pointing at what
+     * they actually answered.
+     */
+    version: integer("version").notNull().default(1),
+    supersedesId: uuid("supersedes_id"),
+
+    status: fisaStatus("status").notNull().default("draft"),
+
+    /** In minutes. The template says "2 hours"; minutes divide cleanly. */
+    durationMinutes: integer("duration_minutes"),
+
+    totalMarks: integer("total_marks"),
+
+    /**
+     * The percentage a candidate must reach. Curiosa's template says 70%.
+     *
+     * Null where the component is judged competent or not yet competent rather
+     * than scored - which is how the examiner's own report describes the
+     * practical half of a two-part paper.
+     */
+    passMarkPercent: integer("pass_mark_percent"),
+
+    /**
+     * A second, practical component judged rather than scored.
+     *
+     * Held as a flag and a note rather than as a second set of marks, because
+     * the template expresses it in words: "Practical: Competent/Not yet
+     * competent". Inventing a mark for it would be inventing information.
+     */
+    hasPracticalComponent: boolean("has_practical_component")
+      .notNull()
+      .default(false),
+    practicalNote: text("practical_note"),
+
+    /** What the moderator thought of it overall. */
+    qualityRating: text("quality_rating"),
+    qualityMotivation: text("quality_motivation"),
+    moderatorComments: text("moderator_comments"),
+
+    /**
+     * When the moderator signed it off as fit for purpose, and who.
+     *
+     * The gate. Until this is set, no candidate may sit this paper - which is
+     * the entire point of a *pre*-moderation, and the one rule in this file
+     * worth enforcing in the database as well as in the library.
+     */
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedById: uuid("approved_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("fisa_instruments_org_idx").on(t.organisationId),
+    index("fisa_instruments_qualification_idx").on(t.qualificationId),
+  ],
+);
+
+/**
+ * Who wrote it and who moderated it, and the confidentiality each signed.
+ *
+ * Both templates in `Design/Templates/` are confidentiality agreements before
+ * they are anything else: the examiner and the moderator each undertake not to
+ * release the contents. So the agreement is not an attachment to the
+ * appointment - it *is* the appointment, and somebody who has not signed one
+ * has not been appointed.
+ *
+ * `userId` is nullable on purpose. A provider may appoint an external examiner
+ * who has no account here, and the agreement still has to be recorded against
+ * a named person with an identity number.
+ */
+export const fisaAppointments = pgTable(
+  "fisa_appointments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    instrumentId: uuid("instrument_id")
+      .notNull()
+      .references(() => fisaInstruments.id, { onDelete: "cascade" }),
+
+    role: fisaRole("role").notNull(),
+
+    /** Where they hold an account. Null for somebody brought in from outside. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+
+    // What both agreements ask for, by name.
+    fullName: text("full_name").notNull(),
+    idNumber: text("id_number"),
+    email: text("email"),
+    mobile: text("mobile"),
+
+    /**
+     * When they signed. Null means appointed but not yet bound, and the
+     * platform will not let them touch the instrument until it is set.
+     */
+    confidentialitySignedAt: timestamp("confidentiality_signed_at", {
+      withTimezone: true,
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("fisa_appointments_org_idx").on(t.organisationId),
+    /** One examiner and one moderator per instrument. */
+    uniqueIndex("fisa_appointments_role_idx").on(t.instrumentId, t.role),
+  ],
+);
+
+/** An answer to one numbered item on one of the two reports. */
+export const fisaChecklistResponses = pgTable(
+  "fisa_checklist_responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    instrumentId: uuid("instrument_id")
+      .notNull()
+      .references(() => fisaInstruments.id, { onDelete: "cascade" }),
+
+    /** Whose report this answer is on. Both answer the same questions. */
+    role: fisaRole("role").notNull(),
+
+    /** "1.1", "5.8" - the number the paper prints. */
+    itemCode: text("item_code").notNull(),
+    answer: text("answer").notNull(),
+
+    /** The report's own column. Where a "no" is explained, it is explained here. */
+    recommendation: text("recommendation"),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("fisa_checklist_org_idx").on(t.organisationId),
+    uniqueIndex("fisa_checklist_item_idx").on(
+      t.instrumentId,
+      t.role,
+      t.itemCode,
+    ),
+  ],
+);
+
+/**
+ * Section 2 of both reports: every exit level outcome, and where it is assessed.
+ *
+ * The part a monitor actually interrogates, because it is the only place that
+ * shows the paper covers the qualification rather than merely looking like an
+ * exam. One row per outcome per report.
+ *
+ * `competenceLevel` is text rather than one of H, M and L. The examiner's own
+ * template has "L,H" against a single outcome, and forcing a choice the paper
+ * does not force would lose what they meant.
+ */
+export const fisaOutcomeCoverage = pgTable(
+  "fisa_outcome_coverage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    instrumentId: uuid("instrument_id")
+      .notNull()
+      .references(() => fisaInstruments.id, { onDelete: "cascade" }),
+    role: fisaRole("role").notNull(),
+
+    exitLevelOutcomeId: uuid("exit_level_outcome_id")
+      .notNull()
+      .references(() => exitLevelOutcomes.id, { onDelete: "cascade" }),
+
+    /** "Learners should be able to maintain and repair drainage pipes." */
+    requiredStandard: text("required_standard"),
+    competenceLevel: text("competence_level"),
+    /** "1.1 - 2.3", or "SECTION 2". Free text, because the papers are. */
+    questionReference: text("question_reference"),
+    comment: text("comment"),
+    /** The moderator's column: was the required standard actually achieved. */
+    standardAchieved: boolean("standard_achieved"),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("fisa_coverage_org_idx").on(t.organisationId),
+    uniqueIndex("fisa_coverage_outcome_idx").on(
+      t.instrumentId,
+      t.role,
+      t.exitLevelOutcomeId,
+    ),
   ],
 );
