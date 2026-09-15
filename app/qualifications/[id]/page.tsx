@@ -8,6 +8,7 @@ import {
   qualificationForDocumentUpload,
 } from "@/lib/programme-documents";
 import { describeSize } from "@/lib/media";
+import { extensionOffered, extensionState } from "@/lib/extensions";
 import { AppShell, Card } from "@/components/app-shell";
 import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
@@ -52,6 +53,12 @@ export default async function QualificationPage({
     listProgrammeDocuments(session, id),
     qualificationForDocumentUpload(session, id),
   ]);
+
+  // Read only so the top-up form can say what an extension would add. A folder
+  // that includes a summary of itself needs none.
+  const extension = await extensionState(session);
+  const mayUseExtension =
+    extensionOffered() && session.permissions.includes("extension:use");
 
   const totalCriteria = modules.reduce(
     (sum, m) =>
@@ -137,8 +144,12 @@ export default async function QualificationPage({
           className="mb-6 rounded-lg border-2 p-4"
           style={{ borderColor: "var(--danger)" }}
         >
-          <p className="text-sm font-semibold" style={{ color: "var(--danger)" }}>
-            {notCaptured.length} of {modules.length} modules have no criteria yet.
+          <p
+            className="text-sm font-semibold"
+            style={{ color: "var(--danger)" }}
+          >
+            {notCaptured.length} of {modules.length} modules have no criteria
+            yet.
           </p>
           <p className="mt-1 text-sm text-[var(--muted)]">
             Nobody can be declared ready for the EISA against this qualification
@@ -153,12 +164,13 @@ export default async function QualificationPage({
         <section className="mb-8">
           <h2 className="mb-2 font-semibold">Delivery structure</h2>
           <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-            The curriculum publishes modules; a provider teaches study units. Each
-            bundles the Knowledge, Practical and Work Experience modules that
-            serve one Exit Level Outcome, which is what the External Integrated
-            Summative Assessment is set against. Two providers may group the
-            same qualification differently and both be correct, so this is the
-            provider&rsquo;s structure rather than the curriculum&rsquo;s.
+            The curriculum publishes modules; a provider teaches study units.
+            Each bundles the Knowledge, Practical and Work Experience modules
+            that serve one Exit Level Outcome, which is what the External
+            Integrated Summative Assessment is set against. Two providers may
+            group the same qualification differently and both be correct, so
+            this is the provider&rsquo;s structure rather than the
+            curriculum&rsquo;s.
           </p>
 
           {unplacedModules.length > 0 ? (
@@ -171,7 +183,9 @@ export default async function QualificationPage({
                 style={{ color: "var(--danger)" }}
               >
                 {unplacedModules.length}{" "}
-                {unplacedModules.length === 1 ? "module belongs" : "modules belong"}{" "}
+                {unplacedModules.length === 1
+                  ? "module belongs"
+                  : "modules belong"}{" "}
                 to no study unit.
               </p>
               <p className="mt-1 text-sm text-[var(--muted)]">
@@ -273,22 +287,66 @@ export default async function QualificationPage({
           them and a coach signs them on paper.
         </p>
 
+        {/*
+          Finishing a curriculum, rather than filing material against one.
+
+          Roland asked on 15 September whether a qualification loaded from an
+          incomplete folder could be completed by pointing at the finished one.
+          It can, and this is where. It is deliberately a separate control from
+          the material picker below: the two do different things to the same
+          folder, and nothing on the screen would otherwise say which one a
+          person was about to get.
+        */}
         <Card>
-          <p className="mb-3 text-sm font-medium">A whole folder at once</p>
+          <p className="mb-3 text-sm font-medium">
+            Finish this qualification from a fuller folder
+          </p>
           <FolderPicker
             qualificationId={id}
-            label="A folder of material, from your own computer"
+            topUp
+            label="The completed folder for this qualification, from your own computer"
+            extension={
+              mayUseExtension
+                ? {
+                    on: extension.on,
+                    available: extension.availability?.available ?? false,
+                    reason: extension.availability?.reason ?? null,
+                  }
+                : null
+            }
             hint={
               <>
-                Theory guides and workbooks go to the study unit their filename
-                names, policies and contracts to the document library, and
-                everything else against this qualification. No AI is used here
-                at all — sorting documents by name is a rule rather than a
-                judgement.
+                For a qualification that was loaded before its documents were
+                complete. The whole folder is read again — the curriculum as
+                well as the material — and only what is missing is added.
+                <br />
+                Nothing already here is changed or replaced, down to the wording
+                of a single criterion, and running it twice does nothing the
+                second time. You still see everything it found and confirm it
+                before any of it is written.
               </>
             }
           />
         </Card>
+
+        <div className="mt-4">
+          <Card>
+            <p className="mb-3 text-sm font-medium">A whole folder at once</p>
+            <FolderPicker
+              qualificationId={id}
+              label="A folder of material, from your own computer"
+              hint={
+                <>
+                  Theory guides and workbooks go to the study unit their
+                  filename names, policies and contracts to the document
+                  library, and everything else against this qualification. No AI
+                  is used here at all — sorting documents by name is a rule
+                  rather than a judgement.
+                </>
+              }
+            />
+          </Card>
+        </div>
 
         <div className="mt-4">
           <Card>
@@ -430,16 +488,28 @@ export default async function QualificationPage({
                       {[...byKind.entries()].map(([kind, items]) => (
                         <div key={kind}>
                           <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                            {ELEMENT_LABELS[kind] ?? kind} — what must be
-                            taught
+                            {ELEMENT_LABELS[kind] ?? kind} — what must be taught
                           </p>
                           <ul className="mt-1.5 space-y-1">
                             {items.map((element) => (
                               <li key={element.id} className="text-sm">
-                                <span className="font-mono text-xs text-[var(--muted)]">
-                                  {element.code}
-                                </span>{" "}
-                                {element.description}
+                                {/*
+                                  A link, because Roland asked on 15 September
+                                  how these are viewed and the honest answer
+                                  was that they were not: the wording was all
+                                  there, but what teaches and assesses a line
+                                  was three records away and reachable from
+                                  nowhere.
+                                */}
+                                <Link
+                                  href={`/qualifications/${id}/elements/${element.id}`}
+                                  className="underline-offset-2 hover:underline"
+                                >
+                                  <span className="font-mono text-xs text-[var(--muted)]">
+                                    {element.code}
+                                  </span>{" "}
+                                  {element.description}
+                                </Link>
                                 {element.coveredBy.length > 0 ? (
                                   <span className="mt-1 flex flex-wrap gap-1">
                                     {element.coveredBy.map((cover) => (
@@ -476,7 +546,10 @@ export default async function QualificationPage({
                           </ul>
                         </div>
                       ) : (
-                        <p className="text-sm" style={{ color: "var(--danger)" }}>
+                        <p
+                          className="text-sm"
+                          style={{ color: "var(--danger)" }}
+                        >
                           No assessment criteria, so this topic can never be
                           achieved.
                         </p>

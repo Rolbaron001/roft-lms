@@ -30,6 +30,7 @@ export function FolderPicker({
   qualificationId,
   courseId,
   learningPathId,
+  topUp,
   label,
   hint,
   extension,
@@ -38,6 +39,13 @@ export function FolderPicker({
   qualificationId?: string;
   courseId?: string;
   learningPathId?: string;
+  /**
+   * With a qualification: read its curriculum too, not only its documents.
+   *
+   * For finishing a qualification that was loaded from an incomplete folder.
+   * What is already held stays; only what is missing is added.
+   */
+  topUp?: boolean;
   label: string;
   hint: React.ReactNode;
   /** Null where this person has no extension set up at all. */
@@ -80,6 +88,7 @@ export function FolderPicker({
     if (qualificationId) body.append("qualificationId", qualificationId);
     if (courseId) body.append("courseId", courseId);
     if (learningPathId) body.append("learningPathId", learningPathId);
+    if (topUp) body.append("topUp", "yes");
     body.append("folderName", chosen?.name ?? "an uploaded folder");
 
     // Appended in step, so the two lists line up on the server.

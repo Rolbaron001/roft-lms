@@ -1813,7 +1813,7 @@ export const aiImportJobs = pgTable(
      */
     target: jsonb("target")
       .$type<{
-        mode: "qualification" | "material" | "course" | "programme";
+        mode: "qualification" | "material" | "course" | "programme" | "top_up";
         qualificationId?: string;
         courseId?: string;
         learningPathId?: string;

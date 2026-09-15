@@ -116,6 +116,20 @@ export type IngestMode =
    * with no extension involved at any point.
    */
   | "material"
+  /**
+   * The curriculum and the documents, into a qualification already here.
+   *
+   * Roland, 15 September: part of the HRM Officer qualification was loaded
+   * from the documents that existed at the time, and he wants to finish it by
+   * pointing at the completed folder rather than deleting it and starting
+   * again. So this reads the whole tree the way "qualification" does, but adds
+   * it to the qualification named instead of creating a second one - which the
+   * duplicate guard would refuse anyway, and rightly.
+   *
+   * What is already held is left exactly as it is, down to the wording of a
+   * single criterion. Only what is missing is added.
+   */
+  | "top_up"
   /** Documents filed against a course that already exists. */
   | "course"
   /** Documents filed against a programme that already exists. */
@@ -207,7 +221,9 @@ async function buildPlan(
 
   // Material, a course and a programme all go against something that already
   // exists, so there is no curriculum to read and nothing for a model to do.
-  if (mode !== "qualification") {
+  // A top-up goes against something that exists too, but its whole purpose is
+  // the curriculum, so it reads the folder in full.
+  if (mode !== "qualification" && mode !== "top_up") {
     const gathered = documentsFor(files, warnings);
     return { ...emptyPlan(), ...gathered, warnings };
   }

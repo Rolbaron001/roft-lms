@@ -287,15 +287,30 @@ export function Proposal({
                 name="learningPathId"
                 value={target.learningPathId ?? ""}
               />
-              <p className="text-sm text-[var(--muted)]">
-                Filed against the{" "}
-                {target.mode === "course"
-                  ? "course"
-                  : target.mode === "programme"
-                    ? "programme"
-                    : "qualification"}{" "}
-                you started from.
-              </p>
+              {target.mode === "top_up" ? (
+                // Everything above is what the folder holds, not what is about
+                // to be created. Most of it is probably already here, and
+                // somebody reading a familiar list under a commit button will
+                // reasonably fear a second copy of it. Said before the button,
+                // not after.
+                <p className="max-w-2xl text-sm text-[var(--muted)]">
+                  Added to the qualification you started from. The list above is
+                  everything the folder holds, not everything that will be
+                  created: whatever is already here is left exactly as it is,
+                  and only what is missing is added. You are told afterwards
+                  which modules were already held.
+                </p>
+              ) : (
+                <p className="text-sm text-[var(--muted)]">
+                  Filed against the{" "}
+                  {target.mode === "course"
+                    ? "course"
+                    : target.mode === "programme"
+                      ? "programme"
+                      : "qualification"}{" "}
+                  you started from.
+                </p>
+              )}
             </>
           )}
 

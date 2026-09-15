@@ -1,6 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { aiImportJobs, curriculumModules, studyUnits } from "@/db/schema";
+import {
+  aiImportJobs,
+  assessmentCriteria,
+  curriculumModules,
+  curriculumTopicElements,
+  curriculumTopics,
+  studyUnits,
+} from "@/db/schema";
 import { recordAudit } from "./audit";
 import {
   addAssessmentCriterion,
@@ -46,6 +53,15 @@ export type CommitReport = {
   libraryDocuments: number;
   /** What the ordinary guards turned away, in their own words. */
   refused: string[];
+  /**
+   * What was already there and was left as it was.
+   *
+   * Separate from `refused` because they are different news. A refusal is
+   * something to go and fix; this is the platform declining to overwrite work
+   * somebody has already done, which is what a second pass over a folder
+   * should do.
+   */
+  alreadyHeld: string[];
 };
 
 function explain(error: unknown, where: string): string {
@@ -100,6 +116,7 @@ export async function commitPlan(
     documents: 0,
     libraryDocuments: 0,
     refused: [],
+    alreadyHeld: [],
   };
 
   // --- study units first, because documents attach to them -----------------
@@ -281,31 +298,104 @@ async function commitModule(
     return row ?? null;
   });
 
+  /**
+   * A module that is already there is topped up, not skipped.
+   *
+   * It used to return here, which made the comment above a lie: nothing was
+   * added and a half-built module stayed half-built. Roland asked on
+   * 15 September whether pointing the platform at a completed folder would
+   * finish a qualification that was partly loaded, and the honest answer was
+   * no - it added missing modules but never looked inside an existing one.
+   *
+   * Now it goes in and adds the topics, elements and criteria that are not
+   * there yet, leaving everything that is exactly as it stands. Nothing is
+   * overwritten and nothing is deleted, so a second pass over a fuller folder
+   * completes the qualification rather than forcing somebody to delete it and
+   * start again.
+   */
+  let created: { id: string };
+
   if (existing) {
-    report.refused.push(
-      `${module.code}: already in this qualification, so it was left alone.`,
+    created = existing;
+    report.alreadyHeld.push(
+      `${module.code}: already here, so only what was missing from it was added.`,
     );
-    return;
+  } else {
+    try {
+      created = await addCurriculumModule(session, {
+        qualificationId,
+        component: component as "knowledge" | "practical" | "workplace",
+        code: module.code,
+        title: module.title,
+        credits: module.credits ?? undefined,
+      });
+      report.modules += 1;
+    } catch (error) {
+      report.refused.push(explain(error, module.code));
+      return;
+    }
   }
 
-  let created;
-  try {
-    created = await addCurriculumModule(session, {
-      qualificationId,
-      component: component as "knowledge" | "practical" | "workplace",
-      code: module.code,
-      title: module.title,
-      credits: module.credits ?? undefined,
-    });
-    report.modules += 1;
-  } catch (error) {
-    report.refused.push(explain(error, module.code));
-    return;
-  }
+  /**
+   * What the module already holds, so a top-up adds rather than duplicates.
+   *
+   * Topics are matched on code, which is what the curriculum document numbers
+   * them by. Elements and criteria are matched on their text, because their
+   * codes are generated here from position - and position shifts the moment a
+   * document gains a topic, so a code match would miss every one of them.
+   */
+  const held = await withTenant(session.organisationId, async (tx) => {
+    const topicRows = await tx
+      .select({ id: curriculumTopics.id, code: curriculumTopics.code })
+      .from(curriculumTopics)
+      .where(eq(curriculumTopics.curriculumModuleId, created.id));
+
+    const topicIds = topicRows.map((row) => row.id);
+
+    const elementRows = topicIds.length
+      ? await tx
+          .select({ description: curriculumTopicElements.description })
+          .from(curriculumTopicElements)
+          .where(inArray(curriculumTopicElements.topicId, topicIds))
+      : [];
+
+    const criterionRows = await tx
+      .select({
+        code: assessmentCriteria.code,
+        description: assessmentCriteria.description,
+      })
+      .from(assessmentCriteria)
+      .where(eq(assessmentCriteria.curriculumModuleId, created.id));
+
+    return {
+      topics: new Map(topicRows.map((row) => [row.code.trim(), row.id])),
+      elements: new Set(
+        elementRows.map((row) => row.description.trim().toLowerCase()),
+      ),
+      criteria: new Set(
+        criterionRows.map((row) => row.description.trim().toLowerCase()),
+      ),
+      /**
+       * The highest criterion number already used in this module.
+       *
+       * Numbering has to continue past it rather than restart. The code is
+       * generated from position - KM01-IAC1, KM01-IAC2 - so a top-up that
+       * started again at one would collide with the criteria loaded first, and
+       * the guard would refuse a criterion whose text is genuinely new. That is
+       * exactly what happened the first time this was tested: the topic and its
+       * element went in and its criterion was turned away.
+       */
+      highestCriterion: criterionRows.reduce((highest, row) => {
+        const number = Number(/(\d+)$/.exec(row.code)?.[1] ?? 0);
+        return Number.isFinite(number) && number > highest ? number : highest;
+      }, 0),
+    };
+  });
 
   // Criterion codes are unique within the module rather than the topic, so the
   // numbering runs across the whole module. Restarting it per topic collides
   // the moment a module has two.
+  // Continues past whatever the module already holds, rather than from zero.
   let criterionNumber = 0;
   let topicNumber = 0;
 
@@ -318,33 +408,56 @@ async function commitModule(
 
   for (const topic of module.topics) {
     topicNumber += 1;
+    const topicCode = topic.code?.trim() || `T${topicNumber}`;
     let topicId: string;
 
-    try {
-      const made = await addTopic(session, {
-        curriculumModuleId: created.id,
-        code: topic.code?.trim() || `T${topicNumber}`,
-        title: topic.title || `Topic ${topicNumber}`,
-      });
-      topicId = made.id;
-      report.topics += 1;
-    } catch (error) {
-      report.refused.push(
-        explain(error, `${module.code} ${topic.code ?? topic.title}`),
-      );
-      continue;
+    // A topic already under this module is used as it stands. Only a topic
+    // that is not there gets made.
+    const existingTopic = held.topics.get(topicCode);
+
+    if (existingTopic) {
+      topicId = existingTopic;
+    } else {
+      try {
+        const made = await addTopic(session, {
+          curriculumModuleId: created.id,
+          code: topicCode,
+          title: topic.title || `Topic ${topicNumber}`,
+        });
+        topicId = made.id;
+        held.topics.set(topicCode, made.id);
+        report.topics += 1;
+      } catch (error) {
+        report.refused.push(
+          explain(error, `${module.code} ${topic.code ?? topic.title}`),
+        );
+        continue;
+      }
     }
 
     let elementNumber = 0;
     for (const element of topic.elements) {
       elementNumber += 1;
+
+      /**
+       * Matched on the text rather than the code.
+       *
+       * These codes are generated here from position, so a document that has
+       * gained a topic since the last pass renumbers everything after it. A
+       * code match would then miss every element and add the lot a second
+       * time, which is the one outcome a top-up must not produce.
+       */
+      const seen = element.trim().toLowerCase();
+      if (held.elements.has(seen)) continue;
+
       try {
         await addTopicElement(session, {
           topicId,
           kind: elementKind,
-          code: `${topic.code?.trim() || `T${topicNumber}`}.${elementNumber}`,
+          code: `${topicCode}.${elementNumber}`,
           description: element,
         });
+        held.elements.add(seen);
         report.elements += 1;
       } catch (error) {
         report.refused.push(explain(error, `${module.code} an element`));
@@ -352,14 +465,21 @@ async function commitModule(
     }
 
     for (const criterion of topic.criteria) {
+      const seen = criterion.trim().toLowerCase();
+      // Checked before the number is spent, so a criterion already held does
+      // not push the next new one's code along by one.
+      if (held.criteria.has(seen)) continue;
+
       criterionNumber += 1;
+
       try {
         await addAssessmentCriterion(session, {
           curriculumModuleId: created.id,
           topicId,
-          code: `${module.code}-IAC${criterionNumber}`,
+          code: `${module.code}-IAC${held.highestCriterion + criterionNumber}`,
           description: criterion,
         });
+        held.criteria.add(seen);
         report.criteria += 1;
       } catch (error) {
         report.refused.push(explain(error, `${module.code} a criterion`));

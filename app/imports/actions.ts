@@ -65,12 +65,22 @@ export async function readFolderAction(
   const courseId = field(formData, "courseId");
   const learningPathId = field(formData, "learningPathId");
 
+  // A qualification can be pointed at a folder for either of two reasons, and
+  // only the person doing it knows which: filing material against a
+  // curriculum that is finished, or finishing a curriculum that is not. The
+  // screen asks rather than the server guessing, because guessing wrong in one
+  // direction reads a curriculum nobody wanted and in the other quietly
+  // ignores the modules they were pointing at.
+  const topUp = field(formData, "topUp") === "yes";
+
   const mode = courseId
     ? "course"
     : learningPathId
       ? "programme"
       : qualificationId
-        ? "material"
+        ? topUp
+          ? "top_up"
+          : "material"
         : "qualification";
 
   // The paths are posted as a parallel list rather than keyed by filename: a
@@ -150,6 +160,14 @@ export async function commitPlanAction(
     `${report.documents + report.libraryDocuments} documents`,
   ].join(", ");
 
+  // What was already here is said as plainly as what was added. On a top-up
+  // this is most of the answer: "nothing happened" and "everything was already
+  // in place" look identical in a count of zero.
+  const held =
+    report.alreadyHeld.length > 0
+      ? ` ${report.alreadyHeld.slice(0, 8).join(" ")}${report.alreadyHeld.length > 8 ? ` And ${report.alreadyHeld.length - 8} more.` : ""}`
+      : "";
+
   // Anything the ordinary guards turned away is said rather than swallowed.
   // A silent partial import is the one outcome nobody could act on.
   const refused =
@@ -157,7 +175,7 @@ export async function commitPlanAction(
       ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` And ${report.refused.length - 8} more.` : ""}`
       : "";
 
-  return { notice: `Committed: ${built}.${refused}` };
+  return { notice: `Committed: ${built}.${held}${refused}` };
 }
 
 export async function discardImportAction(
