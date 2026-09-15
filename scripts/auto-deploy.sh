@@ -152,10 +152,34 @@ IMAGE_TAG="$(git -C "$REPO" rev-parse HEAD)"
 # than the build takes and short enough to fail the same working day.
 log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
 
+# Room to pull into, before waiting half an hour to find out there is none.
+#
+# On 15 September 2026 this server sat at 100% full and every pull failed with
+# "no space left on device". The wait loop below hid that behind a message
+# about images that had never appeared - they had, all of them, and the sign-in
+# was fine. Six days of deploys were lost to a disk check that took one line.
+FREE_MB=$(df -Pm / | awk 'NR==2 {print $4}')
+if [ "${FREE_MB:-0}" -lt 3000 ]; then
+  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af --filter until=168h' and 'docker builder prune -af'. Nothing has been changed."
+fi
+log "${FREE_MB}MB free before pulling."
+
 WAITED=0
-until $COMPOSE pull --quiet app tools mail 2>/dev/null; do
+# stderr is kept rather than sent to /dev/null. Silencing it is exactly how a
+# full disk spent six days masquerading as a missing image.
+PULL_LOG=$(mktemp)
+until $COMPOSE pull --quiet app tools mail >"$PULL_LOG" 2>&1; do
+  # A pull can fail because the image is not published yet, which is worth
+  # waiting for, or because something is actually wrong, which is not. Anything
+  # that is plainly not "not found" stops the deploy now with the real reason.
+  if grep -qiE "no space left|permission denied|unauthorized|denied:|invalid" "$PULL_LOG"; then
+    fail "the pull failed for a reason that waiting will not fix: $(tail -2 "$PULL_LOG" | tr '
+' ' ')"
+  fi
+
   if [ "$WAITED" -ge 1800 ]; then
-    fail "the images for ${IMAGE_TAG:0:7} did not appear within 30 minutes. Either the build failed, the build is unusually slow, or the registry sign-in on this server has expired. Check the Actions tab first: if the build succeeded, re-run this script by hand and it will pull them."
+    fail "the images for ${IMAGE_TAG:0:7} did not appear within 30 minutes. Last words from the pull: $(tail -2 "$PULL_LOG" | tr '
+' ' '). Either the build failed, the build is unusually slow, or the registry sign-in on this server has expired. Check the Actions tab first: if the build succeeded, re-run this script by hand and it will pull them."
   fi
   sleep 30
   WAITED=$((WAITED + 30))
@@ -287,5 +311,19 @@ else
   log "*** show anywhere else. Run: docker compose -f                    ***"
   log "*** docker-compose.production.yml exec app node scripts/smoke-pdf.mjs ***"
 fi
+
+# --- tidy up after a successful deploy --------------------------------------
+#
+# Every deploy pulls an image tagged with its commit, and nothing ever removed
+# the old ones. By 15 September 2026 there were forty-seven of them, fourteen
+# gigabytes on a nineteen-gigabyte disk, and the next pull had nowhere to go.
+#
+# Only after a success, and only images older than a week: the last few days
+# are what a rollback would reach for, and throwing those away to save disk
+# would be trading one bad afternoon for a worse one.
+log "Clearing images older than a week."
+docker image prune -af --filter "until=168h" 2>/dev/null | tail -1 | sed 's/^/  /' || true
+docker builder prune -af >/dev/null 2>&1 || true
+log "$(df -Pm / | awk 'NR==2 {print $4}')MB free after tidying."
 
 log "Deployed ${REMOTE:0:7}."
