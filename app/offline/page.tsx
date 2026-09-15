@@ -4,6 +4,8 @@ import { awaitingResolution, capturedUnderRelaxedRule } from "@/lib/offline";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { HeldOnDevice } from "./held-on-device";
+import { Capture } from "./capture";
+import { TakeOffline } from "./take-offline";
 
 /**
  * What is held on this device, and what is waiting to go back.
@@ -48,6 +50,33 @@ export default async function OfflinePage() {
 
       <div className="mb-6">
         <HeldOnDevice />
+      </div>
+
+      {/*
+        The two halves of the learner's own journey: take the material out with
+        you, and record what you did while you were there.
+      */}
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Card
+          title="Take it with you"
+          description="Download what you need before you go. Nothing is kept that you did not ask for."
+        >
+          <TakeOffline
+            label="Your current study material"
+            paths={["/", "/offline", "/courses", "/workplace"]}
+          />
+        </Card>
+
+        <Card
+          title="Record what you did"
+          description="Works with no signal. It waits on this phone and goes when you next have one."
+        >
+          <Capture
+            targetType="workplace_logbook"
+            targetId={session.userId}
+            kind="workplace_evidence"
+          />
+        </Card>
       </div>
 
       {canSeeQueue && held.length > 0 ? (
