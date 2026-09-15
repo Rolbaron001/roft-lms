@@ -73,6 +73,22 @@ const RENAMES: Rename[] = [
 type Reshape = {
   name: string;
   table: string;
+  /**
+   * The columns the index definition mentions.
+   *
+   * Checked before the index is built, because an index can reference a column
+   * the push has not created yet - and on 9 September 2026 one did. The
+   * curriculum-code index is partial on `kind`, `kind` was newer than the
+   * production database, and this script runs before the push that would have
+   * added it. It failed, the `&&` in the deploy stopped the push, so `kind`
+   * was never created, so it failed again the next day, and the next. Six days
+   * of deploys blocked by an ordering mistake that could only unblock itself.
+   *
+   * Reshapes now run after the push (see the --phase argument), and this list
+   * is the second guard: a reshape whose columns are missing is skipped and
+   * said out loud, rather than stopping the deploy.
+   */
+  columns: string[];
   /** Recognises the definition we want, so a matching index is left alone. */
   wanted: RegExp;
   create: string;
@@ -83,6 +99,7 @@ const RESHAPES: Reshape[] = [
   {
     name: "qualifications_org_curriculum_code_idx",
     table: "qualifications",
+    columns: ["organisation_id", "curriculum_code", "kind"],
     wanted: /where \(kind = 'full'/i,
     create:
       "create unique index qualifications_org_curriculum_code_idx on public.qualifications (organisation_id, curriculum_code) where kind = 'full'",
@@ -90,12 +107,35 @@ const RESHAPES: Reshape[] = [
   },
 ];
 
+/**
+ * Which half to run.
+ *
+ * Renames must happen *before* `drizzle-kit push`: left to itself push sees a
+ * column vanish and another appear, drops the first and creates the second
+ * empty. Reshapes must happen *after* it, because the push is what creates the
+ * columns an index may reference. Running both before the push is what blocked
+ * every deploy from 9 to 15 September 2026.
+ *
+ *   --phase renames    before the push
+ *   --phase reshapes   after it
+ *   (neither)          both, for local use where the schema is already current
+ */
+const phase = (() => {
+  const index = process.argv.indexOf("--phase");
+  const value = index === -1 ? "all" : process.argv[index + 1];
+  if (value !== "renames" && value !== "reshapes" && value !== "all") {
+    console.error(`Unknown phase "${value}". Use renames, reshapes, or omit it.`);
+    process.exit(1);
+  }
+  return value;
+})();
+
 async function main() {
   const sql = postgres(adminUrl!, { max: 1, onnotice: () => {} });
   let applied = 0;
 
   try {
-    for (const rename of RENAMES) {
+    for (const rename of phase === "reshapes" ? [] : RENAMES) {
       const [column] = await sql<{ exists: boolean }[]>`
         select exists (
           select 1 from information_schema.columns
@@ -150,15 +190,17 @@ async function main() {
       applied += 1;
     }
 
-    console.log(
-      applied === 0
-        ? "Nothing to rename; the schema is already current."
-        : `${applied} rename${applied === 1 ? "" : "s"} applied.`,
-    );
+    if (phase !== "reshapes") {
+      console.log(
+        applied === 0
+          ? "Nothing to rename; the schema is already current."
+          : `${applied} rename${applied === 1 ? "" : "s"} applied.`,
+      );
+    }
 
     let reshaped = 0;
 
-    for (const reshape of RESHAPES) {
+    for (const reshape of phase === "renames" ? [] : RESHAPES) {
       const [existing] = await sql<{ indexdef: string }[]>`
         select indexdef from pg_indexes
         where schemaname = 'public' and indexname = ${reshape.name}
@@ -173,6 +215,27 @@ async function main() {
 
       if (!table.exists) {
         // A fresh database. The push creates the table and its indexes.
+        continue;
+      }
+
+      /**
+       * The guard that was missing. An index can name a column the push has
+       * not created yet, and building it then fails the whole deploy - which
+       * is how six days of deploys were lost.
+       */
+      const present = await sql<{ column_name: string }[]>`
+        select column_name from information_schema.columns
+        where table_schema = 'public' and table_name = ${reshape.table}
+      `;
+      const have = new Set(present.map((row) => row.column_name));
+      const missing = reshape.columns.filter((column) => !have.has(column));
+
+      if (missing.length > 0) {
+        console.log(
+          `Skipping index ${reshape.name}: ${reshape.table} has no ${missing.join(", ")} yet.
+` +
+            "  The push creates it; this index is built on the next deploy.",
+        );
         continue;
       }
 

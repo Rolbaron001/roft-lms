@@ -154,8 +154,8 @@ log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
 
 WAITED=0
 until $COMPOSE pull --quiet app tools mail 2>/dev/null; do
-  if [ "$WAITED" -ge 900 ]; then
-    fail "the images for ${IMAGE_TAG:0:7} never appeared. Check the Actions tab: the build may have failed, or the registry sign-in on this server may have expired."
+  if [ "$WAITED" -ge 1800 ]; then
+    fail "the images for ${IMAGE_TAG:0:7} did not appear within 30 minutes. Either the build failed, the build is unusually slow, or the registry sign-in on this server has expired. Check the Actions tab first: if the build succeeded, re-run this script by hand and it will pull them."
   fi
   sleep 30
   WAITED=$((WAITED + 30))
@@ -200,9 +200,17 @@ fi
 # that drizzle-kit cannot infer. Left to itself, push sees a column vanish and
 # another appear, drops the first and creates the second empty — losing every
 # value in it, quietly, on a deploy that then reports success.
-log "Applying renames, schema and policies."
+# Renames, then the push, then the index reshapes, then the policies. The
+# order is load-bearing and was wrong until 15 September 2026: reshapes ran
+# before the push, an index referenced a column the push had not created yet,
+# and the `&&` meant the push never ran. Six days of deploys failed the same
+# way, because the only thing that could unblock it was the step it blocked.
+log "Applying renames, schema, indexes and policies."
 $COMPOSE run --rm tools sh -c \
-  'npx tsx scripts/pre-migrate.ts && npx drizzle-kit push --force && npx tsx scripts/apply-policies.ts' \
+  'npx tsx scripts/pre-migrate.ts --phase renames \
+     && npx drizzle-kit push --force \
+     && npx tsx scripts/pre-migrate.ts --phase reshapes \
+     && npx tsx scripts/apply-policies.ts' \
   || fail "the schema change did not apply. The previous release is still running against the schema it was built for — tell whoever made the change."
 
 log "Starting."
