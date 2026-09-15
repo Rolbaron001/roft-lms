@@ -83,8 +83,20 @@ export function NavMenu({ groups }: { groups: NavGroup[] }) {
       {groups.map((group) => {
         if (group.items.length === 0) return null;
 
-        // A heading over one item is just that item.
-        if (group.label === null || group.items.length === 1) {
+        /*
+          A section with no heading is its item, and always was - Home and Mail
+          are opened all day and a click to open a menu first would be a tax.
+
+          A section that has a heading keeps it even when only one item is
+          showing. It used to collapse too, and that is how Roland lost the
+          Management section on 15 September: his saved arrangement left
+          Templates as the only thing under it, so the heading disappeared and
+          a bare Templates link took its place on the bar. The heading is
+          information - it says what kind of thing this is, and that there may
+          be more of it for somebody with other rights - and a section that
+          appears and disappears by count is a menu nobody can learn.
+        */
+        if (group.label === null) {
           const item = group.items[0];
           return (
             <Link

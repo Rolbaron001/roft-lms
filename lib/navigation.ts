@@ -175,6 +175,17 @@ export const NAV: NavSection[] = [
         label: "Enrolment notification",
         permission: "report:statutory",
       },
+      /*
+        The two reports about the material rather than about the people, and
+        the pair most worth finding without being sent: a criterion nothing
+        tests holds a readiness figure below 100% however hard a cohort works.
+        Reachable only from a link inside Reports until now.
+      */
+      {
+        href: "/reports/programme",
+        label: "Programme quality",
+        anyPermission: ["report:tenant", "qualification:manage"],
+      },
     ],
   },
 
@@ -221,15 +232,36 @@ export const NAV: NavSection[] = [
         label: "Templates",
         anyPermission: ["tenant:manage_branding", "tenant:manage_settings"],
       },
+      /*
+        Who is placed where, under whom, and on which modules.
+
+        Staff work, and it was in no menu at all: the only route to it was
+        somebody already being on the work experience screen and noticing the
+        link. The coach's own view stays under People, which is where a coach
+        goes; this is the setting-up half.
+      */
       {
-        href: "/records",
-        label: "Policies & documents",
-        permission: "records:read",
+        href: "/workplace/setup",
+        label: "Work experience setup",
+        permission: "workplace:manage",
       },
       {
-        href: "/people",
-        label: "People & roles",
-        permission: "user:manage_roles",
+        href: "/imports",
+        label: "AI history",
+        permission: "qualification:manage",
+      },
+      /*
+        Checking a certificate somebody has been handed.
+
+        The page itself is public and needs no account, because the people who
+        most need it - an employer, a SETA, a compliance officer - will never
+        have one. It is listed here as well because an administrator asked to
+        confirm one of their own should not have to find the printed URL.
+      */
+      {
+        href: "/verify",
+        label: "Verify a certificate",
+        permission: "enrolment:read_all",
       },
       {
         href: "/settings",
@@ -238,11 +270,6 @@ export const NAV: NavSection[] = [
         // own AI extension and nothing they cannot change.
         label: "Settings",
         anyPermission: ["tenant:manage_branding", "extension:use"],
-      },
-      {
-        href: "/imports",
-        label: "AI history",
-        permission: "qualification:manage",
       },
       // ROFT's own console, for managing every other client.
       {
@@ -253,6 +280,28 @@ export const NAV: NavSection[] = [
     ],
   },
 ];
+
+/**
+ * Headings the platform has renamed, old to new.
+ *
+ * A stored arrangement names its headings as text, so renaming one in the
+ * catalogue strands every provider who had saved the old name: their pages
+ * stay under the old heading, and anything added to the new one arrives in a
+ * section of its own beside it. That is exactly what happened to Curiosa.
+ * "Admin" became "Management" on 15 September; their saved arrangement still
+ * said Admin, so every Management page they already had stayed there and only
+ * Templates - the one page that was new - landed under Management. A heading
+ * with one item renders as a bare link, so what Roland saw was a Templates
+ * link on the bar and no Management section at all.
+ *
+ * Folding the old name into the new one repairs it without touching anybody's
+ * stored arrangement, and keeps repairing it for a tenant whose arrangement is
+ * restored from an old backup. A provider who had made their own heading
+ * called Admin is folded too, which is the cost: the alternative is leaving
+ * every provider who used the shipped default with a menu quietly split in
+ * two.
+ */
+const RENAMED_HEADINGS: Record<string, string> = { Admin: "Management" };
 
 
 /**
@@ -297,15 +346,30 @@ export function arrangeNavigation(
   }
 
   const placed = new Set<string>();
-  const sections: NavSection[] = saved.map((section) => ({
-    label: section.label,
-    items: section.items
+  const sections: NavSection[] = [];
+
+  for (const section of saved) {
+    // A heading the platform has since renamed keeps its pages rather than
+    // being left behind beside the new one.
+    const label =
+      section.label === null
+        ? null
+        : (RENAMED_HEADINGS[section.label] ?? section.label);
+
+    const items = section.items
       .filter((href) => known.has(href) && !placed.has(href))
       .map((href) => {
         placed.add(href);
         return known.get(href)!;
-      }),
-  }));
+      });
+
+    // Two saved headings can now be one - an arrangement that had both Admin
+    // and Management, or was saved mid-rename. Merged rather than repeated,
+    // because the same heading twice on a bar is worse than either name.
+    const existing = sections.find((one) => one.label === label);
+    if (existing) existing.items.push(...items);
+    else sections.push({ label, items });
+  }
 
   // Whatever the arrangement never mentioned - a page added since it was
   // saved. Appended under the heading it ships with, creating that heading if
