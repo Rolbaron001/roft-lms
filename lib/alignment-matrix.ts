@@ -156,7 +156,7 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
    */
   if (looksLikeWord(bytes)) {
     throw new AlignmentMatrixError(
-      "That is a Word document, and the alignment matrix has to be a spreadsheet - one row per curriculum line, with a column headed something like “Topic Elements”. A Word table cannot be read this way yet. Save the matrix as .xlsx and upload that, or file this document against the qualification as ordinary material, where it is kept and searchable but not read.",
+      "That is a Word document. The document itself is kept, filed and searchable - what could not happen is reading it, because the alignment matrix is read as a spreadsheet: one row per curriculum line, with a column headed something like “Topic Elements”. Save the matrix as a spreadsheet and upload that as well, and each line of the curriculum will show what covers it.",
     );
   }
 

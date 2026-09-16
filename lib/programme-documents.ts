@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
@@ -252,6 +252,35 @@ export async function uploadProgrammeDocument(
       }
       qualificationId = curriculumModule.qualificationId;
     }
+
+    /*
+     * The identical file, already filed.
+     *
+     * Superseding below is for a *new* version of a document; the same bytes
+     * again are not a new version. Curiosa's folder carries their three base
+     * documents inside it as well as beside it, so importing the qualification
+     * from its documents and then importing the folder filed each of them
+     * twice - two curriculum documents, two qualification documents, one of
+     * each of them a copy of the other with no way to tell which.
+     *
+     * Matched on the digest rather than the name, because the same file under
+     * two names is still the same file, and a different file under the same
+     * name is not.
+     */
+    const [same] = await tx
+      .select({ id: programmeDocuments.id })
+      .from(programmeDocuments)
+      .where(
+        and(
+          eq(programmeDocuments.sha256, stored.sha256),
+          qualificationId
+            ? eq(programmeDocuments.qualificationId, qualificationId)
+            : isNull(programmeDocuments.qualificationId),
+        ),
+      )
+      .limit(1);
+
+    if (same) return same.id;
 
     // Supersedes the previous document of the same kind and title, so the
     // library shows the current one and the chain back is still there.
