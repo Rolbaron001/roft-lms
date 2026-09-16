@@ -40,10 +40,13 @@ const ELEMENT_LABELS: Record<string, string> = {
 
 export default async function QualificationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ just?: string }>;
 }) {
   const { id } = await params;
+  const justCreated = (await searchParams).just === "created";
   const tenant = await requireTenant();
   /*
    * Read by everybody who delivers or judges against it; changed by an
@@ -98,6 +101,73 @@ export default async function QualificationPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
+      {/*
+        What just happened, and what is left.
+
+        Creating a qualification from its documents used to land somebody on a
+        full screen with nothing to say that anything had happened — the
+        curriculum is in, the material is not, and the difference is not
+        obvious from looking at it. Heidi had no way to tell how far she had
+        got, which is half of why the test on 16 September felt like a failure
+        rather than a step.
+
+        Shown once, on arrival. It is not a state the qualification is in.
+      */}
+      {justCreated && canManage ? (
+        <div
+          className={`mb-6 rounded-lg border px-4 py-3 ${
+            modules.length > 0
+              ? "border-[var(--success)]/40 bg-[var(--success)]/5"
+              : "border-[var(--danger)]/40 bg-[var(--danger)]/5"
+          }`}
+        >
+          {/*
+            Nothing is claimed that is not true. A reading that produced no
+            modules at all has not put a curriculum in, and saying "the
+            curriculum is in: 0 modules" would be the platform congratulating
+            itself on a failure - which is the exact habit that made the test
+            on 16 September look like it had half worked.
+          */}
+          {modules.length > 0 ? (
+            <p className="text-sm font-medium">
+              The curriculum is in: {modules.length}{" "}
+              {modules.length === 1 ? "module" : "modules"} and {totalCriteria}{" "}
+              assessment criteria, read from the documents you supplied.
+            </p>
+          ) : (
+            <p className="text-sm font-medium">
+              The qualification was created, but no curriculum was read from
+              the documents. Nothing here can be taught or assessed until its
+              modules exist.
+            </p>
+          )}
+          {modules.length > 0 ? (
+            <>
+              <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
+                What is not in yet is the material — the theory guides,
+                workbooks and assessments. Add the whole folder at once further
+                down this page; the study units are created from the filenames,
+                and answer guides are recognised and kept from learners. No AI
+                is used for any of it.
+              </p>
+              <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
+                Check a module or two against the printed document first.
+                Anything the reading was unsure of was listed on the screen
+                before this one.
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
+              Either the curriculum document was not among the files, or it is
+              laid out in a way the reader did not recognise. Build the
+              curriculum by hand, or say what the document looks like and the
+              reader can be taught it — that is how the Commercial Cleaner
+              curriculum came to be read.
+            </p>
+          )}
+        </div>
+      ) : null}
+
       <div className="mb-6">
         <Link
           href="/qualifications"

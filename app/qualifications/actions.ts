@@ -217,6 +217,13 @@ export async function createFromDocumentAction(
   }
 
   revalidatePath("/qualifications");
-  // Straight to the qualification, which is what there is to check.
-  redirect(`/qualifications/${created.qualificationId}`);
+  /*
+   * Straight to the qualification, which is what there is to check — and
+   * marked as just created, so the page can say what comes next.
+   *
+   * It used to land somebody on a full screen with no indication that
+   * anything had happened or what to do now. The curriculum is in; the
+   * material is not, and the difference is not obvious from looking.
+   */
+  redirect(`/qualifications/${created.qualificationId}?just=created`);
 }
