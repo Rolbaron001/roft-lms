@@ -236,6 +236,30 @@ automatically, which is worth something — but it is a second importer for a
 second document shape, not a tweak to the first. **Worth doing, or is saving it
 as .xlsx enough?**
 
+## The whole journey, rehearsed end to end
+
+The sequence Heidi will follow next, run against the real folder with nothing
+created by hand:
+
+1. Qualification from its two documents — 15 modules, 154 criteria, no AI.
+2. The 81-file folder committed against it — **five study units created from
+   the filenames**, 81 documents filed, 63 attached to their study unit, 20
+   carrying the version they were named with.
+3. One refusal, and it is the right one: the Word alignment matrix, now saying
+   plainly what it is and what to upload instead.
+
+Two things that came out of it and are fixed:
+
+- **Their three base documents are inside the folder as well as beside it**, so
+  the ordinary sequence filed each of them twice. The same bytes again are not
+  a new version, and are now recognised by digest rather than by name. A
+  genuine revision still supersedes; a part and its parent may still share a
+  curriculum document.
+- **Nothing said what had happened.** Creating a qualification landed somebody
+  on a full screen with no indication of how far they had got. It now says what
+  was read and what is left — and where nothing was read, it says that instead
+  of congratulating itself.
+
 ## Batch E — Google Drive and OneDrive
 
 **Raised by Roland in the meeting, not yet scoped or started.** Recorded here
