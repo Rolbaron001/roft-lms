@@ -5,6 +5,25 @@ and the notes below it when he returns. The deploy takes whatever is pushed at
 **16:00**, so anything meant to reach the server today is committed before then
 and anything after it waits for tomorrow.
 
+## Where it ended
+
+Every item on the order below was done, plus two that were not on it: the
+Commercial Cleaner rehearsed all the way into the database, and the enrolment
+procedure checked line by line. Seven commits, all pushed before 16:00, so all
+of it lands in today's deploy.
+
+**Three questions are waiting for Roland**, each written up where it belongs
+and none of them urgent:
+
+1. **The `tools` container's isolation** — one line to change, but that
+   container holds the database admin credentials, and it should be decided
+   together with the object-storage bucket that needs it.
+2. **The rest of the terminology sweep** — 727 occurrences inside sentences,
+   days rather than hours, for uneven benefit.
+3. **"Enter details in LMS and Tracker"** — the procedure asks for the same
+   details twice; worth asking Curiosa whether the Tracker should be fed from
+   the platform instead.
+
 ## The order, as given
 
 1. **Start on the Commercial Cleaner import.** Named first and worked first.
@@ -168,6 +187,22 @@ of Docker (docker-ce-cli 29.8.0 to 29.8.1, containerd 2.3.4 to 2.3.5) at
 on their own. Benign, and good news twice over: security updates are applying,
 and the stack recovers unattended. The only thing worth knowing is that it
 means a short outage at an unpredictable hour.
+
+**The Commercial Cleaner, rehearsed to the rows — 9ced0e9.** The parser tests
+assert what the reader makes of the document; this asserts what a provider is
+left holding, which is the question that matters. It runs the application's own
+path — read both documents, then write them with the header fields a person
+confirmed — so it fails if the screen would fail. 22 modules, 592 elements and
+182 criteria actually stored, no module left holding topics with nothing to
+assess against, no page footer glued to a criterion on the way in.
+
+**The enrolment procedure, checked line by line — 6670eb2.** Task 5, which had
+been carried as outstanding. Written up in SOP-CHECK-enrolment.md. Most steps
+were already built; three things came out of it, one fixed, one to raise with
+Curiosa, one a real gap left open and written down. The gap: the procedure says
+to submit the LEISA *and ask for acknowledgement*, and the platform has no
+state for "acknowledged" — so one nobody acknowledged looks exactly like one
+that was. Needs the mail relay to be useful.
 
 **Terminology sweep — headings done, prose left deliberately.** Four headings
 converted; two left alone on purpose ("Enrolment notification" is the QCTO's
