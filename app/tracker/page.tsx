@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { activeProgrammes } from "@/lib/tracker";
 import { Card } from "@/components/ui";
+import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
 
 const VISIT_LABEL: Record<string, string> = {
@@ -29,6 +30,7 @@ export default async function TrackerPage({
 }) {
   const { all } = await searchParams;
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("enrolment:read_all");
 
   const includeFinished = all === "1";
@@ -53,7 +55,7 @@ export default async function TrackerPage({
 
       <div className="mt-6">
         <Card
-          title="Programmes"
+          title={words.many("programme")}
           description="Read from the records rather than kept by hand, so it cannot disagree with the platform it reports on."
         >
           {programmes.length === 0 ? (

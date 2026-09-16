@@ -196,8 +196,37 @@ through, a Settings screen. Built on the split in `lib/dictionary.ts`: a term a
 regulator defines cannot be renamed, because a tenant who renamed
 "qualification" would have changed the wording on their own QCTO submission.
 
-**Outstanding:** the string sweep — not every sentence reads through the helper
-yet. Add "workplace experience sign-off" to the registry while doing it (W4).
+**Headings done, 16 September.** The W4 half was already done: the registry
+carries `workplaceRecord` ("Workplace experience sign-off"), and the labelled
+places — menu entries, page headings, dropdown options — read through the
+helper. Four headings that still hardcoded a renameable word were converted:
+two on the cohort screen, one on EISA, one on the tracker.
+
+Two were deliberately left, and the reasoning matters more than the strings:
+
+- **"Enrolment notification"** is the QCTO's name for a submission. A provider
+  who renamed it would have changed the wording on their own statutory return.
+  A term a regulator defines is not in the registry, by the rule already set.
+- **"Programme documents"** on the qualification screen means the documents of
+  the training programme, not of a learning path — which is what `programme`
+  means in the registry. Renaming it would substitute the wrong word.
+
+**Outstanding, and larger than it looks: the prose.** 727 occurrences of a
+renameable term across `app/` and `components/`, nearly all inside explanatory
+sentences rather than labels — 353 of "learner" alone.
+
+This is not a search and replace, and should not be attempted as one. A term
+substituted into a sentence has to agree with it: "the learner's" needs a
+possessive, "a learner" needs the right article before a renamed word starting
+with a vowel, and a sentence opening with the word needs it capitalised. Get
+one wrong and a provider who renamed nothing never notices, while the one who
+did reads broken English on a screen they show to a monitor.
+
+**Worth asking Roland before doing it**, because it is days rather than hours
+and the benefit is uneven. The words somebody scans - menus, headings, labels,
+buttons - already follow the tenant. What is left is help text, and a provider
+that calls learners "delegates" reading "learner" in a paragraph of explanation
+is a smaller problem than the same word in a heading was.
 
 ### 2 · Part qualifications — **done**
 

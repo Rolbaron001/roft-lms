@@ -126,3 +126,53 @@ SP220320 and the part qualifications.
 properly, but the twelve notes are genuine and she will see them. They are not
 the platform being unsure — they are the document disagreeing with itself, and
 the right response to each is a decision rather than a fix.
+
+**Heidi's three answers — done, 735a2d4.** The EISA screen no longer reports a
+fault where there is none: before December it explains that the dates change
+annually and says what their absence costs; from December, when the letter
+should be out, it asks. The 50 per cent limit is recorded as confirmed rather
+than guessed. And the feedback question is asked again in plain terms, in
+FOR-HEIDI-learner-feedback.md, for Roland to send on.
+
+**Changing what a qualification is — done, 360a791.** Kind and parent were
+settable only at import, so a qualification imported as the wrong sort had to
+be deleted and redone. Now correctable on the edit screen, except once anybody
+is enrolled: enrolment is per programme ID, and changing the kind changes what
+a learner has to do to finish. The refusal says what to do instead.
+
+**The `tools` container — diagnosed, not changed.** The note said "cannot
+resolve DNS" since 11 September; that is a misdiagnosis and would have sent
+somebody hunting through resolv.conf. The compose file declares
+`internal: true` on the internal network and `tools` joins that and no other,
+so it reaches the database and nothing else, on purpose. Left alone: giving it
+the edge network is one line, but that container holds the database admin
+credentials, and the isolation should be reconsidered together with the bucket
+decision that needs it. **A question for Roland.**
+
+**The curriculum, opened to the people who teach it — done, e67f869.** A
+facilitator, assessor or moderator could not read a curriculum at all: the
+screens were gated on the permission to *manage* qualifications. They now admit
+anybody who authors courses, assesses or moderates, with the building controls
+hidden rather than the page. This also finishes yesterday's topic-element work,
+which was reachable only from a page an administrator could open.
+
+Worth recording how that nearly went wrong. Opening the page turned it into a
+server error for exactly the people it had been opened to, because a call
+underneath it asserted the manage permission unconditionally. The tests did not
+catch it and would not have. A permission change that widens who reaches a page
+has to be walked through as each of those people.
+
+**The container restart at 11:08 — explained.** An unattended security upgrade
+of Docker (docker-ce-cli 29.8.0 to 29.8.1, containerd 2.3.4 to 2.3.5) at
+11:07:47, and the daemon restarted at 11:08:29. All three containers came back
+on their own. Benign, and good news twice over: security updates are applying,
+and the stack recovers unattended. The only thing worth knowing is that it
+means a short outage at an unpredictable hour.
+
+**Terminology sweep — headings done, prose left deliberately.** Four headings
+converted; two left alone on purpose ("Enrolment notification" is the QCTO's
+name, "Programme documents" means something other than the registry's
+"programme"). The remaining 727 occurrences are inside sentences, where
+substituting a word needs the grammar around it to agree. Days rather than
+hours, for uneven benefit — see TASKS-FROM-MEETINGS.md. **A question for
+Roland.**

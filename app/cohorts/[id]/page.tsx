@@ -12,6 +12,7 @@ import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
 import { listPeople } from "@/lib/people";
 import { stepTimings } from "@/lib/programme-reports";
+import { vocabulary } from "@/lib/terms";
 import { AppShell, Card } from "@/components/app-shell";
 import {
   AddMember,
@@ -57,6 +58,7 @@ export default async function CohortPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("enrolment:read_all");
 
   let detail;
@@ -310,7 +312,7 @@ export default async function CohortPage({
       {canReadReports ? (
         <div className="mt-6">
           <Card
-            title="Programme feedback"
+            title={`${words.one("programme")} feedback`}
             description="Sent after a summative, answered within 48 hours. Nobody acknowledges receipt and nobody transcribes anything: receipt is a row and the report is a query."
           >
             <Feedback
@@ -403,7 +405,7 @@ export default async function CohortPage({
 
       <div className="mt-6">
         <Card
-          title="Course step release"
+          title={`${words.one("course")} step release`}
           description="Held as days from the start. Change the start date and every one of these moves with it."
         >
           {canManage ? (

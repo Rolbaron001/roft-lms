@@ -9,6 +9,7 @@ import {
   sittingDatesNotice,
 } from "@/lib/eisa-sitting-notice";
 import { dateInZone } from "@/lib/timezone";
+import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { SittingForm } from "./sitting-form";
@@ -23,6 +24,7 @@ import { SittingForm } from "./sitting-form";
  */
 export default async function EisaPage() {
   const tenant = await requireTenant();
+  const words = vocabulary(tenant.terminology);
   const session = await requirePermission("enrolment:read_all");
 
   const today = dateInZone(new Date(), tenant.timezone);
@@ -153,7 +155,7 @@ export default async function EisaPage() {
       {due.length > 0 ? (
         <div className="mt-6">
           <Card
-            title="Cohorts still to be entered"
+            title={`${words.many("cohort")} still to be entered`}
             description="Everything with an open deadline and no registration date recorded against it."
           >
             <ul className="space-y-1 text-sm">
