@@ -58,10 +58,24 @@ export const NAV: NavSection[] = [
     items: [
       { href: "/courses", label: "Courses", term: "course", permission: "course:read" },
       { href: "/paths", label: "Programmes", term: "programme", permission: "course:author" },
+      /*
+        Read by everybody who delivers or judges against it.
+
+        Gated on the permission to *manage* qualifications until 16 September,
+        which meant a facilitator, an assessor and a moderator could not reach
+        the curriculum they teach and mark against. The screens now show the
+        building controls only to somebody who may use them, so the entry can
+        be offered to everybody who has a reason to look.
+      */
       {
         href: "/qualifications",
         label: "Qualifications",
-        permission: "qualification:manage",
+        anyPermission: [
+          "qualification:manage",
+          "course:author",
+          "assessment:assess",
+          "assessment:moderate",
+        ],
       },
       { href: "/capture", label: "Capture", permission: "assessment:author" },
       // A reference, not a record. Every signed-in person can read it,

@@ -87,8 +87,18 @@ function Message({ state }: { state: ActionState }) {
 
 export function QualificationsManager({
   qualifications,
+  canManage,
 }: {
   qualifications: Qualification[];
+  /**
+   * Whether this person may change any of it.
+   *
+   * False for a facilitator, an assessor or a moderator, who reach this screen
+   * to read the curriculum they teach and mark against. They see the same
+   * list; what they do not see is a control that would be refused if they
+   * pressed it.
+   */
+  canManage: boolean;
 }) {
   const [createState, createAction, createPending] = useActionState<
     ActionState,
@@ -236,7 +246,10 @@ export function QualificationsManager({
             </button>
           </div>
 
-          <div id={`modules-${qualification.id}`} hidden={!expanded.has(qualification.id)}>
+          <div
+            id={`modules-${qualification.id}`}
+            hidden={!expanded.has(qualification.id)}
+          >
             {qualification.modules.length > 0 ? (
               <ul className="mt-4 space-y-2">
                 {qualification.modules.map((module) => (
@@ -251,13 +264,17 @@ export function QualificationsManager({
                       </span>
                       <span className="text-xs text-[var(--muted)]">
                         {COMPONENT_LABELS[module.component] ?? module.component}
-                        {module.credits ? ` · ${module.credits} credits` : ""} ·{" "}
+                        {module.credits
+                          ? ` · ${module.credits} credits`
+                          : ""} ·{" "}
                         <Link
                           href={`/qualifications/${qualification.id}`}
                           className="underline-offset-2 hover:underline"
                         >
                           {module.criterionCount}{" "}
-                          {module.criterionCount === 1 ? "criterion" : "criteria"}
+                          {module.criterionCount === 1
+                            ? "criterion"
+                            : "criteria"}
                         </Link>
                       </span>
                     </div>
@@ -301,7 +318,7 @@ export function QualificationsManager({
                           </button>
                         </div>
                       </form>
-                    ) : (
+                    ) : canManage ? (
                       <button
                         type="button"
                         onClick={() => setOpenCriterionFor(module.id)}
@@ -309,7 +326,7 @@ export function QualificationsManager({
                       >
                         + Add an assessment criterion
                       </button>
-                    )}
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -347,7 +364,11 @@ export function QualificationsManager({
                   name="qualificationId"
                   value={qualification.id}
                 />
-                <select name="component" defaultValue="knowledge" className={inputClass}>
+                <select
+                  name="component"
+                  defaultValue="knowledge"
+                  className={inputClass}
+                >
                   <option value="knowledge">Knowledge module</option>
                   <option value="practical">Practical skill module</option>
                   <option value="workplace">Workplace experience module</option>
@@ -390,7 +411,7 @@ export function QualificationsManager({
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : canManage ? (
               <button
                 type="button"
                 onClick={() => setOpenModuleFor(qualification.id)}
@@ -398,151 +419,167 @@ export function QualificationsManager({
               >
                 + Add a curriculum module
               </button>
-            )}
+            ) : null}
           </div>
         </section>
       ))}
 
-      <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          New qualification
-        </h2>
+      {canManage ? (
+        <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            New qualification
+          </h2>
 
-        <div className="mt-3">
-          <Message state={createState} />
-        </div>
-
-        <form action={createAction} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">Title</span>
-            <input name="title" required minLength={3} className={inputClass} />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">What this is</span>
-            <select
-              name="kind"
-              value={newKind}
-              onChange={(event) =>
-                setNewKind(event.target.value as Qualification["kind"])
-              }
-              className={inputClass}
-            >
-              <option value="full">Full qualification</option>
-              <option value="part">Part qualification</option>
-              <option value="skills_programme">
-                Occupational skills programme
-              </option>
-            </select>
-            <span className="block text-xs text-[var(--muted)]">
-              The SAQA document says which. Look for{" "}
-              <em>Qualification Type</em> on its first page.
-            </span>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">
-              Drawn from{" "}
-              <span className="font-normal text-[var(--muted)]">
-                {newKind === "part" ? "" : "(optional)"}
-              </span>
-            </span>
-            <select
-              name="parentQualificationId"
-              disabled={newKind === "full"}
-              required={newKind === "part"}
-              defaultValue=""
-              className={`${inputClass} disabled:opacity-50`}
-            >
-              <option value="">
-                {newKind === "full"
-                  ? "Not applicable"
-                  : "Nothing — it stands on its own"}
-              </option>
-              {qualifications
-                .filter((row) => row.kind === "full")
-                .map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.title}
-                  </option>
-                ))}
-            </select>
-            <span className="block text-xs text-[var(--muted)]">
-              {newKind === "full"
-                ? "A full qualification carries its own curriculum."
-                : "It shares that qualification's curriculum and takes a subset of its modules — you choose which, once it exists."}
-            </span>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">
-              Curriculum code{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
-            </span>
-            <input name="curriculumCode" className={inputClass} />
-            <span className="block text-xs text-[var(--muted)]">
-              {newKind === "full"
-                ? "As written on the curriculum document. Never worked out — only the QCTO or the OFO can say what it is."
-                : "The same code as the qualification it comes from. They share one curriculum, so they share its code."}
-            </span>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">
-              SAQA ID{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
-            </span>
-            <input name="saqaId" className={inputClass} />
-          </label>
-
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">
-              Accreditation number{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
-            </span>
-            <input name="accreditationNumber" className={inputClass} />
-            <span className="block text-xs text-[var(--muted)]">
-              The number this qualification is accredited under. One
-              accreditation letter usually covers several qualifications, so
-              this is not always the same as the provider&rsquo;s own number.
-              Leave it blank and reports fall back to the provider&rsquo;s and
-              say so.
-            </span>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">NQF level</span>
-            <input
-              name="nqfLevel"
-              type="number"
-              min={1}
-              max={10}
-              className={inputClass}
-            />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Total credits</span>
-            <input
-              name="totalCredits"
-              type="number"
-              min={0}
-              className={inputClass}
-            />
-          </label>
-
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={createPending}
-              className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--brand-primary)" }}
-            >
-              {createPending ? "Creating…" : "Create qualification"}
-            </button>
+          <div className="mt-3">
+            <Message state={createState} />
           </div>
-        </form>
-      </section>
+
+          <form
+            action={createAction}
+            className="mt-4 grid gap-3 sm:grid-cols-2"
+          >
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="block text-sm font-medium">Title</span>
+              <input
+                name="title"
+                required
+                minLength={3}
+                className={inputClass}
+              />
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">What this is</span>
+              <select
+                name="kind"
+                value={newKind}
+                onChange={(event) =>
+                  setNewKind(event.target.value as Qualification["kind"])
+                }
+                className={inputClass}
+              >
+                <option value="full">Full qualification</option>
+                <option value="part">Part qualification</option>
+                <option value="skills_programme">
+                  Occupational skills programme
+                </option>
+              </select>
+              <span className="block text-xs text-[var(--muted)]">
+                The SAQA document says which. Look for{" "}
+                <em>Qualification Type</em> on its first page.
+              </span>
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">
+                Drawn from{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  {newKind === "part" ? "" : "(optional)"}
+                </span>
+              </span>
+              <select
+                name="parentQualificationId"
+                disabled={newKind === "full"}
+                required={newKind === "part"}
+                defaultValue=""
+                className={`${inputClass} disabled:opacity-50`}
+              >
+                <option value="">
+                  {newKind === "full"
+                    ? "Not applicable"
+                    : "Nothing — it stands on its own"}
+                </option>
+                {qualifications
+                  .filter((row) => row.kind === "full")
+                  .map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.title}
+                    </option>
+                  ))}
+              </select>
+              <span className="block text-xs text-[var(--muted)]">
+                {newKind === "full"
+                  ? "A full qualification carries its own curriculum."
+                  : "It shares that qualification's curriculum and takes a subset of its modules — you choose which, once it exists."}
+              </span>
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">
+                Curriculum code{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  (optional)
+                </span>
+              </span>
+              <input name="curriculumCode" className={inputClass} />
+              <span className="block text-xs text-[var(--muted)]">
+                {newKind === "full"
+                  ? "As written on the curriculum document. Never worked out — only the QCTO or the OFO can say what it is."
+                  : "The same code as the qualification it comes from. They share one curriculum, so they share its code."}
+              </span>
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">
+                SAQA ID{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  (optional)
+                </span>
+              </span>
+              <input name="saqaId" className={inputClass} />
+            </label>
+
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="block text-sm font-medium">
+                Accreditation number{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  (optional)
+                </span>
+              </span>
+              <input name="accreditationNumber" className={inputClass} />
+              <span className="block text-xs text-[var(--muted)]">
+                The number this qualification is accredited under. One
+                accreditation letter usually covers several qualifications, so
+                this is not always the same as the provider&rsquo;s own number.
+                Leave it blank and reports fall back to the provider&rsquo;s and
+                say so.
+              </span>
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">NQF level</span>
+              <input
+                name="nqfLevel"
+                type="number"
+                min={1}
+                max={10}
+                className={inputClass}
+              />
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">Total credits</span>
+              <input
+                name="totalCredits"
+                type="number"
+                min={0}
+                className={inputClass}
+              />
+            </label>
+
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={createPending}
+                className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "var(--brand-primary)" }}
+              >
+                {createPending ? "Creating…" : "Create qualification"}
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
     </div>
   );
 }

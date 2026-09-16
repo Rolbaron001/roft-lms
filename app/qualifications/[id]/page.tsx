@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireAnyPermission, requireTenant } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
@@ -45,13 +45,36 @@ export default async function QualificationPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const session = await requirePermission("qualification:manage");
+  /*
+   * Read by everybody who delivers or judges against it; changed by an
+   * administrator.
+   *
+   * It was gated on the permission to *manage* qualifications, which meant a
+   * facilitator, an assessor and a moderator could not read the curriculum
+   * they teach and mark against at all. That is the wrong way round: a
+   * curriculum is a published QCTO document, and needing to see what a module
+   * requires is the ordinary case. What each of them may *do* here is a
+   * separate question, answered further down.
+   *
+   * Not opened to learners. Their route to what they must cover is their
+   * course, where it comes with the material.
+   */
+  const session = await requireAnyPermission([
+    "qualification:manage",
+    "course:author",
+    "assessment:assess",
+    "assessment:moderate",
+  ]);
+  const canManage = session.permissions.includes("qualification:manage");
 
   const { qualification, modules, studyUnits, outcomes, unplacedModules } =
     await curriculumOutline(session, id);
   const [documents, uploadTargets] = await Promise.all([
     listProgrammeDocuments(session, id),
-    qualificationForDocumentUpload(session, id),
+    // Only where something will be uploaded. It asserts the permission to
+    // manage qualifications, so asking for it unconditionally turned the whole
+    // page into a server error for the facilitators it was just opened to.
+    canManage ? qualificationForDocumentUpload(session, id) : null,
   ]);
 
   // Read only so the top-up form can say what an extension would add. A folder
@@ -123,7 +146,7 @@ export default async function QualificationPage({
           </p>
         ) : null}
 
-        {session.permissions.includes("qualification:manage") ? (
+        {canManage ? (
           <Link
             href={
               qualification.parentQualificationId
@@ -287,7 +310,9 @@ export default async function QualificationPage({
           them and a coach signs them on paper.
         </p>
 
-        {/*
+        {canManage ? (
+          <>
+            {/*
           Finishing a curriculum, rather than filing material against one.
 
           Roland asked on 15 September whether a qualification loaded from an
@@ -297,71 +322,76 @@ export default async function QualificationPage({
           folder, and nothing on the screen would otherwise say which one a
           person was about to get.
         */}
-        <Card>
-          <p className="mb-3 text-sm font-medium">
-            Finish this qualification from a fuller folder
-          </p>
-          <FolderPicker
-            qualificationId={id}
-            topUp
-            label="The completed folder for this qualification, from your own computer"
-            extension={
-              mayUseExtension
-                ? {
-                    on: extension.on,
-                    available: extension.availability?.available ?? false,
-                    reason: extension.availability?.reason ?? null,
+            <Card>
+              <p className="mb-3 text-sm font-medium">
+                Finish this qualification from a fuller folder
+              </p>
+              <FolderPicker
+                qualificationId={id}
+                topUp
+                label="The completed folder for this qualification, from your own computer"
+                extension={
+                  mayUseExtension
+                    ? {
+                        on: extension.on,
+                        available: extension.availability?.available ?? false,
+                        reason: extension.availability?.reason ?? null,
+                      }
+                    : null
+                }
+                hint={
+                  <>
+                    For a qualification that was loaded before its documents
+                    were complete. The whole folder is read again — the
+                    curriculum as well as the material — and only what is
+                    missing is added.
+                    <br />
+                    Nothing already here is changed or replaced, down to the
+                    wording of a single criterion, and running it twice does
+                    nothing the second time. You still see everything it found
+                    and confirm it before any of it is written.
+                  </>
+                }
+              />
+            </Card>
+
+            <div className="mt-4">
+              <Card>
+                <p className="mb-3 text-sm font-medium">
+                  A whole folder at once
+                </p>
+                <FolderPicker
+                  qualificationId={id}
+                  label="A folder of material, from your own computer"
+                  hint={
+                    <>
+                      Theory guides and workbooks go to the study unit their
+                      filename names, policies and contracts to the document
+                      library, and everything else against this qualification.
+                      No AI is used here at all — sorting documents by name is a
+                      rule rather than a judgement.
+                    </>
                   }
-                : null
-            }
-            hint={
-              <>
-                For a qualification that was loaded before its documents were
-                complete. The whole folder is read again — the curriculum as
-                well as the material — and only what is missing is added.
-                <br />
-                Nothing already here is changed or replaced, down to the wording
-                of a single criterion, and running it twice does nothing the
-                second time. You still see everything it found and confirm it
-                before any of it is written.
-              </>
-            }
-          />
-        </Card>
+                />
+              </Card>
+            </div>
 
-        <div className="mt-4">
-          <Card>
-            <p className="mb-3 text-sm font-medium">A whole folder at once</p>
-            <FolderPicker
-              qualificationId={id}
-              label="A folder of material, from your own computer"
-              hint={
-                <>
-                  Theory guides and workbooks go to the study unit their
-                  filename names, policies and contracts to the document
-                  library, and everything else against this qualification. No AI
-                  is used here at all — sorting documents by name is a rule
-                  rather than a judgement.
-                </>
-              }
-            />
-          </Card>
-        </div>
-
-        <div className="mt-4">
-          <Card>
-            <p className="mb-3 text-sm font-medium">Or one document</p>
-            <DocumentUploader
-              qualificationId={id}
-              kinds={DOCUMENT_KINDS.map((kind) => ({
-                value: kind,
-                label: DOCUMENT_KIND_LABELS[kind],
-              }))}
-              units={uploadTargets.units}
-              modules={uploadTargets.modules}
-            />
-          </Card>
-        </div>
+            <div className="mt-4">
+              <Card>
+                <p className="mb-3 text-sm font-medium">Or one document</p>
+                <DocumentUploader
+                  qualificationId={id}
+                  kinds={DOCUMENT_KINDS.map((kind) => ({
+                    value: kind,
+                    label: DOCUMENT_KIND_LABELS[kind],
+                  }))}
+                  units={uploadTargets?.units ?? []}
+                  modules={uploadTargets?.modules ?? []}
+                />
+              </Card>
+            </div>
+          </>
+        ) : null}
 
         {documents.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">

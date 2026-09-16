@@ -95,8 +95,7 @@ question in plain terms, for Roland to pass on.
 
 ## What happened
 
-**Commercial Cleaner import — done, pushed as 0562bf7 at 15:2x, in time for
-the 16:00 deploy.**
+**Commercial Cleaner import — done, pushed as 0562bf7 before midday.**
 
 The cause was one character. A bullet typed in Word is not U+2022; it is a
 Symbol-font glyph mapped into the Unicode Private Use Area, so it arrives as

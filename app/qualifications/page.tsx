@@ -1,4 +1,4 @@
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireAnyPermission, requireTenant } from "@/lib/request";
 import { listCurriculumModules, listQualifications } from "@/lib/authoring";
 import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
@@ -9,7 +9,15 @@ import { extensionOffered, extensionState } from "@/lib/extensions";
 
 export default async function QualificationsPage() {
   const tenant = await requireTenant();
-  const session = await requirePermission("qualification:manage");
+  // Read by everybody who delivers or judges against a qualification; built
+  // and changed by an administrator. See the detail page for the reasoning.
+  const session = await requireAnyPermission([
+    "qualification:manage",
+    "course:author",
+    "assessment:assess",
+    "assessment:moderate",
+  ]);
+  const canManage = session.permissions.includes("qualification:manage");
 
   // Folder import is ordinary functionality and is shown to everybody who can
   // manage a qualification. The extension state is read only so the form can
@@ -39,43 +47,50 @@ export default async function QualificationsPage() {
         </p>
       </div>
 
-      {/* The documents come first: everything below is built on them, and the
+      {canManage ? (
+        <>
+          {/* The documents come first: everything below is built on them, and the
           App can read most of what the form would otherwise ask for. */}
-      <div className="mb-6">
-        <Card
-          title="Build it from a folder"
-          description="Choose a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create. Nothing is written until you say so."
-        >
-          <FolderPicker
-            label="The qualification's folder, from your own computer"
-            extension={
-              mayUseExtension
-                ? {
-                    on: extension.on,
-                    available: extension.availability?.available ?? false,
-                    reason: extension.availability?.reason ?? null,
-                  }
-                : null
-            }
-            hint={
-              <>
-                Everything in the folder and its subfolders is read: the
-                curriculum, the study units, the guides and the policies.
-                <br />
-                A folder built by your programme development system includes a
-                summary of itself, and that is read directly — in seconds. A
-                folder without one cannot have its structure worked out yet.
-              </>
-            }
-          />
-        </Card>
-      </div>
+          <div className="mb-6">
+            <Card
+              title="Build it from a folder"
+              description="Choose a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create. Nothing is written until you say so."
+            >
+              <FolderPicker
+                label="The qualification's folder, from your own computer"
+                extension={
+                  mayUseExtension
+                    ? {
+                        on: extension.on,
+                        available: extension.availability?.available ?? false,
+                        reason: extension.availability?.reason ?? null,
+                      }
+                    : null
+                }
+                hint={
+                  <>
+                    Everything in the folder and its subfolders is read: the
+                    curriculum, the study units, the guides and the policies.
+                    <br />A folder built by your programme development system
+                    includes a summary of itself, and that is read directly — in
+                    seconds. A folder without one cannot have its structure
+                    worked out yet.
+                  </>
+                }
+              />
+            </Card>
+          </div>
 
-      <div className="mb-6">
-        <FromDocument />
-      </div>
+          <div className="mb-6">
+            <FromDocument />
+          </div>
+        </>
+      ) : null}
 
-      <QualificationsManager qualifications={withModules} />
+      <QualificationsManager
+        qualifications={withModules}
+        canManage={canManage}
+      />
     </AppShell>
   );
 }

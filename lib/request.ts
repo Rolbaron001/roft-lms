@@ -108,3 +108,27 @@ export async function requirePermission(
   }
   return session;
 }
+
+/**
+ * The signed-in session, provided it holds any one of these.
+ *
+ * For a page several roles reach for different reasons. The curriculum is the
+ * case that prompted it: a facilitator, an assessor and a moderator all need
+ * to see what a module requires, and gating that page on the permission to
+ * *manage* qualifications meant only an administrator could read one. The page
+ * then hides what each of them may not do, which is a separate question from
+ * whether they may look.
+ *
+ * Deliberately not "any signed-in person". The list is written out at each
+ * call so that widening it is a decision somebody makes and can be seen in a
+ * diff, rather than a default that drifts.
+ */
+export async function requireAnyPermission(
+  permissions: Permission[],
+): Promise<AuthenticatedSession> {
+  const session = await requireSession();
+  if (!permissions.some((one) => session.permissions.includes(one))) {
+    redirect("/not-permitted");
+  }
+  return session;
+}
