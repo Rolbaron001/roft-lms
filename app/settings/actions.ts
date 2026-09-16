@@ -23,6 +23,8 @@ export async function updateBrandingAction(
       logoUrl: String(formData.get("logoUrl") ?? "") || undefined,
       signInGraphicUrl:
         String(formData.get("signInGraphicUrl") ?? "") || undefined,
+      illustrationUrl:
+        String(formData.get("illustrationUrl") ?? "") || undefined,
       strapline: String(formData.get("strapline") ?? "") || undefined,
     });
   } catch (error) {

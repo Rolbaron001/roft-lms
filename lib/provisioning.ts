@@ -532,6 +532,14 @@ export const brandingInput = z.object({
   logoUrl: logoAddress,
   /** A graphic for the sign-in page, and a line under it. Both optional. */
   signInGraphicUrl: logoAddress,
+  /**
+   * The picture on an empty screen, per tenant rather than per deployment.
+   *
+   * Validated by the same rule as a logo, which is the point: a tenant sets a
+   * picture the same way whatever the picture is for, and it can only be an
+   * address this platform will actually serve.
+   */
+  illustrationUrl: logoAddress,
   strapline: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
@@ -556,6 +564,7 @@ export async function updateOwnBranding(
         accentColour: parsed.accentColour,
         logoUrl: parsed.logoUrl || null,
         signInGraphicUrl: parsed.signInGraphicUrl || null,
+        illustrationUrl: parsed.illustrationUrl || null,
         strapline: parsed.strapline || null,
         updatedAt: new Date(),
       })

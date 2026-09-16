@@ -26,6 +26,8 @@ export type TenantIdentity = {
   displayName: string;
   logoUrl: string | null;
   signInGraphicUrl: string | null;
+  /** This tenant's own illustration, or null for the deployment's. */
+  illustrationUrl: string | null;
   strapline: string | null;
   primaryColour: string;
   accentColour: string;
@@ -178,6 +180,7 @@ export async function resolveTenant(
           displayName: organisations.displayName,
           logoUrl: organisations.logoUrl,
           signInGraphicUrl: organisations.signInGraphicUrl,
+          illustrationUrl: organisations.illustrationUrl,
           strapline: organisations.strapline,
           primaryColour: organisations.primaryColour,
           accentColour: organisations.accentColour,

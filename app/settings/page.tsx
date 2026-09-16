@@ -84,6 +84,7 @@ export default async function SettingsPage() {
           accentColour: tenant.accentColour,
           logoUrl: tenant.logoUrl,
           signInGraphicUrl: tenant.signInGraphicUrl,
+          illustrationUrl: tenant.illustrationUrl,
           strapline: tenant.strapline,
         }}
       />

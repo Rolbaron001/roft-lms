@@ -16,6 +16,7 @@ export function BrandingForm({
     accentColour: string;
     logoUrl: string | null;
     signInGraphicUrl: string | null;
+    illustrationUrl: string | null;
     strapline: string | null;
   };
 }) {
@@ -32,6 +33,9 @@ export function BrandingForm({
   const [logoError, setLogoError] = useState<string | null>(null);
   const [graphic, setGraphic] = useState(defaults.signInGraphicUrl ?? "");
   const [strapline, setStrapline] = useState(defaults.strapline ?? "");
+  const [illustration, setIllustration] = useState(
+    defaults.illustrationUrl ?? "",
+  );
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -242,6 +246,34 @@ export function BrandingForm({
               placeholder="https://…"
               className={inputClass}
             />
+          </label>
+
+          {/*
+            The picture on an empty screen, per tenant.
+
+            It used to be one setting for the whole deployment - one picture for
+            everybody on that server - which was right while a deployment served
+            one operator and wrong as soon as it serves several. Left empty, it
+            falls back to the deployment's own, so a tenant that never touches
+            this sees exactly what it saw before.
+          */}
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-medium text-[var(--muted)]">
+              Picture for empty screens
+            </span>
+            <input
+              name="illustrationUrl"
+              value={illustration}
+              onChange={(event) => setIllustration(event.target.value)}
+              placeholder="https://… or /your-graphic.png"
+              className={inputClass}
+            />
+            <span className="block text-xs text-[var(--muted)]">
+              Shown where a screen has nothing on it yet — beside the sentence
+              explaining what would be there. Small, and it should read as
+              friendly rather than decorative. Leave it empty to use this
+              platform&rsquo;s own.
+            </span>
           </label>
 
           <label className="block space-y-1.5">

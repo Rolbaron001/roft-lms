@@ -99,6 +99,22 @@ export const organisations = pgTable(
      * a bare form on white.
      */
     signInGraphicUrl: text("sign_in_graphic_url"),
+
+    /**
+     * A small illustration for empty screens, or null to use the
+     * deployment's own.
+     *
+     * The illustration was a deployment-wide setting - one environment
+     * variable, one picture for everybody on that server. That was right while
+     * a deployment served one operator, and wrong as soon as it serves
+     * several: one tenant having a mascot must not put that mascot in another
+     * tenant's product.
+     *
+     * Roland asked for graphics to be settable as part of tenant branding on
+     * 16 September. Null means "whatever this deployment is configured with",
+     * so nothing changes for a tenant that never sets one.
+     */
+    illustrationUrl: text("illustration_url"),
     strapline: text("strapline"),
 
     primaryColour: text("primary_colour").notNull().default("#0D1E32"),

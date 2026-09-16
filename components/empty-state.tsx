@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { platformIllustration } from "@/lib/platform";
+import { currentTenant } from "@/lib/request";
 
 /**
  * What a screen says when there is nothing on it yet.
@@ -15,7 +16,7 @@ import { platformIllustration } from "@/lib/platform";
  * carrying the meaning anyway, and the picture is marked decorative for a
  * screen reader for exactly that reason.
  */
-export function EmptyState({
+export async function EmptyState({
   title,
   children,
   showIllustration = true,
@@ -27,7 +28,19 @@ export function EmptyState({
   showIllustration?: boolean;
   action?: React.ReactNode;
 }) {
-  const illustration = showIllustration ? platformIllustration() : null;
+  /*
+   * The tenant's own picture, or this deployment's, or none.
+   *
+   * It was the deployment's alone, which was right while a deployment served
+   * one operator and wrong as soon as it serves several - one tenant's mascot
+   * has no business appearing in another tenant's product. A tenant that never
+   * sets one is unaffected: null falls through to exactly what was there
+   * before.
+   */
+  const tenant = showIllustration ? await currentTenant() : null;
+  const illustration = showIllustration
+    ? (tenant?.illustrationUrl ?? platformIllustration())
+    : null;
 
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-12 text-center">
