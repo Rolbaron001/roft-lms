@@ -89,6 +89,31 @@ export function FromDocument() {
       input.files = transfer.files;
     }
   });
+  const anyChosen = Object.values(chosen).some((name) => Boolean(name));
+
+  /*
+   * How long the reading has been going.
+   *
+   * There is no real progress to report - it is one server call that does not
+   * report back - so this counts seconds honestly rather than drawing a bar
+   * that advances on a guess. A bar that reaches ninety per cent and stops is
+   * worse than none.
+   */
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!readPending) return;
+    const started = Date.now();
+    const timer = setInterval(
+      () => setSeconds(Math.round((Date.now() - started) / 1000)),
+      1000,
+    );
+    return () => {
+      clearInterval(timer);
+      setSeconds(0);
+    };
+  }, [readPending]);
+
 
   if (!open) {
     return (
@@ -105,8 +130,28 @@ export function FromDocument() {
 
   const found = reading.reading;
 
+  /*
+   * Which of the three steps is showing.
+   *
+   * The flow was already read-then-confirm; what it never did was say so. The
+   * qualification test failed partly on not knowing what would happen next or
+   * whether anything had been written yet, and a person who cannot see where
+   * they are in a process assumes the worst at the first pause.
+   */
+  const step = found ? 2 : 1;
+
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+      {/*
+        Two steps, because there are two. Creating redirects straight to the
+        qualification, so a third step would be a state this component never
+        sees - and a step somebody never arrives at is worse than no step.
+      */}
+      <Steps
+        current={step}
+        labels={["Choose the documents", "Check what was found"]}
+      />
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -165,14 +210,44 @@ export function FromDocument() {
           ))}
         </div>
 
-        <button
-          type="submit"
-          formAction={read}
-          disabled={readPending}
-          className="mt-4 rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium disabled:opacity-60"
-        >
-          {readPending ? "Reading…" : "Read them"}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            formAction={read}
+            disabled={readPending}
+            className={`rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+              anyChosen && !readPending && !found
+                ? "ring-2 ring-[var(--brand-accent)] ring-offset-2 ring-offset-[var(--surface)] motion-safe:animate-pulse"
+                : ""
+            }`}
+          >
+            {readPending ? "Reading…" : "Read them"}
+          </button>
+
+          {anyChosen && !readPending && !found ? (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
+              <span aria-hidden className="motion-safe:animate-bounce">
+                ←
+              </span>
+              Now press this. Nothing is written yet.
+            </p>
+          ) : null}
+
+          {readPending ? (
+            <p
+              role="status"
+              className="flex items-center gap-2 text-sm text-[var(--muted)]"
+            >
+              <span
+                aria-hidden
+                className="inline-block h-4 w-4 rounded-full border-2 border-[var(--border)] border-t-[var(--brand-accent)] motion-safe:animate-spin"
+              />
+              {seconds < 15
+                ? "Reading the documents…"
+                : `Still reading — ${seconds} seconds. A curriculum document is long; this is normal.`}
+            </p>
+          ) : null}
+        </div>
 
         {reading.error ? (
           <p
@@ -425,5 +500,62 @@ export function FromDocument() {
         ) : null}
       </form>
     </section>
+  );
+}
+
+/**
+ * Where you are, and what is left.
+ *
+ * Three steps rather than a bar with a percentage, because the steps are real
+ * and a percentage would not be. Each is named by what the person does at it,
+ * not by what the system does - "check what was found" rather than "parsing".
+ */
+function Steps({
+  current,
+  labels,
+}: {
+  current: number;
+  labels: string[];
+}) {
+  return (
+    <ol className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      {labels.map((label, index) => {
+        const number = index + 1;
+        const done = number < current;
+        const here = number === current;
+
+        return (
+          <li key={label} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${
+                here
+                  ? "border-[var(--brand-accent)] bg-[var(--brand-accent)] font-semibold text-white"
+                  : done
+                    ? "border-[var(--success)] text-[var(--success)]"
+                    : "border-[var(--border)] text-[var(--muted)]"
+              }`}
+            >
+              {done ? "✓" : number}
+            </span>
+            <span
+              className={
+                here
+                  ? "font-medium text-[var(--foreground)]"
+                  : "text-[var(--muted)]"
+              }
+            >
+              {label}
+              {here ? <span className="sr-only"> (you are here)</span> : null}
+            </span>
+            {number < labels.length ? (
+              <span aria-hidden className="text-[var(--muted)]">
+                &rarr;
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

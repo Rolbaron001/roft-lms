@@ -127,6 +127,48 @@ attempt.
 
 ---
 
+## Where it got to, 16 September
+
+**Batch A — done (cbff0fe).** The documents route is first, and the ordering is
+the fix rather than a preference. The folder card states what it needs before
+anything is chosen, including whether this person's extension can run here at
+all. A revoked or expired token produces a sentence somebody can act on rather
+than the provider's own words about an API being revoked.
+
+**Batch D — done (cbff0fe).** The button announces itself when it becomes the
+thing to press, and says nothing is saved yet. While a read is running there is
+a spinner, the elapsed seconds, and a line that changes as it goes.
+Deliberately not a progress bar: the work is one server call that does not
+report back, so a bar would advance on a guess, and one that reaches ninety per
+cent and stops is worse than none.
+
+**The mascot is not in it, and that is a decision rather than an omission.**
+Heidi's instinct was right, but a Curiosa character hardcoded into a shared
+component appears on every tenant's screen, and the standing rule is that
+nothing is built for Curiosa alone. Doing it properly means a per-tenant mascot
+image somebody sets in Settings — a column, an upload, and a control. Worth
+doing; not worth doing badly in an afternoon. **A question for Roland: is it
+worth that, or is the neutral treatment enough?**
+
+**Batch C — done (1e67f7d).** Gemini by API key, and with it the first
+provider that can run on the server at all. The claim that "a second provider
+is a file rather than a project" held: a file and one line. The settings screen
+now says an API key is not a subscription, because everybody assumes it is.
+OpenAI is the same shape and is next.
+
+**Batch B — started, not finished (this commit).** The documents flow was
+already two steps, read then confirm; what it never did was say so. It now
+shows which step you are on, draws the eye to the read button, and shows
+elapsed time while reading.
+
+What is **not** done, and should not be mistaken for done: the fuller assistant
+in the batch above — choosing an existing qualification to add to, the
+assessment specification as its own step, and the folder of material as a final
+step. The flow today still asks for the three documents on one screen. That is
+a real improvement on this morning and it is not the whole of Batch B.
+
+---
+
 ## Open, and not to be guessed at
 
 - **Heidi's own notes**, when they arrive. Added here rather than remembered.
