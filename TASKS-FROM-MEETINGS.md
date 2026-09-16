@@ -658,8 +658,22 @@ Worth recording, because each looked like a problem and was not:
 ## Carried over
 
 - **Outbound mail refuses the login** (`535`). Awaiting Linda.
-- **The `tools` container cannot resolve DNS.** Harmless today; breaks off-site
-  backups.
+- **The `tools` container has no route off the machine.** Recorded until
+  16 September as "cannot resolve DNS", which is a misdiagnosis and would send
+  the next person hunting through `resolv.conf` for nothing. The compose file
+  declares `internal: true` on the `internal` network, and `tools` joins that
+  network and no other. So it reaches the database and nothing else, on
+  purpose. DNS is a symptom.
+
+  Harmless today, because everything `tools` does - migrations, the nightly
+  local backup, the notification sweep - is inside the machine. It blocks
+  off-site backups, which is the next thing that needs it.
+
+  **Not changed without Roland.** Giving `tools` the `edge` network is one
+  line, but that container holds the database admin credentials and the
+  isolation is deliberate. It is also not urgent: off-site backup is blocked on
+  choosing a bucket, which is his decision anyway, and the two should be made
+  together.
 - **Off-site storage for backups.** Outstanding.
 - **The Commercial Cleaner curriculum imports thin.** Modules and topics land;
   topic content and internal assessment criteria do not. Same shape as the

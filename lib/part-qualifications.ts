@@ -2,6 +2,7 @@ import { and, eq, inArray, sql as dbSql } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import {
   curriculumModules,
+  enrolments,
   qualificationModules,
   qualifications,
 } from "@/db/schema";
@@ -33,7 +34,9 @@ export class PartQualificationError extends Error {
       | "not_permitted"
       | "wrong_kind"
       | "not_in_parent"
-      | "credits_disagree",
+      | "credits_disagree"
+      | "in_use"
+      | "would_orphan",
   ) {
     super(message);
     this.name = "PartQualificationError";
@@ -220,6 +223,185 @@ export async function selectModules(
     });
 
     return { selected: wanted.length };
+  });
+}
+
+/** What reclassifying a qualification would do, said before it is done. */
+export type Reclassification = {
+  from: "full" | "part" | "skills_programme";
+  to: "full" | "part" | "skills_programme";
+  /** Modules of its own curriculum, which a part does not have. */
+  ownModules: number;
+  /** Modules it selects from a parent, which a full qualification does not. */
+  selectedModules: number;
+  /** Learners enrolled on it. Any at all, and it cannot be reclassified. */
+  enrolled: number;
+};
+
+/**
+ * Changing what a qualification is, after it has been created.
+ *
+ * Until now the kind and the parent were settable only at import, so a
+ * qualification imported as full that should have been a part had to be
+ * deleted and done again - taking its documents and anything already built on
+ * it with it. Heidi is about to import several for the first time, and
+ * "imported it as the wrong kind" is the most ordinary mistake there is.
+ *
+ * The line this will not cross is enrolment. Enrolment is per programme ID,
+ * and a learner is enrolled on this qualification as it is: changing a full
+ * qualification into a part changes which modules they are assessed against,
+ * and therefore what they have to do to complete. That is not a correction, it
+ * is a different programme, and the platform refuses rather than quietly
+ * moving the goalposts under somebody mid-study.
+ *
+ * Everything else is allowed and reported rather than forbidden. A part that
+ * still holds modules of its own curriculum is a real state of affairs - it
+ * was imported as a full qualification and had one - and refusing to record
+ * the correction because the consequence is untidy would leave the wrong
+ * answer in place, which is worse.
+ */
+export async function planReclassification(
+  session: AuthenticatedSession,
+  qualificationId: string,
+): Promise<Reclassification> {
+  assertSessionCan(session, "qualification:manage");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [entry] = await tx
+      .select({ kind: qualifications.kind })
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+
+    if (!entry) {
+      throw new PartQualificationError(
+        "That qualification is not here.",
+        "not_found",
+      );
+    }
+
+    const own = await tx
+      .select({ id: curriculumModules.id })
+      .from(curriculumModules)
+      .where(eq(curriculumModules.qualificationId, qualificationId));
+
+    const selected = await tx
+      .select({ id: qualificationModules.id })
+      .from(qualificationModules)
+      .where(eq(qualificationModules.qualificationId, qualificationId));
+
+    const enrolled = await tx
+      .select({ id: enrolments.id })
+      .from(enrolments)
+      .where(eq(enrolments.qualificationId, qualificationId));
+
+    return {
+      from: entry.kind,
+      to: entry.kind,
+      ownModules: own.length,
+      selectedModules: selected.length,
+      enrolled: enrolled.length,
+    };
+  });
+}
+
+export async function reclassify(
+  session: AuthenticatedSession,
+  qualificationId: string,
+  input: {
+    kind: "full" | "part" | "skills_programme";
+    /** Required for a part or a skills programme; ignored for a full one. */
+    parentId?: string | null;
+  },
+): Promise<Reclassification> {
+  assertSessionCan(session, "qualification:manage");
+
+  const plan = await planReclassification(session, qualificationId);
+
+  if (plan.enrolled > 0) {
+    throw new PartQualificationError(
+      `${plan.enrolled} ${plan.enrolled === 1 ? "learner is" : "learners are"} enrolled on this qualification, so what it is cannot be changed underneath them. Enrolment is per programme ID: create the right one and enrol them onto that.`,
+      "in_use",
+    );
+  }
+
+  const wantsParent = input.kind !== "full";
+  const parentId = wantsParent ? (input.parentId ?? null) : null;
+
+  if (wantsParent && !parentId) {
+    throw new PartQualificationError(
+      "A part qualification or skills programme draws its modules from a parent, so it needs one named.",
+      "wrong_kind",
+    );
+  }
+
+  if (parentId === qualificationId) {
+    throw new PartQualificationError(
+      "A qualification cannot be a part of itself.",
+      "wrong_kind",
+    );
+  }
+
+  if (parentId) {
+    const [parent] = await withTenant(session.organisationId, (tx) =>
+      tx
+        .select({ kind: qualifications.kind })
+        .from(qualifications)
+        .where(eq(qualifications.id, parentId)),
+    );
+
+    if (!parent) {
+      throw new PartQualificationError(
+        "That parent qualification is not here.",
+        "not_found",
+      );
+    }
+
+    // One level, deliberately. A part of a part has no meaning in the
+    // documents: each part's SAQA document lists the full qualification's own
+    // module codes.
+    if (parent.kind !== "full") {
+      throw new PartQualificationError(
+        "A part draws from a full qualification. The one named is itself a part.",
+        "wrong_kind",
+      );
+    }
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    await tx
+      .update(qualifications)
+      .set({ kind: input.kind, parentQualificationId: parentId })
+      .where(eq(qualifications.id, qualificationId));
+
+    // A full qualification selects nothing from anybody. Left behind, those
+    // rows would keep counting towards its credits.
+    let cleared = 0;
+    if (input.kind === "full" && plan.selectedModules > 0) {
+      await tx
+        .delete(qualificationModules)
+        .where(eq(qualificationModules.qualificationId, qualificationId));
+      cleared = plan.selectedModules;
+    }
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "qualification.reclassified",
+      entityType: "qualification",
+      entityId: qualificationId,
+      before: { kind: plan.from },
+      after: {
+        kind: input.kind,
+        parentQualificationId: parentId,
+        selectionsCleared: cleared,
+      },
+    });
+
+    return {
+      ...plan,
+      to: input.kind,
+      selectedModules: plan.selectedModules - cleared,
+    };
   });
 }
 

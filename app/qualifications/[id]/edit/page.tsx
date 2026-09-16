@@ -7,9 +7,12 @@ import {
   CurriculumError,
 } from "@/lib/curriculum-editor";
 import { programmeReadiness } from "@/lib/programme-readiness";
+import { planReclassification } from "@/lib/part-qualifications";
+import { listQualifications } from "@/lib/authoring";
 import { AppShell, Card } from "@/components/app-shell";
 import { ModuleEditor } from "./module-editor";
 import { AddModule } from "./add-module";
+import { ReclassifyForm } from "./reclassify-form";
 
 /**
  * Building a curriculum by hand.
@@ -40,10 +43,20 @@ export default async function EditCurriculumPage({
     throw error;
   }
 
-  const [problems, readiness] = await Promise.all([
-    curriculumProblems(session, id),
-    programmeReadiness(session, id),
-  ]);
+  const [problems, readiness, classification, everyQualification] =
+    await Promise.all([
+      curriculumProblems(session, id),
+      programmeReadiness(session, id),
+      planReclassification(session, id),
+      listQualifications(session),
+    ]);
+
+  // Only a full qualification can be a parent: a part of a part has no meaning
+  // in the documents, where each part lists the full qualification's own
+  // module codes.
+  const candidates = everyQualification
+    .filter((one) => one.id !== id && one.kind === "full")
+    .map((one) => ({ id: one.id, title: one.title }));
 
   const faults = problems.filter((problem) => problem.severity === "problem");
   const notes = problems.filter((problem) => problem.severity === "note");
@@ -87,6 +100,23 @@ export default async function EditCurriculumPage({
           </ul>
         </div>
       )}
+
+      <div className="mb-6">
+        <Card
+          title="What this qualification is"
+          description="Set when it was imported, and correctable here. A full qualification has its own curriculum; a part or a skills programme selects modules from one."
+        >
+          <ReclassifyForm
+            qualificationId={id}
+            kind={classification.from}
+            parentId={curriculum.qualification.parentQualificationId ?? null}
+            ownModules={classification.ownModules}
+            selectedModules={classification.selectedModules}
+            enrolled={classification.enrolled}
+            candidates={candidates}
+          />
+        </Card>
+      </div>
 
       {faults.length > 0 ? (
         <Card

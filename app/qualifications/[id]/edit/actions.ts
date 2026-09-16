@@ -17,6 +17,7 @@ import {
   updateTopicElement,
   type ElementKind,
 } from "@/lib/curriculum-editor";
+import { PartQualificationError, reclassify } from "@/lib/part-qualifications";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type EditorState = { error?: string; done?: string };
@@ -38,6 +39,7 @@ async function run(
     if (
       error instanceof CurriculumError ||
       error instanceof AuthoringError ||
+      error instanceof PartQualificationError ||
       error instanceof PermissionDeniedError
     ) {
       return { error: error.message };
@@ -270,5 +272,42 @@ export async function removeCriterionAction(
     qualificationId,
     () => removeCriterion(session, field(formData, "criterionId")),
     "Criterion removed.",
+  );
+}
+
+/**
+ * Correcting what a qualification is.
+ *
+ * Its own action rather than part of the details form: this is not editing a
+ * field, it is saying the thing was filed as the wrong sort of thing. The
+ * consequences are reported by the library and passed straight through, so a
+ * refusal names the learners in the way rather than saying "could not save".
+ */
+export async function reclassifyAction(
+  _previous: EditorState,
+  formData: FormData,
+): Promise<EditorState> {
+  const session = await requirePermission("qualification:manage");
+  const qualificationId = field(formData, "qualificationId");
+  const kind = field(formData, "kind");
+
+  if (kind !== "full" && kind !== "part" && kind !== "skills_programme") {
+    return { error: "Choose what this qualification is." };
+  }
+
+  const parentId = field(formData, "parentId");
+
+  return run(
+    qualificationId,
+    () =>
+      reclassify(session, qualificationId, {
+        kind,
+        parentId: parentId || null,
+      }),
+    kind === "full"
+      ? "Recorded as a full qualification."
+      : kind === "part"
+        ? "Recorded as a part qualification of the one named."
+        : "Recorded as a skills programme drawn from the one named.",
   );
 }
