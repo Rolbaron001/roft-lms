@@ -321,7 +321,23 @@ QA'd before capture, details go into both the LMS *and* the Tracker.
 Confirmed 9 September: enrolment starts after invoicing and proof of payment;
 cohorts run at 5–10 learners minimum.
 
-**Size:** small.
+**Done, 16 September — see [SOP-CHECK-enrolment.md](SOP-CHECK-enrolment.md).**
+Every line of the procedure checked against the platform. Most steps were
+already built. Three things came out of it:
+
+- **Fixed.** The two grounds the procedure names as flat rules for turning away
+  an ID — more than one certification date, an illegible copy — were possible
+  but unwritten, left to whatever a reviewer typed. They are now offered by
+  name on the screen where the check happens.
+- **To raise with Curiosa.** The procedure says "Enter details in LMS and
+  Tracker". Both are supported, but that is the duplication a system of record
+  exists to end, and it is worth asking whether the Tracker should be fed from
+  the platform instead.
+- **A real gap, still open.** The procedure says to submit the LEISA *and ask
+  for acknowledgement*. The platform records the submission but has no state
+  for "acknowledged", so one that was never acknowledged looks exactly like one
+  that was — which is the whole reason the procedure asks. Small, needs the
+  mail relay to be useful, and waits behind Linda with the rest.
 
 ### 6 · CAT and RPL: the three-year rule — **done, 10 September**
 

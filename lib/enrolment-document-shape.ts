@@ -54,6 +54,57 @@ export const ENROLMENT_ROUTES: EnrolmentRoute[] = [
   "employment_equity",
 ];
 
+/**
+ * The grounds a document is commonly turned away on.
+ *
+ * Offered as a list rather than left to whatever somebody types. Curiosa's
+ * enrolment procedure names two of these as flat rules rather than judgements
+ * - "multiple certification dates on an ID is unacceptable, illegible IDs not
+ * acceptable" - and a rule that only exists in a Word document gets applied
+ * differently by each person who remembers it differently.
+ *
+ * Writing the reason is still possible and still required; this only saves
+ * typing the same sentence a hundred times, and makes "how often are we
+ * sending copies back, and why" a question somebody can answer.
+ *
+ * The wording is the learner's to read. Each is phrased as what to do about
+ * it, because a refusal is sent back to somebody who has to fix it.
+ */
+export const REFUSAL_REASONS: { forKinds: DocumentKind[] | "any"; text: string }[] =
+  [
+    {
+      forKinds: ["certified_id"],
+      text: "The ID has more than one certification date on it. Please supply a copy certified once, recently.",
+    },
+    {
+      forKinds: "any",
+      text: "The copy is not legible. Please scan or photograph it again, flat and in good light.",
+    },
+    {
+      forKinds: ["certified_id", "highest_qualification"],
+      text: "This is not a certified copy. Please have it certified and send it again.",
+    },
+    {
+      forKinds: ["certified_id", "highest_qualification"],
+      text: "The certification is older than the period allowed. Please have a fresh copy certified.",
+    },
+    {
+      forKinds: "any",
+      text: "Some of the pages are missing.",
+    },
+    {
+      forKinds: "any",
+      text: "This is not the document that was asked for.",
+    },
+  ];
+
+/** The reasons worth offering for one kind of document. */
+export function refusalReasonsFor(kind: DocumentKind): string[] {
+  return REFUSAL_REASONS.filter(
+    (reason) => reason.forKinds === "any" || reason.forKinds.includes(kind),
+  ).map((reason) => reason.text);
+}
+
 /** Kinds that must be a certified copy, and therefore go stale. */
 export const CERTIFIED_KINDS: DocumentKind[] = [
   "certified_id",

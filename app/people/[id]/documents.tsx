@@ -9,6 +9,7 @@ import {
 import {
   CERTIFIED_KINDS,
   DOCUMENT_LABEL,
+  refusalReasonsFor,
   ROUTE_LABEL,
   type DocumentKind,
   type EnrolmentReadiness,
@@ -147,11 +148,27 @@ export function EnrolmentDocuments({
                           name="documentId"
                           value={document.id}
                         />
+                        {/*
+                          The grounds Curiosa's enrolment procedure names as
+                          flat rules - more than one certification date on an
+                          ID, an illegible copy - offered rather than left to
+                          whoever remembers them. Typing your own is still
+                          possible: the list is a shortcut, not a menu of the
+                          only acceptable answers.
+                        */}
                         <input
                           name="reason"
+                          list={`refusal-${document.id}`}
                           placeholder="Reason, if refusing"
-                          className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
+                          className="min-w-[16rem] flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
                         />
+                        <datalist id={`refusal-${document.id}`}>
+                          {refusalReasonsFor(
+                            document.kind as DocumentKind,
+                          ).map((reason) => (
+                            <option key={reason} value={reason} />
+                          ))}
+                        </datalist>
                         <button
                           type="submit"
                           name="outcome"
