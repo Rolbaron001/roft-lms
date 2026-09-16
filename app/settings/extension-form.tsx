@@ -101,7 +101,13 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
           name="token"
           type="password"
           autoComplete="off"
-          placeholder={isKeyProvider ? "AIza…" : "sk-ant-oat…"}
+          placeholder={
+            provider === "gemini"
+              ? "AIza…"
+              : provider === "openai"
+                ? "sk-proj-…"
+                : "sk-ant-oat…"
+          }
           className={`${inputClass} mt-1 block w-full max-w-md font-mono`}
         />
       </label>
@@ -149,7 +155,11 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               name="model"
               defaultValue={current.model ?? ""}
               placeholder={
-                provider === "gemini" ? "gemini-2.5-flash" : "claude-opus-5"
+                provider === "gemini"
+                  ? "gemini-2.5-flash"
+                  : provider === "openai"
+                    ? "gpt-5"
+                    : "claude-opus-5"
               }
               className={`${inputClass} mt-1 block w-full max-w-md`}
             />
@@ -401,10 +411,23 @@ function ApiKeyGuide({ provider }: { provider: string }) {
         </span>{" "}
         {gemini
           ? "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it."
-          : "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second."}
+          : "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it."}
       </p>
 
-      {gemini ? (
+      {!gemini ? (
+        <p>
+          Create a key at{" "}
+          <span className="font-mono">platform.openai.com</span>, under{" "}
+          <span className="font-medium text-[var(--foreground)]">API keys</span>
+          , and paste it above. It begins{" "}
+          <span className="font-mono">sk-</span>.{" "}
+          <span className="font-medium text-[var(--foreground)]">
+            There is no free tier
+          </span>{" "}
+          — unlike Gemini, every call is charged to the account the key belongs
+          to, so expect a bill, however small.
+        </p>
+      ) : (
         <>
           <p>
             Sign in at{" "}
@@ -422,11 +445,6 @@ function ApiKeyGuide({ provider }: { provider: string }) {
             platform will say so plainly if it does.
           </p>
         </>
-      ) : (
-        <p>
-          Create a key in your provider&rsquo;s own console and paste it above.
-          Keys are charged per use against the account they belong to.
-        </p>
       )}
 
       <p>

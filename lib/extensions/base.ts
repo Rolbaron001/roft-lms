@@ -84,5 +84,5 @@ export type AiProvider = {
 };
 
 /** Every provider name the platform knows. Used to validate a stored setting. */
-export const PROVIDER_NAMES = ["claude_code", "gemini"] as const;
+export const PROVIDER_NAMES = ["claude_code", "gemini", "openai"] as const;
 export type ProviderName = (typeof PROVIDER_NAMES)[number];

@@ -6,6 +6,7 @@ import { assertSessionCan, type AuthenticatedSession } from "../session";
 import { hintOf, seal, sealingAvailable, unseal } from "../secret-box";
 import { claudeCodeProvider } from "./claude-code";
 import { geminiProvider } from "./gemini";
+import { openAiProvider } from "./openai";
 import {
   PROVIDER_NAMES,
   type AiProvider,
@@ -37,6 +38,7 @@ export * from "./base";
 const PROVIDERS: Record<ProviderName, AiProvider> = {
   claude_code: claudeCodeProvider,
   gemini: geminiProvider,
+  openai: openAiProvider,
 };
 
 /**
