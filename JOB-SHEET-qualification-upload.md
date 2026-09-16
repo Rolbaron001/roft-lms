@@ -169,9 +169,54 @@ a real improvement on this morning and it is not the whole of Batch B.
 
 ---
 
-## Open, and not to be guessed at
+## Heidi's notes, arrived 16 September
 
-- **Heidi's own notes**, when they arrive. Added here rather than remembered.
+From the meeting record of the test. They confirm the diagnosis above and add
+two things that were not on this sheet.
+
+**Confirmed, and already done today:** the missing progress indicator; multiple
+AI models rather than Claude only; the revoked-token error; and the folder
+upload failing on a missing extension. Also worth recording: **Heidi's
+extension was switched off on her account**, which is by design — it is
+per-person and every sitting starts with it off — but it was not obvious to
+either of them at the time. Batch A now says so on the screen.
+
+**New, and not previously on this sheet:**
+
+- **Read files directly from Google Drive and OneDrive.** Roland's own next
+  step from the meeting. This is a feature rather than a fix and it is not
+  small: an OAuth connection per person, per provider, with a consent screen
+  and a token to store and refresh. It also changes the privacy story — the
+  platform would be reaching into somebody's own drive — so it wants deciding
+  rather than starting. **Batch E below.**
+- **"11 of 30 items loaded" on the Advanced Occupational Certificate.** The
+  meeting record is ambiguous about what the items were, and the number is
+  exactly the shape of the Commercial Cleaner fault: most of a thing arriving
+  and nobody able to tell that the rest did not. **Being investigated against
+  the real 121151 documents rather than guessed at.**
+
+**Not a fault:** the document alignment error Heidi found was a document filed
+against tasks rather than exit level outcomes. She removed it and uploaded the
+right one. The platform did what it was told.
+
+## Batch E — Google Drive and OneDrive
+
+**Raised by Roland in the meeting, not yet scoped or started.** Recorded here
+so it is not lost, and deliberately not begun without a decision.
+
+It is an OAuth connection per person per provider: a consent screen, a stored
+refresh token, and a file picker. The work is not the reading — the platform
+already reads files it is handed — it is the connection and what it means. The
+platform would hold a credential that can read somebody's whole drive, which is
+a different promise from holding one that can call a model.
+
+Worth asking whether it is wanted at all now that a folder can be chosen from
+the computer in two clicks, or whether it is wanted because the documents live
+in a shared drive that nobody downloads.
+
+---
+
+## Open, and not to be guessed at
 - **Whether a per-person API key is acceptable to Curiosa at all**, or whether
   they would rather nobody held one. Gemini's free tier makes it testable; it
   does not make it policy.

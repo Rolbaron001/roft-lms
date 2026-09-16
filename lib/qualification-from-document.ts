@@ -546,14 +546,21 @@ export async function createQualificationFromDocuments(
       criteria: outcome.criteria,
     })),
     modules: curriculum.modules.map((module) => {
-      // A criterion code has to be unique within its module, and an element
-      // code within its topic. The real documents break both: 121150 restarts
-      // its criteria at IAC0101 in a second topic of KM02, and numbers five
-      // different work activities WA0201. Only the first of each can be
-      // stored, so the rest are dropped here and named in the result — the
-      // alternative is the whole import failing on a constraint, which loses
-      // four hundred good lines over a numbering slip.
-      const seenCriteria = new Set<string>();
+      // A code has to be unique within its topic - a criterion as well as an
+      // element. The real documents still break that: 121151 numbers five
+      // different work activities WA0201 under one topic, and uses AK0105
+      // twice. Only the first of each can be stored, so the rest are dropped
+      // here and named in the result - the alternative is the whole import
+      // failing on a constraint, which loses four hundred good lines over a
+      // numbering slip.
+      //
+      // Criteria were scoped to the module until 16 September, and that was
+      // wrong rather than strict. 121151's PM01 restarts at IAC0101 under its
+      // second topic, which is a perfectly ordinary thing for a curriculum to
+      // do - PM03 in the same document does the opposite - and it cost that
+      // module four of its eight criteria, silently, with the note blaming the
+      // document. A learner would have been assessed against half of what the
+      // curriculum requires.
 
       return {
         component: module.component,
@@ -563,6 +570,7 @@ export async function createQualificationFromDocuments(
         nqfLevel: module.nqfLevel ?? undefined,
         topics: module.topics.map((topic) => {
           const seenElements = new Set<string>();
+          const seenCriteria = new Set<string>();
 
           const elements = topic.elements.filter((element) => {
             if (seenElements.has(element.code)) {
@@ -577,7 +585,9 @@ export async function createQualificationFromDocuments(
 
           const criteria = topic.criteria.filter((criterion) => {
             if (seenCriteria.has(criterion.code)) {
-              dropped.push(`${module.code}: a second ${criterion.code}`);
+              dropped.push(
+                `${module.code} / ${topic.code}: a second ${criterion.code}`,
+              );
               return false;
             }
             seenCriteria.add(criterion.code);

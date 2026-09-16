@@ -463,8 +463,31 @@ export const assessmentCriteria = pgTable(
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [
-    uniqueIndex("assessment_criteria_module_code_idx").on(
+    /*
+     * A criterion is unique within its topic, not within its whole module.
+     *
+     * It was per module until 16 September, and that quietly threw away real
+     * criteria. The QCTO's own documents do not agree with themselves about
+     * how to number them: in the HRM Officer curriculum (121151) module PM03
+     * numbers continuously across the module - IAC0101, then IAC0201 under the
+     * next topic - while PM01 restarts at IAC0101 under every topic. Both are
+     * unambiguous on the page, because the topic is the context.
+     *
+     * Per-module uniqueness turned the second reading into a clash, so PM01
+     * kept four of its eight criteria and reported the rest as a fault in the
+     * document. It was not one. A learner in that module would have been
+     * assessed against half of what the curriculum requires, and the readiness
+     * figure would have been computed from half.
+     *
+     * The topic is nullable, for a tenant whose criteria hang directly off a
+     * module, and Postgres treats every null as distinct - so this index stops
+     * applying to exactly those rows. That hole is closed by a partial index
+     * in db/policies.sql, which is where constraints Drizzle cannot express
+     * already live.
+     */
+    uniqueIndex("assessment_criteria_topic_code_idx").on(
       t.curriculumModuleId,
+      t.topicId,
       t.code,
     ),
     index("assessment_criteria_org_idx").on(t.organisationId),

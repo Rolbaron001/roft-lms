@@ -198,6 +198,16 @@ alter table enrolments drop constraint if exists enrolments_target_check;
 alter table enrolments add constraint enrolments_target_check
   check (num_nonnulls(course_id, learning_path_id) = 1);
 
+-- A criterion is unique within its topic, and the index on the table says so.
+-- Postgres treats every NULL as distinct, though, so that index stops applying
+-- to criteria that hang directly off a module rather than off a topic - which
+-- is a real shape, for a tenant outside the occupational qualification system.
+-- This closes exactly that gap and nothing else.
+drop index if exists assessment_criteria_module_code_no_topic_idx;
+create unique index assessment_criteria_module_code_no_topic_idx
+  on assessment_criteria (curriculum_module_id, code)
+  where topic_id is null;
+
 -- Moderation sampling is a proportion.
 alter table assessments drop constraint if exists assessments_sample_rate_check;
 alter table assessments add constraint assessments_sample_rate_check

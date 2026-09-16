@@ -61,22 +61,25 @@ describe("parseCurriculumText", () => {
     });
 
     /**
-     * The only things this document leaves over are faults in the document
-     * itself, and they are worth naming here because they are invisible on the
-     * page: KM02 restarts its criteria at IAC0101 in a second topic while its
-     * elements correctly run on to KT0201, and WM01 numbers five different
-     * work activities WA0201.
-     *
-     * The platform requires a criterion code to be unique in its module and an
-     * element code unique in its topic, so in both cases only the first can be
+     * One fault left, and it is a real one: WM01 numbers five different work
+     * activities WA0201, within a single topic, so only the first can be
      * stored. Saying so before anybody accepts the module is the difference
      * between renumbering four lines and losing them.
+     *
+     * Three notes that used to be here are gone, and their absence is the
+     * point. KM02 restarts its criteria at IAC0101 under a second topic, and
+     * this called that a fault in the document. It is not: a criterion is
+     * numbered within its topic, which is why the same document's elements
+     * correctly run on to KT0201 while its criteria do not. The platform was
+     * requiring a criterion code to be unique across a whole module, so it
+     * kept the first topic's three and threw the second topic's away - in a
+     * curriculum, not in a test fixture.
+     *
+     * Changed on 16 September, after the same shape turned up in 121151's PM01
+     * and cost it four of its eight criteria.
      */
     it("reports the document's own numbering faults, and nothing else", () => {
       expect(parsed.notes).toEqual([
-        "KM02: the document uses criterion IAC0101 more than once in this entry. Only the first can be stored — the rest need their own codes.",
-        "KM02: the document uses criterion IAC0102 more than once in this entry. Only the first can be stored — the rest need their own codes.",
-        "KM02: the document uses criterion IAC0103 more than once in this entry. Only the first can be stored — the rest need their own codes.",
         "WM01 / WE0102: the document uses WA0201 more than once. Only the first can be stored — the rest need their own codes.",
       ]);
     });

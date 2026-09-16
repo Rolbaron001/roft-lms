@@ -572,19 +572,29 @@ export async function addAssessmentCriterion(
       }
     }
 
+    /*
+     * Within the topic, because that is where the document makes it unique.
+     *
+     * See the index on the table. A curriculum that restarts its criterion
+     * numbering under each topic - which the HRM Officer curriculum does in
+     * some modules and not others - was losing every set after the first.
+     */
     const [clash] = await tx
       .select({ id: assessmentCriteria.id })
       .from(assessmentCriteria)
       .where(
         and(
           eq(assessmentCriteria.curriculumModuleId, parsed.curriculumModuleId),
+          parsed.topicId
+            ? eq(assessmentCriteria.topicId, parsed.topicId)
+            : isNull(assessmentCriteria.topicId),
           eq(assessmentCriteria.code, parsed.code),
         ),
       );
 
     if (clash) {
       throw new AuthoringError(
-        `${module.code} already has a criterion ${parsed.code}.`,
+        `${module.code} already has a criterion ${parsed.code}${parsed.topicId ? " under that topic" : ""}.`,
         "invalid_state",
       );
     }

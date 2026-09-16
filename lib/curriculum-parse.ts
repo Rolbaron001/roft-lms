@@ -969,8 +969,15 @@ function review(modules: ParsedModule[]): string[] {
     // can be stored, so it has to be said before somebody accepts the module
     // and quietly loses the other four.
     //
-    // The two scopes differ because the platform's do: a line to teach is
-    // unique within its topic, and a criterion within its whole module.
+    // Both are scoped to the topic, because that is where the document makes
+    // them unique and, since 16 September, where the platform does too.
+    //
+    // The criterion check used to span the whole module, and it reported a
+    // fault that was not one. The QCTO's documents do not agree with
+    // themselves: in 121151, PM03 numbers criteria continuously across its
+    // module while PM01 restarts at IAC0101 under every topic. Both are
+    // unambiguous on the page. Treating the second as a duplicate meant PM01
+    // kept four of its eight criteria and the note blamed the document.
     for (const topic of entry.topics) {
       for (const code of repeats(topic.elements.map((e) => e.code))) {
         notes.push(
@@ -979,12 +986,12 @@ function review(modules: ParsedModule[]): string[] {
       }
     }
 
-    for (const code of repeats(
-      entry.topics.flatMap((t) => t.criteria.map((c) => c.code)),
-    )) {
-      notes.push(
-        `${entry.code}: the document uses criterion ${code} more than once in this entry. Only the first can be stored — the rest need their own codes.`,
-      );
+    for (const topic of entry.topics) {
+      for (const code of repeats(topic.criteria.map((c) => c.code))) {
+        notes.push(
+          `${entry.code} / ${topic.code}: the document uses criterion ${code} more than once under this topic. Only the first can be stored — the rest need their own codes.`,
+        );
+      }
     }
 
     for (const topic of entry.topics) {
