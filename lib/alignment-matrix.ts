@@ -124,10 +124,42 @@ function findHeaderRow(sheet: Sheet): number {
 }
 
 /**
+ * Whether these bytes are a Word document rather than a workbook.
+ *
+ * Both are zip files, and they are told apart by what is inside: a Word
+ * document carries word/document.xml, a workbook carries xl/workbook.xml.
+ * Looking is cheap and does not depend on what the file was named.
+ */
+function looksLikeWord(bytes: Uint8Array): boolean {
+  const head = new TextDecoder("latin1").decode(bytes.slice(0, 4096));
+  return head.includes("word/document.xml") || head.includes("word/_rels");
+}
+
+/**
  * Reads the matrix without touching the database, so a file can be checked
  * before it is trusted.
  */
 export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
+  /*
+   * A Word document handed to a spreadsheet reader.
+   *
+   * Curiosa's own alignment document is a Word table - "CA - 121151 - KM PM
+   * ELO Alignment.docx" - and the message it produced was "This file is
+   * missing xl/workbook.xml, so it is not a readable Office document". That is
+   * true and useless: it names an internal part of a file format to somebody
+   * who wants to know what to do. Heidi uploaded exactly this during the test
+   * on 16 September.
+   *
+   * Checked by looking inside rather than by trusting the extension, because a
+   * file renamed .xlsx is still a Word document and would otherwise reach the
+   * same dead end by a longer road.
+   */
+  if (looksLikeWord(bytes)) {
+    throw new AlignmentMatrixError(
+      "That is a Word document, and the alignment matrix has to be a spreadsheet - one row per curriculum line, with a column headed something like “Topic Elements”. A Word table cannot be read this way yet. Save the matrix as .xlsx and upload that, or file this document against the qualification as ordinary material, where it is kept and searchable but not read.",
+    );
+  }
+
   const sheets = readXlsxSheets(bytes);
 
   const found = sheets

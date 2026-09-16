@@ -187,3 +187,27 @@ describe("reading an alignment matrix", () => {
     ).toThrow(AlignmentMatrixError);
   });
 });
+
+describe("an alignment matrix that is not a spreadsheet", () => {
+  /**
+   * Curiosa's own alignment document is a Word table, and handing it to the
+   * spreadsheet reader produced "This file is missing xl/workbook.xml, so it
+   * is not a readable Office document" — true, and useless to the person
+   * holding the file. Heidi uploaded exactly this during the test on
+   * 16 September.
+   *
+   * Told apart by looking inside rather than by the extension, because a Word
+   * document renamed .xlsx reaches the same dead end by a longer road.
+   */
+  it("says it is a Word document, and what to do instead", () => {
+    // A minimal zip whose directory names the Word part.
+    const asWord = new TextEncoder().encode(
+      "PK\u0003\u0004" + " ".repeat(30) + "word/document.xml" + " ".repeat(40),
+    );
+
+    expect(() => readAlignmentMatrix(asWord)).toThrow(/Word document/i);
+    expect(() => readAlignmentMatrix(asWord)).toThrow(/spreadsheet/i);
+    // And names the thing they can do right now with the file they have.
+    expect(() => readAlignmentMatrix(asWord)).toThrow(/ordinary material/i);
+  });
+});

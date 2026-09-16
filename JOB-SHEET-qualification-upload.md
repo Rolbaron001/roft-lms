@@ -199,6 +199,43 @@ either of them at the time. Batch A now says so on the screen.
 against tasks rather than exit level outcomes. She removed it and uploaded the
 right one. The platform did what it was told.
 
+## What the real 121151 folder turned up
+
+Roland supplied the full folder at 13:45 — the one Heidi uploaded. Running it
+through the platform's own material import found two things, and the first is
+the most serious thing found all day.
+
+**Every answer guide and every summative paper would have been published to
+learners.** All 81 files were recognised and every one matched its study unit,
+but 66 of them were filed as "other" because the rules only knew spelled-out
+words and Curiosa name theirs the way a provider does: `WB1` for workbook one,
+`SA1 V1 AG` for summative assessment one, version one, answer guide. A workbook
+memorandum, a summative memorandum and a summative assessment are withheld from
+anybody without the permission to assess. "Other" is withheld from nobody. So
+uploading that folder would have handed thirty-eight documents to the learners
+they are the answer keys for, silently, at the moment of upload.
+
+Fixed, with the memo rules deliberately ahead of the plain ones — "WB1 AG"
+contains "WB1", and getting that order wrong fails in the same direction as
+having no rule at all. "Other" is now nine files: the CCMA manual, the SABPP
+fact sheets, and two abbreviations nobody has explained. Those are somebody
+else's documents and "I do not know" is the right answer.
+
+**Their alignment document cannot be read, and now says so properly.** It is a
+Word table — `CA - 121151 - KM PM ELO Alignment.docx` — and the matrix reader
+takes a spreadsheet. What Heidi would have seen was "This file is missing
+xl/workbook.xml, so it is not a readable Office document": true, and useless to
+somebody holding a file. It now says it is a Word document, that the matrix has
+to be a spreadsheet, and what she can do with the file she has.
+
+**A decision for Roland.** Their document is not the same thing as the
+spreadsheet matrix. The spreadsheet maps each topic element to what teaches and
+tests it; this Word table maps each Exit Level Outcome to its modules and study
+unit. Reading it would let the platform build the study unit structure
+automatically, which is worth something — but it is a second importer for a
+second document shape, not a tweak to the first. **Worth doing, or is saving it
+as .xlsx enough?**
+
 ## Batch E — Google Drive and OneDrive
 
 **Raised by Roland in the meeting, not yet scoped or started.** Recorded here
