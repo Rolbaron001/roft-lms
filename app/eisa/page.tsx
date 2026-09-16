@@ -4,6 +4,10 @@ import {
   registrationDue,
   upcomingSittings,
 } from "@/lib/eisa-registration";
+import {
+  shouldAskForNextYear,
+  sittingDatesNotice,
+} from "@/lib/eisa-sitting-notice";
 import { dateInZone } from "@/lib/timezone";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -28,6 +32,17 @@ export default async function EisaPage() {
   ]);
 
   const urgent = due.filter((row) => row.urgent);
+
+  // Heidi, 16 September: the dates "change every year and are only released in
+  // December of each year". So an empty calendar is the ordinary state of
+  // affairs for most of the year rather than something somebody neglected.
+  const notice = sittingDatesNotice(today);
+  const askForNextYear =
+    sittings.length > 0 &&
+    shouldAskForNextYear(
+      today,
+      sittings.map((sitting) => sitting.sittingDate),
+    );
   const canManage = session.permissions.includes("enrolment:manage");
 
   return (
@@ -75,12 +90,22 @@ export default async function EisaPage() {
         description="Only those still open for registration. A closed one is nothing anybody can act on, and leaving it here would push the next real deadline down the page."
       >
         {sittings.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">
-            No sittings recorded. Add the dates from the assessment quality
-            partner&rsquo;s letter and the countdown starts.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{notice.text}</p>
         ) : (
           <div className="overflow-x-auto">
+            {/*
+              December, and next year's letter should be out. Said here rather
+              than as a warning banner: nothing is wrong yet, and a calendar
+              that ends is the thing somebody is looking at anyway.
+            */}
+            {askForNextYear ? (
+              <p className="mb-3 text-sm text-[var(--muted)]">
+                Nothing is recorded beyond this year. The assessment quality
+                partner publishes next year&rsquo;s dates in December, so the
+                letter should be out — adding them now is what keeps the
+                countdown running into January.
+              </p>
+            ) : null}
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">

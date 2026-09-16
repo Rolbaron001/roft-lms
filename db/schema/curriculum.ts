@@ -185,10 +185,12 @@ export const qualifications = pgTable(
      * by recognition of prior learning, credit transfer, or both together.
      *
      * A percentage of credits, per qualification, because the limit is a
-     * property of the award rather than of the provider. Fifty is the figure
-     * commonly applied and is a default rather than an authority - the
-     * qualification document or the assessment quality partner is, and where
-     * one says otherwise this is where that goes.
+     * property of the award rather than of the provider. Fifty was shipped as
+     * a defensible default and was confirmed as correct by Heidi Els on
+     * 16 September 2026 - so it is now the answer rather than a guess. It
+     * remains a default and not an authority: the qualification document or
+     * the assessment quality partner is, and where one says otherwise this is
+     * where that goes.
      *
      * It is enforced when an exemption is granted rather than checked at the
      * end, because at the end the learner has already been told they are

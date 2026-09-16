@@ -42,6 +42,15 @@ and reading what it actually saw.
 7. **Account for the container recreation at 11:08 today.** No restart loop,
    exit 0, healthy, server up nine days — most likely the hourly notification
    cron touching the stack, but unexplained is unexplained.
+8. **EISA sitting dates, given that they cannot be known until December.**
+   Heidi's answer makes this a design question rather than a missing field.
+   From January to November the dates for the following year genuinely do not
+   exist, so the platform must not report their absence as a fault; in
+   December it should ask for them once, plainly, of somebody who can enter
+   them. Record the 50 per cent RPL limit as confirmed while in there.
+9. **Ask the feedback-questions question in Heidi's language.** Write it in
+   plain terms for Roland to pass on: what the platform means by it, what it
+   is doing in the meantime, and what changes if she sends theirs.
 
 ## Not touched without him
 
@@ -60,6 +69,61 @@ and reading what it actually saw.
   is not ambiguous and write the question down here rather than stopping.
 - Report what failed as plainly as what worked.
 
+## Sent by Roland mid-afternoon, with Heidi's answers
+
+**Curiosa's own SOPs — dropped from the list.** "All of their SOPs will need
+to be reviewed once the LMS is running." So the two corrections I had been
+holding (moderation still says a flat 25 per cent, Records Management still
+describes a Drive) stop being separate items and become part of that review.
+Item 9.6 stays in the queue as platform work; telling them about it does not.
+
+**The RPL and credit transfer limit: 50 per cent is correct.** Confirmed by
+Heidi. It was a defensible default with a note saying so; it is now the
+answer, and the note should stop apologising for it.
+
+**EISA sitting dates cannot be given.** Heidi: "We cannot give sitting dates
+because they change every year and are only released in December of each
+year." That is not a refusal to answer, it is the answer, and it changes what
+the platform should do. A countdown that cannot run is not a fault to report
+all year round — it is the normal state of affairs from January to November.
+Added as item 8 below.
+
+**The feedback questions: Heidi does not know what I meant.** "I do not
+understand the 'feedback questions' part of the message." That is my fault for
+asking in platform language rather than hers. Added as item 9: write the
+question in plain terms, for Roland to pass on.
+
 ## What happened
 
-Filled in as the afternoon goes. Newest last.
+**Commercial Cleaner import — done, pushed as 0562bf7 at 15:2x, in time for
+the 16:00 deploy.**
+
+The cause was one character. A bullet typed in Word is not U+2022; it is a
+Symbol-font glyph mapped into the Unicode Private Use Area, so it arrives as
+U+F0B7 — and it is not whitespace, so trimming a line leaves it in place while
+every pattern in the reader is anchored at the start of a line. There are 1,164
+of them in that document, one in front of every element and every criterion.
+
+Two older faults surfaced underneath it, both invisible while only 47 elements
+were getting through: page footers were being glued onto descriptions in
+thirty-three places, and six topics list their content without announcing it
+with a heading.
+
+    modules    22 -> 22
+    topics     92 -> 85     the twelve lost were duplicates and misreads
+    elements   47 -> 592
+    criteria    0 -> 182
+    notes     128 -> 12
+
+The twelve remaining notes are real faults in the document and are meant to
+stay: two codes used twice, one module whose topic weights come to 110 rather
+than 100, and five topics listed in a module summary the document never gives
+guidelines for. Reported, never tidied away.
+
+No regression: 1,288 tests pass, including the readings of 121150, 121151,
+SP220320 and the part qualifications.
+
+**Worth Roland knowing before the test with Heidi:** 118709 now imports
+properly, but the twelve notes are genuine and she will see them. They are not
+the platform being unsure — they are the document disagreeing with itself, and
+the right response to each is a decision rather than a fix.
