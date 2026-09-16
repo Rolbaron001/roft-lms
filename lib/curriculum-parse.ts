@@ -174,6 +174,9 @@ const CONTENTS_LINE = /\.{4,}\s*\d{1,4}\s*$/;
  */
 const CODED_LINE = /^([A-Z]{2,3}\d{2,4})[:.]?\s+(.*)$/;
 
+/** The QCTO's own abbreviation for an internal assessment criterion. */
+const CRITERION_CODE = /^IAC/i;
+
 /**
  * The heading above the assessment criteria, whatever the document calls it.
  *
@@ -186,6 +189,24 @@ const CODED_LINE = /^([A-Z]{2,3}\d{2,4})[:.]?\s+(.*)$/;
  */
 const CRITERIA_HEADING =
   /^(?:internal\s+|formative\s+)?assessment\s+criteri(?:a|on)\b/i;
+
+/**
+ * A list bullet at the start of a line, and the space after it.
+ *
+ * Stripped before anything is matched. Every pattern here is anchored at the
+ * start of a line, and a document that bullets its lists would otherwise match
+ * none of them - which is exactly what SAQA 118709 did, importing ninety-two
+ * topics and not one assessment criterion.
+ *
+ * Whitespace is taken with it. A bullet and an indent mean the same thing to a
+ * reader looking for a code, and a document is free to use either.
+ */
+const LEADING_BULLET = /^[\u2022\u25AA\u27A2\u2713\u00B7\u2023\u25E6\u2043\u2219*-]?[ \u00A0\u2007\u202F]*/;
+
+/** A line as the patterns below need to see it: no bullet, no indent. */
+function bare(line: string): string {
+  return line.replace(LEADING_BULLET, "");
+}
 
 /**
  * Numbering a document puts in front of its headings — "3.2 Applied
@@ -268,6 +289,34 @@ const PLANS: Record<
  */
 const SECTION_END =
   /^(Provider Programme Approval Requirements|Physical Requirements|Human Resource Requirements|Legal Requirements|Purpose of the|Knowledge Topics|Skills included in the Module|List of Experiences|Total number of credits)/i;
+
+/**
+ * A line that carries no content: what a page does, rather than what it says.
+ *
+ * Every one of these was found appended to the end of a real description, not
+ * reasoned about. A curriculum runs its elements across a page break, so the
+ * running footer and the page number land in the middle of a list - and the
+ * line after a coded one is taken as its continuation, because descriptions
+ * genuinely do wrap. "Work flow 811201-000-00-000 COMMERCIAL CLEANER
+ * -CURRICULUM 21" is what that produced, and nobody reading the imported
+ * curriculum would know whether the document said it.
+ *
+ * Skipped rather than ended on. A page break interrupts a list without
+ * finishing it, so what follows still belongs to the topic that was being
+ * read.
+ */
+const FURNITURE = new RegExp(
+  [
+    // A page number alone on its line.
+    "^[0-9]{1,4}$",
+    // The running header or footer: the qualification's own code, then its
+    // name, with or without a page number after it.
+    "^[0-9]{5,6}-[0-9]{3}-[0-9]{2}(?:-[0-9]{2,3})*\\b",
+    // The weight restated under a topic, which belongs to the heading above.
+    "^\\(\\s*weight[^)]*\\)\\s*$",
+  ].join("|"),
+  "i",
+);
 
 /**
  * Reads the qualification's own details out of the front matter.
@@ -777,7 +826,7 @@ function collectTopics(
   let collecting: ElementKind | "criteria" | null = null;
 
   for (let index = 0; index < body.length; index++) {
-    const line = body[index];
+    const line = bare(body[index]);
 
     // A topic header wraps as often as not: the title runs on and the
     // percentage lands on the next line. Matching only single lines silently
@@ -788,7 +837,10 @@ function collectTopics(
 
     if (!topic) {
       for (let extra = 1; extra <= 2 && index + extra < body.length; extra++) {
-        const joined = body.slice(index, index + extra + 1).join(" ");
+        const joined = body
+          .slice(index, index + extra + 1)
+          .map(bare)
+          .join(" ");
         const match = pattern.exec(joined);
         if (match) {
           topic = match;
@@ -828,9 +880,40 @@ function collectTopics(
       continue;
     }
 
-    if (!collecting) continue;
+    // Skipped without touching what is being collected: a list interrupted by
+    // a page break carries on afterwards.
+    if (FURNITURE.test(line)) continue;
 
     const coded = CODED_LINE.exec(line);
+
+    /*
+     * A topic that lists its content without announcing it.
+     *
+     * Most topics say "Topic elements to be covered include:" and then list
+     * them. Some, in the same document, simply list them under the topic
+     * heading - SAQA 118709 does it at KM-03-KT01 and five other places. With
+     * nothing being collected those lines were dropped in silence, and the
+     * note said the topic had nothing to teach when the document plainly
+     * showed nine things.
+     *
+     * So a coded line directly under a topic heading is taken as its content.
+     * The code says which half it belongs to: IAC is the QCTO's own
+     * abbreviation for an internal assessment criterion, and everything else
+     * under a topic is something to be taught. That is a reading of the
+     * document's own convention rather than a guess - and it only applies
+     * where no heading has been seen, so a document that does announce its
+     * sections is unaffected.
+     */
+    if (!collecting && coded && CRITERION_CODE.test(coded[1])) {
+      collecting = "criteria";
+    } else if (!collecting && coded) {
+      const fallback = plan.sections.find(
+        (entry) => entry.collect !== "criteria",
+      );
+      if (fallback) collecting = fallback.collect;
+    }
+
+    if (!collecting) continue;
 
     if (coded) {
       const [, code, description] = coded;

@@ -325,7 +325,9 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
     await document.destroy();
   }
 
-  const text = parts.join("\n\n").replace(/\u0000/g, "").trim();
+  const text = normaliseSymbolBullets(
+    parts.join("\n\n").replace(/\u0000/g, ""),
+  ).trim();
 
   return {
     text,
@@ -334,6 +336,48 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
     // magnitude; a scan produces almost nothing at all.
     looksScanned: text.length < pages * 200,
   };
+}
+
+/**
+ * Word's bulleted lists, as they come out of a PDF.
+ *
+ * A bullet typed in Word is not the character U+2022. It is a glyph from the
+ * Symbol or Wingdings font, and those fonts map their glyphs into the Unicode
+ * Private Use Area - so the bullet arrives as U+F0B7 and the hollow square as
+ * U+F0A7. Nothing renders them, nothing matches them, and critically they are
+ * not whitespace, so trimming a line does not remove one.
+ *
+ * That is worth naming. The Commercial Cleaner curriculum (SAQA 118709) puts
+ * one in front of every topic element and every internal assessment criterion
+ * - 1,164 of them - and the reader, anchoring its patterns at the start of a
+ * line, matched not one. Twenty-two modules and ninety-two topics imported;
+ * zero criteria did. The document looked like it had worked, right up until
+ * somebody opened a module and found nothing to assess against.
+ *
+ * Only glyphs that are certainly bullets are translated, and they are
+ * translated rather than deleted: the document did say "this is a list item",
+ * and a reader downstream may want to know. Any other private-use character is
+ * left exactly as it is. Deleting those would be guessing at content, and the
+ * failure above is the argument against guessing quietly - it was caught
+ * because the reader said what it could not read, not because it stayed
+ * silent.
+ */
+const SYMBOL_BULLETS: Record<string, string> = {
+  "\uF0B7": "\u2022", // Symbol, filled round bullet
+  "\uF0A7": "\u25AA", // Wingdings, filled square
+  "\uF06C": "\u2022", // Wingdings, filled round bullet
+  "\uF06E": "\u25AA", // Wingdings, filled square
+  "\uF0D8": "\u27A2", // Wingdings, arrowhead
+  "\uF0FC": "\u2713", // Wingdings, tick
+};
+
+const SYMBOL_BULLET_PATTERN = /[\uF0B7\uF0A7\uF06C\uF06E\uF0D8\uF0FC]/g;
+
+function normaliseSymbolBullets(text: string): string {
+  return text.replace(
+    SYMBOL_BULLET_PATTERN,
+    (glyph) => SYMBOL_BULLETS[glyph] ?? glyph,
+  );
 }
 
 /**
