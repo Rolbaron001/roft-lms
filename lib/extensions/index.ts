@@ -5,6 +5,7 @@ import { aiRuns, aiUserSettings } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "../session";
 import { hintOf, seal, sealingAvailable, unseal } from "../secret-box";
 import { claudeCodeProvider } from "./claude-code";
+import { geminiProvider } from "./gemini";
 import {
   PROVIDER_NAMES,
   type AiProvider,
@@ -18,13 +19,24 @@ export * from "./base";
 /**
  * The registry.
  *
- * One provider today. The shape is a registry rather than a direct call
- * because the choice of tool was asked to stay open, and a second provider
- * should be a file added here rather than a change anywhere else. Nothing
- * above this module names a provider.
+ * The claim that "a second provider is a file rather than a project" was made
+ * when there was one. Adding Gemini on 16 September is the first time it was
+ * tested, and it held: a file, and this line.
+ *
+ * They are different animals and the contract absorbs it. Claude Code is an
+ * agent with file tools that reads a working directory and writes its answer
+ * into it; Gemini is one HTTP request that is handed the documents and returns
+ * text. The caller already accepted either, so neither had to change.
+ *
+ * The practical difference is where they can run. Claude Code shells out to a
+ * CLI, so it works on somebody's laptop and never on the server, where the
+ * application lives in a container without one. Gemini needs nothing installed
+ * and works in both. That is why the folder import could not succeed on
+ * production before this.
  */
 const PROVIDERS: Record<ProviderName, AiProvider> = {
   claude_code: claudeCodeProvider,
+  gemini: geminiProvider,
 };
 
 /**

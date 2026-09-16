@@ -51,6 +51,18 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
 
   const chosen = current.providers.find((row) => row.name === provider);
 
+  /*
+   * A key bought from a provider, or a token minted from a subscription.
+   *
+   * Claude Code is the odd one out and the only one that draws on a
+   * subscription somebody already pays for. Every other provider charges per
+   * call against a key, and a Gemini Advanced or ChatGPT Plus subscription
+   * does not include one - which everybody assumes it does, Roland included,
+   * so the screen says so rather than waiting to be asked.
+   */
+  const isKeyProvider = provider !== "claude_code";
+  const credentialWord = isKeyProvider ? "API key" : "token";
+
   return (
     <form action={action} className="space-y-4">
       {current.registered ? (
@@ -73,22 +85,28 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
         </div>
       ) : null}
 
+      {/*
+        The word depends on the provider, and so does where it comes from.
+        Claude's is a subscription token generated on your own machine; Gemini's
+        is an API key from Google AI Studio. Calling both "token" left somebody
+        looking for the wrong thing in the wrong place.
+      */}
       <label className="block text-sm">
         <span className="text-[var(--muted)]">
           {current.registered
-            ? "Replace it with a new token — leave empty to keep the stored one"
-            : "Your token"}
+            ? `Replace it with a new ${credentialWord} — leave empty to keep the stored one`
+            : `Your ${credentialWord}`}
         </span>
         <input
           name="token"
           type="password"
           autoComplete="off"
-          placeholder="sk-ant-oat…"
+          placeholder={isKeyProvider ? "AIza…" : "sk-ant-oat…"}
           className={`${inputClass} mt-1 block w-full max-w-md font-mono`}
         />
       </label>
 
-      <SetupGuide />
+      {isKeyProvider ? <ApiKeyGuide provider={provider} /> : <SetupGuide />}
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -130,7 +148,9 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             <input
               name="model"
               defaultValue={current.model ?? ""}
-              placeholder="claude-opus-5"
+              placeholder={
+                provider === "gemini" ? "gemini-2.5-flash" : "claude-opus-5"
+              }
               className={`${inputClass} mt-1 block w-full max-w-md`}
             />
           </label>
@@ -155,8 +175,8 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             they are agreeing to it.
           */}
           <p className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-            <span className="font-medium">What the platform keeps.</span> Your
-            token, encrypted, until you discard it. It is used only for work you
+            <span className="font-medium">What the platform keeps.</span> Your{" "}
+            {credentialWord}, encrypted, until you discard it. It is used only for work you
             ask for, only while you have the switch on, and it is never shown
             back to you or written to any log. Available is not the same as on:
             every sitting starts with it off, you switch it on for a job, and
@@ -351,4 +371,69 @@ function detectSystem(): "windows" | "unix" {
     navigator.platform ??
     "";
   return /win/i.test(platform) ? "windows" : "unix";
+}
+
+/**
+ * Where an API key comes from, and the thing everybody gets wrong.
+ *
+ * A Gemini Advanced or ChatGPT Plus subscription does not include API access.
+ * They are separate products with separate billing, and the assumption that
+ * paying for one buys the other is near-universal — Roland made it on
+ * 16 September, which is what prompted this being written down rather than
+ * explained one person at a time.
+ *
+ * Said before the steps rather than after them, because somebody who believes
+ * their subscription covers it will not read past the first instruction that
+ * seems to contradict them.
+ */
+function ApiKeyGuide({ provider }: { provider: string }) {
+  const gemini = provider === "gemini";
+
+  return (
+    <div className="max-w-2xl space-y-2 rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
+      <p className="text-sm font-medium text-[var(--foreground)]">
+        Where the key comes from
+      </p>
+
+      <p>
+        <span className="font-medium text-[var(--foreground)]">
+          A subscription is not an API key.
+        </span>{" "}
+        {gemini
+          ? "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it."
+          : "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second."}
+      </p>
+
+      {gemini ? (
+        <>
+          <p>
+            Sign in at{" "}
+            <span className="font-mono">aistudio.google.com</span>, choose{" "}
+            <span className="font-medium text-[var(--foreground)]">
+              Get API key
+            </span>
+            , create one, and paste it above. It begins{" "}
+            <span className="font-mono">AIza</span>.
+          </p>
+          <p>
+            The Gemini API has a free tier, so this costs nothing to try. It
+            limits how many requests you may make in a minute rather than
+            charging for them — reading a large folder can hit that, and the
+            platform will say so plainly if it does.
+          </p>
+        </>
+      ) : (
+        <p>
+          Create a key in your provider&rsquo;s own console and paste it above.
+          Keys are charged per use against the account they belong to.
+        </p>
+      )}
+
+      <p>
+        It is yours, not the tenant&rsquo;s. It is encrypted, used only for work
+        you ask for while your switch is on, never shown back to you, and never
+        written to a log.
+      </p>
+    </div>
+  );
 }
