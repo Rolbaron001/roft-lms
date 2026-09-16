@@ -88,13 +88,42 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   { match: /qualification document/i, kind: "qualification_document" },
   { match: /curriculum document/i, kind: "curriculum_document" },
   { match: /assessment specification/i, kind: "assessment_specification" },
-  { match: /alignment matrix/i, kind: "alignment_matrix" },
+  /*
+   * "Alignment" alone, because that is what a provider calls it. Curiosa
+   * name theirs "CA - 121151 - KM PM ELO Alignment.docx", and requiring the
+   * word "matrix" left the one document that drives coverage filed as
+   * "other" - so every topic element would have shown nothing covering it
+   * while the answer sat in the same folder.
+   */
+  { match: /\balignment\b/i, kind: "alignment_matrix" },
   { match: /theory guide/i, kind: "theory_guide" },
   { match: /learner handbook/i, kind: "learner_handbook" },
+  /*
+   * Abbreviated names, which is how a provider actually files these.
+   *
+   * Curiosa's own 121151 folder names them "CA 121151 SU1 WB1.docx" and
+   * "CA 121151 SU1 SA1 V1 AG.docx" - workbook one, summative assessment one
+   * version one, answer guide. None of the spelled-out rules matched, so 66 of
+   * their 81 files landed as "other".
+   *
+   * That was not a tidiness problem. A workbook memorandum, a summative
+   * memorandum and a summative assessment are withheld from anybody without
+   * the permission to assess; "other" is not. Filing an answer guide as
+   * "other" publishes it to the learners it is the answer key for.
+   *
+   * The memo rules come first deliberately: "WB1 AG" contains "WB1", so the
+   * plain rule would claim it and the answer guide would be filed as the
+   * workbook. [^/] keeps a match inside one filename rather than letting it
+   * run across a folder path.
+   */
+  { match: /\bWB\s?\d[^/]*\b(AG|memo)\b/i, kind: "workbook_memorandum" },
+  { match: /\bSA\s?\d[^/]*\b(AG|memo)\b/i, kind: "summative_memorandum" },
   { match: /workbook memo|memorandum.*workbook/i, kind: "workbook_memorandum" },
   { match: /workbook/i, kind: "workbook" },
+  { match: /\bWB\s?\d/i, kind: "workbook" },
   { match: /summative memo/i, kind: "summative_memorandum" },
   { match: /summative/i, kind: "summative_assessment" },
+  { match: /\bSA\s?\d/i, kind: "summative_assessment" },
   { match: /coach guide/i, kind: "workplace_coach_guide" },
   { match: /workplace agreement/i, kind: "workplace_agreement" },
   { match: /sign.?off/i, kind: "workplace_signoff" },
@@ -118,6 +147,20 @@ const LIBRARY_RULES: { match: RegExp; category: string }[] = [
   { match: /learner agreement|contract/i, category: "contract" },
   { match: /paia|popia|b-bbee|tax clearance/i, category: "statutory" },
 ];
+
+/**
+ * The version a filename carries, as V1 or v2.
+ *
+ * Curiosa keep two versions of each summative assessment side by side - SA1 V1
+ * and SA1 V2 - which is how a provider avoids handing the same paper to a
+ * cohort twice. Without this they arrive as two documents of the same kind
+ * with the same title and no way to tell them apart, which reads as a
+ * duplicate upload.
+ */
+export function versionFromName(name: string): string | null {
+  const match = name.match(/\bv\s?(\d{1,2})\b/i);
+  return match ? `V${match[1]}` : null;
+}
 
 /** The study unit a filename names, as SU1, SU 1 or Study Unit 1. */
 export function studyUnitFromName(name: string): string | null {
@@ -162,7 +205,7 @@ export function classifyDocument(
         category: null,
         studyUnitCode: unit,
         title: cleanTitle(filename),
-        version: null,
+        version: versionFromName(filename),
         because: unit
           ? `Recognised as a ${rule.kind.replace(/_/g, " ")}, and the filename names ${unit}.`
           : `Recognised as a ${rule.kind.replace(/_/g, " ")}.`,
