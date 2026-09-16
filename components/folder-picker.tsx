@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   readFolderAction,
   type ImportActionState,
@@ -64,6 +64,34 @@ export function FolderPicker({
   );
   const [pending, start] = useTransition();
 
+  /*
+   * How long it has been going, counted honestly.
+   *
+   * A reading takes minutes, and the button said "Reading…" and nothing else -
+   * which is indistinguishable from a page that has hung. There is no real
+   * progress to report: the work happens in one server call and does not
+   * report back. So this counts the seconds and says what it is doing, rather
+   * than drawing a bar that advances on a guess. A fake bar that reaches 90%
+   * and stops is worse than no bar.
+   */
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!pending) return;
+
+    const started = Date.now();
+    const timer = setInterval(
+      () => setSeconds(Math.round((Date.now() - started) / 1000)),
+      1000,
+    );
+    // Reset on the way out rather than on the way in: setting state straight
+    // away inside an effect makes React render twice for nothing.
+    return () => {
+      clearInterval(timer);
+      setSeconds(0);
+    };
+  }, [pending]);
+
   function openPicker() {
     input.current?.click();
   }
@@ -102,9 +130,48 @@ export function FolderPicker({
     });
   }
 
+  /*
+   * Said before anything is chosen, not after it fails.
+   *
+   * The qualification test on 16 September failed here. Reading a folder that
+   * does not describe itself needs an AI extension, and on the hosted server
+   * no extension can run at all - the only provider shells out to a CLI that
+   * is not in the container. So the screen invited Heidi to do the one thing
+   * that could not work, and said so only once she had tried it.
+   *
+   * Nothing is disabled. A folder that carries a blueprint.json imports with
+   * no extension whatever, and a folder of material never needed one. What is
+   * new is that the condition is on the screen before the choice rather than
+   * in the error afterwards.
+   */
+  const needsExtension = !qualificationId && !courseId && !learningPathId;
+  const extensionUsable = Boolean(extension?.on && extension?.available);
+  const extensionPossible = extension ? extension.available : false;
+
   return (
     <div className="space-y-3">
       <p className="text-sm text-[var(--muted)]">{label}</p>
+
+      {needsExtension && !extensionUsable ? (
+        <div className="max-w-2xl rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-2 text-sm">
+          <p className="font-medium">
+            Building a qualification from a folder needs an AI extension, unless
+            the folder describes itself.
+          </p>
+          <p className="mt-1 text-[var(--muted)]">
+            {extensionPossible
+              ? "Yours is not switched on for this sitting. Switch it on below, or use the documents route instead — that needs no AI at all and reads the whole curriculum."
+              : extension
+                ? `Yours cannot run here: ${extension.reason ?? "it is not available on this machine."} Use the documents route instead — it needs no AI at all and reads the whole curriculum.`
+                : "You do not have one set up. Use the documents route instead — it needs no AI at all and reads the whole curriculum, which is how the Commercial Cleaner qualification was imported."}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            A folder produced by a programme development system includes a
+            summary of itself (a <code>_control/blueprint.json</code>), and one
+            of those imports here in seconds with no extension involved.
+          </p>
+        </div>
+      ) : null}
 
       {/*
         Driven by the button below rather than shown.
@@ -166,25 +233,73 @@ export function FolderPicker({
       {/*
         One button, two steps. Never disabled while there is something for it
         to do, so it cannot look broken.
+
+        Once a folder is chosen the button changes what it does, and nothing
+        said so. Heidi chose a folder and did not realise the next step had
+        appeared - so the button now announces itself when it becomes the thing
+        to press.
       */}
-      <button
-        type="button"
-        onClick={chosen ? send : openPicker}
-        disabled={pending}
-        className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-      >
-        {pending
-          ? "Reading…"
-          : chosen
-            ? "Read this folder"
-            : "Choose a folder…"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={chosen ? send : openPicker}
+          disabled={pending}
+          className={`rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
+            chosen && !pending
+              ? "ring-2 ring-[var(--brand-accent)] ring-offset-2 ring-offset-[var(--surface)] motion-safe:animate-pulse"
+              : ""
+          }`}
+        >
+          {pending
+            ? "Reading…"
+            : chosen
+              ? "Read this folder"
+              : "Choose a folder…"}
+        </button>
+
+        {chosen && !pending ? (
+          <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
+            {/* Points at the button, and is hidden from a screen reader, which
+                is told the same thing by the sentence beside it. */}
+            <span aria-hidden className="motion-safe:animate-bounce">
+              ←
+            </span>
+            Now press this to read it. Nothing is saved yet.
+          </p>
+        ) : null}
+
+        {pending ? (
+          <p
+            role="status"
+            className="flex items-center gap-2 text-sm text-[var(--muted)]"
+          >
+            <span
+              aria-hidden
+              className="inline-block h-4 w-4 rounded-full border-2 border-[var(--border)] border-t-[var(--brand-accent)] motion-safe:animate-spin"
+            />
+            {seconds < 20
+              ? "Reading the folder…"
+              : seconds < 90
+                ? `Still reading — ${seconds} seconds so far. A curriculum document takes a few minutes.`
+                : `Still going — ${Math.floor(seconds / 60)} min ${seconds % 60}s. This is normal for a large folder; leave the page open.`}
+          </p>
+        ) : null}
+      </div>
 
       <div className="max-w-2xl text-xs text-[var(--muted)]">{hint}</div>
 
       {extension ? (
         <div className="max-w-2xl space-y-2 border-t border-[var(--border)] pt-3">
-          <p className="text-xs text-[var(--muted)]">
+          {/*
+            The block at the top of the card already says the extension cannot
+            run, or is off. Saying it again here made one card state the same
+            fact three times. What is still worth having at the bottom is the
+            switch itself, and the note for somebody whose extension is working.
+          */}
+          <p
+            className="text-xs text-[var(--muted)]"
+            hidden={needsExtension && !extensionUsable}
+          >
             {extension.on && extension.available ? (
               <>
                 <span className="font-medium text-[var(--success)]">

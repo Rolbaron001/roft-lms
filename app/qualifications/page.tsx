@@ -49,12 +49,31 @@ export default async function QualificationsPage() {
 
       {canManage ? (
         <>
-          {/* The documents come first: everything below is built on them, and the
-          App can read most of what the form would otherwise ask for. */}
+          {/*
+            The documents come first, and that ordering is the fix rather than
+            a preference.
+
+            This route needs no AI at any point: the curriculum document is
+            parsed directly, and it reads the whole thing — 22 modules, 85
+            topics and 182 internal assessment criteria out of the Commercial
+            Cleaner. The folder route below needs an AI extension unless the
+            folder describes itself, and on the hosted server no extension can
+            run at all, because the only provider shells out to a CLI that is
+            not in the container.
+
+            On 16 September the folder route was at the top and this was
+            beneath it, so the qualification test with Heidi was spent on the
+            one path that could not succeed while the one that works sat
+            further down the page.
+          */}
+          <div className="mb-6">
+            <FromDocument />
+          </div>
+
           <div className="mb-6">
             <Card
-              title="Build it from a folder"
-              description="Choose a qualification folder and it reads everything in it — the curriculum, the study units, the guides, the policies — and shows you what it would create. Nothing is written until you say so."
+              title="Or build it from a folder"
+              description="Everything at once: the curriculum, the study units, the guides and the policies. A folder that includes a summary of itself imports in seconds; one that does not has to have its structure worked out, and that is the part that needs an AI extension."
             >
               <FolderPicker
                 label="The qualification's folder, from your own computer"
@@ -79,10 +98,6 @@ export default async function QualificationsPage() {
                 }
               />
             </Card>
-          </div>
-
-          <div className="mb-6">
-            <FromDocument />
           </div>
         </>
       ) : null}
