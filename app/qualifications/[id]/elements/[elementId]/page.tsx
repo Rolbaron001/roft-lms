@@ -150,7 +150,17 @@ export default async function TopicElementPage({
           title="What it is assessed by"
           description="The internal assessment criteria of the topic this line belongs to."
         >
-          {criteria.length === 0 ? (
+          {criteria.length === 0 && module.component === "workplace" ? (
+            /*
+              A work experience module has no criteria by design, so this is
+              what finished looks like rather than what missing looks like.
+            */
+            <p className="text-sm text-[var(--muted)]">
+              A work experience module has no assessment criteria. What it
+              requires is evidenced by a signed record of the work itself,
+              accepted by an assessor, rather than judged against criteria.
+            </p>
+          ) : criteria.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--danger)" }}>
               This topic has no assessment criteria, so nothing here can ever be
               achieved. Until they are captured from the curriculum document,

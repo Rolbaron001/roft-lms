@@ -702,6 +702,19 @@ export default async function QualificationPage({
                             ))}
                           </ul>
                         </div>
+                      ) : curriculumModule.component === "workplace" ? (
+                        /*
+                          Not a fault here. A work experience module is proved
+                          by a logbook a coach signs and an assessor accepts,
+                          so having no criteria is its finished state - and
+                          colouring that red taught somebody reading a
+                          correctly imported qualification to distrust it.
+                        */
+                        <p className="text-sm text-[var(--muted)]">
+                          No assessment criteria, which is right for work
+                          experience: it is proved by a signed record of the
+                          work rather than judged against criteria.
+                        </p>
                       ) : (
                         <p
                           className="text-sm"
