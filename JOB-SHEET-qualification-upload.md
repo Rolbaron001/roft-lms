@@ -302,6 +302,42 @@ picks, and the ones this platform reads.
 
 ---
 
+## 17 September, in order
+
+**The alignment document builds the study units.** Roland raised it as almost a
+fourth base document, which it is: a curriculum publishes modules and says
+nothing about study units, because grouping them is the provider's own
+decision. Dropping Curiosa's folder in now produces the whole spine — five
+units with their real names, the outcome each serves, and the right three
+modules under each — where before it produced five labels with nothing attached.
+Reads a Word table or a spreadsheet, because he said "whether it is a Word or
+an Excel document" and only the first was covered at first.
+
+**Google Drive and OneDrive.** Read-only, per person, on every screen that
+takes a folder. Needs an OAuth application registered with each provider before
+it appears at all — see DRIVE-SETUP.md.
+
+**Google's own documents are exported rather than skipped**, which Roland
+caught. The first version skipped Docs and Sheets on the reasoning that a Doc
+has no bytes and the format was an open question. Neither holds: downloading a
+Drive folder as a zip already works, and it works because Google exports the
+documents on the way in. For a provider who works in Google throughout, the
+first version would have made a folder of their material read as empty.
+
+**Batch B finished.** A qualification already on the platform used to show a
+red alert over a dead button; it now links straight to the qualification, where
+adding what is missing leaves everything already there untouched.
+
+**"fetch failed" says something.** Found by making a fake drive connection
+locally to watch the picker render — the tests could not have found it, because
+they replace `fetch` and it therefore never fails the way the real one does.
+
+**A gap I reported was withdrawn.** The LEISA acknowledgement is built and
+reachable; I had looked in the wrong library. Both notes corrected in place.
+
+Production confirmed afterwards: the per-topic criterion index, its partial
+companion, and the tenant illustration column all applied in today's deploy.
+
 ## Open, and not to be guessed at
 - **Whether a per-person API key is acceptable to Curiosa at all**, or whether
   they would rather nobody held one. Gemini's free tier makes it testable; it
