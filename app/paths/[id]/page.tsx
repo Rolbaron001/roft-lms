@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
+import { DrivePicker } from "@/components/drive-picker";
+import { connectionsFor } from "@/lib/drive";
 import {
   availableCourses,
   enrollableForPath,
@@ -20,6 +22,11 @@ export default async function PathPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+  // Drive and OneDrive are offered wherever a folder is, so a provider
+  // who keeps their material there never has to download it first.
+  const drives = session.permissions.includes("qualification:manage")
+    ? await connectionsFor(session)
+    : [];
 
   const canAuthorHere = session.permissions.includes("course:author");
   const extension = await extensionState(session);
@@ -116,6 +123,24 @@ export default async function PathPage({
                   shape is built by adding courses to it below. This files what it holds.
                 </>
               }
+            />
+          </Card>
+        </div>
+      ) : null}
+
+      {drives.length > 0 ? (
+        <div className="mt-6">
+          <Card
+            title="Or from a drive you have connected"
+            description="The same folder, read where it already lives. It ends in the same place — a proposal to check before anything is written."
+          >
+            <DrivePicker
+              drives={drives.map((one) => ({
+                provider: one.provider,
+                label: one.label,
+                accountLabel: one.accountLabel,
+              }))}
+              learningPathId={id}
             />
           </Card>
         </div>

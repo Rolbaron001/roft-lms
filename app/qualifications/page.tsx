@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
 import { FromDocument } from "./from-document";
 import { FolderPicker } from "@/components/folder-picker";
+import { DrivePicker } from "@/components/drive-picker";
+import { connectionsFor } from "@/lib/drive";
 import { Card } from "@/components/ui";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 
@@ -18,6 +20,10 @@ export default async function QualificationsPage() {
     "assessment:moderate",
   ]);
   const canManage = session.permissions.includes("qualification:manage");
+
+  // Curiosa keep all their material on Google Drive, so reading it where it
+  // already lives saves downloading eighty files and uploading them again.
+  const drives = canManage ? await connectionsFor(session) : [];
 
   // Folder import is ordinary functionality and is shown to everybody who can
   // manage a qualification. The extension state is read only so the form can
@@ -99,6 +105,23 @@ export default async function QualificationsPage() {
               />
             </Card>
           </div>
+
+          {drives.length > 0 ? (
+            <div className="mb-6">
+              <Card
+                title="Or from a drive you have connected"
+                description="The same folder, read where it already lives. It ends in the same place — a proposal to check before anything is written."
+              >
+                <DrivePicker
+                  drives={drives.map((one) => ({
+                    provider: one.provider,
+                    label: one.label,
+                    accountLabel: one.accountLabel,
+                  }))}
+                />
+              </Card>
+            </div>
+          ) : null}
         </>
       ) : null}
 

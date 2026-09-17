@@ -1636,6 +1636,72 @@ export const disposalDecisions = pgTable(
  * runs the platform themselves, each uses their own. The interface says so
  * rather than implying otherwise.
  */
+/**
+ * A person's connection to a file store of their own.
+ *
+ * Roland, 17 September: "In Curiosa's case, all the learning material is
+ * stored on Google Drive." So the platform has to be able to read a folder
+ * from there rather than asking somebody to download eighty files and upload
+ * them again.
+ *
+ * Per person, never per tenant, and for the same reason the AI extension is:
+ * the credential belongs to whoever consented to it, it can read their own
+ * drive rather than the provider's, and nobody should be able to reach a
+ * colleague's files by way of a shared connection. A tenant with four
+ * administrators has four connections or none.
+ *
+ * What is held is a refresh token, sealed the way the extension token is. That
+ * is a real thing to hold and it is worth saying plainly: it can be exchanged
+ * for read access to that person's drive until they withdraw it, which they
+ * can do here or from the provider's own account page. The platform asks for
+ * read-only scope and nothing else.
+ */
+export const driveConnections = pgTable(
+  "drive_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    /** "google_drive" or "one_drive". */
+    provider: text("provider").notNull(),
+
+    /** The account that consented, so a person can tell two apart. */
+    accountLabel: text("account_label"),
+
+    /** The refresh token, sealed. Never displayed, never logged. */
+    refreshTokenSealed: text("refresh_token_sealed").notNull(),
+
+    /**
+     * The access token and when it dies, so a run of eighty files does not
+     * exchange the refresh token eighty times.
+     */
+    accessTokenSealed: text("access_token_sealed"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+
+    connectedAt: timestamp("connected_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [
+    // One connection per person per provider. Connecting again replaces it,
+    // which is what somebody reconnecting a different account expects.
+    uniqueIndex("drive_connections_user_provider_idx").on(
+      t.organisationId,
+      t.userId,
+      t.provider,
+    ),
+    index("drive_connections_org_idx").on(t.organisationId),
+  ],
+);
+
 export const aiUserSettings = pgTable(
   "ai_user_settings",
   {

@@ -12,6 +12,8 @@ import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
 import { MailTest } from "./mail-test";
+import { DriveConnections } from "./drive-connections";
+import { availableDriveProviders, connectionsFor } from "@/lib/drive";
 import { TerminologyForm } from "./terminology-form";
 import { TERMS, TERM_KEYS } from "@/lib/terms";
 import { mailIsConfigured } from "@/lib/mail";
@@ -21,9 +23,39 @@ import {
   knownProviders,
 } from "@/lib/extensions";
 
-export default async function SettingsPage() {
+/** What came back from a drive consent, said in a sentence. */
+const DRIVE_NOTICES: Record<string, string> = {
+  connected: "Connected. A folder can now be read straight from it.",
+  cancelled: "Nothing was connected — the consent was cancelled.",
+  refused: "That account refused the connection.",
+  state:
+    "That consent did not match the one this browser started, so nothing was connected. Start again from this page.",
+  nocode: "The provider sent nothing back to connect with. Try again.",
+  failed:
+    "The connection could not be completed. Nothing was stored. Trying again is worth doing before anything else.",
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ drive?: string }>;
+}) {
   const tenant = await requireTenant();
   const session = await requireSession();
+
+  /*
+   * Connecting a file store belongs with getting material into a
+   * qualification, so it is held by the people who do that rather than by
+   * everybody with a settings page.
+   */
+  const canManageQualifications = session.permissions.includes(
+    "qualification:manage",
+  );
+  const driveConnected = canManageQualifications
+    ? await connectionsFor(session)
+    : [];
+  const driveNotice =
+    DRIVE_NOTICES[(await searchParams).drive ?? ""] ?? null;
 
   // Reachable by anybody with something on this page, which is not the same as
   // anybody who can brand the tenant.
@@ -160,6 +192,33 @@ export default async function SettingsPage() {
             description="Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. The same for everybody at this provider, because staff tell each other where things are."
           >
             <MenuEditor current={menu} />
+          </Card>
+        </div>
+      ) : null}
+
+      {canManageQualifications ? (
+        <div className="mt-6">
+          <Card
+            title="Your file stores"
+            description="Read a folder straight from Google Drive or OneDrive, instead of downloading it and uploading it again. Yours rather than this provider's: every member of staff connects their own."
+          >
+            <DriveConnections
+              connected={driveConnected.map((one) => ({
+                provider: one.provider,
+                label: one.label,
+                accountLabel: one.accountLabel,
+                connectedAt: dateInZone(one.connectedAt, tenant.timezone),
+                lastUsedAt: one.lastUsedAt
+                  ? dateInZone(one.lastUsedAt, tenant.timezone)
+                  : null,
+              }))}
+              offered={availableDriveProviders().map((one) => ({
+                name: one.name,
+                label: one.label,
+                description: one.description,
+              }))}
+              notice={driveNotice}
+            />
           </Card>
         </div>
       ) : null}

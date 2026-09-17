@@ -12,6 +12,8 @@ import { extensionOffered, extensionState } from "@/lib/extensions";
 import { AppShell, Card } from "@/components/app-shell";
 import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
+import { DrivePicker } from "@/components/drive-picker";
+import { connectionsFor } from "@/lib/drive";
 
 const COMPONENT_LABELS: Record<string, string> = {
   knowledge: "Knowledge module",
@@ -69,6 +71,9 @@ export default async function QualificationPage({
     "assessment:moderate",
   ]);
   const canManage = session.permissions.includes("qualification:manage");
+  // Reading the material where it already lives, for somebody who connected
+  // a drive. Absent for everybody else rather than offered and refused.
+  const drives = canManage ? await connectionsFor(session) : [];
 
   const { qualification, modules, studyUnits, outcomes, unplacedModules } =
     await curriculumOutline(session, id);
@@ -423,6 +428,24 @@ export default async function QualificationPage({
                   </>
                 }
               />
+
+              {drives.length > 0 ? (
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <p className="mb-2 text-xs text-[var(--muted)]">
+                    Or the completed folder from a drive you have connected. It
+                    tops up the same way: only what is missing is added.
+                  </p>
+                  <DrivePicker
+                    drives={drives.map((one) => ({
+                      provider: one.provider,
+                      label: one.label,
+                      accountLabel: one.accountLabel,
+                    }))}
+                    qualificationId={id}
+                    topUp
+                  />
+                </div>
+              ) : null}
             </Card>
 
             <div className="mt-4">
@@ -445,6 +468,24 @@ export default async function QualificationPage({
                 />
               </Card>
             </div>
+
+            {drives.length > 0 ? (
+              <div className="mt-4">
+                <Card>
+                  <p className="mb-3 text-sm font-medium">
+                    Or the folder where it already lives
+                  </p>
+                  <DrivePicker
+                    drives={drives.map((one) => ({
+                      provider: one.provider,
+                      label: one.label,
+                      accountLabel: one.accountLabel,
+                    }))}
+                    qualificationId={id}
+                  />
+                </Card>
+              </div>
+            ) : null}
 
             <div className="mt-4">
               <Card>
