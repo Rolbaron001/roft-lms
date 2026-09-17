@@ -177,6 +177,40 @@ describe("reading it", () => {
     expect(readAlignmentDocument(alignmentText()).notes).toEqual([]);
   });
 
+  /**
+   * Roland: "whether it is a Word or an Excel document". Curiosa's is a Word
+   * table, whose cells come out one per line. The same thing saved as a
+   * spreadsheet comes out one row per line with tabs between the cells, and
+   * the reader has to make the same sense of both — otherwise a provider who
+   * keeps theirs in Sheets gets nothing, with no indication why.
+   */
+  it("reads the same content laid out as a spreadsheet", () => {
+    const asRows = [
+      [
+        "Study Unit 1 – Organisational Architecture",
+        "ELO 1 – 24 Credits",
+        "Apply detailed knowledge of workforce architecture.",
+        "KM-01, Creating and Implementing Organisational Architecture, NQF Level 6, 8 Credits.",
+        "PM-01, Implementing fit-for-purpose HR Architecture. NQF Level 6, 8 Credits.",
+        "WM-01: Organisational and Work design, NQF Level 6, 8 Credits.",
+      ].join("\t"),
+      [
+        "Study Unit 2 – Talent Management",
+        "ELO 2 - 19 Credits; Level 5",
+        "Use professional HRM methods.",
+        "KM-02, Making Talent Management work, NQF Level 6, 7 Credits.",
+      ].join("\t"),
+    ].join("\n");
+
+    const reading = readAlignmentDocument(asRows);
+
+    expect(reading.studyUnits.map((one) => one.code)).toEqual(["SU1", "SU2"]);
+    expect(reading.studyUnits[0].title).toBe("Organisational Architecture");
+    expect(reading.studyUnits[0].moduleCodes).toEqual(["KM01", "PM01", "WM01"]);
+    expect(reading.studyUnits[0].outcome?.credits).toBe(24);
+    expect(reading.studyUnits[1].outcome?.nqfLevel).toBe(5);
+  });
+
   it("refuses a document that is not one, rather than inventing units", () => {
     expect(() => readAlignmentDocument("A policy about leave.")).toThrow(
       /No study units/i,

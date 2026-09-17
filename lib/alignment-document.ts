@@ -96,9 +96,24 @@ function numberIn(text: string, after: RegExp): number | null {
  * credits from an outcome.
  */
 export function readAlignmentDocument(text: string): AlignmentReading {
+  /*
+   * Split on tabs as well as newlines, because the same document arrives two
+   * ways.
+   *
+   * Roland, 17 September: "whether it is a Word or an Excel document".
+   * Curiosa's is a Word table, whose cells come out one per line. The same
+   * thing saved as a spreadsheet comes out one row per line with tabs between
+   * the cells - so a study unit, its outcome and its three modules would
+   * arrive as a single line and none of the patterns below would match
+   * anything.
+   *
+   * In both layouts a tab means what a line break means: the next cell. The
+   * outcome description is a paragraph and carries none, so nothing that
+   * should stay together is split.
+   */
   const lines = text
-    .split("\n")
-    .map((line) => line.replace(/ /g, " ").trim())
+    .split(/[\n\t]/)
+    .map((line) => line.replace(/\u00a0/g, " ").trim())
     .filter((line) => line.length > 0 && !FURNITURE.test(line));
 
   const studyUnits: AlignedStudyUnit[] = [];
