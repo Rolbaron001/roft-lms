@@ -333,11 +333,12 @@ already built. Three things came out of it:
   Tracker". Both are supported, but that is the duplication a system of record
   exists to end, and it is worth asking whether the Tracker should be fed from
   the platform instead.
-- **A real gap, still open.** The procedure says to submit the LEISA *and ask
-  for acknowledgement*. The platform records the submission but has no state
-  for "acknowledged", so one that was never acknowledged looks exactly like one
-  that was — which is the whole reason the procedure asks. Small, needs the
-  mail relay to be useful, and waits behind Linda with the rest.
+- **Reported as a gap and withdrawn, 17 September.** I wrote that the platform
+  had no state for an acknowledged LEISA. It has one, with a library function,
+  an action and a form on the notification screen — a submission reads as
+  "submitted" until the QCTO's reference and date are recorded against it. I
+  had looked in the enrolment documents library rather than the statutory one
+  and concluded too quickly.
 
 ### 6 · CAT and RPL: the three-year rule — **done, 10 September**
 

@@ -73,8 +73,9 @@ zeros the QCTO's data-loading specification requires kept intact.
 **"Submit LEISA to learnerenrolments@qcto.org.za and ask for
 acknowledgement."** — **Partly blocked.** The address is right, and the
 skills-programme address (splearnerenrolments@) is right for that half.
-Submitting depends on the same mail relay. "Ask for acknowledgement" is not
-tracked as a state — see below.
+Submitting depends on the same mail relay. "Ask for acknowledgement" **is**
+tracked: a submission reads as "submitted" until the QCTO's reference and date
+are recorded against it, and only then as acknowledged.
 
 **"Submit two FISA instruments and related documentation to the QCTO for
 approval"** *(skills programmes only)* — **Built.** Two is the expected number
@@ -94,14 +95,21 @@ asking whether the Tracker should be fed from the platform rather than typed
 into separately. That is their process to change, not ours, and it is the kind
 of thing worth settling before a monitoring visit rather than after.
 
-**One gap worth building, and not yet built: the acknowledgement.** The
-procedure says to submit the LEISA *and ask for acknowledgement*. The platform
-records the submission but has no state for "acknowledged", so a submission
-that was never acknowledged looks exactly like one that was. That is the whole
-reason the procedure asks for it. Small, and it needs the mail relay to be
-useful, so it waits with everything else behind Linda — but it is a real gap
-rather than a matter of opinion, and it is written down here so it is not
-mistaken for done.
+**The acknowledgement — I reported this as a gap on 16 September and it is
+not one.** The correction matters more than the original note, so it replaces
+it rather than sitting underneath it.
 
-**Nothing else is missing.** Every other step is either built, deliberately
-outside the platform, or blocked on outbound mail.
+The procedure says to submit the LEISA *and ask for acknowledgement*. I wrote
+that the platform records the submission but has no state for "acknowledged",
+so one that was never acknowledged would look exactly like one that was. That
+is wrong. There is a state, a library function, an action and a form: a
+submission sits at "submitted" until somebody records the QCTO's reference and
+the date, and only then reads as acknowledged. The screen even says "Ask for an
+acknowledgement, and record it here when it comes back."
+
+I checked the enrolment documents library, found nothing about acknowledgements
+there, and concluded too quickly. It is in the statutory library, which is
+where it belongs.
+
+**Nothing is missing.** Every step is either built, deliberately outside the
+platform, or blocked on outbound mail.
