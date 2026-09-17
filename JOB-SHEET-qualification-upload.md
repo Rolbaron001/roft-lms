@@ -335,6 +335,25 @@ they replace `fetch` and it therefore never fails the way the real one does.
 **A gap I reported was withdrawn.** The LEISA acknowledgement is built and
 reachable; I had looked in the wrong library. Both notes corrected in place.
 
+**Three false alarms on a correctly imported qualification.** Found by seeding
+the HRM Officer locally and opening the screen, to see whether the new study
+unit structure rendered at all. It did — and above it sat "5 of 15 modules have
+no criteria yet", with every work experience topic marked in red as one that
+"can never be achieved".
+
+All three were wrong in the same way. A work experience module is proved by a
+logbook a coach signs and an assessor accepts, not by assessment criteria, so
+having none is its finished state. The parser knows that and the importer says
+so in a comment; three screens counted them anyway. Somebody importing for the
+first time reads a third of their qualification being flagged as the import
+having half failed — and one of the three was written by me two days ago, on
+the screen built to make curriculum lines legible.
+
+Every count involved was correct. What was wrong was which modules the count
+included, which is why the suite was green and the screen was not. The warnings
+still fire for a knowledge or practical module with nothing to assess against,
+which is the case they exist for.
+
 Production confirmed afterwards: the per-topic criterion index, its partial
 companion, and the tenant illustration column all applied in today's deploy.
 
