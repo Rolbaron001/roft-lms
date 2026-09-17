@@ -17,6 +17,11 @@ import {
   OfficeReadError,
 } from "./office";
 import { importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
+import { looksLikeAlignmentDocument } from "./alignment-document";
+import {
+  applyAlignmentDocument,
+  type AlignmentApplied,
+} from "./study-unit-alignment";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { modulesOfCondition } from "./part-qualifications";
@@ -179,7 +184,12 @@ export async function uploadProgrammeDocument(
   session: AuthenticatedSession,
   input: DocumentInput,
   file: { filename: string; bytes: Uint8Array },
-): Promise<{ id: string; matrix?: MatrixImportSummary; notice?: string }> {
+): Promise<{
+  id: string;
+  matrix?: MatrixImportSummary;
+  alignment?: AlignmentApplied;
+  notice?: string;
+}> {
   assertSessionCan(session, "qualification:manage");
   const parsed = documentInput.parse(input);
 
@@ -339,18 +349,39 @@ export async function uploadProgrammeDocument(
     return created.id;
   });
 
-  // An alignment matrix is not just filed: it is read, and what it says about
-  // the curriculum is recorded. This is the whole point of accepting it.
+  /*
+   * An alignment document is not just filed: it is read, and what it says
+   * about the qualification is recorded. That is the whole point of accepting
+   * it.
+   *
+   * Two quite different documents are called "alignment" by the people who
+   * write them, and the platform decides by what a document contains rather
+   * than by what it is called.
+   *
+   * The Curriculum Alignment Matrix is a spreadsheet, one row per curriculum
+   * line, saying what teaches and tests it. The alignment document proper —
+   * Curiosa's is a Word table — is the level above: which modules belong to
+   * which study unit, and which Exit Level Outcome they serve. Roland put that
+   * second one "almost on the same level as the 3 base documents", and he is
+   * right, because it carries the one thing no other document does. A
+   * curriculum publishes modules and says nothing about study units, since
+   * grouping them is the provider's own decision.
+   */
   let matrix: MatrixImportSummary | undefined;
+  let alignment: AlignmentApplied | undefined;
 
   if (parsed.kind === "alignment_matrix") {
     const target = parsed.qualificationId;
     if (target) {
-      matrix = await importAlignmentMatrix(session, target, file.bytes);
+      if (extractedText && looksLikeAlignmentDocument(extractedText)) {
+        alignment = await applyAlignmentDocument(session, target, extractedText);
+      } else {
+        matrix = await importAlignmentMatrix(session, target, file.bytes);
+      }
     }
   }
 
-  return { id, matrix, notice };
+  return { id, matrix, alignment, notice };
 }
 
 export async function listProgrammeDocuments(
