@@ -161,11 +161,29 @@ already two steps, read then confirm; what it never did was say so. It now
 shows which step you are on, draws the eye to the read button, and shows
 elapsed time while reading.
 
-What is **not** done, and should not be mistaken for done: the fuller assistant
-in the batch above — choosing an existing qualification to add to, the
-assessment specification as its own step, and the folder of material as a final
-step. The flow today still asks for the three documents on one screen. That is
-a real improvement on this morning and it is not the whole of Batch B.
+**Finished 17 September.** The three things left were looked at one at a time,
+and only one of them turned out to be work.
+
+**Choosing an existing qualification to add to — done, and it was a dead end
+rather than a missing feature.** Importing documents for a qualification
+already on the platform showed a red alert saying "open that qualification
+instead" above a disabled button, with nothing to press and no way to get
+there. It now says what is already here, why importing again would be worse
+than useless — the curriculum would be replaced and anything tagged to a
+criterion would go with it — and offers the one thing the person actually
+wants, which is to open it and add what is missing. The dead button is gone
+rather than disabled: a control that cannot be used only invites somebody to
+press it.
+
+**The assessment specification as its own step — not done, deliberately.** It
+is already read, validated and filed, and its absence is already reported as
+one of the three documents needed before material can be authored. Giving it a
+screen of its own would add a click and change nothing about what happens.
+
+**The folder of material as a final step — done by other means.** Creating a
+qualification now lands on a panel that says what was read and points at the
+folder of material further down the same page. That is the step; it did not
+need a wizard around it.
 
 ---
 
@@ -260,20 +278,27 @@ Two things that came out of it and are fixed:
   was read and what is left — and where nothing was read, it says that instead
   of congratulating itself.
 
-## Batch E — Google Drive and OneDrive
+## Batch E — Google Drive and OneDrive — done, 17 September
 
-**Raised by Roland in the meeting, not yet scoped or started.** Recorded here
-so it is not lost, and deliberately not begun without a decision.
+Asked for outright: "all the learning material is stored on Google Drive."
+Built as an OAuth connection per person per provider, read-only, with the token
+sealed and never displayed or logged. Offered on every screen that takes a
+folder — a qualification, its top-up, a course, a programme — and a test reads
+the screens rather than trusting they were all changed.
 
-It is an OAuth connection per person per provider: a consent screen, a stored
-refresh token, and a file picker. The work is not the reading — the platform
-already reads files it is handed — it is the connection and what it means. The
-platform would hold a credential that can read somebody's whole drive, which is
-a different promise from holding one that can call a model.
+**Nothing appears until an application is registered with each provider.** That
+means agreeing to their terms on ROFT's behalf and putting ROFT's name on a
+consent screen, which is not a decision to take by proxy. See DRIVE-SETUP.md.
 
-Worth asking whether it is wanted at all now that a folder can be chosen from
-the computer in two clicks, or whether it is wanted because the documents live
-in a shared drive that nobody downloads.
+**Google's own documents were nearly the whole point and were nearly missed.**
+The first version skipped Docs, Sheets and Slides on the reasoning that a Doc
+has no bytes and exporting is a decision about format. Roland pointed out that
+downloading a Drive folder as a zip already works and involves no export by the
+user — which is the flaw exactly: the export happens, on Google's side, on the
+way into the zip. For a provider who works in Google throughout, skipping them
+would have made a folder of their material read as empty. Docs now arrive as
+Word, Sheets as Excel, Slides as PowerPoint — the formats Google's own download
+picks, and the ones this platform reads.
 
 ---
 

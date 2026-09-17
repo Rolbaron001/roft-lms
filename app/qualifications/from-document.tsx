@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   createFromDocumentAction,
@@ -310,14 +312,37 @@ export function FromDocument() {
                 ) : null}
               </div>
             ) : found.existing ? (
-              <p
-                role="alert"
-                className="mt-3 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2 text-sm text-[var(--danger)]"
-              >
-                <strong>{found.existing.title}</strong> already carries this
-                code. Importing again would replace its whole curriculum, so
-                this route will not do it. Open that qualification instead.
-              </p>
+              /*
+                Already here, which is not a failure.
+
+                This was a red alert over a dead button: "Open that
+                qualification instead", with nothing to press and no way to get
+                there. A disabled control with the reason stated is better than
+                one without, and a way forward is better than either — this is
+                the ordinary case of somebody importing a qualification that
+                somebody else already started, and the thing they want next is
+                one click away.
+              */
+              <div className="mt-3 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-3 text-sm">
+                <p className="font-medium">
+                  {found.existing.title} is already here.
+                </p>
+                <p className="mt-1 text-[var(--muted)]">
+                  Importing the curriculum again would replace the one it has,
+                  and anything tagged to a criterion would go with it. What you
+                  probably want is to add what is missing — the material, or
+                  the parts of the curriculum that never made it — which is
+                  done on the qualification itself and leaves everything
+                  already there untouched.
+                </p>
+                <Link
+                  href={`/qualifications/${found.existing.id}`}
+                  className="mt-2 inline-block rounded-md px-4 py-2 text-sm font-semibold text-white"
+                  style={{ background: "var(--brand-primary)" }}
+                >
+                  Open it, and add what is missing
+                </Link>
+              </div>
             ) : null}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -476,26 +501,33 @@ export function FromDocument() {
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              formAction={create}
-              disabled={
-                createPending || Boolean(found.existing && !found.part)
-              }
-              className="mt-5 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--brand-primary)" }}
-            >
-              {createPending
-                ? "Creating…"
-                : found.part
-                  ? "Create it, drawing on its parent's curriculum"
-                  : "Create it, with this curriculum"}
-            </button>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              {found.part
-                ? "Its own Qualification Document is filed against it. The curriculum document and the assessment specification are not: they belong to the qualification it comes from, and are already filed there."
-                : "Every document you supplied is filed against the qualification, so a moderator can open the source of any criterion — and so the readiness gate is satisfied before material is authored."}
-            </p>
+            {/*
+              Absent rather than disabled where it cannot be used. The panel
+              above carries the reason and the way forward, and a dead button
+              underneath it would only invite somebody to press it.
+            */}
+            {found.existing && !found.part ? null : (
+              <>
+                <button
+                  type="submit"
+                  formAction={create}
+                  disabled={createPending}
+                  className="mt-5 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ background: "var(--brand-primary)" }}
+                >
+                  {createPending
+                    ? "Creating…"
+                    : found.part
+                      ? "Create it, drawing on its parent's curriculum"
+                      : "Create it, with this curriculum"}
+                </button>
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  {found.part
+                    ? "Its own Qualification Document is filed against it. The curriculum document and the assessment specification are not: they belong to the qualification it comes from, and are already filed there."
+                    : "Every document you supplied is filed against the qualification, so a moderator can open the source of any criterion — and so the readiness gate is satisfied before material is authored."}
+                </p>
+              </>
+            )}
           </div>
         ) : null}
       </form>
