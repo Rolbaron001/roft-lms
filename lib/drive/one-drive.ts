@@ -244,9 +244,11 @@ export const oneDriveProvider: DriveProvider = {
     return found;
   },
 
-  async download({ accessToken, fileId }): Promise<Uint8Array> {
+  async download({ accessToken, file }): Promise<Uint8Array> {
+    // No export step here: OneDrive keeps Word, Excel and PowerPoint files in
+    // those formats already, so what is stored is what comes back.
     const response = await call(
-      `${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}/content`,
+      `${GRAPH}/me/drive/items/${encodeURIComponent(file.id)}/content`,
       accessToken,
     );
     return new Uint8Array(await response.arrayBuffer());

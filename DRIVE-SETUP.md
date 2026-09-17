@@ -84,6 +84,31 @@ never given. A tenant with four administrators has four connections or none.
 
 ---
 
+## Google's own documents are read
+
+Docs, Sheets and Slides are exported on the way in — to Word, Excel and
+PowerPoint, which are the formats this platform already reads and the same ones
+Google picks when you download a folder as a zip. A Drawing comes across as
+PDF. The file arrives with the extension it now has, because everything
+downstream reads it: a theory guide called "CA 121151 SU1 Theory Guide" with
+nothing after it would otherwise be a document of unknown kind and unknown
+format.
+
+This matters more for Curiosa than for most: they work in Google throughout, so
+their guides and workbooks are Docs rather than uploaded Word files. Without
+the export the feature would have been useless to them — a folder of Docs would
+have read as empty, and the only way in would have been to download the folder
+as a zip and upload it again, which works *because Google exports the documents
+on the way into the zip*. The export was always happening. It was only
+happening on the other side of a manual round trip.
+
+Google refuses to export a very large document — the documented limit is around
+10 MB of exported content. One that hits it is named, with the suggestion to
+download that document on its own; the rest of the folder reads normally.
+
+A Form, a Map or a shortcut is skipped: Google-native things with no document
+inside them to export.
+
 ## What the platform holds, and what it cannot do
 
 A sealed refresh token per person per provider. It can be exchanged for
@@ -102,12 +127,6 @@ and Microsoft will refuse a write, whatever the platform asks.
 ---
 
 ## What it will not do yet, and why
-
-**Google's own document formats are skipped.** A Google Doc has no bytes to
-download — it would have to be exported, and which format is a decision nobody
-has made. A folder of Google Docs rather than Word files therefore reads as
-empty, and says so rather than importing nothing quietly. Worth revisiting if
-Curiosa's material turns out to be native Docs rather than uploaded Word files.
 
 **Five hundred files, or about 750 MB, in one go.** A qualification folder is
 eighty files; a personal drive root is not. Refused with the number said,

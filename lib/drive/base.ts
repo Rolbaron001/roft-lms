@@ -30,6 +30,15 @@ export type DriveFile = {
   /** Null where the provider does not say. */
   bytes: number | null;
   mimeType: string | null;
+  /**
+   * What to export this as, for a document that has no bytes of its own.
+   *
+   * A Google Doc is not a file: it lives in Google's own format and is turned
+   * into one on the way out. Downloading a Drive folder as a zip already does
+   * exactly this, which is why that route works and why skipping these was
+   * wrong.
+   */
+  exportAs?: { mimeType: string; extension: string };
 };
 
 export type DriveFolder = {
@@ -94,8 +103,16 @@ export type DriveProvider = {
    */
   list(input: { accessToken: string; folderId: string }): Promise<DriveFile[]>;
 
-  /** The bytes of one file. */
-  download(input: { accessToken: string; fileId: string }): Promise<Uint8Array>;
+  /**
+   * The bytes of one file, exporting it first where it has none of its own.
+   *
+   * Takes the file rather than its id, because whether an export is needed is
+   * something the listing worked out and the caller should not have to know.
+   */
+  download(input: {
+    accessToken: string;
+    file: DriveFile;
+  }): Promise<Uint8Array>;
 };
 
 /** Every drive provider the platform knows. Used to validate a stored value. */
@@ -103,20 +120,67 @@ export const DRIVE_PROVIDER_NAMES = ["google_drive", "one_drive"] as const;
 export type DriveProviderName = (typeof DRIVE_PROVIDER_NAMES)[number];
 
 /**
+ * What a Google-native document should be exported as.
+ *
+ * Curiosa work in Google throughout, so their theory guides and workbooks are
+ * Docs rather than uploaded Word files. Skipping those would have made the
+ * whole feature useless to them: a folder of Docs would have read as empty,
+ * and the only way in would have been to download the folder as a zip and
+ * upload it again — which works, and works *because Google exports the
+ * documents on the way into the zip*. The export was always happening. It was
+ * only happening on the other side of a manual round trip.
+ *
+ * So these are the formats Google's own folder download picks, and the ones
+ * this platform already reads.
+ */
+const EXPORT_AS: Record<string, { mimeType: string; extension: string }> = {
+  "application/vnd.google-apps.document": {
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    extension: ".docx",
+  },
+  "application/vnd.google-apps.spreadsheet": {
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    extension: ".xlsx",
+  },
+  "application/vnd.google-apps.presentation": {
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    extension: ".pptx",
+  },
+  // A Drawing has no Office equivalent worth having; PDF keeps it readable.
+  "application/vnd.google-apps.drawing": {
+    mimeType: "application/pdf",
+    extension: ".pdf",
+  },
+};
+
+export function exportFormatFor(
+  mimeType: string | null,
+): { mimeType: string; extension: string } | undefined {
+  return mimeType ? EXPORT_AS[mimeType] : undefined;
+}
+
+/**
  * Files a drive holds that the platform has no use for.
  *
  * Skipped at the point of listing rather than downloaded and then ignored,
- * because a shared drive folder routinely holds shortcuts, native documents
- * and things somebody left there, and downloading eighty megabytes to discard
- * it is a cost the person waiting can feel.
+ * because a shared drive folder routinely holds shortcuts and things somebody
+ * left there, and fetching eighty megabytes to discard it is a cost the person
+ * waiting can feel.
  */
 export function worthDownloading(file: DriveFile): boolean {
-  // A Google-native document has no bytes to download; it would have to be
-  // exported, which is a different call and a decision about which format.
-  if (file.mimeType?.startsWith("application/vnd.google-apps")) return false;
-
-  // Shortcuts point at a file rather than being one.
+  // Points at a file rather than being one.
   if (file.mimeType === "application/vnd.google-apps.shortcut") return false;
+
+  // A folder, a form, a map: Google-native things with no document in them.
+  if (
+    file.mimeType?.startsWith("application/vnd.google-apps") &&
+    !file.exportAs
+  ) {
+    return false;
+  }
 
   return true;
 }

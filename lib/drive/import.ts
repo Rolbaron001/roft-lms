@@ -27,6 +27,14 @@ import { accessTokenFor, DriveError, type DriveProviderName } from "./index";
 const MAX_FILES = 500;
 const MAX_TOTAL_BYTES = 750 * 1024 * 1024;
 
+/*
+ * The size guard counts only what the provider states a size for, and a
+ * Google-native document has none until it is exported. So the total is a
+ * floor rather than a measure, and the file count is what actually holds the
+ * line for a folder of Docs. Said here because a guard that quietly does not
+ * apply is worse than no guard.
+ */
+
 export type DriveImportProgress = {
   /** Files downloaded so far, of how many. */
   done: number;
@@ -60,7 +68,7 @@ export async function importFromDrive(
 
   if (listed.length === 0) {
     throw new DriveError(
-      "That folder has nothing in it the platform can read. A folder of Google Docs rather than Word files reads as empty here — those have to be exported first.",
+      "That folder has nothing in it the platform can read. Documents, spreadsheets and presentations are all read, including Google's own — so an empty result means the folder really is empty, or holds only things like Forms and shortcuts.",
     );
   }
 
@@ -89,7 +97,7 @@ export async function importFromDrive(
     try {
       incoming.push({
         path: file.path,
-        bytes: await provider.download({ accessToken, fileId: file.id }),
+        bytes: await provider.download({ accessToken, file }),
       });
     } catch (error) {
       /*

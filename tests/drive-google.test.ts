@@ -20,7 +20,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { googleDriveProvider } from "@/lib/drive/google-drive";
-import { worthDownloading } from "@/lib/drive/base";
+import { exportFormatFor, worthDownloading } from "@/lib/drive/base";
 
 const TOKEN = "ya29-not-a-real-access-token";
 
@@ -140,20 +140,142 @@ describe("walking a folder", () => {
   });
 });
 
-describe("what is not worth downloading", () => {
+describe("Google's own documents", () => {
   /**
-   * A Google Doc has no bytes to download — it would have to be exported, and
-   * which format is a decision nobody has made. Fetching it would return an
-   * error per file in a folder full of them.
+   * The thing that would have made this feature useless to Curiosa, who work
+   * in Google throughout: their theory guides and workbooks are Docs, not
+   * uploaded Word files.
+   *
+   * These were skipped at first, on the reasoning that a Doc has no bytes and
+   * exporting is a decision about format. That was wrong, and Roland said so:
+   * downloading a Drive folder as a zip already works, and it works *because
+   * Google exports the documents on the way into the zip*. The export was
+   * always happening — just on the other side of a manual round trip. So the
+   * formats here are the ones Google's own folder download picks, and the ones
+   * this platform already reads.
    */
-  it("skips Google's own document formats", () => {
+  it("exports a Doc as Word, a Sheet as Excel, a Slide deck as PowerPoint", () => {
+    expect(exportFormatFor("application/vnd.google-apps.document")?.extension)
+      .toBe(".docx");
     expect(
-      worthDownloading({
-        id: "1",
-        path: "notes",
-        name: "notes",
+      exportFormatFor("application/vnd.google-apps.spreadsheet")?.extension,
+    ).toBe(".xlsx");
+    expect(
+      exportFormatFor("application/vnd.google-apps.presentation")?.extension,
+    ).toBe(".pptx");
+  });
+
+  /**
+   * A Doc has no name ending in anything, and everything downstream reads the
+   * extension: the media check decides what a file is, and the classifier
+   * matches "WB1 AG" in a filename. A theory guide arriving as
+   * "CA 121151 SU1 Theory Guide" with nothing after it is a file of unknown
+   * kind and unknown format.
+   */
+  it("gives an exported document the extension it now has", async () => {
+    drive({
+      root: [
+        {
+          id: "doc",
+          name: "CA 121151 SU1 Theory Guide",
+          mimeType: "application/vnd.google-apps.document",
+        },
+      ],
+    });
+
+    const [found] = await googleDriveProvider.list({
+      accessToken: TOKEN,
+      folderId: "root",
+    });
+
+    expect(found.path).toBe("CA 121151 SU1 Theory Guide.docx");
+    expect(found.exportAs?.mimeType).toContain("wordprocessingml");
+  });
+
+  it("asks Google to export it rather than for its bytes", async () => {
+    drive({});
+    globalThis.fetch = (async (input: string | URL) => {
+      calls.push(String(input));
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(8),
+      } as unknown as Response;
+    }) as typeof fetch;
+
+    await googleDriveProvider.download({
+      accessToken: TOKEN,
+      file: {
+        id: "doc",
+        path: "a.docx",
+        name: "a.docx",
         bytes: null,
         mimeType: "application/vnd.google-apps.document",
+        exportAs: {
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          extension: ".docx",
+        },
+      },
+    });
+
+    // The export endpoint, not alt=media. Asking for the bytes of a Doc
+    // returns an error saying it cannot be downloaded, which is exactly what
+    // made a folder of Docs look unreadable.
+    expect(calls[0]).toContain("/export");
+    expect(calls[0]).toContain("wordprocessingml");
+    expect(calls[0]).not.toContain("alt=media");
+  });
+
+  it("downloads an uploaded file as it is", async () => {
+    globalThis.fetch = (async (input: string | URL) => {
+      calls.push(String(input));
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => new ArrayBuffer(8),
+      } as unknown as Response;
+    }) as typeof fetch;
+
+    await googleDriveProvider.download({
+      accessToken: TOKEN,
+      file: {
+        id: "up",
+        path: "a.docx",
+        name: "a.docx",
+        bytes: 10,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    });
+
+    expect(calls[0]).toContain("alt=media");
+    expect(calls[0]).not.toContain("/export");
+  });
+});
+
+describe("what is still not worth fetching", () => {
+  it("skips a shortcut, which points at a file rather than being one", () => {
+    expect(
+      worthDownloading({
+        id: "s",
+        path: "link",
+        name: "link",
+        bytes: null,
+        mimeType: "application/vnd.google-apps.shortcut",
+      }),
+    ).toBe(false);
+  });
+
+  /** A Form is Google-native with no document in it to export. */
+  it("skips a Google thing with nothing to export", () => {
+    expect(
+      worthDownloading({
+        id: "f",
+        path: "survey",
+        name: "survey",
+        bytes: null,
+        mimeType: "application/vnd.google-apps.form",
       }),
     ).toBe(false);
   });

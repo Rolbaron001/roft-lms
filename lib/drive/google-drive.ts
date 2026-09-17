@@ -4,7 +4,7 @@ import type {
   DriveFolder,
   DriveProvider,
 } from "./base";
-import { worthDownloading } from "./base";
+import { exportFormatFor, worthDownloading } from "./base";
 
 /**
  * Google Drive, read-only.
@@ -71,6 +71,7 @@ async function call(
   url: string,
   accessToken: string,
   init?: RequestInit,
+  say?: { exportTooLarge?: string },
 ): Promise<Response> {
   const response = await fetch(url, {
     ...init,
@@ -82,7 +83,13 @@ async function call(
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(explain(response.status, body));
+    const message = explain(response.status, body);
+
+    if (say?.exportTooLarge && /export size|too large/i.test(message)) {
+      throw new Error(say.exportTooLarge);
+    }
+
+    throw new Error(message);
   }
 
   return response;
@@ -255,12 +262,29 @@ export const googleDriveProvider: DriveProvider = {
             continue;
           }
 
+          /*
+           * A Google Doc is not a file and has no name ending in anything.
+           *
+           * The extension is added because everything downstream reads it: the
+           * media check decides what a document is by its bytes and its name,
+           * and the classifier matches "WB1 AG" in a filename. A theory guide
+           * called "CA 121151 SU1 Theory Guide" with nothing after it would
+           * arrive as an unknown kind of file with no format.
+           *
+           * This is what Google's own folder download does, and it is why
+           * downloading a folder as a zip produces something the platform can
+           * already read.
+           */
+          const exportAs = exportFormatFor(entry.mimeType ?? null);
+
           const file: DriveFile = {
             id: entry.id,
-            path,
-            name: entry.name,
+            path: exportAs ? `${path}${exportAs.extension}` : path,
+            name: exportAs ? `${entry.name}${exportAs.extension}` : entry.name,
+            // A native document has no size until it is exported.
             bytes: entry.size ? Number(entry.size) : null,
             mimeType: entry.mimeType ?? null,
+            exportAs,
           };
 
           if (worthDownloading(file)) found.push(file);
@@ -273,8 +297,30 @@ export const googleDriveProvider: DriveProvider = {
     return found;
   },
 
-  async download({ accessToken, fileId }): Promise<Uint8Array> {
-    const url = new URL(`${FILES}/${encodeURIComponent(fileId)}`);
+  async download({ accessToken, file }): Promise<Uint8Array> {
+    /*
+     * A native document is exported; an uploaded one is downloaded.
+     *
+     * Two different endpoints, and the difference is not a detail: asking for
+     * the bytes of a Google Doc returns an error saying it cannot be
+     * downloaded, which is what made a folder of Docs look unreadable.
+     */
+    if (file.exportAs) {
+      const url = new URL(`${FILES}/${encodeURIComponent(file.id)}/export`);
+      url.searchParams.set("mimeType", file.exportAs.mimeType);
+
+      const response = await call(url.toString(), accessToken, undefined, {
+        // Google refuses to export a very large document - the documented
+        // limit is about 10 MB of exported content - and the error it returns
+        // says only "export size limit exceeded", which is true and gives
+        // nobody anything to do.
+        exportTooLarge: `"${file.name}" is too large for Google to export in one piece. Download that one document from Drive as ${file.exportAs.extension} and add it on its own afterwards; everything else in the folder reads normally.`,
+      });
+
+      return new Uint8Array(await response.arrayBuffer());
+    }
+
+    const url = new URL(`${FILES}/${encodeURIComponent(file.id)}`);
     url.searchParams.set("alt", "media");
     url.searchParams.set("supportsAllDrives", "true");
 
