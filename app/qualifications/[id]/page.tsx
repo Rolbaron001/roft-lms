@@ -98,8 +98,24 @@ export default async function QualificationPage({
       m.looseCriteria.length,
     0,
   );
+  /*
+   * Modules whose criteria have not been transcribed yet.
+   *
+   * A work experience module is not one of them, ever. It is proved by a
+   * logbook a coach signs rather than by assessment criteria, so having none
+   * is its finished state — the parser and the importer both already know
+   * that, and this screen did not.
+   *
+   * The result was a warning on every correctly imported QCTO qualification:
+   * the HRM Officer read perfectly and then announced "5 of 15 modules have no
+   * criteria yet", because five of its fifteen are work experience modules.
+   * Somebody importing for the first time reads that as the import having
+   * half failed — which is exactly the kind of false alarm that made the test
+   * on 16 September feel like a failure.
+   */
   const notCaptured = modules.filter(
     (m) =>
+      m.component !== "workplace" &&
       m.topics.every((topic) => topic.criteria.length === 0) &&
       m.looseCriteria.length === 0,
   );
