@@ -4,7 +4,7 @@ import type {
   DriveFolder,
   DriveProvider,
 } from "./base";
-import { exportFormatFor, worthDownloading } from "./base";
+import { exportFormatFor, reach, worthDownloading } from "./base";
 
 /**
  * Google Drive, read-only.
@@ -73,13 +73,17 @@ async function call(
   init?: RequestInit,
   say?: { exportTooLarge?: string },
 ): Promise<Response> {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-      authorization: `Bearer ${accessToken}`,
+  const response = await reach(
+    url,
+    {
+      ...init,
+      headers: {
+        ...(init?.headers ?? {}),
+        authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+    "Google",
+  );
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
@@ -124,17 +128,21 @@ export const googleDriveProvider: DriveProvider = {
   },
 
   async exchange({ code, redirectUri }): Promise<DriveConnectionInfo> {
-    const response = await fetch(TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId(),
-        client_secret: clientSecret(),
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
-    });
+    const response = await reach(
+      TOKEN,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId(),
+          client_secret: clientSecret(),
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      },
+      "Google",
+    );
 
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(explain(response.status, body));
@@ -161,16 +169,20 @@ export const googleDriveProvider: DriveProvider = {
   },
 
   async refresh(refreshToken) {
-    const response = await fetch(TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        refresh_token: refreshToken,
-        client_id: clientId(),
-        client_secret: clientSecret(),
-        grant_type: "refresh_token",
-      }),
-    });
+    const response = await reach(
+      TOKEN,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          refresh_token: refreshToken,
+          client_id: clientId(),
+          client_secret: clientSecret(),
+          grant_type: "refresh_token",
+        }),
+      },
+      "Google",
+    );
 
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(explain(response.status, body));

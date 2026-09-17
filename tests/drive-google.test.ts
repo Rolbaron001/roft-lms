@@ -316,6 +316,42 @@ describe("what it says when Google says no", () => {
   });
 });
 
+describe("when the machine cannot get there at all", () => {
+  /**
+   * A different failure from the provider refusing something, and it has to
+   * say so differently: nobody's credential is wrong and nothing needs
+   * reconnecting — the server simply could not reach Google.
+   *
+   * `fetch` throws rather than returning a response when it cannot make the
+   * connection, and what it throws says "fetch failed" and nothing else. That
+   * reached the screen during a check on 17 September and is indistinguishable
+   * to the reader from the platform being broken.
+   */
+  it("says so, rather than letting fetch's own words through", async () => {
+    globalThis.fetch = (async () => {
+      throw new TypeError("fetch failed");
+    }) as typeof fetch;
+
+    await expect(
+      googleDriveProvider.list({ accessToken: TOKEN, folderId: "root" }),
+    ).rejects.toThrow(/could not be reached from this machine/i);
+
+    await expect(
+      googleDriveProvider.list({ accessToken: TOKEN, folderId: "root" }),
+    ).rejects.not.toThrow(/fetch failed/);
+  });
+
+  it("says the same for renewing a connection", async () => {
+    globalThis.fetch = (async () => {
+      throw new TypeError("fetch failed");
+    }) as typeof fetch;
+
+    await expect(googleDriveProvider.refresh("a-token")).rejects.toThrow(
+      /could not be reached/i,
+    );
+  });
+});
+
 describe("the consent it asks for", () => {
   it("asks to read, and for nothing else", () => {
     process.env.GOOGLE_DRIVE_CLIENT_ID = "test-client";

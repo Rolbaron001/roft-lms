@@ -115,6 +115,39 @@ export type DriveProvider = {
   }): Promise<Uint8Array>;
 };
 
+/**
+ * A request to a provider, with a network failure turned into a sentence.
+ *
+ * `fetch` throws rather than returning a response when it cannot reach the
+ * other end at all — no DNS, no route, a firewall — and what it throws says
+ * "fetch failed" and nothing else. That reached the screen during a check on
+ * 17 September, and it is indistinguishable to the reader from the platform
+ * being broken.
+ *
+ * It is a different failure from the provider refusing something, and it wants
+ * saying differently: nobody's credential is wrong, nothing needs
+ * reconnecting, the machine simply could not get there.
+ */
+export async function reach(
+  url: string,
+  init: RequestInit,
+  who: string,
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    const aborted =
+      error instanceof Error &&
+      (error.name === "AbortError" || /abort/i.test(error.message));
+
+    throw new Error(
+      aborted
+        ? `${who} did not answer in time.`
+        : `${who} could not be reached from this machine. Nothing is wrong with your connection to it and nothing needs reconnecting - the server the platform runs on could not get there. If it keeps happening, whoever maintains the deployment should check that it is allowed to reach ${who} over the network.`,
+    );
+  }
+}
+
 /** Every drive provider the platform knows. Used to validate a stored value. */
 export const DRIVE_PROVIDER_NAMES = ["google_drive", "one_drive"] as const;
 export type DriveProviderName = (typeof DRIVE_PROVIDER_NAMES)[number];

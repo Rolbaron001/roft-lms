@@ -4,6 +4,7 @@ import type {
   DriveFolder,
   DriveProvider,
 } from "./base";
+import { reach } from "./base";
 
 /**
  * OneDrive, read-only, through Microsoft Graph.
@@ -63,9 +64,11 @@ function explain(status: number, body: unknown): string {
 }
 
 async function call(url: string, accessToken: string): Promise<Response> {
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${accessToken}` },
-  });
+  const response = await reach(
+    url,
+    { headers: { authorization: `Bearer ${accessToken}` } },
+    "Microsoft",
+  );
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
@@ -99,18 +102,22 @@ export const oneDriveProvider: DriveProvider = {
   },
 
   async exchange({ code, redirectUri }): Promise<DriveConnectionInfo> {
-    const response = await fetch(TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId(),
-        client_secret: clientSecret(),
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-        scope: SCOPE,
-      }),
-    });
+    const response = await reach(
+      TOKEN,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId(),
+          client_secret: clientSecret(),
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+          scope: SCOPE,
+        }),
+      },
+      "Microsoft",
+    );
 
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(explain(response.status, body));
@@ -151,17 +158,21 @@ export const oneDriveProvider: DriveProvider = {
   },
 
   async refresh(refreshToken) {
-    const response = await fetch(TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        refresh_token: refreshToken,
-        client_id: clientId(),
-        client_secret: clientSecret(),
-        grant_type: "refresh_token",
-        scope: SCOPE,
-      }),
-    });
+    const response = await reach(
+      TOKEN,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          refresh_token: refreshToken,
+          client_id: clientId(),
+          client_secret: clientSecret(),
+          grant_type: "refresh_token",
+          scope: SCOPE,
+        }),
+      },
+      "Microsoft",
+    );
 
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(explain(response.status, body));
