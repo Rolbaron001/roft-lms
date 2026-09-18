@@ -33,12 +33,23 @@ export default async function AiImportPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">What the AI has read</h1>
+        <h1 className="text-xl font-semibold">Folders that have been read</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
           Every folder that has been read, and what became of it. Reading a new
           one starts where the work is — on the qualification, course or
           material you are building — rather than here.
         </p>
+        {/*
+          Was headed "What the AI has read", which was not true of all of it.
+          A folder carrying its own blueprint.json is read by this platform
+          alone, and a folder of material never involves a model at any point -
+          filing a document by its name is a rule rather than a judgement.
+
+          The distinction is not pedantry. A provider has to be able to say
+          which of their documents were sent to a third party and which never
+          left the platform, and a page that calls all of it AI leaves them
+          unable to answer. So each row says which it was.
+        */}
       </div>
 
       {!extension.registered ? (
@@ -56,7 +67,7 @@ export default async function AiImportPage() {
         <div className="mt-6">
           <Card
             title="What has been read"
-            description="Kept whether committed or discarded. What the extension proposed and was rejected is how anybody judges whether it is worth having."
+            description="Kept whether committed or discarded. What was proposed and then rejected is how anybody judges whether a reading is worth trusting."
           >
             <ul className="space-y-2 text-sm">
               {jobs.map((job) => (
@@ -76,6 +87,25 @@ export default async function AiImportPage() {
                     />
                   </span>
                   <span>{STATUS_LABEL[job.status] ?? job.status}</span>
+                  {/*
+                    Whether a model saw these documents. Read from the proposal
+                    the reader wrote, rather than inferred from the job, so it
+                    says what happened rather than what usually happens.
+                  */}
+                  {(() => {
+                    const source = (
+                      job.proposal as { source?: string } | null
+                    )?.source;
+                    if (!source) return null;
+
+                    return (
+                      <span className="text-xs text-[var(--muted)]">
+                        {source === "documents"
+                          ? "read by an AI extension"
+                          : "read by the platform, no AI involved"}
+                      </span>
+                    );
+                  })()}
                   {job.error ? (
                     <span className="text-[var(--danger)]">{job.error}</span>
                   ) : null}
