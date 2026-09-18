@@ -457,3 +457,27 @@ SABPP fact sheets, a task report, and **TM and WP, still unexplained**. Those
 two are now flagged on the confirmation screen as unrecognised and visible to
 everyone, which is the right treatment for a file the platform cannot identify,
 but somebody at Curiosa should say what they are.
+
+### One thing for Roland to decide
+
+**The parser fixes are forward-only.** A qualification imported before today
+keeps whatever the old reader wrote — the 571-character element is still in the
+local copy I imported this morning, because the fix is in the reader rather
+than in a migration. Confirmed by opening the element screen after the fix.
+
+That matters only if a qualification has already been imported into production.
+If one has, there are three ways out and none is free:
+
+- **Re-import it.** Clean, and it replaces the curriculum — which discards
+  anything tagged to a criterion. Fine for a qualification nothing hangs off
+  yet, wrong for one in use.
+- **Edit the line.** The element screen is deliberately read-only: a published
+  curriculum is the QCTO's, not the provider's. Allowing an edit would need a
+  reason and an audit trail, and the reason here is "the platform read it
+  wrongly", which is a different thing from "the provider disagrees with the
+  QCTO".
+- **Leave it.** The text is wrong but visible, and re-importing later fixes it.
+
+I have not looked in the production database to see whether any qualification
+is affected — that is beyond reading the deploy log, and it is a question worth
+asking rather than answering unasked. **Say the word and I will check.**
