@@ -42,6 +42,12 @@ if you hand it one.
    panel and nothing has happened.
 5. **Create it.** Now it is written, and you land on the qualification.
 
+**What you will see there, and it is not a fault.** The qualification arrives
+with every module belonging to no study unit. That is expected: a curriculum
+publishes modules and says nothing about how a provider groups them, so
+grouping them is the next step rather than something the import missed. The
+screen says so and points at the document that does it.
+
 ## Then the material
 
 From the qualification's own page, further down, upload the folder of study
@@ -54,6 +60,15 @@ Two things worth knowing, because both surprised us:
   `WB1 AG` and the rest are filed as restricted and are not visible to
   learners. Before this was fixed, 38 of Curiosa's own files would have been
   published to the learners they are the answer keys for.
+
+  **Check the line above the document list before you commit.** It says how
+  many are withheld, how many learners will be able to read, and how many the
+  platform could not recognise from their names. Anything it could not
+  recognise is filed as "other", which is visible to everyone — so if an answer
+  guide is named in some way these rules do not know, that line is where it
+  shows up. In your folder two files land there today, `HRM Officer SU2 TM.pdf`
+  and `HRM Officer SU2 WP.pdf`, because nobody has told us what TM and WP are.
+  If either is a memorandum, say so and the rule can be taught.
 - **The alignment document is read too**, and it builds the study units — five
   units with their real names, the outcome each serves and the right modules
   under each. Word or Excel both work.
