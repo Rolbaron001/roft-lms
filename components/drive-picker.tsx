@@ -7,6 +7,7 @@ import {
   importFromDriveAction,
   type DriveImportState,
 } from "@/app/imports/drive-actions";
+import { AttentionMascot } from "./tenant-illustration";
 
 /**
  * Choosing a folder from a drive somebody has connected.
@@ -197,6 +198,22 @@ export function DrivePicker({
           >
             {reading ? "Reading…" : `Read “${here.name}”`}
           </button>
+
+          {/*
+            The same prompt the uploaded-folder route gives, and it was missing
+            here. Somebody who has walked into a folder on their drive is at
+            exactly the point Heidi was at: the next step has appeared and
+            nothing says so.
+          */}
+          {!reading ? (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
+              <AttentionMascot className="mr-1" />
+              <span aria-hidden className="motion-safe:animate-bounce">
+                ←
+              </span>
+              Now press this to read it. Nothing is saved yet.
+            </p>
+          ) : null}
 
           {reading ? (
             <p

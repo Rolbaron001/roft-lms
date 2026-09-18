@@ -9,6 +9,7 @@ import {
   type CreateFromDocumentState,
   type ReadingState,
 } from "./actions";
+import { AttentionMascot } from "@/components/tenant-illustration";
 
 const field =
   "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -228,6 +229,7 @@ export function FromDocument() {
 
           {anyChosen && !readPending && !found ? (
             <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
+              <AttentionMascot className="mr-1" />
               <span aria-hidden className="motion-safe:animate-bounce">
                 ←
               </span>

@@ -259,7 +259,7 @@ export function BrandingForm({
           */}
           <label className="block space-y-1.5">
             <span className="block text-xs font-medium text-[var(--muted)]">
-              Picture for empty screens
+              Your character
             </span>
             <input
               name="illustrationUrl"
@@ -269,10 +269,11 @@ export function BrandingForm({
               className={inputClass}
             />
             <span className="block text-xs text-[var(--muted)]">
-              Shown where a screen has nothing on it yet — beside the sentence
-              explaining what would be there. Small, and it should read as
-              friendly rather than decorative. Leave it empty to use this
-              platform&rsquo;s own.
+              Appears on a screen with nothing on it yet, beside the sentence
+              explaining what would be there — and beside a button somebody has
+              to press next, where it is there to be noticed. Small, upright,
+              and friendlier than it is decorative. Leave it empty to use this
+              platform&rsquo;s own, or nothing at all.
             </span>
           </label>
 

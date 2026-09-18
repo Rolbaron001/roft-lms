@@ -7,6 +7,8 @@ import { arrangeNavigation } from "@/lib/navigation";
 import { vocabulary } from "@/lib/terms";
 import { OfflineRegistration } from "./offline-registration";
 import { TenantLogo } from "./tenant-logo";
+import { TenantIllustrationProvider } from "./tenant-illustration";
+import { platformIllustration } from "@/lib/platform";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
@@ -153,7 +155,17 @@ export async function AppShell({
 
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      {/*
+        Said once here rather than passed to each control that wants it. The
+        tenant's own picture, or this deployment's, or none - the same order
+        the empty states use, and for the same reason: one operator having a
+        mascot must not put that mascot in another operator's product.
+      */}
+      <TenantIllustrationProvider
+        url={tenant.illustrationUrl ?? platformIllustration()}
+      >
+        <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      </TenantIllustrationProvider>
     </div>
   );
 }

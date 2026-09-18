@@ -7,6 +7,7 @@ import {
   type ImportActionState,
 } from "@/app/imports/actions";
 import { AiSwitch } from "./ai-switch";
+import { AttentionMascot } from "./tenant-illustration";
 
 /**
  * Choosing a folder to read.
@@ -259,8 +260,10 @@ export function FolderPicker({
 
         {chosen && !pending ? (
           <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
-            {/* Points at the button, and is hidden from a screen reader, which
-                is told the same thing by the sentence beside it. */}
+            {/* The tenant's character where one is set, and nothing where none
+                is. Both it and the arrow are hidden from a screen reader, which
+                is told the same thing by the sentence beside them. */}
+            <AttentionMascot className="mr-1" />
             <span aria-hidden className="motion-safe:animate-bounce">
               ←
             </span>
