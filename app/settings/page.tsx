@@ -282,11 +282,21 @@ export default async function SettingsPage({
                 provider: extension.provider,
                 model: extension.model,
                 availability: extension.availability,
-                providers: knownProviders().map((provider) => ({
-                  name: provider.name,
-                  label: provider.label,
-                  description: provider.description,
-                })),
+                // Asked of each provider rather than assumed, because the
+                // answer differs by deployment: Claude Code runs on a laptop
+                // and not in the container on the server.
+                providers: await Promise.all(
+                  knownProviders().map(async (provider) => {
+                    const here = await provider.availability(tenant.id);
+                    return {
+                      name: provider.name,
+                      label: provider.label,
+                      description: provider.description,
+                      runsHere: here.available,
+                      reason: here.reason ?? null,
+                    };
+                  }),
+                ),
               }}
             />
           </Card>

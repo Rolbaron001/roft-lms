@@ -254,10 +254,18 @@ export const claudeCodeProvider: AiProvider = {
     if (!cli) {
       return {
         available: false,
-        reason:
-          "Claude Code is not installed where the platform is running.",
+        reason: "Claude Code is not installed where the platform is running.",
+        /*
+         * This used to say the hosted platform has it installed already, and
+         * that seeing this meant the deployment was broken. Neither is true.
+         * The application image contains the built application and nothing
+         * else - no CLI - so on the server this provider is unavailable by
+         * construction and always will be. Heidi hit exactly this on
+         * 16 September, and a message telling her to report a fault would have
+         * sent her to Roland with nothing wrong to find.
+         */
         remedy:
-          "On the hosted platform it is installed already, so seeing this means something is wrong with the deployment rather than with your account - tell whoever maintains it. Running the platform on your own machine, install Claude Code there.",
+          "This provider works by running a program on the same machine as the platform, and the hosted platform does not have it. That is by design rather than a fault: nothing is wrong with your account and there is nothing for anybody to fix. Choose Google Gemini or OpenAI instead - those are called over the internet and work wherever the platform runs. Claude Code remains the right choice when the platform is running on your own computer.",
       };
     }
 

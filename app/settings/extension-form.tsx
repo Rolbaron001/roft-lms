@@ -24,7 +24,25 @@ export type ExtensionView = {
     remedy?: string;
     detail?: string;
   } | null;
-  providers: { name: string; label: string; description: string }[];
+  providers: {
+    name: string;
+    label: string;
+    description: string;
+    /**
+     * Whether this provider can run on the machine the platform is on.
+     *
+     * Not the same as whether it is set up. Claude Code shells out to a CLI,
+     * and the deployed container does not have one - so on the server it is
+     * permanently unavailable however correct somebody's token is. That is
+     * what the qualification test hit on 16 September, and the folder screen
+     * was taught to say it. This screen, one step earlier, was not: it offers
+     * Claude first and says nothing, so the whole setup can be completed
+     * perfectly and still not work.
+     */
+    runsHere: boolean;
+    /** Why not, where it cannot. */
+    reason: string | null;
+  }[];
 };
 
 /**
@@ -45,8 +63,20 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
     {},
   );
   const [available, setAvailable] = useState(current.available);
+  /*
+   * What they already chose, or the first one that can actually run here.
+   *
+   * Falling through to `providers[0]` put Claude Code in front of everybody on
+   * a deployment where Claude Code cannot run - so the default was the one
+   * choice guaranteed to fail. Somebody's existing choice is still honoured
+   * even where it cannot run, because it is theirs and the warning below says
+   * what is wrong with it; changing it under them would be worse.
+   */
   const [provider, setProvider] = useState(
-    current.provider ?? current.providers[0]?.name ?? "",
+    current.provider ??
+      current.providers.find((row) => row.runsHere)?.name ??
+      current.providers[0]?.name ??
+      "",
   );
 
   const chosen = current.providers.find((row) => row.name === provider);
@@ -111,9 +141,30 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             {current.providers.map((row) => (
               <option key={row.name} value={row.name}>
                 {row.label}
+                {row.runsHere ? "" : " — cannot run on this platform"}
               </option>
             ))}
           </select>
+          {chosen && !chosen.runsHere ? (
+            /*
+              Said here rather than after a failed run. Everything below this
+              still works - the token is stored and kept - because a platform
+              run on somebody's own machine can use it, and telling them they
+              may not set up what they have is not this screen's business.
+              What it must not do is let them finish and assume it will work.
+            */
+            <span className="mt-2 block max-w-2xl rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-2 text-xs">
+              <span className="font-medium">
+                This one cannot run on this platform, so setting it up here will
+                not make the AI features work.
+              </span>{" "}
+              {chosen.reason ??
+                "It needs a program installed on the machine the platform runs on."}{" "}
+              Choose one of the API-key providers instead — those call the
+              provider over the internet and work wherever the platform is
+              installed.
+            </span>
+          ) : null}
           {chosen ? (
             <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">
               {chosen.description}
