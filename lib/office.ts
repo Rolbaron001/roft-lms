@@ -27,7 +27,29 @@ export class OfficeReadError extends Error {
  */
 const MAX_ENTRY_BYTES = 80 * 1024 * 1024;
 
+/**
+ * The signature of the pre-2007 Office formats.
+ *
+ * A .doc or .xls from that era is an OLE compound file, not a zip, so the
+ * reader below cannot open one — and said so by suggesting the file was
+ * "damaged or is not really the type it claims to be", which is untrue and
+ * unhelpful to somebody holding a perfectly good document that is simply
+ * twenty years old. The upload control offers .doc, so this is a file the
+ * platform invites and then insults.
+ */
+const LEGACY_OFFICE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+
+function looksLegacy(bytes: Uint8Array): boolean {
+  return LEGACY_OFFICE.every((byte, index) => bytes[index] === byte);
+}
+
 function open(bytes: Uint8Array): Record<string, Uint8Array> {
+  if (looksLegacy(bytes)) {
+    throw new OfficeReadError(
+      "That is an older Word or Excel file - the format used before 2007, which is a different thing inside despite the similar name. Nothing is wrong with it. Open it and use Save As to make a .docx or .xlsx, and that will read.",
+    );
+  }
+
   try {
     return unzipSync(bytes, {
       filter: (file) => file.originalSize <= MAX_ENTRY_BYTES,

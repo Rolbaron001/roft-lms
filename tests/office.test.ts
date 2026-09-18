@@ -212,3 +212,33 @@ describe("an alignment matrix that is not a spreadsheet", () => {
     expect(() => readAlignmentMatrix(asWord)).toThrow(/itself is kept/i);
   });
 });
+
+describe("an older Word or Excel file", () => {
+  /**
+   * A .doc from before 2007 is an OLE compound file rather than a zip, so the
+   * reader cannot open one — and it used to say the file was "damaged or is
+   * not really the type it claims to be". That is untrue of a perfectly good
+   * document that happens to be twenty years old, and the upload control
+   * offers .doc, so it was a file the platform invited and then insulted.
+   *
+   * A tenant on older software is exactly the tenant this has to be kind to.
+   */
+  it("is named for what it is, with something to do about it", () => {
+    // The OLE compound-file signature, which is how the format is recognised
+    // regardless of what the file is called.
+    const legacy = new Uint8Array([
+      0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 0, 0, 0,
+    ]);
+
+    expect(() => readDocxText(legacy)).toThrow(/before 2007/i);
+    expect(() => readDocxText(legacy)).toThrow(/Save As/i);
+    // And does not tell somebody their good file is broken.
+    expect(() => readDocxText(legacy)).not.toThrow(/damaged/i);
+  });
+
+  it("still calls a genuinely broken file broken", () => {
+    const rubbish = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    expect(() => readDocxText(rubbish)).toThrow(/damaged|not really the type/i);
+  });
+});
