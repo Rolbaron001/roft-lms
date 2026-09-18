@@ -7,6 +7,7 @@ import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { connectionsFor } from "@/lib/drive";
 import { Card } from "@/components/ui";
+import { EmptyState } from "@/components/empty-state";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 
 export default async function QualificationsPage() {
@@ -123,6 +124,43 @@ export default async function QualificationsPage() {
             </div>
           ) : null}
         </>
+      ) : null}
+
+      {/*
+        Said rather than left blank.
+
+        Every other list on the platform says what would be here when it holds
+        nothing - "Nothing is waiting", "No cohorts yet" - and this one did
+        not. A facilitator or an assessor opening it before any qualification
+        has been loaded got a heading, a paragraph explaining what a
+        qualification is, and then the bottom of the page: no list, no message,
+        and no way to tell an empty platform from a broken one. They see no
+        import controls either, correctly, so there was nothing on the screen
+        at all.
+
+        Two different sentences, because the two readers can do different
+        things about it. Found by signing in as a facilitator and looking,
+        which is the only way this kind of fault shows up - the screen is
+        correct for the administrator who built it.
+      */}
+      {withModules.length === 0 ? (
+        <EmptyState title="No qualifications yet">
+          {canManage ? (
+            <p>
+              Build one from its documents above — the curriculum document and
+              the qualification document are enough, and no AI extension is
+              involved. Everything else on the platform hangs off a
+              qualification, so this is the first thing to do.
+            </p>
+          ) : (
+            <p>
+              None has been loaded yet. When one has been, the curriculum you
+              teach and mark against will be here — its modules, its topics and
+              the criteria each one is assessed by. Loading one is an
+              administrator&rsquo;s job.
+            </p>
+          )}
+        </EmptyState>
       ) : null}
 
       <QualificationsManager
