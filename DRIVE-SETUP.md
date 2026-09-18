@@ -195,3 +195,15 @@ reconnection.
 **Not wasted:** with Roland's own client id and secret on the server the button
 appears, and the whole path can be proved end to end against his own drive.
 Swapping in the operator's credentials afterwards is two lines and a restart.
+
+**One thing was on our side.** Roland put the client id and secret into the
+server's `.env` and the Settings page still said no file store was set up.
+`docker-compose.production.yml` names each variable the app container receives
+one at a time, and the two drive variables were not on that list - so the
+process started without them and the provider correctly reported itself
+unconfigured. Fixed in 31c5fb6, with a test that now reads what the source
+reads from the environment against what this file tells an operator to set.
+
+So if the button is still missing after the credentials are in place, check
+that the deploy carrying 31c5fb6 has run before checking anything in Google's
+console.
