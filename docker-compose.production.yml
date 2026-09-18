@@ -54,6 +54,10 @@ services:
       # The owner role: migrations, tenant provisioning, backups.
       DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
       ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      # Ten, spelled out rather than left to db/client.ts's default, because
+      # the empty string is not the same as unset: `?? 10` would keep an empty
+      # value and ask Postgres for a pool of nought connections.
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
       # Quoted: the message after :? contains a colon and a space, which YAML
       # would otherwise read as the start of another key.
       AUTH_SECRET: "${AUTH_SECRET:?generate one with npx auth secret}"
@@ -66,6 +70,25 @@ services:
       # rotate independently.
       AI_TOKEN_KEY: ${AI_TOKEN_KEY:-}
 
+      # Reading a folder straight from Google Drive or OneDrive.
+      #
+      # Only on this service: nothing else connects a drive. Left unset, the
+      # provider reports itself unconfigured and the Settings page says so
+      # instead of offering a button that could not work.
+      #
+      # These have to be listed here to exist at all. Putting them in .env is
+      # not enough - this file names every variable the container receives, so
+      # one that is not named is simply not passed, and the application sees an
+      # empty string however carefully the value was pasted in. That is exactly
+      # what happened on 18 September: the credentials were on the server and
+      # correct, and the screen still read "no file store is set up on this
+      # deployment", which points the person who set it up at their own work
+      # rather than at the wiring.
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
+      ONE_DRIVE_CLIENT_ID: ${ONE_DRIVE_CLIENT_ID:-}
+      ONE_DRIVE_CLIENT_SECRET: ${ONE_DRIVE_CLIENT_SECRET:-}
+
       # Outbound mail, and the domain the per-person mailboxes sit on.
       #
       # These were missing from this service entirely, which broke two things
@@ -77,7 +100,7 @@ services:
       # to a default without MAILBOX_DOMAIN, so people were shown addresses on
       # somebody else's domain for their own mailboxes.
       MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
@@ -170,7 +193,7 @@ services:
       BACKUP_BUCKET: ${BACKUP_BUCKET:-}
       BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
       MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
