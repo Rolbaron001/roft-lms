@@ -44,14 +44,27 @@ export async function EmptyState({
 
   return (
     <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-12 text-center">
+      {/*
+        A remote address is drawn without the image optimiser, which refuses a
+        host that is not in next.config's remotePatterns and answers 400. A
+        tenant who pasted an https address got no picture and no explanation.
+        See components/tenant-illustration.tsx for the whole reasoning; the
+        same rule has to hold in both places, or the same graphic appears on
+        one screen and not the other.
+      */}
       {illustration ? (
-        <Image
-          src={illustration}
-          alt=""
-          width={60}
-          height={145}
-          className="h-24 w-auto opacity-90"
-        />
+        /^https?:\/\//i.test(illustration) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={illustration} alt="" className="h-24 w-auto opacity-90" />
+        ) : (
+          <Image
+            src={illustration}
+            alt=""
+            width={60}
+            height={145}
+            className="h-24 w-auto opacity-90"
+          />
+        )
       ) : null}
 
       <div className="max-w-sm space-y-1.5">

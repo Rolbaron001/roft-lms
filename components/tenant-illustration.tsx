@@ -64,18 +64,44 @@ export function AttentionMascot({
   const url = useTenantIllustration();
   if (!url) return null;
 
+  // `alt` is written out on each element rather than spread in with the rest.
+  // It is the one attribute here that carries a decision - this picture is
+  // decorative and a screen reader should skip it - and a linter cannot see an
+  // attribute that arrives through a spread, so spreading it means the rule
+  // that exists to catch a missing alt cannot do its job on either branch.
+  const shared = {
+    "aria-hidden": true as const,
+    className: `w-auto shrink-0 motion-safe:animate-bounce ${className}`,
+    style: { height },
+  };
+
+  /*
+   * An address somewhere else is drawn without the image optimiser.
+   *
+   * The optimiser refuses a host that is not in next.config's remotePatterns -
+   * it answers the request with 400 "url parameter is not allowed" - so a
+   * tenant who pasted an https address got no picture and no explanation,
+   * while the field beside the box invited exactly that. Allowing every host
+   * instead would turn the optimiser into an open fetcher of arbitrary URLs on
+   * the server's behalf, which is a great deal to give away for a decorative
+   * graphic.
+   *
+   * So a remote one is a plain img. It loses resizing and format conversion on
+   * an image already under a hundred pixels tall, and it makes the promise on
+   * the settings field true.
+   */
+  if (/^https?:\/\//i.test(url)) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt="" {...shared} />;
+  }
+
   return (
     <Image
       src={url}
       alt=""
-      aria-hidden
+      {...shared}
       width={Math.round(height * 0.7)}
       height={height}
-      className={`w-auto shrink-0 motion-safe:animate-bounce ${className}`}
-      style={{ height }}
-      // Beside a button somebody is about to press, so it must not arrive
-      // after they have pressed it.
-      priority={false}
     />
   );
 }
