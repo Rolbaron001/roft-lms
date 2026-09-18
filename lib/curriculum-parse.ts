@@ -287,8 +287,48 @@ const PLANS: Record<
  * Lines that end a section without starting one. What follows belongs to the
  * module, not to the topic before it.
  */
-const SECTION_END =
-  /^(Provider Programme Approval Requirements|Physical Requirements|Human Resource Requirements|Legal Requirements|Purpose of the|Knowledge Topics|Skills included in the Module|List of Experiences|Total number of credits)/i;
+const SECTION_END = new RegExp(
+  "^(?:" +
+    [
+      "Provider Programme Approval Requirements",
+      "Physical Requirements",
+      "Human Resource Requirements",
+      "Legal Requirements",
+      "Purpose of the",
+      "Knowledge Topics",
+      "Skills included in the Module",
+      "List of Experiences",
+      "Total number of credits",
+      /*
+       * A numbered section of the curriculum itself - "4.4 SECTION 4D:
+       * STATEMENT OF WORK EXPERIENCE". Matched on the heading, which has had
+       * its number stripped, so what is recognised is the word.
+       *
+       * Without it, the last supporting-evidence line of the last work
+       * experience module swallowed everything after it. On 121151 that
+       * produced an element 571 characters long reading "Signed Off Logbook.
+       * The following is a broad description of the work exposure that the
+       * learner must have... 4.4 SECTION 4D: STATEMENT OF WORK EXPERIENCE
+       * Curriculum Number 242303-001-00-00..." - document plumbing presented
+       * on screen as something a learner must be taught.
+       *
+       * The running footer sitting between the two was already skipped as
+       * furniture, which is right on its own and not enough: skipping keeps
+       * collecting, so the heading after it still joined on.
+       */
+      "SECTION\s+\d",
+      // The QCTO's standard preamble to the work experience section. Prose
+      // addressed to the provider, introducing what follows rather than
+      // belonging to the list before it.
+      "The following is a broad description of the work exposure",
+      "List of Work Experience Module Specifications",
+      // The statement-of-work-experience block, and its two label lines.
+      "WORK EXPERIENCE MODULES INCLUDED IN THIS STATEMENT",
+      "Curriculum (?:Number|Title)\b",
+    ].join("|") +
+    ")",
+  "i",
+);
 
 /**
  * A line that carries no content: what a page does, rather than what it says.
@@ -875,7 +915,11 @@ function collectTopics(
       continue;
     }
 
-    if (SECTION_END.test(line)) {
+    // Tested against the heading rather than the raw line, so a numbered
+    // section - "4.4 SECTION 4D: STATEMENT OF WORK EXPERIENCE" - is recognised
+    // by its words. No other pattern here begins with a digit, so none is
+    // affected.
+    if (SECTION_END.test(heading)) {
       collecting = null;
       continue;
     }
