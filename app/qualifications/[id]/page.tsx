@@ -287,27 +287,65 @@ export default async function QualificationPage({
             curriculum&rsquo;s.
           </p>
 
+          {/*
+            Two different situations, and they were being told apart by nobody.
+
+            A qualification built from its two base documents has no study
+            units at all, because a curriculum publishes modules and says
+            nothing about how a provider groups them. So every module is
+            unplaced, and the first thing somebody saw after a successful
+            import was a red box announcing that fifteen modules were taught
+            by nobody - which reads as the import having failed when it did
+            exactly what it was asked to.
+
+            The alarming version is right once some study units exist: modules
+            left out of a structure that is otherwise built is a real gap.
+            Before that it is simply the next step, and saying what that step
+            is matters more than the colour of the box.
+          */}
           {unplacedModules.length > 0 ? (
-            <div
-              className="mb-4 rounded-lg border-2 p-4"
-              style={{ borderColor: "var(--danger)" }}
-            >
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--danger)" }}
+            studyUnits.length === 0 ? (
+              <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+                <p className="text-sm font-semibold">
+                  The next step: group these modules into study units.
+                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  The curriculum publishes modules and says nothing about study
+                  units, because grouping them is the provider&rsquo;s own
+                  decision — so a qualification read from its documents arrives
+                  with all {unplacedModules.length} of its modules unplaced.
+                  That is expected, not a fault in the import.
+                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  The quickest way is to upload your alignment document — the
+                  one mapping each Exit Level Outcome to its modules, in Word or
+                  Excel — under the documents below. It creates the study units,
+                  names them, and places every module it covers. You can also
+                  build them by hand here.
+                </p>
+              </div>
+            ) : (
+              <div
+                className="mb-4 rounded-lg border-2 p-4"
+                style={{ borderColor: "var(--danger)" }}
               >
-                {unplacedModules.length}{" "}
-                {unplacedModules.length === 1
-                  ? "module belongs"
-                  : "modules belong"}{" "}
-                to no study unit.
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {unplacedModules.map((m) => m.code).join(", ")}. A module no
-                study unit delivers is a module nobody teaches, however
-                completely its curriculum has been captured.
-              </p>
-            </div>
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--danger)" }}
+                >
+                  {unplacedModules.length}{" "}
+                  {unplacedModules.length === 1
+                    ? "module belongs"
+                    : "modules belong"}{" "}
+                  to no study unit.
+                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {unplacedModules.map((m) => m.code).join(", ")}. A module no
+                  study unit delivers is a module nobody teaches, however
+                  completely its curriculum has been captured.
+                </p>
+              </div>
+            )
           ) : null}
 
           <div className="space-y-3">
