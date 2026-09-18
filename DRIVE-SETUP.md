@@ -15,17 +15,54 @@ failing, and a folder is chosen from a computer as it is today.
 
 ---
 
+## Whose Google account owns it - read this first
+
+**One OAuth application per deployment, owned by the organisation that operates
+that deployment.** Not one application shared across all of them.
+
+This was got wrong once, on 18 September, and the wrong turn is easy to repeat.
+The platform is deployed more than once from one codebase: ROFT runs an
+instance for its own clients, Curiosa Academy runs another at
+`lms.curiosa.academy`. So "who owns the OAuth app" has an obvious-sounding
+wrong answer - ROFT built the platform, so ROFT - and a correct one: whoever
+operates the deployment the app serves.
+
+Getting it wrong is not cosmetic, because of what the audience setting does:
+
+- **Internal** restricts consent to accounts inside the owner's own Google
+  Workspace organisation. Combine that with an app owned by the wrong
+  organisation and exactly one person can ever connect a drive - which is the
+  state this walkthrough produced before it was corrected.
+- **External** admits any Google account, but an unverified app is limited to
+  named test users, and in Testing mode **a refresh token expires after seven
+  days**, so every connection has to be remade weekly.
+
+**So: Internal, owned by the operator.** For a deployment whose users are all
+in one Workspace that is correct, needs no verification, shows no warning
+screen, and does not expire. It also avoids Google's verification process,
+which matters more than it sounds: `drive.readonly` is a *restricted* scope,
+and publishing one externally to many organisations requires verification and
+likely an annual third-party security assessment, which costs money.
+
+**If the operator has no Google Workspace** - ordinary Gmail accounts rather
+than paid email on their own domain - Internal is not offered, and External
+with named test users is the only way in without verification. Workable to
+prove the feature; not a place to stop.
+
+---
+
 ## Google Drive
 
-1. At `console.cloud.google.com`, create a project — call it something like
-   "ROFT LMS".
+0. Sign in as **the operator of this deployment**, not as whoever is doing the
+   typing. See the section above - this is the step that was got wrong.
+1. At `console.cloud.google.com`, create a project, named after the
+   deployment: "Curiosa LMS" on Curiosa's.
 2. Enable the **Google Drive API** for it.
 3. Configure the **OAuth consent screen**:
-   - User type **External**, unless every user is on a Google Workspace domain
-     you control, in which case **Internal** is simpler and needs no review.
-   - App name: whatever your people should see when they are asked to consent.
-     This is the name on the screen, so "Curiosa Academy LMS" reads better to
-     Heidi than "ROFT LMS".
+   - Audience **Internal**, where the operator has a Google Workspace. Only
+     fall back to External where they do not, and read the section above first.
+   - App name: what this deployment's people should see when they are asked to
+     consent.
    - Scope: **`.../auth/drive.readonly`** and nothing else. The platform cannot
      create, change or delete anything, and asking for more would be asking for
      what it does not use.
@@ -45,9 +82,10 @@ failing, and a folder is chosen from a computer as it is today.
        GOOGLE_DRIVE_CLIENT_SECRET=...
 
 **On External and verification.** While the app is unverified, Google shows an
-"unverified app" warning and limits it to test users you list. For a handful of
-Curiosa staff that is workable — add them as test users and they will see the
-warning once. Verification is only worth pursuing if this goes to many tenants.
+"unverified app" warning, limits it to test users you list, and expires every
+refresh token after seven days. The last of those is the one that bites: the
+feature works, and then quietly stops working a week later. Only take that path
+knowingly.
 
 ---
 
@@ -132,3 +170,28 @@ and Microsoft will refuse a write, whatever the platform asks.
 eighty files; a personal drive root is not. Refused with the number said,
 rather than reading part of it — a partial import that looks complete is the
 failure this platform keeps having to design against.
+
+---
+
+## Where this got to, 18 September
+
+Walked through Google's console together and stopped partway, because the
+question at the top has no answer yet.
+
+**Done:** project created, Drive API enabled, consent screen configured as
+Internal, scope set to `drive.readonly`, OAuth client created as a Web
+application with the right redirect address.
+
+**Wrong:** all of it under Roland's own Google account rather than the
+operator's. With Internal, that means only he can connect a drive. Every screen
+and every value was right; the account was not.
+
+**Waiting on Heidi:** does Curiosa have a Google Workspace - paid Google email
+on their own domain - or ordinary Gmail accounts? That decides whether a
+Curiosa admin repeats the same ten minutes inside their Workspace and it is
+finished, or whether this is External with named test users and a weekly
+reconnection.
+
+**Not wasted:** with Roland's own client id and secret on the server the button
+appears, and the whole path can be proved end to end against his own drive.
+Swapping in the operator's credentials afterwards is two lines and a restart.
