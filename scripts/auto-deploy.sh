@@ -160,7 +160,7 @@ log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
 # was fine. Six days of deploys were lost to a disk check that took one line.
 FREE_MB=$(df -Pm / | awk 'NR==2 {print $4}')
 if [ "${FREE_MB:-0}" -lt 3000 ]; then
-  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af --filter until=168h' and 'docker builder prune -af'. Nothing has been changed."
+  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af --filter until=72h' and 'docker builder prune -af'. Nothing has been changed. Both commands run on the server, over SSH - run on your own machine they talk to Docker Desktop and do nothing for this."
 fi
 log "${FREE_MB}MB free before pulling."
 
@@ -318,11 +318,22 @@ fi
 # the old ones. By 15 September 2026 there were forty-seven of them, fourteen
 # gigabytes on a nineteen-gigabyte disk, and the next pull had nowhere to go.
 #
-# Only after a success, and only images older than a week: the last few days
-# are what a rollback would reach for, and throwing those away to save disk
-# would be trading one bad afternoon for a worse one.
-log "Clearing images older than a week."
-docker image prune -af --filter "until=168h" 2>/dev/null | tail -1 | sed 's/^/  /' || true
+# Only after a success, and only images older than three days: the last couple
+# of days are what a rollback would reach for, and throwing those away to save
+# disk would be trading one bad afternoon for a worse one.
+#
+# A week was too generous, and the arithmetic says why. Each deploy lands about
+# 950MB of app image and 1.36GB of tools image, so a week of daily deploys is
+# more disk than this machine has. On 18 September the free space had drifted
+# to 5.9GB with 4.85GB of it sitting in unused images, and a hand-run prune at
+# 72h returned 1.5GB - which is exactly the clean-up this step should have been
+# doing on its own.
+#
+# Three days still leaves two local rollback targets, and nothing is ever
+# really lost: every one of these images is in ghcr.io and re-pulls if a
+# rollback needs one. The local copy only saves the download.
+log "Clearing images older than three days."
+docker image prune -af --filter "until=72h" 2>/dev/null | tail -1 | sed 's/^/  /' || true
 docker builder prune -af >/dev/null 2>&1 || true
 log "$(df -Pm / | awk 'NR==2 {print $4}')MB free after tidying."
 
