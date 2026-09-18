@@ -12,6 +12,7 @@ import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
 import { MailTest } from "./mail-test";
+import { SettingsNav } from "./settings-nav";
 import { DriveConnections } from "./drive-connections";
 import { availableDriveProviders, connectionsFor } from "@/lib/drive";
 import { TerminologyForm } from "./terminology-form";
@@ -109,6 +110,18 @@ export default async function SettingsPage({
         </p>
       </div>
 
+      {/*
+        What is on this page, before any of it.
+
+        Roland, 18 September: hard to navigate "especially if you don't know
+        all the options that can be found there". The sections are marked with
+        data attributes and the list is built from what actually rendered, so a
+        section added later names itself rather than waiting for somebody to
+        remember a second list.
+      */}
+      <SettingsNav />
+
+      <div id="branding" data-settings-section="Branding" className="scroll-mt-24">
       <BrandingForm
         defaults={{
           displayName: tenant.displayName,
@@ -120,15 +133,24 @@ export default async function SettingsPage({
           strapline: tenant.strapline,
         }}
       />
+      </div>
 
       {canManageSettings ? (
-        <div className="mt-6">
+        <div
+          id="clock"
+          data-settings-section="Clock"
+          className="mt-6 scroll-mt-24"
+        >
           <ClockForm current={tenant.timezone} />
         </div>
       ) : null}
 
       {canManageSettings ? (
-        <div className="mt-6">
+        <div
+          id="mail"
+          data-settings-section="Outbound mail"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="Outbound mail"
             description="Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived."
@@ -139,7 +161,11 @@ export default async function SettingsPage({
       ) : null}
 
       {canBrand ? (
-        <div className="mt-6">
+        <div
+          id="terminology"
+          data-settings-section="What you call things"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="What you call things"
             description="Use your own vocabulary. A provider outside South Africa may not say programme, and a provider inside it may not say course — the platform should not insist."
@@ -166,7 +192,11 @@ export default async function SettingsPage({
         who knew where it used to be will come here first.
       */}
       {canManageSettings ? (
-        <div className="mt-6">
+        <div
+          id="templates"
+          data-settings-section="Templates"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="Your own documents"
             description="How each document this provider issues reads and looks."
@@ -186,7 +216,11 @@ export default async function SettingsPage({
       ) : null}
 
       {canBrand ? (
-        <div className="mt-6">
+        <div
+          id="menu"
+          data-settings-section="The menu"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="The menu"
             description="Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. The same for everybody at this provider, because staff tell each other where things are."
@@ -197,7 +231,11 @@ export default async function SettingsPage({
       ) : null}
 
       {canManageQualifications ? (
-        <div className="mt-6">
+        <div
+          id="drives"
+          data-settings-section="File stores"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="Your file stores"
             description="Read a folder straight from Google Drive or OneDrive, instead of downloading it and uploading it again. Yours rather than this provider's: every member of staff connects their own."
@@ -224,7 +262,11 @@ export default async function SettingsPage({
       ) : null}
 
       {extension ? (
-        <div className="mt-6">
+        <div
+          id="extension"
+          data-settings-section="AI extension"
+          className="mt-6 scroll-mt-24"
+        >
           <Card
             title="Your AI extension"
             description="Against your own profile. Optional, off by default, and what it lets you do is bounded by your role exactly as everything else is."

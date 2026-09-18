@@ -86,6 +86,45 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
       ) : null}
 
       {/*
+        Which provider, first, because it decides what everything below is.
+        
+        This sat underneath the credential field and behind the "make it
+        available" checkbox, and the credential defaulted to Claude's. So
+        somebody opening this screen was asked for a Claude token, shown how to
+        generate a Claude token, and never saw that there was a choice - which
+        is exactly what Roland reported on 18 September: "Everything under AI
+        Extension still only points to Claude." Gemini and OpenAI had been
+        there for two days, three controls further down.
+        
+        A field whose meaning depends on an answer cannot come before the
+        question.
+      */}
+      {current.providers.length > 1 ? (
+        <label className="block text-sm">
+          <span className="font-medium">Which one</span>
+          <select
+            name="provider"
+            value={provider}
+            onChange={(event) => setProvider(event.target.value)}
+            className={`${inputClass} mt-1 block w-full max-w-md`}
+          >
+            {current.providers.map((row) => (
+              <option key={row.name} value={row.name}>
+                {row.label}
+              </option>
+            ))}
+          </select>
+          {chosen ? (
+            <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">
+              {chosen.description}
+            </span>
+          ) : null}
+        </label>
+      ) : (
+        <input type="hidden" name="provider" value={provider} />
+      )}
+
+      {/*
         The word depends on the provider, and so does where it comes from.
         Claude's is a subscription token generated on your own machine; Gemini's
         is an API key from Google AI Studio. Calling both "token" left somebody
@@ -126,27 +165,6 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
 
       {available ? (
         <>
-          <label className="block text-sm">
-            <span className="text-[var(--muted)]">Which one</span>
-            <select
-              name="provider"
-              value={provider}
-              onChange={(event) => setProvider(event.target.value)}
-              className={`${inputClass} mt-1 block w-full max-w-md`}
-            >
-              {current.providers.map((row) => (
-                <option key={row.name} value={row.name}>
-                  {row.label}
-                </option>
-              ))}
-            </select>
-            {chosen ? (
-              <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">
-                {chosen.description}
-              </span>
-            ) : null}
-          </label>
-
           <label className="block text-sm">
             <span className="text-[var(--muted)]">
               Model — leave empty for the provider&rsquo;s own default
