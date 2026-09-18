@@ -24,6 +24,19 @@ const TARGET_LABEL: Record<string, string> = {
   library: "the document library",
 };
 
+/**
+ * The kinds withheld from anybody without the right to assess.
+ *
+ * Repeated from lib/programme-documents.ts rather than imported, because that
+ * module reaches the database and this one runs in the browser. Held to the
+ * same list by a test, which is the only honest way to keep a copy.
+ */
+const RESTRICTED_KINDS = new Set([
+  "workbook_memorandum",
+  "summative_memorandum",
+  "summative_assessment",
+]);
+
 export type PlanView = {
   source: string;
   qualification: {
@@ -222,11 +235,65 @@ export function Proposal({
       {/* --- documents ---------------------------------------------------- */}
       <div>
         {section("documents", "Documents", plan.documents.length)}
+
+        {/*
+          Who will be able to open these, said before the list rather than
+          discoverable by reading eighty lines of it.
+
+          This is the one consequence on the screen that cannot be undone by
+          noticing later. A memorandum filed as something unrestricted is
+          handed to the learners it is the answer key for, at the moment of
+          commit, silently - which is what would have happened to
+          thirty-eight of Curiosa's documents before the naming rules knew
+          "WB1 AG" and "SA1 V1 AG".
+
+          The rules are better now and they are still only rules about
+          filenames. So the count is stated, and the catch-all is named,
+          because "other" is the bucket an unrecognised name falls into and
+          nothing in it is withheld from anybody.
+        */}
+        {plan.documents.length > 0 ? (
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {(() => {
+              const withheld = plan.documents.filter((one) =>
+                RESTRICTED_KINDS.has(one.kind ?? ""),
+              ).length;
+              const unknown = plan.documents.filter(
+                (one) => !one.kind || one.kind === "other",
+              ).length;
+              const visible = plan.documents.length - withheld;
+
+              return (
+                <>
+                  <span className="font-medium text-[var(--foreground)]">
+                    {withheld} withheld from learners, {visible} visible to them.
+                  </span>{" "}
+                  Memoranda, answer guides and summative papers are withheld
+                  from anybody without the right to assess.
+                  {unknown > 0 ? (
+                    <>
+                      {" "}
+                      <span className="font-medium text-[var(--foreground)]">
+                        {unknown} could not be recognised from{" "}
+                        {unknown === 1 ? "its name" : "their names"} and{" "}
+                        {unknown === 1 ? "is" : "are"} filed as “other”, which
+                        is visible to everyone.
+                      </span>{" "}
+                      Worth a look below before committing: an answer guide
+                      named in a way these rules do not know would be here.
+                    </>
+                  ) : null}
+                </>
+              );
+            })()}
+          </p>
+        ) : null}
+
         {open === "documents" ? (
           <ul className="mt-2 space-y-2 text-sm">
             {plan.documents.map((document) => (
               <li key={document.path}>
-                <p className="flex flex-wrap gap-x-3">
+                <p className="flex flex-wrap items-baseline gap-x-3">
                   <span className="font-mono text-xs">{document.path}</span>
                   <span className="text-[var(--muted)]">
                     → {TARGET_LABEL[document.target] ?? document.target}
@@ -234,6 +301,23 @@ export function Proposal({
                     {document.kind ? ` as ${document.kind.replace(/_/g, " ")}` : ""}
                     {document.category ? ` as ${document.category}` : ""}
                   </span>
+                  {/* Marked on the line itself, so scanning the list answers
+                      the question without counting. */}
+                  {RESTRICTED_KINDS.has(document.kind ?? "") ? (
+                    <span className="rounded bg-[var(--border)]/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                      withheld
+                    </span>
+                  ) : !document.kind || document.kind === "other" ? (
+                    <span
+                      className="rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                      style={{
+                        background: "color-mix(in srgb, var(--danger) 10%, transparent)",
+                        color: "var(--danger)",
+                      }}
+                    >
+                      not recognised · visible to all
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-xs text-[var(--muted)]">{document.because}</p>
               </li>
