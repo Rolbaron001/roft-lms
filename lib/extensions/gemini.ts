@@ -40,6 +40,27 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
  */
 const MAX_INPUT_CHARS = 600_000;
 
+/*
+ * What a real qualification actually comes to, measured 18 September against
+ * the published documents in tests/fixtures rather than estimated:
+ *
+ *   121151 HRM Officer   curriculum 152,120 + qualification 26,019
+ *                        + assessment specification 10,821  =  188,960
+ *   118709 Commercial Cleaner   curriculum 152,873 + qualification 17,154
+ *   121150                      curriculum 151,444
+ *   SP220320 skills programme   curriculum  20,948
+ *
+ * So a full set of base documents is around a third of the cap, and every
+ * curriculum published so far lands near 150,000 characters. Reaching 600,000
+ * really does mean something pathological - a folder holding three unrelated
+ * qualifications, or a scan that came back as noise - which is what makes
+ * refusing the honest answer rather than a cautious one.
+ *
+ * Only the base documents are staged in the first place; the folder reader
+ * filters to those, so a folder of eighty workbooks does not count against
+ * this at all.
+ */
+
 /**
  * The documents the caller staged, read back as text.
  *
