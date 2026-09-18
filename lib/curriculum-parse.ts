@@ -326,12 +326,14 @@ const SECTION_END = new RegExp(
       "WORK EXPERIENCE MODULES INCLUDED IN THIS STATEMENT",
       String.raw`Curriculum (?:Number|Title)\b`,
       /*
-       * Written with String.raw throughout this list, and that is not a style
-       * choice. In an ordinary double-quoted string "\s" is the letter s and
-       * "\b" is a backspace character, so a pattern typed the obvious way
-       * silently becomes one that matches something else - here, "SECTIONs+d"
-       * and a literal U+0008. It still compiles, still runs, and quietly
-       * stops catching what it was added for.
+       * Any pattern here that needs a backslash is written with String.raw,
+       * and that is not a style choice. In an ordinary double-quoted string
+       * "\s" is the letter s and "\b" is a backspace character, so a pattern
+       * typed the obvious way silently becomes one that matches something
+       * else - here, "SECTIONs+d" and a literal U+0008. It compiles, it runs,
+       * and it quietly stops catching what it was added for.
+       *
+       * The plain strings above need no escapes and are left as they are.
        */
     ].join("|") +
     ")",
