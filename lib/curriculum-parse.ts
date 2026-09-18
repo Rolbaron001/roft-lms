@@ -316,7 +316,7 @@ const SECTION_END = new RegExp(
        * furniture, which is right on its own and not enough: skipping keeps
        * collecting, so the heading after it still joined on.
        */
-      "SECTION\s+\d",
+      String.raw`SECTION\s+\d`,
       // The QCTO's standard preamble to the work experience section. Prose
       // addressed to the provider, introducing what follows rather than
       // belonging to the list before it.
@@ -324,7 +324,15 @@ const SECTION_END = new RegExp(
       "List of Work Experience Module Specifications",
       // The statement-of-work-experience block, and its two label lines.
       "WORK EXPERIENCE MODULES INCLUDED IN THIS STATEMENT",
-      "Curriculum (?:Number|Title)\b",
+      String.raw`Curriculum (?:Number|Title)\b`,
+      /*
+       * Written with String.raw throughout this list, and that is not a style
+       * choice. In an ordinary double-quoted string "\s" is the letter s and
+       * "\b" is a backspace character, so a pattern typed the obvious way
+       * silently becomes one that matches something else - here, "SECTIONs+d"
+       * and a literal U+0008. It still compiles, still runs, and quietly
+       * stops catching what it was added for.
+       */
     ].join("|") +
     ")",
   "i",
@@ -354,6 +362,23 @@ const FURNITURE = new RegExp(
     "^[0-9]{5,6}-[0-9]{3}-[0-9]{2}(?:-[0-9]{2,3})*\\b",
     // The weight restated under a topic, which belongs to the heading above.
     "^\\(\\s*weight[^)]*\\)\\s*$",
+    /*
+     * A footer ending in "Page 9 of 16".
+     *
+     * The rule above catches a footer that opens with the curriculum code,
+     * which is how the full qualification documents print theirs. The skills
+     * programme documents print a different one - "SP Cur Assessment
+     * Practitioner 5 20 Page 9 of 16" - which begins with words, fell through,
+     * and landed on the end of whatever element was being read when the page
+     * broke. In SP220320 that gave AK0202 the description "Evidence collection
+     * and reporting practices SP Cur Assessment Practitioner 5 20 Page 9 of
+     * 16".
+     *
+     * Anchored at the end rather than the start, because what identifies this
+     * kind of footer is the page count; what comes before it is whatever the
+     * document happens to be called.
+     */
+    String.raw`\bPage\s+\d{1,4}\s+of\s+\d{1,4}\s*$`,
   ].join("|"),
   "i",
 );

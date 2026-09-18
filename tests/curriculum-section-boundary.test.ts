@@ -89,3 +89,33 @@ describe("the end of the work experience section", () => {
     expect(criteria).toHaveLength(154);
   });
 });
+
+/**
+ * A footer that does not begin with the curriculum code.
+ *
+ * The full qualification documents print "242303-001-00-00: HRM Officer 73",
+ * which the furniture rule already knew. The skills programme documents print
+ * "SP Cur Assessment Practitioner 5 20 Page 9 of 16", which begins with words
+ * and so fell through - landing on the end of whatever element was being read
+ * when the page broke.
+ */
+describe("a skills programme document's page footer", () => {
+  it("does not end up inside an element", async () => {
+    const { text } = await readPdfText(
+      readFileSync(join(__dirname, "fixtures", "sp220320-curriculum.pdf")),
+    );
+    const programme = parseCurriculumText(text);
+
+    const carrying = programme.modules.flatMap((module) =>
+      module.topics.flatMap((topic) =>
+        topic.elements
+          .filter((element) => /Page\s+\d+\s+of\s+\d+/i.test(element.description))
+          .map((element) => `${module.code}/${topic.code}/${element.code}`),
+      ),
+    );
+
+    expect(carrying).toEqual([]);
+    // And the document still reads, which is the half that is easy to lose.
+    expect(programme.modules).toHaveLength(3);
+  }, 120_000);
+});
