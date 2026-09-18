@@ -721,9 +721,17 @@ Worth recording, because each looked like a problem and was not:
   choosing a bucket, which is his decision anyway, and the two should be made
   together.
 - **Off-site storage for backups.** Outstanding.
-- **The Commercial Cleaner curriculum imports thin.** Modules and topics land;
-  topic content and internal assessment criteria do not. Same shape as the
-  `Cr 6` credits gap — one house style the reader does not know.
+- ~~**The Commercial Cleaner curriculum imports thin.**~~ **Fixed, and this
+  entry was stale — corrected 18 September.** It was one Symbol-font bullet:
+  the document marks its topic content with U+F0B7, a character that means
+  "bullet" only if you are rendering in the Symbol typeface, and the reader
+  treated it as text. Modules and topics landed; everything under them did not.
+
+  `tests/commercial-cleaner-import.test.ts` now runs the published document
+  through the real importer and holds it to 22 modules, more than 80 topics,
+  more than 500 elements and more than 150 internal assessment criteria — and
+  separately that no module is left with topics and nothing to assess against,
+  which is what "thin" looked like from the screen.
 
 ---
 

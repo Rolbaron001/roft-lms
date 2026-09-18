@@ -362,3 +362,41 @@ companion, and the tenant illustration column all applied in today's deploy.
   they would rather nobody held one. Gemini's free tier makes it testable; it
   does not make it policy.
 - Everything still waiting on the mail relay is unaffected by any of this.
+
+---
+
+## 18 September
+
+**The mascot question is answered and built.** Roland: "make provision in
+Settings for graphic changes as part of Tenant branding." It is the picture a
+tenant already sets under Branding, now reaching the button somebody has to
+press next as well as the empty screens it was built for — supplied by the
+frame rather than passed to each control, so the fourth screen that takes a
+folder gets it without anybody remembering. A tenant who sets none sees the
+words and the arrow, exactly as before, and no operator's character can appear
+in another operator's product. The field is no longer called "Picture for empty
+screens", which described half of what it does.
+
+**The drive route had no prompt at all.** The same fault one road further
+along: somebody who has walked into a folder on their Google Drive is at
+exactly the point Heidi was at when she chose a folder and did not notice the
+next step had appeared. Fixed with the rest.
+
+**The file store button was hidden by our own wiring, not by Google.** Roland
+put the OAuth client id and secret on the server and the Settings page still
+said no file store was set up. `docker-compose.production.yml` names each
+variable the container receives one at a time, and the two drive variables were
+not on that list. Two more were in the same state, found while looking:
+`DATABASE_POOL_MAX` did nothing, and `MAIL_PORT` defaulted to the empty string,
+which `Number(x ?? 587)` keeps — so a deployment that left it unset asked for
+port 0. `tests/compose-env.test.ts` now reads what the source reads from the
+environment against what `.env.example` tells an operator to set.
+
+**Per-person API keys are settled.** Roland, 18 September: acceptable to
+Curiosa "as long as the provider is not forced (must be a selection, Google,
+Claude, etc)". The chooser is above the credential field and the wording
+follows the provider, so nobody is asked for a "token" when they need an API
+key. That closes the last open question on this sheet.
+
+**Still on hold:** which Google account owns the OAuth application, pending
+Heidi on whether Curiosa has a Workspace. See DRIVE-SETUP.md.
