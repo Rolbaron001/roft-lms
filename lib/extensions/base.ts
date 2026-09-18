@@ -48,6 +48,25 @@ export type AiProvider = {
   description: string;
   /** What it uses when the caller does not say. */
   defaultModel: string;
+  /**
+   * Whether it can put its answer in a file rather than in its reply.
+   *
+   * True only for a provider that is an agent with file tools. Claude Code is
+   * one: given a workspace it reads the documents as files and writes the
+   * answer as a file, which it does far more reliably than it returns JSON in
+   * prose. Gemini and OpenAI are HTTP calls - they are handed the documents as
+   * text and the reply is the only thing that comes back.
+   *
+   * The difference has to be in the contract because it changes what the
+   * prompt must ask for, and a caller that hardcodes one of them writes a
+   * prompt that is wrong for the other. `lib/folder-import.ts` did exactly
+   * that: it told the model "write proposal.json, and do not summarise your
+   * findings in your reply - the file is the answer". Given to Gemini that is
+   * an instruction to return nothing usable, so the one path Gemini was added
+   * for would have failed on the first attempt, and failed as "the extension
+   * ran but wrote nothing that could be read as a plan".
+   */
+  writesFiles: boolean;
   availability(tenantId?: string): Promise<Availability> | Availability;
   run(input: {
     prompt: string;

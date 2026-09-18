@@ -134,6 +134,7 @@ export const geminiProvider: AiProvider = {
   label: "Google Gemini (API key)",
   description:
     "Uses your own Google AI Studio API key. Not a Gemini Advanced subscription — that is a separate product and does not include API access. The API has a free tier, so this can be used without buying anything, within its rate limits.",
+  writesFiles: false,
   defaultModel: "gemini-2.5-flash",
 
   /**

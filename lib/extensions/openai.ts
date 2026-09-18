@@ -108,6 +108,7 @@ export const openAiProvider: AiProvider = {
   label: "OpenAI (API key)",
   description:
     "Uses your own OpenAI API key, created at platform.openai.com. Not a ChatGPT Plus subscription — that is a separate product and does not include API access. Unlike Gemini there is no free tier, so calls are charged to the account the key belongs to.",
+  writesFiles: false,
   defaultModel: "gpt-5",
 
   /** Nothing to install and nothing signed in on the machine. */

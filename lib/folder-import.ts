@@ -64,11 +64,7 @@ export class IngestError extends Error {
 const INSTRUCTION = `Read every document in this directory. They describe a South African
 occupational qualification.
 
-Write what they say to a file called proposal.json in this directory. Write
-nothing else, and do not summarise your findings in your reply - the file is
-the answer.
-
-proposal.json must contain exactly this shape:
+Report what they say as a single JSON object of exactly this shape:
 
 {
   "title": string,
@@ -413,6 +409,18 @@ async function planFromDocuments(
       task: "ingest_qualification",
       prompt: INSTRUCTION,
       workdir,
+      /*
+       * Where to put the answer, if this provider can put it anywhere but its
+       * reply. The registry adds the right sentence: Claude Code is told to
+       * write the file, Gemini and OpenAI are told to reply with the object.
+       *
+       * This used to be written into INSTRUCTION, which made the prompt right
+       * for Claude Code and useless for every other provider - "the file is
+       * the answer" given to an HTTP call asks it to return nothing. So the
+       * one route Gemini was added for, folder import on the server, would
+       * have failed on the first attempt.
+       */
+      answerFile: "proposal.json",
       timeoutMs: 900_000,
     });
 

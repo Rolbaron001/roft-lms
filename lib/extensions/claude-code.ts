@@ -247,6 +247,7 @@ export const claudeCodeProvider: AiProvider = {
   label: "Claude Code (subscription)",
   description:
     "Uses your own Claude subscription, through a token you generate on your own computer with `claude setup-token`. Not an API key: no per-token cost, and it draws on the subscription you already pay for rather than a shared one.",
+  writesFiles: true,
   defaultModel: "claude-opus-5",
 
   availability(tenantId?: string): Availability {

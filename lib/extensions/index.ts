@@ -315,6 +315,12 @@ export async function runExtension(
     system?: string;
     timeoutMs?: number;
     workdir?: string;
+    /**
+     * The file the answer should be written to, where the provider can write
+     * one. Naming it here rather than in the prompt is what lets the same
+     * caller work with a provider that writes files and one that cannot.
+     */
+    answerFile?: string;
   },
 ): Promise<ExtensionResult> {
   const state = await extensionState(session);
@@ -374,8 +380,25 @@ export async function runExtension(
     };
   }
 
+  /*
+   * Where the answer goes, said by the registry rather than by the caller.
+   *
+   * A caller knows what it wants back; it does not know which provider is
+   * about to be asked, and it must not have to. Claude Code is an agent with
+   * file tools and answers far more reliably by writing a file than by
+   * returning JSON in prose; Gemini and OpenAI are HTTP calls whose reply is
+   * the only thing that comes back. The same sentence cannot serve both.
+   */
+  const prompt = input.answerFile
+    ? `${input.prompt}\n\n${
+        provider.writesFiles
+          ? `Write your answer to a file called ${input.answerFile} in this directory. Write nothing else, and do not summarise your findings in your reply - the file is the answer.`
+          : "Reply with that JSON object and nothing else. No explanation before it, no commentary after it, and no code fence around it."
+      }`
+    : input.prompt;
+
   const result = await provider.run({
-    prompt: input.prompt,
+    prompt,
     system: input.system,
     model: state.model ?? undefined,
     timeoutMs: input.timeoutMs,
