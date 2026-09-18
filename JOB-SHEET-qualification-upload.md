@@ -400,3 +400,60 @@ key. That closes the last open question on this sheet.
 
 **Still on hold:** which Google account owns the OAuth application, pending
 Heidi on whether Curiosa has a Workspace. See DRIVE-SETUP.md.
+
+## 18 September, afternoon — what reading the screens turned up
+
+The job sheet was finished, so the afternoon went on the technique that found
+the false alarms last week: sign in as somebody who is not an administrator,
+load the real documents, and read what is actually on the screen. Six faults,
+none of which a test would have found, because every one of them is a screen
+being correct for the person who built it.
+
+**A facilitator opening Qualifications saw a blank page.** Every other list on
+the platform says what would be here when it holds nothing. This one gave a
+heading, a paragraph explaining what a qualification is, and then the bottom of
+the page — no list, no message, no way to tell an empty platform from a broken
+one. Invisible to an administrator, who has the import cards above the list.
+Checked the other nineteen list screens the same way; this was the only one.
+
+**"Your AI extension cannot run here", to somebody who has none.** Two
+questions asked of one flag. With no extension there is no provider, so nothing
+can report on whether it runs — and the sentence appeared with the empty space
+where the reason would have been. It is the fault the top of that card was
+fixed for on 16 September, surviving in the branch that shows when a
+qualification is already named, which is the screen for finishing a part-loaded
+import.
+
+**A successful import was greeted with a red box saying nothing is taught.** A
+curriculum publishes modules and says nothing about study units, so a
+qualification built from its documents arrives with every module unplaced. That
+is the expected state, and the screen announced it in red as fifteen modules
+taught by nobody. It now says what the next step is and which document does it.
+
+**571 characters of document plumbing inside a curriculum line.** The last
+supporting-evidence line of the last work experience module in 121151 carried
+the QCTO's preamble to the next section, the running footer, "SECTION 4D:
+STATEMENT OF WORK EXPERIENCE" and the curriculum number under it — presented as
+something a learner must be taught and a coach must sign off. Then the same
+sweep over all four published documents found a second kind of footer, the one
+the skills programme documents use, doing the same thing in SP220320.
+
+**The confirmation screen never said who would be able to open the documents.**
+Eighty-one lines, and the one consequence that cannot be undone by noticing
+afterwards nowhere on the screen. It now states how many are withheld and how
+many visible, names the ones no rule recognised — that is the bucket an answer
+guide with an unfamiliar name falls into — and marks each line.
+
+**Folder import asked Gemini for its answer in a form Gemini cannot give.** The
+prompt said "write proposal.json... the file is the answer", which is right for
+Claude Code and an instruction to return nothing for an HTTP provider. Since
+Claude Code cannot run on the server, that was the one route Gemini exists for.
+
+Two things measured rather than assumed while looking: a full set of base
+documents comes to about 189,000 characters against Gemini's 600,000 cap, so
+the folder route fits comfortably; and the classifier still files all 81 of
+Curiosa's documents correctly, with "other" being nine — the CCMA manual, five
+SABPP fact sheets, a task report, and **TM and WP, still unexplained**. Those
+two are now flagged on the confirmation screen as unrecognised and visible to
+everyone, which is the right treatment for a file the platform cannot identify,
+but somebody at Curiosa should say what they are.
