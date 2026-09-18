@@ -150,6 +150,7 @@ export default async function CoursePage({
                   ? {
                       on: extension.on,
                       available: extension.availability?.available ?? false,
+                        registered: extension.registered,
                       reason: extension.availability?.reason ?? null,
                     }
                   : null

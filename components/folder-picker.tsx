@@ -55,6 +55,18 @@ export function FolderPicker({
     on: boolean;
     /** The provider can actually run here. */
     available: boolean;
+    /**
+     * A credential is stored, so there is a provider to ask about at all.
+     *
+     * Separate from `available` because the two were being collapsed, and the
+     * message that came out of it was wrong. Somebody who has never set up an
+     * extension has no provider, so nothing can report on whether it runs -
+     * and this screen told them "your AI extension cannot run here", followed
+     * by the empty space where the reason would have gone. Both halves are
+     * false: they have no extension, and nothing is stopping them setting one
+     * up.
+     */
+    registered: boolean;
     reason: string | null;
   } | null;
 }) {
@@ -312,6 +324,23 @@ export function FolderPicker({
                 structure worked out from the documents instead — slower, and
                 worth checking against the curriculum document. Switch it off
                 when you are done with it.
+              </>
+            ) : !extension.registered ? (
+              /*
+                Checked before "cannot run", because somebody with no extension
+                has no provider for anything to report on. This screen used to
+                fall through to the branch below and tell them their extension
+                could not run here, followed by the gap where the reason would
+                have been - two statements about a thing they do not have.
+              */
+              <>
+                <span className="font-medium">
+                  You do not have an AI extension set up.
+                </span>{" "}
+                It adds one thing here: working out the structure from the
+                documents, when a folder does not include a summary of itself.
+                Everything else on this page works without it. Settings, under
+                your AI extension, if you want one.
               </>
             ) : !extension.available ? (
               <>

@@ -89,6 +89,7 @@ export default async function QualificationsPage() {
                     ? {
                         on: extension.on,
                         available: extension.availability?.available ?? false,
+                        registered: extension.registered,
                         reason: extension.availability?.reason ?? null,
                       }
                     : null
