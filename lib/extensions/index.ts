@@ -239,6 +239,21 @@ export async function setMyExtension(
    */
   const chosen = providerByName(input.provider);
 
+  /*
+   * A credential of the right family and the wrong kind.
+   *
+   * An Anthropic API key (sk-ant-api…) and a Claude Code token (sk-ant-oat…)
+   * look alike, come from the same company, and are not interchangeable: this
+   * provider hands its credential to the CLI, which wants the token. Telling
+   * somebody holding a valid API key that it "does not look like" one would
+   * send them to check their typing, which is the one thing that is not wrong.
+   */
+  if (token && input.provider === "claude_code" && /^sk-ant-api/.test(token)) {
+    throw new ExtensionSetupError(
+      "That is an Anthropic API key, not a Claude Code token. They are different products and this one needs the token — run `claude setup-token` on your own computer and paste what it prints. If an API key is what you have, choose a provider that takes one.",
+    );
+  }
+
   if (token && chosen && !chosen.credentialFormat.shape.test(token)) {
     /*
      * "a Google Gemini API key", not "an Google Gemini (API key) API key".
@@ -251,8 +266,12 @@ export async function setMyExtension(
     const name = chosen.label.replace(/\s*\([^)]*\)\s*$/, "");
     const article = /^[aeiou]/i.test(name) ? "an" : "a";
 
+    const begins = chosen.credentialFormat.looksLike;
+
     throw new ExtensionSetupError(
-      `That does not look like ${article} ${name} ${chosen.credentialFormat.word}. To get one, ${chosen.credentialFormat.source} — it begins ${chosen.credentialFormat.looksLike}.`,
+      `That does not look like ${article} ${name} ${chosen.credentialFormat.word}. To get one, ${chosen.credentialFormat.source}${
+        begins ? ` — it begins ${begins}` : ""
+      }.`,
     );
   }
 

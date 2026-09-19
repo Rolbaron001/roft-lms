@@ -250,8 +250,23 @@ export const claudeCodeProvider: AiProvider = {
   writesFiles: true,
   credentialFormat: {
     word: "token",
-    // Printed by `claude setup-token`: sk-ant-oat01-…
-    shape: /^sk-ant-oat[0-9]{2}-[A-Za-z0-9_-]{20,}$/,
+    /*
+     * Loose about everything after the family, tight about the family.
+     *
+     * This demanded `sk-ant-oat` followed by exactly two digits and a hyphen,
+     * which is what `claude setup-token` prints today. One more digit, or one
+     * fewer, and a valid token would have been refused - the same failure that
+     * an AIza-only rule caused for Gemini on 19 September, waiting to happen
+     * here on the day Anthropic changes a counter.
+     *
+     * What is worth keeping is the one distinction that is a real mistake
+     * rather than a guess about formatting: an Anthropic API key is
+     * sk-ant-api…, a different product that this provider cannot use, and
+     * pasting one here is an easy thing to do. That is caught by name below,
+     * with its own message, because "wrong shape" would be useless advice for
+     * somebody holding a perfectly good key of the wrong kind.
+     */
+    shape: /^sk-ant-(?!api)[A-Za-z0-9_-]{16,}$/,
     source: "run `claude setup-token` on your own computer; it prints one",
     looksLike: "sk-ant-oat",
   },

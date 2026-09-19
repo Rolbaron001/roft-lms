@@ -158,13 +158,28 @@ export const geminiProvider: AiProvider = {
   writesFiles: false,
   credentialFormat: {
     word: "API key",
-    // Google AI Studio keys are AIza followed by 35 characters. The length
-    // is left loose deliberately - refusing a valid key because Google
-    // changed its length by one is a worse failure than passing a wrong one
-    // through, which the provider itself rejects with a clear message.
-    shape: /^AIza[A-Za-z0-9_-]{20,}$/,
+    /*
+     * Deliberately not a prefix check.
+     *
+     * This was /^AIza.../ on 19 September, written from memory of what a
+     * Google key looks like. Roland's real key begins "AQ.Ab", so the check
+     * would have refused the very thing it was added to accept - the same
+     * failure as the Claude-only rule it replaced, one commit later, and in
+     * the worst direction: it fails closed on a valid credential and tells
+     * somebody holding the right thing that they are wrong.
+     *
+     * Google has issued at least two formats and may issue a third. Guessing
+     * at the next one is not a game worth playing, and this check was never
+     * able to say whether a key is genuine - only the provider can, and it
+     * does so clearly on the first call.
+     *
+     * So what is left is the question it can actually answer: is this another
+     * provider's credential pasted into the wrong box? Anything starting sk-
+     * is Claude's or OpenAI's, and that is the mistake somebody switching
+     * provider actually makes.
+     */
+    shape: /^(?!sk-)[A-Za-z0-9._-]{20,}$/,
     source: "sign in at aistudio.google.com and choose Get API key",
-    looksLike: "AIza",
   },
   defaultModel: "gemini-2.5-flash",
 

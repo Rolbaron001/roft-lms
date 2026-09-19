@@ -111,8 +111,19 @@ export const openAiProvider: AiProvider = {
   writesFiles: false,
   credentialFormat: {
     word: "API key",
-    // Both the classic sk-… and the newer project keys sk-proj-… fit this.
-    shape: /^sk-[A-Za-z0-9_-]{20,}$/,
+    /*
+     * Every OpenAI key family begins sk-: the classic ones, project keys
+     * (sk-proj-…) and service account keys (sk-svcacct-…). The length is left
+     * loose, because the part after the prefix has changed more than once and
+     * refusing a valid key over its length is the worse error.
+     *
+     * Anthropic's begin sk-ant-, so those are excluded rather than quietly
+     * accepted. Somebody switching between the two is exactly who pastes the
+     * wrong one, and "sk-" alone would have taken a Claude token happily and
+     * failed later against OpenAI with a message from OpenAI about a key it
+     * had never issued.
+     */
+    shape: /^sk-(?!ant-)[A-Za-z0-9_-]{16,}$/,
     source: "create one at platform.openai.com under API keys",
     looksLike: "sk-",
   },

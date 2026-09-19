@@ -51,7 +51,7 @@ describe("every provider's credential", () => {
     // never belong in a test file.
     const samples: Record<string, string> = {
       claude_code: "sk-ant-oat01-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
-      gemini: "AIzaSyeXAMPLEnotARealKey1234567890abcd",
+      gemini: "AQ.AbSOMETHINGnotARealKey1234567890abcd",
       openai: "sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
     };
 
@@ -64,15 +64,88 @@ describe("every provider's credential", () => {
 
       for (const [other, sample] of Object.entries(samples)) {
         if (other === provider.name) continue;
-        // OpenAI's sk- prefix is a prefix of Claude's sk-ant-, so that one
-        // pair is allowed to overlap; every other crossing must be refused.
-        if (provider.name === "openai" && other === "claude_code") continue;
+        // No exemptions. OpenAI's rule used to accept a Claude token, because
+        // both begin sk-; it now excludes sk-ant- explicitly, so every
+        // crossing is refused.
         expect(
           provider.credentialFormat.shape.test(sample),
           `${provider.name} accepted ${other}'s`,
         ).toBe(false);
       }
     }
+  });
+
+  /**
+   * Both formats Google has actually issued.
+   *
+   * The Gemini rule was /^AIza…/ for about an hour on 19 September, written
+   * from memory. Roland's real key begins "AQ.Ab", so it would have been
+   * refused - the same failure as the Claude-only rule it replaced, one
+   * commit later, and failing closed on a valid credential.
+   */
+  it("accepts every Gemini key format Google has issued", () => {
+    const gemini = providerByName("gemini")!;
+
+    for (const sample of [
+      "AIzaSyeXAMPLEnotARealKey1234567890abcd",
+      "AQ.AbSOMETHINGnotARealKey1234567890abcd",
+    ]) {
+      expect(
+        gemini.credentialFormat.shape.test(sample),
+        `refused ${sample.slice(0, 6)}…`,
+      ).toBe(true);
+    }
+  });
+
+  it("promises a prefix only where the provider keeps one", () => {
+    // Claude generates its own with a documented command, so the prefix is
+    // safe to name. Google's is not, so nothing claims one.
+    expect(providerByName("claude_code")!.credentialFormat.looksLike).toBe(
+      "sk-ant-oat",
+    );
+    expect(providerByName("gemini")!.credentialFormat.looksLike).toBeUndefined();
+  });
+
+  /**
+   * The counters and suffixes each provider has changed at least once.
+   *
+   * Every one of these is a credential family somebody could legitimately be
+   * holding. A rule that pins the digits refuses a valid one the day the
+   * issuer bumps them, which is the failure this whole set of checks has now
+   * caused twice.
+   */
+  it("does not pin a version number it cannot promise", () => {
+    const claude = providerByName("claude_code")!.credentialFormat.shape;
+    for (const sample of [
+      "sk-ant-oat01-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+      "sk-ant-oat02-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+      "sk-ant-oat-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345",
+    ]) {
+      expect(claude.test(sample), `refused ${sample.slice(0, 14)}…`).toBe(true);
+    }
+
+    const openai = providerByName("openai")!.credentialFormat.shape;
+    for (const sample of [
+      "sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+      "sk-svcacct-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    ]) {
+      expect(openai.test(sample), `refused ${sample.slice(0, 12)}…`).toBe(true);
+    }
+  });
+
+  /**
+   * The one refusal that is about kind rather than shape.
+   *
+   * An Anthropic API key and a Claude Code token come from the same company
+   * and are not interchangeable. Somebody holding a valid API key needs to be
+   * told which product they have, not to check their typing.
+   */
+  it("refuses an Anthropic API key for the token-based provider", () => {
+    const claude = providerByName("claude_code")!.credentialFormat.shape;
+    expect(claude.test("sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123")).toBe(
+      false,
+    );
   });
 
   it("is named without repeating itself when refused", () => {

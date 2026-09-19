@@ -88,8 +88,15 @@ export type AiProvider = {
     shape: RegExp;
     /** How to get one, as a phrase that can follow "Paste a … first." */
     source: string;
-    /** What a valid one starts with, for the error. */
-    looksLike: string;
+    /**
+     * What a valid one starts with, where that is stable enough to promise.
+     *
+     * Omitted for a provider whose format its owner changes: Google has
+     * issued Gemini keys beginning AIza and beginning AQ., and a screen that
+     * names one of them tells half the people holding a valid key that theirs
+     * is wrong.
+     */
+    looksLike?: string;
   };
   availability(tenantId?: string): Promise<Availability> | Availability;
   run(input: {

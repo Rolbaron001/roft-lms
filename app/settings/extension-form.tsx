@@ -242,8 +242,13 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
           type="password"
           autoComplete="off"
           placeholder={
+            /*
+              Gemini's is deliberately vague. Google has issued keys beginning
+              AIza and beginning AQ., so a placeholder naming either one tells
+              half the people holding a valid key that theirs is wrong.
+            */
             provider === "gemini"
-              ? "AIza…"
+              ? "your key from Google AI Studio"
               : provider === "openai"
                 ? "sk-proj-…"
                 : "sk-ant-oat…"
@@ -554,8 +559,9 @@ function ApiKeyGuide({ provider }: { provider: string }) {
             <span className="font-medium text-[var(--foreground)]">
               Get API key
             </span>
-            , create one, and paste it above. It begins{" "}
-            <span className="font-mono">AIza</span>.
+            , create one, and paste it above. Google has issued keys in more
+            than one format, so paste whatever it gives you — this platform
+            does not second-guess it.
           </p>
           <p>
             The Gemini API has a free tier, so this costs nothing to try. It
