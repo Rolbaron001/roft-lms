@@ -13,6 +13,7 @@ import { AppShell, Card } from "@/components/app-shell";
 import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
+import { PointHere, ProgressMap } from "@/components/progress-map";
 import { connectionsFor } from "@/lib/drive";
 
 const COMPONENT_LABELS: Record<string, string> = {
@@ -139,6 +140,21 @@ export default async function QualificationPage({
   const studyUnitsPlaced =
     studyUnits.length > 0 && unplacedModules.length === 0;
 
+  /*
+   * The qualification's own source documents, as opposed to what is taught
+   * from. Filed automatically when a qualification is built from them, so
+   * counting them as material would mark the last step done before anybody
+   * had uploaded a single workbook.
+   */
+  const SOURCE_KINDS = new Set([
+    "qualification_document",
+    "curriculum_document",
+    "assessment_specification",
+  ]);
+  const teachingMaterial = documents.filter(
+    (document) => !SOURCE_KINDS.has(document.kind),
+  );
+
   const steps = [
     {
       title: "The curriculum",
@@ -163,18 +179,24 @@ export default async function QualificationPage({
     },
     {
       title: "The material",
-      done: documents.length > 0,
+      /*
+       * Teaching material, not the qualification's own source documents.
+       *
+       * This counted every filed document, so creating a qualification ticked
+       * it immediately: the curriculum, qualification and assessment
+       * specification are filed by that step and are three documents. A
+       * qualification with its source documents and nothing to teach from is
+       * not ready, and a map that says otherwise is worse than no map.
+       */
+      done: teachingMaterial.length > 0,
       state:
-        documents.length > 0
-          ? `${documents.length} documents filed.`
+        teachingMaterial.length > 0
+          ? `${teachingMaterial.length} theory guides, workbooks and assessments filed.`
           : "The theory guides, workbooks and assessments. The whole folder goes in at once, answer guides are recognised and withheld from learners, and no AI is involved at any point.",
       href: "#material",
       action: "Add the folder",
     },
   ];
-
-  const done = steps.filter((step) => step.done);
-  const needed = steps.filter((step) => !step.done);
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -256,70 +278,7 @@ export default async function QualificationPage({
         ) : null}
       </div>
 
-      {/*
-        Where you are, and what to do next.
-
-        Roland, 19 September, having just created a qualification on
-        production: "After clicking Create there is nothing to guide you to the
-        next step. The page is full, but I can't see what to do next."
-
-        There was a panel here before and it did not do the job. It appeared
-        only with ?just=created, so it vanished on the first reload and was
-        never seen again by somebody coming back to finish; it was prose rather
-        than a list, so there was nothing to scan; and it said "further down
-        this page" without a link, on a page that runs to fifteen modules.
-
-        This is read from the qualification rather than from a query string, so
-        it is the same on arrival and on a return visit a week later, and each
-        step goes to the control that does it. It says what is done as plainly
-        as what is not - a step already finished is worth seeing, because the
-        question "did that work?" is the one somebody actually has.
-
-        It disappears when all three are done. A checklist with nothing left on
-        it is clutter, and this page has enough.
-      */}
-      {canManage && (modules.length === 0 || needed.length > 0) ? (
-        <div className="mb-6 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 p-4">
-          <p className="text-sm font-semibold">
-            {modules.length === 0
-              ? "This qualification has no curriculum yet"
-              : `Building this qualification — ${done.length} of ${steps.length} done`}
-          </p>
-
-          <ol className="mt-3 space-y-2.5">
-            {steps.map((step, index) => (
-              <li key={step.title} className="flex gap-3 text-sm">
-                <span
-                  aria-hidden
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                    step.done
-                      ? "bg-[var(--success)]/20 text-[var(--success)]"
-                      : "border border-[var(--border)] text-[var(--muted)]"
-                  }`}
-                >
-                  {step.done ? "✓" : index + 1}
-                </span>
-                <span>
-                  <span className={step.done ? "text-[var(--muted)]" : "font-medium"}>
-                    {step.title}
-                  </span>
-                  <span className="block text-[var(--muted)]">
-                    {step.state}
-                    {step.done ? null : (
-                      <>
-                        {" "}
-                        <Link href={step.href} className="underline">
-                          {step.action}
-                        </Link>
-                      </>
-                    )}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
+      {canManage ? <ProgressMap steps={steps} /> : null}
 
       {notCaptured.length > 0 ? (
         <div
@@ -385,11 +344,25 @@ export default async function QualificationPage({
                   That is expected, not a fault in the import.
                 </p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  The quickest way is to upload your alignment document — the
-                  one mapping each Exit Level Outcome to its modules, in Word or
-                  Excel — under the documents below. It creates the study units,
-                  names them, and places every module it covers. You can also
-                  build them by hand here.
+                  Upload your alignment document — the one mapping each Exit
+                  Level Outcome to its modules, in Word or Excel. It creates the
+                  study units, names them, and places every module it covers.
+                </p>
+                {/*
+                  A link, because "under the documents below" is not a
+                  direction on a page this long. The sentence that used to sit
+                  here also offered to build them "by hand here", pointing at a
+                  screen that does not exist - worse than a vague pointer,
+                  because somebody looks for it.
+                */}
+                <p className="mt-2">
+                  <Link
+                    href="#documents"
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                    style={{ background: "var(--brand-primary)" }}
+                  >
+                    Take me to the upload →
+                  </Link>
                 </p>
               </div>
             ) : (
@@ -572,6 +545,12 @@ export default async function QualificationPage({
             </Card>
 
             <div id="material" className="mt-4 scroll-mt-24">
+              {studyUnitsPlaced && teachingMaterial.length === 0 ? (
+                <PointHere>
+                  The material goes here — the whole folder at once. Nothing is
+                  saved until you have seen what it found.
+                </PointHere>
+              ) : null}
               <Card>
                 <p className="mb-3 text-sm font-medium">
                   A whole folder at once
@@ -611,6 +590,18 @@ export default async function QualificationPage({
             ) : null}
 
             <div className="mt-4">
+              {/*
+                The pointer sits on the control, not in a sentence describing
+                where the control might be. Shown only while this is the step
+                somebody is on, so it is never pointing at finished work.
+              */}
+              {!studyUnitsPlaced && modules.length > 0 ? (
+                <PointHere>
+                  Your alignment document goes here — choose it, set its kind to
+                  Curriculum Alignment Matrix, and upload. That builds the study
+                  units.
+                </PointHere>
+              ) : null}
               <Card>
                 <p className="mb-3 text-sm font-medium">Or one document</p>
                 <DocumentUploader
