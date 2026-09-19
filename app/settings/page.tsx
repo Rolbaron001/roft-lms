@@ -295,6 +295,8 @@ export default async function SettingsPage({
                       runsHere: here.available,
                       reason: here.reason ?? null,
                       credentialWord: provider.credentialFormat.word,
+                      defaultModel: provider.defaultModel,
+                      listsModels: Boolean(provider.listModels),
                     };
                   }),
                 ),

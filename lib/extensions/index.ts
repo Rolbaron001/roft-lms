@@ -150,6 +150,64 @@ export async function extensionState(
 }
 
 /**
+ * The models this person's own credential can reach, from the provider.
+ *
+ * Reads the stored token exactly as a run does, uses it once, and returns
+ * nothing but model names - the credential does not come back up, and the
+ * failure message is the provider's own explanation with the key stripped
+ * out of it.
+ *
+ * Refuses rather than guesses where a provider cannot be asked: Claude Code
+ * takes a model name and offers no list, and an empty list presented as "no
+ * models" would be a lie about a working provider.
+ */
+export async function modelsAvailableTo(
+  session: AuthenticatedSession,
+): Promise<{ models: string[]; error?: string }> {
+  assertSessionCan(session, "extension:use");
+
+  const state = await extensionState(session);
+  const provider = providerByName(state.provider);
+
+  if (!provider) return { models: [], error: "Choose a provider first." };
+  if (!provider.listModels) {
+    return {
+      models: [],
+      error: `${provider.label} does not publish a list of models, so type the name you want.`,
+    };
+  }
+  if (!state.registered) {
+    return {
+      models: [],
+      error: `Save ${
+        provider.credentialFormat.word === "token" ? "a" : "an"
+      } ${provider.credentialFormat.word} first — the list comes from the provider, and it needs one to answer.`,
+    };
+  }
+
+  const token = await tokenFor(session);
+  if (!token) {
+    return {
+      models: [],
+      error:
+        "Your stored credential could not be read, so the provider could not be asked.",
+    };
+  }
+
+  try {
+    return { models: await provider.listModels(token) };
+  } catch (error) {
+    return {
+      models: [],
+      error:
+        error instanceof Error
+          ? error.message
+          : "The provider could not be asked for its models.",
+    };
+  }
+}
+
+/**
  * This person's token, decrypted, or null.
  *
  * Deliberately not part of `extensionState`: that is read by pages and passed

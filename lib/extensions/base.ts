@@ -98,6 +98,23 @@ export type AiProvider = {
      */
     looksLike?: string;
   };
+  /**
+   * The models this credential can actually use, asked of the provider.
+   *
+   * Optional, because not every provider can answer: Claude Code takes a model
+   * name and offers no list.
+   *
+   * This exists because `defaultModel` is a guess with a shelf life. On
+   * 19 September Google answered a perfectly good request with "models/
+   * gemini-2.5-flash is no longer available to new users" - a name written
+   * into this codebase from memory, correct when it was written and wrong
+   * within the month. Bumping it to the next name only resets the clock.
+   *
+   * A provider that can be asked should be asked. Then the person chooses from
+   * what their own key can reach today, rather than from what somebody
+   * believed when the file was last edited.
+   */
+  listModels?(token: string): Promise<string[]>;
   availability(tenantId?: string): Promise<Availability> | Availability;
   run(input: {
     prompt: string;

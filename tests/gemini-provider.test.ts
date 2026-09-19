@@ -209,7 +209,10 @@ describe("a good answer", () => {
 
     expect(result.ok).toBe(true);
     expect(result.text).toContain("KM01");
-    expect(result.model).toBe("gemini-2.5-flash");
+    // Whatever the provider's own default is, not a name repeated here. This
+    // said "gemini-2.5-flash" and would have had to be edited on the day
+    // Google retired it - a test asserting the mistake it was meant to catch.
+    expect(result.model).toBe(geminiProvider.defaultModel);
   });
 
   it("asks for JSON, because every caller here parses one", async () => {

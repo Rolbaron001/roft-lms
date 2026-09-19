@@ -6,10 +6,13 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  useTransition,
 } from "react";
 import {
+  listExtensionModelsAction,
   updateMyExtensionAction,
   type ExtensionState,
+  type ModelListState,
 } from "./actions";
 
 const inputClass =
@@ -50,6 +53,10 @@ export type ExtensionView = {
     reason: string | null;
     /** What this provider calls its credential: a token, or an API key. */
     credentialWord: string;
+    /** What it uses when nobody says. Shown as the placeholder. */
+    defaultModel: string;
+    /** Whether it can be asked which models this credential reaches. */
+    listsModels: boolean;
   }[];
 };
 
@@ -103,6 +110,11 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
   });
 
   const chosen = current.providers.find((row) => row.name === provider);
+
+  // Held in state because the model list writes into it.
+  const [model, setModel] = useState(current.model ?? "");
+  const [models, setModels] = useState<ModelListState>({});
+  const [asking, startAsking] = useTransition();
 
   /*
    * A key bought from a provider, or a token minted from a subscription.
@@ -277,17 +289,77 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             </span>
             <input
               name="model"
-              defaultValue={current.model ?? ""}
-              placeholder={
-                provider === "gemini"
-                  ? "gemini-2.5-flash"
-                  : provider === "openai"
-                    ? "gpt-5"
-                    : "claude-opus-5"
-              }
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              // The provider's own default, not a third copy of the name kept
+              // here. This listed gemini-2.5-flash for a fortnight after
+              // Google stopped serving it.
+              placeholder={chosen?.defaultModel ?? ""}
               className={`${inputClass} mt-1 block w-full max-w-md`}
             />
           </label>
+
+          {/*
+            What this key can actually reach, asked of the provider.
+
+            Google retired gemini-2.5-flash and answered a valid request with
+            "no longer available to new users". The name had been written into
+            this codebase from memory - right once, wrong within the month, and
+            the failure landed on the person trying to use it. Bumping it to
+            the next name only resets that clock.
+
+            So nobody has to know a model name: ask, and choose from what came
+            back. A provider that cannot be asked says so rather than showing
+            an empty list, which would read as "none" for a working provider.
+          */}
+          {chosen?.listsModels ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={asking}
+                onClick={() =>
+                  startAsking(async () => {
+                    setModels(await listExtensionModelsAction());
+                  })
+                }
+                className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60"
+              >
+                {asking
+                  ? "Asking…"
+                  : `Show the models this ${credentialWord} can use`}
+              </button>
+
+              {models.error ? (
+                <p className="text-sm text-[var(--danger)]">{models.error}</p>
+              ) : null}
+
+              {models.models && models.models.length > 0 ? (
+                <div className="max-h-48 overflow-y-auto rounded-md border border-[var(--border)] p-2">
+                  <p className="mb-1 text-xs text-[var(--muted)]">
+                    {models.models.length} available to you today. Choosing one
+                    fills the box above; it is saved when you press Save.
+                  </p>
+                  <ul className="flex flex-wrap gap-1">
+                    {models.models.map((name) => (
+                      <li key={name}>
+                        <button
+                          type="button"
+                          onClick={() => setModel(name)}
+                          className={`rounded px-2 py-0.5 font-mono text-xs ${
+                            model === name
+                              ? "bg-[var(--brand-primary)] text-white"
+                              : "border border-[var(--border)] hover:bg-[var(--border)]/40"
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {current.availability && !current.availability.available ? (
             <div className="rounded-md border border-[var(--border)] p-3 text-sm">

@@ -145,7 +145,14 @@ function explain(status: number, body: unknown, token?: string): string {
     return "Google's rate limit for that key has been reached. The free tier allows a limited number of requests a minute; wait and try again, or use a key with billing enabled.";
   }
   if (status >= 500) {
-    return `Google reported a problem on their side (${status}). This is worth simply trying again.`;
+    /*
+     * Worded from three failed attempts on 19 September rather than from the
+     * status code alone. A 503 on a small request is worth retrying; a 503 on
+     * a whole curriculum, three times running, is the size of the job rather
+     * than Google having a bad minute, and telling somebody to try again is
+     * how they spend an afternoon doing exactly that.
+     */
+    return `Google reported a problem on their side (${status}). A small request is worth simply trying again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete - import it from its documents instead, which reads the curriculum directly with no model involved.`;
   }
   return message || `Gemini returned ${status}.`;
 }
@@ -181,7 +188,50 @@ export const geminiProvider: AiProvider = {
     shape: /^(?!sk-)[A-Za-z0-9._-]{20,}$/,
     source: "sign in at aistudio.google.com and choose Get API key",
   },
-  defaultModel: "gemini-2.5-flash",
+  /*
+   * A starting point with a shelf life, not a promise.
+   *
+   * This said gemini-2.5-flash until 19 September, when Google answered a
+   * valid request with "no longer available to new users - use
+   * models/gemini-3.6-flash". Written from memory, correct once, wrong within
+   * the month, and the failure landed on the person trying to use it.
+   *
+   * `listModels` below is the actual answer: anybody can see what their own
+   * key reaches today and pick from that. This is only what happens when they
+   * have not.
+   */
+  defaultModel: "gemini-3.6-flash",
+
+  /**
+   * What this key can use, from Google rather than from this file.
+   *
+   * Filtered to models that can answer a generateContent call, because the
+   * list also carries embedding and vision models that would fail confusingly
+   * if somebody picked one.
+   */
+  async listModels(token: string): Promise<string[]> {
+    const response = await fetch(ENDPOINT, {
+      headers: { "x-goog-api-key": token },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        explain(response.status, await response.json().catch(() => null), token),
+      );
+    }
+
+    const body = (await response.json()) as {
+      models?: { name?: string; supportedGenerationMethods?: string[] }[];
+    };
+
+    return (body.models ?? [])
+      .filter((one) =>
+        (one.supportedGenerationMethods ?? []).includes("generateContent"),
+      )
+      .map((one) => (one.name ?? "").replace(/^models\//, ""))
+      .filter(Boolean)
+      .sort();
+  },
 
   /**
    * Always available where there is a network.
@@ -275,12 +325,40 @@ export const geminiProvider: AiProvider = {
         };
       }
 
+      const candidate = (
+        body as {
+          candidates?: {
+            finishReason?: string;
+            content?: { parts?: { text?: string }[] };
+          }[];
+        }
+      )?.candidates?.[0];
+
       const text =
-        (body as {
-          candidates?: { content?: { parts?: { text?: string }[] } }[];
-        })?.candidates?.[0]?.content?.parts
-          ?.map((part) => part.text ?? "")
-          .join("") ?? "";
+        candidate?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+
+      /*
+       * An answer that stopped because it ran out of room is not an answer.
+       *
+       * The input side of this already refuses rather than truncating, on the
+       * grounds that a plan built from half a curriculum looks exactly like a
+       * plan built from all of it. The output side did not, so a curriculum
+       * too large to state in one reply came back as ok with the JSON cut
+       * mid-sentence - and whether that was caught depended on whether the
+       * truncation happened to land somewhere unparseable.
+       *
+       * A whole occupational curriculum is a lot to ask for in one reply: the
+       * 121151 documents come to 15 modules, 51 topics, 499 elements and 154
+       * criteria. Saying so is more use than a parse error three steps later.
+       */
+      if (candidate?.finishReason === "MAX_TOKENS") {
+        return {
+          ok: false,
+          error:
+            "Gemini ran out of room before it finished answering, so what came back is part of a curriculum rather than all of it - and a partial one looks exactly like a complete one. Nothing was kept. A whole qualification is a great deal to ask for in a single reply; import it from its documents instead, which reads the curriculum directly with no model involved and no limit of this kind.",
+          durationMs: Date.now() - started,
+        };
+      }
 
       if (!text.trim()) {
         return {

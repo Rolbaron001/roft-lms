@@ -127,7 +127,30 @@ export const openAiProvider: AiProvider = {
     source: "create one at platform.openai.com under API keys",
     looksLike: "sk-",
   },
+  // A starting point, not a promise. See listModels, and gemini.ts for what
+  // happens when a hardcoded model name outlives the provider's willingness
+  // to serve it.
   defaultModel: "gpt-5",
+
+  /** What this key can use, from OpenAI rather than from this file. */
+  async listModels(token: string): Promise<string[]> {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        explain(response.status, await response.json().catch(() => null)),
+      );
+    }
+
+    const body = (await response.json()) as { data?: { id?: string }[] };
+
+    return (body.data ?? [])
+      .map((one) => one.id ?? "")
+      .filter(Boolean)
+      .sort();
+  },
 
   /** Nothing to install and nothing signed in on the machine. */
   availability(): Availability {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
 import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
-import { setMyExtension } from "@/lib/extensions";
+import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -141,6 +141,34 @@ export type ExtensionState = { error?: string; notice?: string };
  * bounded by their role exactly as everything else is - an assessor with an
  * extension can do assessor things faster, and nothing more.
  */
+export type ModelListState = { models?: string[]; error?: string };
+
+/**
+ * Asks the provider what this person's own credential can reach.
+ *
+ * Its own action rather than part of saving, because it is a question and not
+ * a change: it writes nothing, and somebody who asks it and dislikes the
+ * answer has altered nothing.
+ */
+export async function listExtensionModelsAction(): Promise<ModelListState> {
+  const session = await requireSession();
+
+  try {
+    const { models, error } = await modelsAvailableTo(session);
+    return error ? { error } : { models };
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) {
+      return { error: "Your role does not include model assistance." };
+    }
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "The provider could not be asked for its models.",
+    };
+  }
+}
+
 export async function updateMyExtensionAction(
   _previous: ExtensionState,
   formData: FormData,
