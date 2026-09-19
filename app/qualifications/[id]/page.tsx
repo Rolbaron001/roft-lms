@@ -40,15 +40,21 @@ const ELEMENT_LABELS: Record<string, string> = {
   supporting_evidence: "Supporting evidence",
 };
 
+/*
+ * `?just=created` is no longer read.
+ *
+ * What replaced it is a panel built from the qualification itself, which says
+ * the same thing on arrival and still says it on a return visit - the one-shot
+ * version vanished on the first reload, which is exactly when somebody comes
+ * back to finish. The parameter is still appended by the create action and is
+ * harmless; nothing here depends on it.
+ */
 export default async function QualificationPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ just?: string }>;
 }) {
   const { id } = await params;
-  const justCreated = (await searchParams).just === "created";
   const tenant = await requireTenant();
   /*
    * Read by everybody who delivers or judges against it; changed by an
@@ -120,6 +126,56 @@ export default async function QualificationPage({
       m.looseCriteria.length === 0,
   );
 
+  /*
+   * The three things that have to happen before a qualification can be taught,
+   * in the order they have to happen in, each answered from the data rather
+   * than from a flag somebody has to remember to set.
+   *
+   * The material can be uploaded before the study units exist - filenames name
+   * their unit and the importer creates them - so these are a sequence by
+   * convenience rather than by rule. What matters is that somebody can see
+   * which of them are outstanding without reading the whole page.
+   */
+  const studyUnitsPlaced =
+    studyUnits.length > 0 && unplacedModules.length === 0;
+
+  const steps = [
+    {
+      title: "The curriculum",
+      done: modules.length > 0,
+      state:
+        modules.length > 0
+          ? `${modules.length} modules, ${totalCriteria} assessment criteria, read from the qualification's own documents.`
+          : "Nothing here can be taught or assessed until its modules exist.",
+      href: "#curriculum",
+      action: "Build it by hand",
+    },
+    {
+      title: "Study units",
+      done: studyUnitsPlaced,
+      state: studyUnitsPlaced
+        ? `${studyUnits.length} units, with every module placed in one.`
+        : studyUnits.length === 0
+          ? "The curriculum publishes modules and says nothing about how you group them, so this is yours to decide. Your alignment document does it in one upload — Word or Excel."
+          : `${unplacedModules.length} ${unplacedModules.length === 1 ? "module belongs" : "modules belong"} to no unit yet. A module no study unit delivers is a module nobody teaches.`,
+      href: "#documents",
+      action: "Upload the alignment document",
+    },
+    {
+      title: "The material",
+      done: documents.length > 0,
+      state:
+        documents.length > 0
+          ? `${documents.length} documents filed.`
+          : "The theory guides, workbooks and assessments. The whole folder goes in at once, answer guides are recognised and withheld from learners, and no AI is involved at any point.",
+      href: "#material",
+      action: "Add the folder",
+    },
+  ];
+
+  const done = steps.filter((step) => step.done);
+  const needed = steps.filter((step) => !step.done);
+
   return (
     <AppShell tenant={tenant} session={session}>
       {/*
@@ -134,60 +190,7 @@ export default async function QualificationPage({
 
         Shown once, on arrival. It is not a state the qualification is in.
       */}
-      {justCreated && canManage ? (
-        <div
-          className={`mb-6 rounded-lg border px-4 py-3 ${
-            modules.length > 0
-              ? "border-[var(--success)]/40 bg-[var(--success)]/5"
-              : "border-[var(--danger)]/40 bg-[var(--danger)]/5"
-          }`}
-        >
-          {/*
-            Nothing is claimed that is not true. A reading that produced no
-            modules at all has not put a curriculum in, and saying "the
-            curriculum is in: 0 modules" would be the platform congratulating
-            itself on a failure - which is the exact habit that made the test
-            on 16 September look like it had half worked.
-          */}
-          {modules.length > 0 ? (
-            <p className="text-sm font-medium">
-              The curriculum is in: {modules.length}{" "}
-              {modules.length === 1 ? "module" : "modules"} and {totalCriteria}{" "}
-              assessment criteria, read from the documents you supplied.
-            </p>
-          ) : (
-            <p className="text-sm font-medium">
-              The qualification was created, but no curriculum was read from
-              the documents. Nothing here can be taught or assessed until its
-              modules exist.
-            </p>
-          )}
-          {modules.length > 0 ? (
-            <>
-              <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
-                What is not in yet is the material — the theory guides,
-                workbooks and assessments. Add the whole folder at once further
-                down this page; the study units are created from the filenames,
-                and answer guides are recognised and kept from learners. No AI
-                is used for any of it.
-              </p>
-              <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
-                Check a module or two against the printed document first.
-                Anything the reading was unsure of was listed on the screen
-                before this one.
-              </p>
-            </>
-          ) : (
-            <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
-              Either the curriculum document was not among the files, or it is
-              laid out in a way the reader did not recognise. Build the
-              curriculum by hand, or say what the document looks like and the
-              reader can be taught it — that is how the Commercial Cleaner
-              curriculum came to be read.
-            </p>
-          )}
-        </div>
-      ) : null}
+
 
       <div className="mb-6">
         <Link
@@ -253,6 +256,71 @@ export default async function QualificationPage({
         ) : null}
       </div>
 
+      {/*
+        Where you are, and what to do next.
+
+        Roland, 19 September, having just created a qualification on
+        production: "After clicking Create there is nothing to guide you to the
+        next step. The page is full, but I can't see what to do next."
+
+        There was a panel here before and it did not do the job. It appeared
+        only with ?just=created, so it vanished on the first reload and was
+        never seen again by somebody coming back to finish; it was prose rather
+        than a list, so there was nothing to scan; and it said "further down
+        this page" without a link, on a page that runs to fifteen modules.
+
+        This is read from the qualification rather than from a query string, so
+        it is the same on arrival and on a return visit a week later, and each
+        step goes to the control that does it. It says what is done as plainly
+        as what is not - a step already finished is worth seeing, because the
+        question "did that work?" is the one somebody actually has.
+
+        It disappears when all three are done. A checklist with nothing left on
+        it is clutter, and this page has enough.
+      */}
+      {canManage && (modules.length === 0 || needed.length > 0) ? (
+        <div className="mb-6 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 p-4">
+          <p className="text-sm font-semibold">
+            {modules.length === 0
+              ? "This qualification has no curriculum yet"
+              : `Building this qualification — ${done.length} of ${steps.length} done`}
+          </p>
+
+          <ol className="mt-3 space-y-2.5">
+            {steps.map((step, index) => (
+              <li key={step.title} className="flex gap-3 text-sm">
+                <span
+                  aria-hidden
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                    step.done
+                      ? "bg-[var(--success)]/20 text-[var(--success)]"
+                      : "border border-[var(--border)] text-[var(--muted)]"
+                  }`}
+                >
+                  {step.done ? "✓" : index + 1}
+                </span>
+                <span>
+                  <span className={step.done ? "text-[var(--muted)]" : "font-medium"}>
+                    {step.title}
+                  </span>
+                  <span className="block text-[var(--muted)]">
+                    {step.state}
+                    {step.done ? null : (
+                      <>
+                        {" "}
+                        <Link href={step.href} className="underline">
+                          {step.action}
+                        </Link>
+                      </>
+                    )}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
       {notCaptured.length > 0 ? (
         <div
           className="mb-6 rounded-lg border-2 p-4"
@@ -275,7 +343,7 @@ export default async function QualificationPage({
       ) : null}
 
       {studyUnits.length > 0 || outcomes.length > 0 ? (
-        <section className="mb-8">
+        <section id="structure" className="mb-8 scroll-mt-24">
           <h2 className="mb-2 font-semibold">Delivery structure</h2>
           <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
             The curriculum publishes modules; a provider teaches study units.
@@ -419,7 +487,7 @@ export default async function QualificationPage({
         </section>
       ) : null}
 
-      <section className="mb-8">
+      <section id="documents" className="mb-8 scroll-mt-24">
         <h2 className="mb-2 font-semibold">Programme documents</h2>
         <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
           Filed here are the authoritative copies: the source documents this
@@ -503,7 +571,7 @@ export default async function QualificationPage({
               ) : null}
             </Card>
 
-            <div className="mt-4">
+            <div id="material" className="mt-4 scroll-mt-24">
               <Card>
                 <p className="mb-3 text-sm font-medium">
                   A whole folder at once
@@ -617,7 +685,9 @@ export default async function QualificationPage({
         )}
       </section>
 
-      <h2 className="mb-2 font-semibold">Curriculum</h2>
+      <h2 id="curriculum" className="mb-2 scroll-mt-24 font-semibold">
+        Curriculum
+      </h2>
       <div className="space-y-4">
         {modules.map((curriculumModule) => {
           const criteriaHere =
