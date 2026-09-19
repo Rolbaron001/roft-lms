@@ -262,7 +262,10 @@ async function buildPlan(
 /** A plan with no qualification in it, for a material-only import. */
 function emptyPlan(): IngestionPlan {
   return {
-    source: "blueprint",
+    // Not "blueprint". Nothing was read to produce this and nothing is meant
+    // to be: a material import files documents by name and leaves the
+    // curriculum alone.
+    source: "filing",
     qualification: {
       title: "",
       saqaId: null,

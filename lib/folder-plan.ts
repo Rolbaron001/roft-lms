@@ -57,7 +57,22 @@ export type PlannedDocument = {
 };
 
 export type IngestionPlan = {
-  source: "blueprint" | "documents";
+  /**
+   * How this plan was arrived at, which is not decoration.
+   *
+   * "blueprint" - the folder described itself and the structure is copied from
+   * that file. "documents" - a model worked it out and every line of it needs
+   * checking. "filing" - no structure was read at all, because none was
+   * wanted: a folder of material is sorted by its filenames against rules, and
+   * no blueprint and no model are involved at any point.
+   *
+   * The third was missing, so a material import borrowed "blueprint" from the
+   * empty plan it starts out as - and the review screen told Roland his 81
+   * files had been "read from the folder's own blueprint file", of a folder
+   * that has no blueprint. Getting this wrong misstates where a provider's
+   * documents went and what looked at them.
+   */
+  source: "blueprint" | "documents" | "filing";
   qualification: {
     title: string;
     saqaId: string | null;

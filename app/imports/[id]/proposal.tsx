@@ -155,12 +155,45 @@ export function Proposal({
         </p>
       ) : null}
 
+      {/*
+        Where this plan came from, said accurately.
+
+        A material import produced an empty plan whose source said
+        "blueprint", so this told Roland his 81 files had been "read from the
+        folder's own blueprint file" - of a folder that has no blueprint, in a
+        mode that reads no structure at all and never asks a model. The claim
+        was about provenance, which is the one thing a review screen must not
+        get wrong.
+      */}
       <p className="text-sm text-[var(--muted)]">
         {plan.source === "blueprint"
           ? "Read from the folder's own blueprint file. The structure below is exactly what that file says — nothing was inferred, and no model was asked."
-          : "Read from the documents by the model. Check it against the curriculum document before committing."}
+          : plan.source === "documents"
+            ? "Read from the documents by the model. Check it against the curriculum document before committing."
+            : "Filed by name. No blueprint and no model were involved: each document went where its filename says it belongs, and the curriculum is untouched."}
       </p>
 
+      {/*
+        Hidden for a filing run, which reads no qualification and no
+        curriculum. Shown anyway it read "Qualification: Not stated, NQF ? · ?
+        credits, will create 0 modules, 0 topics, 0 elements, 0 criteria" -
+        four blanks and five zeroes over a perfectly successful import of
+        eighty-one documents. It looks like a failure and it is a success.
+      */}
+      {plan.source === "filing" ? (
+        <p className="text-sm">
+          <span className="font-medium">
+            {plan.documents.length} documents
+          </span>{" "}
+          <span className="text-[var(--muted)]">
+            to file, and{" "}
+            {plan.studyUnits.length > 0
+              ? `${plan.studyUnits.length} study units named by their filenames. `
+              : ""}
+            No module, topic or criterion is added or changed by this.
+          </span>
+        </p>
+      ) : (
       <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[10rem_1fr]">
         <dt className="text-[var(--muted)]">Qualification</dt>
         <dd className="font-medium">{plan.qualification.title || "Not stated"}</dd>
@@ -188,6 +221,7 @@ export function Proposal({
           {plan.studyUnits.length} study units, {plan.documents.length} documents
         </dd>
       </dl>
+      )}
 
       {/* --- warnings, first and open ------------------------------------- */}
       {plan.warnings.length > 0 ? (
@@ -204,7 +238,9 @@ export function Proposal({
       ) : null}
 
       {/* --- modules ------------------------------------------------------ */}
-      <div>
+      {/* A filing run creates no curriculum, so "Curriculum 0" is another
+          zero that reads as a failure over a successful import. */}
+      <div hidden={plan.source === "filing"}>
         {section("modules", "Curriculum", plan.modules.length)}
         {open === "modules" ? (
           <ul className="mt-2 space-y-2 text-sm">

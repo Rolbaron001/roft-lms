@@ -81,3 +81,48 @@ describe("what the confirmation screen says about visibility", () => {
     expect(proposal).toMatch(/!document\.kind \|\| document\.kind === "other"/);
   });
 });
+
+/**
+ * What the review screen claims about where a plan came from.
+ *
+ * Roland uploaded 81 files of material on 19 September and was told they had
+ * been "read from the folder's own blueprint file" - of a folder that has no
+ * blueprint, in a mode that reads no structure at all and never asks a model.
+ *
+ * The cause was that a material import starts from an empty plan, and the
+ * empty plan declared itself "blueprint" because there were only two values to
+ * choose from. Provenance is the one thing a review screen must not get wrong:
+ * it is the answer to "what looked at my documents", which is a question a
+ * provider can be asked about their learners' material.
+ */
+describe("where the review screen says a plan came from", () => {
+  it("has a value for filing, which reads nothing", async () => {
+    const { ingestUpload } = await import("@/lib/folder-import");
+    // The type is what is asserted here; exercising the whole import needs a
+    // tenant and is covered elsewhere.
+    expect(typeof ingestUpload).toBe("function");
+
+    const source = readFileSync(join(root, "lib/folder-plan.ts"), "utf8");
+    expect(source).toMatch(/"blueprint" \| "documents" \| "filing"/);
+  });
+
+  it("does not claim a blueprint was read when none was", () => {
+    const plan = readFileSync(join(root, "lib/folder-import.ts"), "utf8");
+    const empty = plan.slice(plan.indexOf("function emptyPlan"));
+    expect(empty.slice(0, 400)).toMatch(/source: "filing"/);
+  });
+
+  it("says plainly that no model was involved", () => {
+    expect(proposal).toMatch(/No blueprint and no model were involved/);
+  });
+
+  /**
+   * "Qualification: Not stated, NQF ? · ? credits, 0 modules, 0 topics, 0
+   * elements, 0 criteria" over a successful import of eighty-one documents.
+   * Four blanks and five zeroes that look like a failure and are a success.
+   */
+  it("hides the curriculum summary on a run that reads no curriculum", () => {
+    expect(proposal).toMatch(/plan\.source === "filing" \? \(/);
+    expect(proposal).toMatch(/hidden=\{plan\.source === "filing"\}/);
+  });
+});
