@@ -261,7 +261,16 @@ export const NAV: NavSection[] = [
       },
       {
         href: "/imports",
-        label: "AI history",
+        /*
+         * Not "AI history". The page was renamed on 19 September because most
+         * of what it lists never involved a model - a folder carrying its own
+         * blueprint is read by the platform alone, and a folder of material
+         * never asks one - and the menu was left saying otherwise. So somebody
+         * arriving from the menu was promised AI and shown a list mostly
+         * labelled "read by the platform, no AI involved", which is a fair
+         * reason to wonder whether you are on the right screen.
+         */
+        label: "Folders that have been read",
         permission: "qualification:manage",
       },
       /*

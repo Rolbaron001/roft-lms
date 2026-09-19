@@ -38,11 +38,30 @@ export default async function ImportJobPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
+      {/*
+        Back to the work, not back to a list of jobs.
+
+        This said "← Back" and went to /imports. It sits at the very top of the
+        page, which is where somebody reaches when they are heading for the
+        menu bar - so Roland, having just committed 81 documents, clicked it on
+        his way to the navigation and landed on a list of import jobs he had
+        no use for. A vague label on an unhelpful destination, in the most
+        clickable position on the screen.
+      */}
       <Link
-        href="/imports"
+        href={
+          job.qualificationId
+            ? `/qualifications/${job.qualificationId}`
+            : job.target?.qualificationId
+              ? `/qualifications/${job.target.qualificationId}`
+              : "/imports"
+        }
         className="text-sm text-[var(--muted)] hover:underline"
       >
-        ← Back
+        ←{" "}
+        {job.qualificationId || job.target?.qualificationId
+          ? "Back to the qualification"
+          : "Back to the folders that have been read"}
       </Link>
 
       <h1 className="mt-2 font-mono text-lg font-semibold break-all">

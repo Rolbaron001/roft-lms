@@ -118,13 +118,22 @@ describe("an arrangement saved before a heading was renamed", () => {
     );
     expect(management).toBeDefined();
 
-    const labels = management!.items.map((item) => item.label);
+    /*
+     * By page, not by wording.
+     *
+     * This asserted the label "AI history", so renaming that page broke a test
+     * about where pages live - two unrelated things tied together. A saved
+     * arrangement stores hrefs and nothing else; the label always comes from
+     * the current definition, which is precisely why a rename reaches a tenant
+     * who saved their menu months ago.
+     */
+    const hrefs = management!.items.map((item) => item.href);
     // What their own arrangement had under Admin.
-    expect(labels).toContain("Settings");
-    expect(labels).toContain("AI history");
-    expect(labels).toContain("Clients");
+    expect(hrefs).toContain("/settings");
+    expect(hrefs).toContain("/imports");
+    expect(hrefs).toContain("/platform");
     // And what the platform has added to Management since they saved it.
-    expect(labels).toContain("Templates");
+    expect(hrefs).toContain("/templates");
   });
 
   it("names Management once, not twice", () => {
