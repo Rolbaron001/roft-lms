@@ -8,9 +8,23 @@ import { DrivePicker } from "@/components/drive-picker";
 import { connectionsFor } from "@/lib/drive";
 import { Card } from "@/components/ui";
 import { EmptyState } from "@/components/empty-state";
+import { ViewTabs } from "@/components/view-tabs";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 
-export default async function QualificationsPage() {
+export default async function QualificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  /*
+   * Reading what you have, or adding one. Two jobs on one screen.
+   *
+   * Roland, 19 September: "a list of available qualifications is pushed
+   * in-between the creation and upload processes. Let's untangle the screens
+   * please." The list sat under three upload cards and above a dashed box for
+   * building another, so neither job had a screen of its own.
+   */
+  const view = (await searchParams).view === "add" ? "add" : "list";
   const tenant = await requireTenant();
   // Read by everybody who delivers or judges against a qualification; built
   // and changed by an administrator. See the detail page for the reasoning.
@@ -54,6 +68,20 @@ export default async function QualificationsPage() {
         </p>
       </div>
 
+
+      {canManage ? (
+        <ViewTabs
+          basePath="/qualifications"
+          current={view}
+          tabs={[
+            { id: "list", label: "Qualifications", count: withModules.length },
+            { id: "add", label: "Add a qualification" },
+          ]}
+        />
+      ) : null}
+
+      {view === "add" ? (
+        <>
       {canManage ? (
         <>
           {/*
@@ -127,6 +155,14 @@ export default async function QualificationsPage() {
         </>
       ) : null}
 
+          <QualificationsManager
+            qualifications={withModules}
+            canManage={canManage}
+            show="create"
+          />
+        </>
+      ) : (
+        <>
       {/*
         Said rather than left blank.
 
@@ -148,7 +184,7 @@ export default async function QualificationsPage() {
         <EmptyState title="No qualifications yet">
           {canManage ? (
             <p>
-              Build one from its documents above — the curriculum document and
+              Build one from its documents — the tab above — the curriculum document and
               the qualification document are enough, and no AI extension is
               involved. Everything else on the platform hangs off a
               qualification, so this is the first thing to do.
@@ -167,7 +203,10 @@ export default async function QualificationsPage() {
       <QualificationsManager
         qualifications={withModules}
         canManage={canManage}
+        show="list"
       />
+        </>
+      )}
     </AppShell>
   );
 }

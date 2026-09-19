@@ -16,6 +16,7 @@ import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
+import { ViewTabs } from "@/components/view-tabs";
 import { connectionsFor } from "@/lib/drive";
 
 const COMPONENT_LABELS: Record<string, string> = {
@@ -54,10 +55,22 @@ const ELEMENT_LABELS: Record<string, string> = {
  */
 export default async function QualificationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { id } = await params;
+  /*
+   * Which half of this page somebody is on.
+   *
+   * "what it holds" is the qualification as it stands - the structure, the
+   * curriculum, the documents filed. "build" is the machinery for adding to
+   * it. They were interleaved, so a curriculum sat below three upload cards
+   * and somebody reading one had to scroll past the controls for making
+   * another.
+   */
+  const view = (await searchParams).view === "build" ? "build" : "holds";
   const tenant = await requireTenant();
   /*
    * Read by everybody who delivers or judges against it; changed by an
@@ -282,6 +295,169 @@ export default async function QualificationPage({
 
       {canManage ? <ProgressMap steps={steps} /> : null}
 
+      {/*
+        Two jobs, told apart. See components/view-tabs.tsx for why this is a
+        query parameter rather than client state.
+      */}
+      {canManage ? (
+        <ViewTabs
+          basePath={`/qualifications/${id}`}
+          current={view}
+          tabs={[
+            { id: "holds", label: "The qualification" },
+            { id: "build", label: "Add to it" },
+          ]}
+        />
+      ) : null}
+
+      {view === "build" ? (
+        <section className="mb-8">
+          <h2 className="mb-2 font-semibold">Add to this qualification</h2>
+          <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
+            Everything that puts something in. What is already here is on the
+            other tab.
+          </p>
+        {canManage ? (
+          <>
+            {/*
+          Finishing a curriculum, rather than filing material against one.
+
+          Roland asked on 15 September whether a qualification loaded from an
+          incomplete folder could be completed by pointing at the finished one.
+          It can, and this is where. It is deliberately a separate control from
+          the material picker below: the two do different things to the same
+          folder, and nothing on the screen would otherwise say which one a
+          person was about to get.
+        */}
+            <Card>
+              <p className="mb-3 text-sm font-medium">
+                Finish this qualification from a fuller folder
+              </p>
+              <FolderPicker
+                qualificationId={id}
+                topUp
+                label="The completed folder for this qualification, from your own computer"
+                extension={
+                  mayUseExtension
+                    ? {
+                        on: extension.on,
+                        available: extension.availability?.available ?? false,
+                        registered: extension.registered,
+                        reason: extension.availability?.reason ?? null,
+                      }
+                    : null
+                }
+                hint={
+                  <>
+                    For a qualification that was loaded before its documents
+                    were complete. The whole folder is read again — the
+                    curriculum as well as the material — and only what is
+                    missing is added.
+                    <br />
+                    Nothing already here is changed or replaced, down to the
+                    wording of a single criterion, and running it twice does
+                    nothing the second time. You still see everything it found
+                    and confirm it before any of it is written.
+                  </>
+                }
+              />
+
+              {drives.length > 0 ? (
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <p className="mb-2 text-xs text-[var(--muted)]">
+                    Or the completed folder from a drive you have connected. It
+                    tops up the same way: only what is missing is added.
+                  </p>
+                  <DrivePicker
+                    drives={drives.map((one) => ({
+                      provider: one.provider,
+                      label: one.label,
+                      accountLabel: one.accountLabel,
+                    }))}
+                    qualificationId={id}
+                    topUp
+                  />
+                </div>
+              ) : null}
+            </Card>
+
+            <div id="material" className="mt-4 scroll-mt-24">
+              {studyUnitsPlaced && teachingMaterial.length === 0 ? (
+                <PointHere>
+                  The material goes here — the whole folder at once. Nothing is
+                  saved until you have seen what it found.
+                </PointHere>
+              ) : null}
+              <Card>
+                <p className="mb-3 text-sm font-medium">
+                  A whole folder at once
+                </p>
+                <FolderPicker
+                  qualificationId={id}
+                  label="A folder of material, from your own computer"
+                  hint={
+                    <>
+                      Theory guides and workbooks go to the study unit their
+                      filename names, policies and contracts to the document
+                      library, and everything else against this qualification.
+                      No AI is used here at all — sorting documents by name is a
+                      rule rather than a judgement.
+                    </>
+                  }
+                />
+              </Card>
+            </div>
+
+            {drives.length > 0 ? (
+              <div className="mt-4">
+                <Card>
+                  <p className="mb-3 text-sm font-medium">
+                    Or the folder where it already lives
+                  </p>
+                  <DrivePicker
+                    drives={drives.map((one) => ({
+                      provider: one.provider,
+                      label: one.label,
+                      accountLabel: one.accountLabel,
+                    }))}
+                    qualificationId={id}
+                  />
+                </Card>
+              </div>
+            ) : null}
+
+            <div className="mt-4">
+              {/*
+                The pointer sits on the control, not in a sentence describing
+                where the control might be. Shown only while this is the step
+                somebody is on, so it is never pointing at finished work.
+              */}
+              {!studyUnitsPlaced && modules.length > 0 ? (
+                <PointHere>
+                  Your alignment document goes here — choose it, set its kind to
+                  Curriculum Alignment Matrix, and upload. That builds the study
+                  units.
+                </PointHere>
+              ) : null}
+              <Card>
+                <p className="mb-3 text-sm font-medium">Or one document</p>
+                <DocumentUploader
+                  qualificationId={id}
+                  kinds={DOCUMENT_KINDS.map((kind) => ({
+                    value: kind,
+                    label: DOCUMENT_KIND_LABELS[kind],
+                  }))}
+                  units={uploadTargets?.units ?? []}
+                  modules={uploadTargets?.modules ?? []}
+                />
+              </Card>
+            </div>
+          </>
+        ) : null}
+        </section>
+      ) : (
+      <>
+
       {notCaptured.length > 0 ? (
         <div
           className="mb-6 rounded-lg border-2 p-4"
@@ -435,16 +611,27 @@ export default async function QualificationPage({
 
                 {unit.modules.length > 0 ? (
                   <ul className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+                    {/*
+                      Chips that go somewhere.
+
+                      Roland: "there are no links on the buttons, so I can't
+                      view the respective modules." They looked exactly like
+                      controls and did nothing. There is no page per module -
+                      a module's content is a card further down this one - so
+                      each goes to that card.
+                    */}
                     {unit.modules.map((entry) => (
-                      <li
-                        key={entry.id}
-                        className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs"
-                      >
-                        <span className="font-mono">{entry.code}</span>{" "}
-                        <span className="text-[var(--muted)]">
-                          {COMPONENT_LABELS[entry.component] ?? entry.component}
-                          {entry.credits ? ` · ${entry.credits} cr` : ""}
-                        </span>
+                      <li key={entry.id}>
+                        <Link
+                          href={`#module-${entry.code}`}
+                          className="block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/5"
+                        >
+                          <span className="font-mono">{entry.code}</span>{" "}
+                          <span className="text-[var(--muted)]">
+                            {COMPONENT_LABELS[entry.component] ?? entry.component}
+                            {entry.credits ? ` · ${entry.credits} cr` : ""}
+                          </span>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -482,143 +669,6 @@ export default async function QualificationPage({
           them and a coach signs them on paper.
         </p>
 
-        {canManage ? (
-          <>
-            {/*
-          Finishing a curriculum, rather than filing material against one.
-
-          Roland asked on 15 September whether a qualification loaded from an
-          incomplete folder could be completed by pointing at the finished one.
-          It can, and this is where. It is deliberately a separate control from
-          the material picker below: the two do different things to the same
-          folder, and nothing on the screen would otherwise say which one a
-          person was about to get.
-        */}
-            <Card>
-              <p className="mb-3 text-sm font-medium">
-                Finish this qualification from a fuller folder
-              </p>
-              <FolderPicker
-                qualificationId={id}
-                topUp
-                label="The completed folder for this qualification, from your own computer"
-                extension={
-                  mayUseExtension
-                    ? {
-                        on: extension.on,
-                        available: extension.availability?.available ?? false,
-                        registered: extension.registered,
-                        reason: extension.availability?.reason ?? null,
-                      }
-                    : null
-                }
-                hint={
-                  <>
-                    For a qualification that was loaded before its documents
-                    were complete. The whole folder is read again — the
-                    curriculum as well as the material — and only what is
-                    missing is added.
-                    <br />
-                    Nothing already here is changed or replaced, down to the
-                    wording of a single criterion, and running it twice does
-                    nothing the second time. You still see everything it found
-                    and confirm it before any of it is written.
-                  </>
-                }
-              />
-
-              {drives.length > 0 ? (
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <p className="mb-2 text-xs text-[var(--muted)]">
-                    Or the completed folder from a drive you have connected. It
-                    tops up the same way: only what is missing is added.
-                  </p>
-                  <DrivePicker
-                    drives={drives.map((one) => ({
-                      provider: one.provider,
-                      label: one.label,
-                      accountLabel: one.accountLabel,
-                    }))}
-                    qualificationId={id}
-                    topUp
-                  />
-                </div>
-              ) : null}
-            </Card>
-
-            <div id="material" className="mt-4 scroll-mt-24">
-              {studyUnitsPlaced && teachingMaterial.length === 0 ? (
-                <PointHere>
-                  The material goes here — the whole folder at once. Nothing is
-                  saved until you have seen what it found.
-                </PointHere>
-              ) : null}
-              <Card>
-                <p className="mb-3 text-sm font-medium">
-                  A whole folder at once
-                </p>
-                <FolderPicker
-                  qualificationId={id}
-                  label="A folder of material, from your own computer"
-                  hint={
-                    <>
-                      Theory guides and workbooks go to the study unit their
-                      filename names, policies and contracts to the document
-                      library, and everything else against this qualification.
-                      No AI is used here at all — sorting documents by name is a
-                      rule rather than a judgement.
-                    </>
-                  }
-                />
-              </Card>
-            </div>
-
-            {drives.length > 0 ? (
-              <div className="mt-4">
-                <Card>
-                  <p className="mb-3 text-sm font-medium">
-                    Or the folder where it already lives
-                  </p>
-                  <DrivePicker
-                    drives={drives.map((one) => ({
-                      provider: one.provider,
-                      label: one.label,
-                      accountLabel: one.accountLabel,
-                    }))}
-                    qualificationId={id}
-                  />
-                </Card>
-              </div>
-            ) : null}
-
-            <div className="mt-4">
-              {/*
-                The pointer sits on the control, not in a sentence describing
-                where the control might be. Shown only while this is the step
-                somebody is on, so it is never pointing at finished work.
-              */}
-              {!studyUnitsPlaced && modules.length > 0 ? (
-                <PointHere>
-                  Your alignment document goes here — choose it, set its kind to
-                  Curriculum Alignment Matrix, and upload. That builds the study
-                  units.
-                </PointHere>
-              ) : null}
-              <Card>
-                <p className="mb-3 text-sm font-medium">Or one document</p>
-                <DocumentUploader
-                  qualificationId={id}
-                  kinds={DOCUMENT_KINDS.map((kind) => ({
-                    value: kind,
-                    label: DOCUMENT_KIND_LABELS[kind],
-                  }))}
-                  units={uploadTargets?.units ?? []}
-                  modules={uploadTargets?.modules ?? []}
-                />
-              </Card>
-            </div>
-          </>
-        ) : null}
 
         {documents.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
@@ -690,7 +740,15 @@ export default async function QualificationPage({
             ) + curriculumModule.looseCriteria.length;
 
           return (
-            <Card key={curriculumModule.id}>
+            /* The destination for the chips in the delivery structure
+               above. scroll-mt-24 keeps the heading clear of the fixed
+               header when somebody arrives. */
+            <div
+              key={curriculumModule.id}
+              id={`module-${curriculumModule.code}`}
+              className="scroll-mt-24"
+            >
+            <Card>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div>
                   <p className="font-medium">
@@ -849,9 +907,12 @@ export default async function QualificationPage({
                 </div>
               ) : null}
             </Card>
+            </div>
           );
         })}
       </div>
+      </>
+      )}
     </AppShell>
   );
 }

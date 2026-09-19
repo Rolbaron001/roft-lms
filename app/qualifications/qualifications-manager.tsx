@@ -88,6 +88,7 @@ function Message({ state }: { state: ActionState }) {
 export function QualificationsManager({
   qualifications,
   canManage,
+  show = "both",
 }: {
   qualifications: Qualification[];
   /**
@@ -99,6 +100,17 @@ export function QualificationsManager({
    * pressed it.
    */
   canManage: boolean;
+  /**
+   * Which half of the screen this is rendering.
+   *
+   * Roland, 19 September: "on the opening Qualifications page ... a list of
+   * available qualifications is pushed in-between the creation and upload
+   * processes. Let's untangle the screens please." Building a qualification
+   * and reading the ones you have are different jobs, and this component was
+   * doing both - the list, then a dashed box for making another underneath
+   * it, with the folder and document uploads above the lot.
+   */
+  show?: "both" | "list" | "create";
 }) {
   const [createState, createAction, createPending] = useActionState<
     ActionState,
@@ -157,7 +169,9 @@ export function QualificationsManager({
 
   return (
     <div className="space-y-6">
-      {qualifications.map((qualification) => (
+      {show === "create"
+        ? null
+        : qualifications.map((qualification) => (
         <section
           key={qualification.id}
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
@@ -422,9 +436,9 @@ export function QualificationsManager({
             ) : null}
           </div>
         </section>
-      ))}
+        ))}
 
-      {canManage ? (
+      {canManage && show !== "list" ? (
         <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             New qualification
