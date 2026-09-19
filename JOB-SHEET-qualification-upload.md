@@ -481,3 +481,62 @@ If one has, there are three ways out and none is free:
 I have not looked in the production database to see whether any qualification
 is affected — that is beyond reading the deploy log, and it is a question worth
 asking rather than answering unasked. **Say the word and I will check.**
+
+## 19 September — where tomorrow starts
+
+**Production holds a correct qualification.** 15 modules, 51 topics, 499
+elements, 154 criteria, 5 study units with every module placed, 81 documents
+filed. The duplicate curriculum is gone — it had 30 modules under two code
+conventions, so EISA readiness was uncomputable — and SE05 reads "Signed Off
+Logbook." instead of 561 characters of QCTO section headings.
+
+Built through the documents route, deterministically, in seconds. That remains
+the route that works.
+
+### What Gemini actually did
+
+Three attempts at the whole curriculum, three 503s. The job is 189,000
+characters in and roughly 500 structured lines out, which is an enormous thing
+to ask of any model in one reply. **Roland's decision: enable billing on the
+Gemini key and retry, to find out whether the wall was the free tier or the
+size of the job.**
+
+Two things he should not be allowed to assume, and both were said:
+
+- **A Gemini Plus subscription is not API access.** Separate products,
+  separate billing. The free-tier key he has is already the right kind of
+  credential; a subscription adds nothing to it.
+- **A Claude subscription cannot run on the server.** Claude Code shells out to
+  a CLI and the production container has none. Testable on a local instance,
+  never on production, and that is a licensing question rather than a technical
+  one.
+
+### First thing tomorrow
+
+**Record what a run consumes.** The platform does not show what a Gemini call
+cost, because Google does not return a price and `lib/extensions/base.ts` is
+right to refuse to invent one. But Gemini *does* return `usageMetadata` with
+prompt, candidate and total token counts, and those are the real driver of any
+bill. Deliberately not shipped tonight: it needs a column on `ai_runs`, and a
+schema migration deployed at the end of a day with nobody watching is not a
+thing to do.
+
+### Then the sweep — Roland's item 3
+
+Today's fixes were nine or ten distinct patterns, all found on the
+qualification screens. Every one of them needs applying to Programmes, Courses
+and Part Qualifications deliberately rather than by pattern-match:
+
+- Where you are in a process, and what to press next (`ProgressMap`, `PointHere`)
+- Pointers that are links, not "below" and "here"
+- A pointer that follows the work rather than the last thing pressed
+- Somewhere to go after an action completes
+- Screens that do one job, not two (`ViewTabs`)
+- Chips and labels that lead somewhere
+- Material listed where somebody looks for it
+- Empty states that say what would be here
+- Honest provenance: what read this, and what did not
+- Counts that mean what they say
+
+**And Roland's item 1:** a floating sub-menu for long pages, which is the same
+idea as the Settings nav and belongs on every long screen rather than one.
