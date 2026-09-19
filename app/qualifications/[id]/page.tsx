@@ -4,6 +4,7 @@ import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LABELS,
+  RESTRICTED_TO_ASSESSORS,
   TEACHING_KINDS,
   listProgrammeDocuments,
   qualificationForDocumentUpload,
@@ -169,6 +170,27 @@ export default async function QualificationPage({
   const teachingMaterial = documents.filter((document) =>
     TEACHING_KINDS.has(document.kind as DocumentKind),
   );
+
+  /*
+   * Each study unit's own material, so it can be read where somebody looks
+   * for it.
+   *
+   * Roland, 19 September: "How do I see the actual content of each Study Unit
+   * - Where is the Theory Guide? How do I view it?" The documents were
+   * openable, but only from a table of eighty-one rows at the bottom of the
+   * page, with the unit code in a column. A study unit's card listed its
+   * modules and nothing else, so the one place somebody would look for SU1's
+   * theory guide was the one place it was not.
+   *
+   * Grouped from the documents already loaded rather than queried again.
+   */
+  const materialByUnit = new Map<string, typeof documents>();
+  for (const document of documents) {
+    if (!document.studyUnitCode) continue;
+    const held = materialByUnit.get(document.studyUnitCode) ?? [];
+    held.push(document);
+    materialByUnit.set(document.studyUnitCode, held);
+  }
 
   const steps = [
     {
@@ -643,6 +665,50 @@ export default async function QualificationPage({
                     This study unit delivers no modules.
                   </p>
                 )}
+
+                {/*
+                  What a learner and a facilitator actually work from, in the
+                  place somebody looks for it. Each one opens.
+
+                  The restricted kinds - memoranda, answer guides, summative
+                  papers - are marked, because this is a screen a facilitator
+                  reads and the difference between a workbook and its answer
+                  guide matters at a glance. What is withheld from learners is
+                  enforced on the download itself, not here; this is a label,
+                  not the lock.
+                */}
+                {(materialByUnit.get(unit.code) ?? []).length > 0 ? (
+                  <div className="mt-3 border-t border-[var(--border)] pt-3">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                      Material filed against this unit
+                    </p>
+                    <ul className="space-y-1">
+                      {(materialByUnit.get(unit.code) ?? []).map((document) => (
+                        <li key={document.id} className="text-sm">
+                          <Link
+                            href={`/api/programme-documents/${document.id}`}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {document.title}
+                          </Link>{" "}
+                          <span className="text-xs text-[var(--muted)]">
+                            {DOCUMENT_KIND_LABELS[
+                              document.kind as DocumentKind
+                            ] ?? document.kind}
+                            {document.version ? ` · ${document.version}` : ""}
+                          </span>
+                          {RESTRICTED_TO_ASSESSORS.has(
+                            document.kind as DocumentKind,
+                          ) ? (
+                            <span className="ml-1.5 rounded bg-[var(--border)]/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                              withheld from learners
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </Card>
             ))}
           </div>

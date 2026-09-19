@@ -131,7 +131,7 @@ export const TEACHING_KINDS = new Set<DocumentKind>([
   "induction",
 ]);
 
-const RESTRICTED_KINDS = new Set<DocumentKind>([
+export const RESTRICTED_TO_ASSESSORS = new Set<DocumentKind>([
   "workbook_memorandum",
   "summative_memorandum",
   "summative_assessment",
@@ -449,7 +449,7 @@ export async function listProgrammeDocuments(
 
     return rows.filter(
       (row) =>
-        canSeeMemoranda || !RESTRICTED_KINDS.has(row.kind as DocumentKind),
+        canSeeMemoranda || !RESTRICTED_TO_ASSESSORS.has(row.kind as DocumentKind),
     );
   });
 }
@@ -479,7 +479,7 @@ export async function readProgrammeDocument(
   }
 
   if (
-    RESTRICTED_KINDS.has(document.kind as DocumentKind) &&
+    RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind) &&
     !session.permissions.includes("assessment:assess")
   ) {
     throw new ProgrammeDocumentError(

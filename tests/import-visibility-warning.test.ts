@@ -36,11 +36,20 @@ const documents = readFileSync(
   "utf8",
 );
 
-/** The kinds named in a `RESTRICTED_KINDS` set, wherever it is declared. */
+/**
+ * The kinds named in the restricted set, wherever it is declared.
+ *
+ * Two names by design: the library's is RESTRICTED_TO_ASSESSORS, which reads
+ * as what it does at the call sites that enforce it, and the client component
+ * keeps a copy called RESTRICTED_KINDS because it cannot import from a module
+ * that reaches the database. Both are matched, and the test's whole job is to
+ * fail when their contents drift apart.
+ */
 function restrictedIn(source: string): string[] {
-  const block = /RESTRICTED_KINDS\s*=\s*new Set(?:<[^>]*>)?\(\[([\s\S]*?)\]\)/.exec(
-    source,
-  );
+  const block =
+    /(?:RESTRICTED_KINDS|RESTRICTED_TO_ASSESSORS)\s*=\s*new Set(?:<[^>]*>)?\(\[([\s\S]*?)\]\)/.exec(
+      source,
+    );
   if (!block) return [];
   return Array.from(block[1].matchAll(/"([a-z_]+)"/g))
     .map((match) => match[1])

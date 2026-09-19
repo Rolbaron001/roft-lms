@@ -97,3 +97,41 @@ describe("the qualifications index", () => {
     expect(empty.slice(0, 400)).not.toMatch(/documents above —/);
   });
 });
+
+/**
+ * Finding a study unit's own material.
+ *
+ * Roland, 19 September: "How do I see the actual content of each Study Unit -
+ * Where is the Theory Guide? How do I view it?"
+ *
+ * The documents were openable all along, but only from a table of eighty-one
+ * rows at the bottom of the page with the unit code in a column. A study
+ * unit's card listed its modules and nothing else, so the one place somebody
+ * would look for SU1's theory guide was the one place it was not.
+ */
+describe("a study unit's material", () => {
+  it("is listed on the unit itself, not only in the table below", () => {
+    expect(detail).toMatch(/Material filed against this unit/);
+    expect(detail).toMatch(/materialByUnit\.get\(unit\.code\)/);
+  });
+
+  it("opens", () => {
+    const block = detail.slice(detail.indexOf("Material filed against this unit"));
+    expect(block.slice(0, 900)).toMatch(
+      /href=\{`\/api\/programme-documents\/\$\{document\.id\}`\}/,
+    );
+  });
+
+  it("marks what a learner may not see", () => {
+    // A label, not the lock: the download path enforces it, and the list
+    // itself is already filtered by permission before it reaches the page.
+    expect(detail).toMatch(/withheld from learners/);
+    expect(detail).toMatch(/RESTRICTED_TO_ASSESSORS\.has\(/);
+  });
+
+  it("groups from what the page already loaded", () => {
+    // A second query per study unit would be five queries for five units,
+    // and the documents are already in hand.
+    expect(detail).toMatch(/const materialByUnit = new Map/);
+  });
+});
