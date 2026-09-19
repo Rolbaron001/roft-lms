@@ -103,6 +103,34 @@ export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
  * the assessment, so they are marked here and the download path refuses them
  * to anybody without the right to assess.
  */
+/**
+ * The kinds that are material somebody learns or is assessed from.
+ *
+ * Named positively, one by one, rather than as "everything that is not a
+ * source document". The exclusion version lasted an hour: it listed the three
+ * documents a qualification is built from, so uploading the alignment matrix -
+ * which is structure, not teaching - marked a qualification's material
+ * complete on the strength of one spreadsheet. Roland saw "3 of 3 done" having
+ * uploaded exactly one file and said, correctly, that it could not be true.
+ *
+ * A list of what counts has to be edited when a new kind is added, which is
+ * the point: a new kind of document is not teaching material until somebody
+ * says it is. The exclusion list failed silently in the other direction.
+ */
+export const TEACHING_KINDS = new Set<DocumentKind>([
+  "learner_handbook",
+  "theory_guide",
+  "workbook",
+  "workbook_memorandum",
+  "summative_assessment",
+  "summative_memorandum",
+  "workplace_signoff",
+  "workplace_coach_guide",
+  "learning_programme_guide",
+  "facilitation_plan",
+  "induction",
+]);
+
 const RESTRICTED_KINDS = new Set<DocumentKind>([
   "workbook_memorandum",
   "summative_memorandum",

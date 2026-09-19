@@ -4,8 +4,10 @@ import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LABELS,
+  TEACHING_KINDS,
   listProgrammeDocuments,
   qualificationForDocumentUpload,
+  type DocumentKind,
 } from "@/lib/programme-documents";
 import { describeSize } from "@/lib/media";
 import { extensionOffered, extensionState } from "@/lib/extensions";
@@ -141,18 +143,18 @@ export default async function QualificationPage({
     studyUnits.length > 0 && unplacedModules.length === 0;
 
   /*
-   * The qualification's own source documents, as opposed to what is taught
-   * from. Filed automatically when a qualification is built from them, so
-   * counting them as material would mark the last step done before anybody
-   * had uploaded a single workbook.
+   * What is taught from, as opposed to what the qualification is built out of.
+   *
+   * This was an exclusion list - everything that is not one of the three
+   * source documents - and it lasted an hour. Uploading the alignment matrix,
+   * which is structure rather than teaching, marked the material step complete
+   * on the strength of one spreadsheet: "3 of 3 done" after a single file.
+   *
+   * TEACHING_KINDS names them positively instead, so a kind that nobody has
+   * classified does not quietly count.
    */
-  const SOURCE_KINDS = new Set([
-    "qualification_document",
-    "curriculum_document",
-    "assessment_specification",
-  ]);
-  const teachingMaterial = documents.filter(
-    (document) => !SOURCE_KINDS.has(document.kind),
+  const teachingMaterial = documents.filter((document) =>
+    TEACHING_KINDS.has(document.kind as DocumentKind),
   );
 
   const steps = [

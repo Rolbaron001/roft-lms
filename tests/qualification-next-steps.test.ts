@@ -64,22 +64,16 @@ describe("the progress map", () => {
   });
 
   /**
-   * The qualification's own source documents are not teaching material.
+   * Teaching material is named, not inferred.
    *
-   * Building a qualification from its documents files three of them, so
-   * counting every document marked the last step done before anybody had
-   * uploaded a workbook - which is exactly the false reassurance this map
-   * exists to replace.
+   * This was an exclusion list - everything that is not one of the three
+   * source documents - and it survived an hour. Uploading the alignment
+   * matrix, which is structure rather than teaching, marked the material step
+   * complete on one spreadsheet: "3 of 3 done" after a single file, which
+   * Roland rightly said could not be true.
    */
-  it("does not count the source documents as material", () => {
-    expect(page).toMatch(/SOURCE_KINDS/);
-    for (const kind of [
-      "qualification_document",
-      "curriculum_document",
-      "assessment_specification",
-    ]) {
-      expect(page).toContain(`"${kind}"`);
-    }
+  it("counts only what is taught from", () => {
+    expect(page).toMatch(/TEACHING_KINDS\.has/);
   });
 
   it("does not call the structure done while a module sits outside it", () => {
@@ -126,6 +120,53 @@ describe("what the page no longer says", () => {
     for (const anchor of ["#curriculum", "#documents", "#material"]) {
       expect(page).toContain(`href: "${anchor}"`);
       expect(page).toContain(`id="${anchor.slice(1)}"`);
+    }
+  });
+});
+
+/**
+ * Which documents mean a qualification can be taught.
+ *
+ * Asserted against the real list rather than against the page, because this is
+ * the judgement the map rests on: get it wrong and the platform tells somebody
+ * their qualification is ready when nobody could teach from it.
+ */
+describe("what counts as teaching material", () => {
+  it("excludes the documents a qualification is built out of", async () => {
+    const { TEACHING_KINDS } = await import("@/lib/programme-documents");
+
+    for (const kind of [
+      "qualification_document",
+      "curriculum_document",
+      "assessment_specification",
+      // Structure, not teaching. This is the one that got through.
+      "alignment_matrix",
+      "rollout_schedule",
+      "learning_roadmap",
+      "workplace_agreement",
+      "other",
+    ] as const) {
+      expect(TEACHING_KINDS.has(kind), `${kind} counted as material`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("includes what a learner or facilitator actually works from", async () => {
+    const { TEACHING_KINDS } = await import("@/lib/programme-documents");
+
+    for (const kind of [
+      "theory_guide",
+      "workbook",
+      "workbook_memorandum",
+      "summative_assessment",
+      "summative_memorandum",
+      "learner_handbook",
+      "workplace_signoff",
+    ] as const) {
+      expect(TEACHING_KINDS.has(kind), `${kind} not counted as material`).toBe(
+        true,
+      );
     }
   });
 });
