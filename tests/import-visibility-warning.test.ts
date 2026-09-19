@@ -126,3 +126,29 @@ describe("where the review screen says a plan came from", () => {
     expect(proposal).toMatch(/hidden=\{plan\.source === "filing"\}/);
   });
 });
+
+/**
+ * Where a successful commit leaves you.
+ *
+ * Roland, having committed 81 documents: "What now? Shouldn't there be
+ * navigation to upload workbooks and assessments? Or at least take me to the
+ * Qualification page."
+ *
+ * The commit returned a sentence - "Committed: 0 modules, 0 topics, ... 81
+ * documents." - and stopped. No link, no redirect, nothing but the browser's
+ * back button, at the end of the longest single action in the platform.
+ *
+ * The report has carried the qualification id all along; nothing passed it on.
+ */
+describe("after a commit succeeds", () => {
+  it("says where the work went", () => {
+    const actions = readFileSync(join(root, "app/imports/actions.ts"), "utf8");
+    expect(actions).toMatch(/committedTo\?: string;/);
+    expect(actions).toMatch(/committedTo: report\.qualificationId/);
+  });
+
+  it("offers the way on rather than a dead end", () => {
+    expect(proposal).toMatch(/state\.committedTo \? \(/);
+    expect(proposal).toMatch(/Open the qualification/);
+  });
+});

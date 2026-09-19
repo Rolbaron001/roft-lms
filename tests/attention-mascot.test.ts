@@ -106,3 +106,45 @@ describe("the attention prompt", () => {
     );
   });
 });
+
+/**
+ * Where the pointer goes once the folder has been read.
+ *
+ * Roland, 19 September: "The prompter (mascot) is in the wrong place. It looks
+ * like it wants me to Read the folder a second time, when I should need to
+ * Review it."
+ *
+ * He was right. The pointer fired on "a folder is chosen" and never learned
+ * that the read had already happened, so after a successful read it went on
+ * pointing at the button he had just pressed - while the thing he actually
+ * needed, the review, sat above it as a plain underlined link.
+ *
+ * Reading the same folder again is not harmless either: it makes a second
+ * identical job, which is exactly what he ended up with.
+ */
+describe("the pointer after a read", () => {
+  const picker = readFileSync(
+    join(process.cwd(), "components/folder-picker.tsx"),
+    "utf8",
+  );
+
+  it("knows a read has already produced something", () => {
+    expect(picker).toMatch(
+      /const read = Boolean\(state\.jobId\) && !pending;/,
+    );
+  });
+
+  it("stops pointing at the read button once there is a result", () => {
+    expect(picker).toMatch(/chosen && !pending && !read \?/);
+  });
+
+  it("points at the review instead", () => {
+    expect(picker).toMatch(/Review what it found/);
+  });
+
+  it("says what the button would now do instead", () => {
+    // "Read this folder" after it has been read invites a second identical
+    // job. "Read it again" is at least true.
+    expect(picker).toMatch(/"Read it again"/);
+  });
+});

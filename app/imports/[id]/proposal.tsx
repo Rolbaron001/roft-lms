@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   commitPlanAction,
@@ -149,10 +150,29 @@ export function Proposal({
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+      {/*
+        What happened, and where to go now.
+
+        A successful commit returned a sentence and stopped there, so somebody
+        who had just filed eighty-one documents was left on this page with the
+        browser's back button. The count is worth reading; it is not worth
+        being stranded on.
+      */}
       {state.notice ? (
-        <p className="rounded-md border border-[var(--border)] p-3 text-sm">
-          {state.notice}
-        </p>
+        <div className="rounded-md border border-[var(--success)]/40 bg-[var(--success)]/5 p-3">
+          <p className="text-sm">{state.notice}</p>
+          {state.committedTo ? (
+            <p className="mt-2">
+              <Link
+                href={`/qualifications/${state.committedTo}`}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                style={{ background: "var(--brand-primary)" }}
+              >
+                Open the qualification →
+              </Link>
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {/*

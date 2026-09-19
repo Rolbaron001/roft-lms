@@ -78,6 +78,16 @@ export function FolderPicker({
   const [pending, start] = useTransition();
 
   /*
+   * A read has already produced something to look at.
+   *
+   * While this is true the button is no longer the thing to press - reading
+   * the same folder again would only make a second identical job - so it
+   * stops announcing itself, says what it would actually do, and the pointer
+   * moves to the review.
+   */
+  const read = Boolean(state.jobId) && !pending;
+
+  /*
    * How long it has been going, counted honestly.
    *
    * A reading takes minutes, and the button said "Reading…" and nothing else -
@@ -232,15 +242,42 @@ export function FolderPicker({
       {state.error ? (
         <p className="text-sm text-[var(--danger)]">{state.error}</p>
       ) : null}
+      {/*
+        Once a folder has been read, the next thing to do is review what it
+        found - so that is where the eye should be sent.
+
+        The pointer below fires on "a folder is chosen" and never learned that
+        the read had already happened, so after a successful read it went on
+        pointing at "Read this folder". Roland: "It looks like it wants me to
+        Read the folder a second time, when I should need to Review it."
+      */}
       {state.notice ? (
-        <p className="text-sm text-[var(--muted)]">
-          {state.notice}{" "}
-          {state.jobId ? (
-            <Link href={`/imports/${state.jobId}`} className="underline">
-              Review it
+        state.jobId ? (
+          <div
+            className="flex flex-wrap items-center gap-2 rounded-md border-2 px-3 py-2"
+            style={{ borderColor: "var(--brand-accent)" }}
+          >
+            <AttentionMascot height={56} />
+            <span aria-hidden className="motion-safe:animate-bounce text-lg">
+              →
+            </span>
+            <p className="text-sm">
+              <span className="text-[var(--muted)]">{state.notice}</span>{" "}
+              <span className="font-medium">
+                Nothing is saved until you have checked it.
+              </span>
+            </p>
+            <Link
+              href={`/imports/${state.jobId}`}
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+              style={{ background: "var(--brand-primary)" }}
+            >
+              Review what it found →
             </Link>
-          ) : null}
-        </p>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--muted)]">{state.notice}</p>
+        )
       ) : null}
 
       {/*
@@ -257,20 +294,26 @@ export function FolderPicker({
           type="button"
           onClick={chosen ? send : openPicker}
           disabled={pending}
-          className={`rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
-            chosen && !pending
+          className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60 ${
+            read
+              ? "border border-[var(--border)] text-[var(--foreground)]"
+              : "bg-[var(--brand-primary)] text-white"
+          } ${
+            chosen && !pending && !read
               ? "ring-2 ring-[var(--brand-accent)] ring-offset-2 ring-offset-[var(--surface)] motion-safe:animate-pulse"
               : ""
           }`}
         >
           {pending
             ? "Reading…"
-            : chosen
-              ? "Read this folder"
-              : "Choose a folder…"}
+            : read
+              ? "Read it again"
+              : chosen
+                ? "Read this folder"
+                : "Choose a folder…"}
         </button>
 
-        {chosen && !pending ? (
+        {chosen && !pending && !read ? (
           <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--brand-accent)]">
             {/* The tenant's character where one is set, and nothing where none
                 is. Both it and the arrow are hidden from a screen reader, which

@@ -12,6 +12,16 @@ export type ImportActionState = {
   path?: string;
   /** Set once a folder has been read, so the form can link straight to it. */
   jobId?: string;
+  /**
+   * Where to go now, set once a commit has succeeded.
+   *
+   * A commit used to return a sentence and nothing else, so somebody landed
+   * on "Committed: 81 documents." with no way onward but the browser's back
+   * button. Roland, having committed the material: "What now? Shouldn't there
+   * be navigation to upload workbooks and assessments? Or at least take me to
+   * the Qualification page."
+   */
+  committedTo?: string;
 };
 
 function field(formData: FormData, name: string): string {
@@ -175,7 +185,10 @@ export async function commitPlanAction(
       ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` And ${report.refused.length - 8} more.` : ""}`
       : "";
 
-  return { notice: `Committed: ${built}.${held}${refused}` };
+  return {
+    notice: `Committed: ${built}.${held}${refused}`,
+    committedTo: report.qualificationId || undefined,
+  };
 }
 
 export async function discardImportAction(
