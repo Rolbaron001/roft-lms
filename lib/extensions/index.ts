@@ -176,17 +176,19 @@ async function tokenFor(
 }
 
 /**
- * The shape of a Claude Code subscription token.
+ * Why a credential is checked at all before it is stored.
  *
- * Checked before it is stored, because a mistyped token fails at the moment
- * somebody is trying to get work done rather than at the moment they set it up,
- * and by then it looks like the extension is broken rather than like a typo.
- * Deliberately loose about length and the tail: this validates that somebody
- * pasted a token rather than a password or an API key, not that the token is
- * genuine. Only the provider can say that.
+ * A mistyped one otherwise fails at the moment somebody is trying to get work
+ * done rather than at the moment they set it up, and by then it looks like the
+ * extension is broken rather than like a typo.
+ *
+ * Each provider now carries its own shape, in `credentialFormat` on the
+ * contract,
+ * and every check here is deliberately loose about length and tail: it
+ * establishes that somebody pasted a credential of the right kind rather than
+ * a password or the wrong provider's key. Whether it is genuine only the
+ * provider can say, and it says so on the first real call.
  */
-const TOKEN_SHAPE = /^sk-ant-oat[0-9]{2}-[A-Za-z0-9_-]{20,}$/;
-
 export class ExtensionSetupError extends Error {}
 
 /**
@@ -225,9 +227,32 @@ export async function setMyExtension(
     throw new ExtensionSetupError("Choose a provider the platform knows.");
   }
 
-  if (token && !TOKEN_SHAPE.test(token)) {
+  /*
+   * Judged by the provider it belongs to, not by Claude's rule.
+   *
+   * One constant used to check every credential against `sk-ant-oat…`, so a
+   * Gemini key beginning AIza was refused with "That does not look like a
+   * Claude Code token" - wrong, and impossible to act on: the person is
+   * holding exactly the right thing and being told to fetch a different one.
+   * Roland hit this on 19 September trying to switch to Gemini, and it made
+   * the provider unusable however correctly it had been set up.
+   */
+  const chosen = providerByName(input.provider);
+
+  if (token && chosen && !chosen.credentialFormat.shape.test(token)) {
+    /*
+     * "a Google Gemini API key", not "an Google Gemini (API key) API key".
+     *
+     * The label carries its own parenthetical for the dropdown - "Google
+     * Gemini (API key)" - which reads as a stutter once the word is appended,
+     * and the article has to follow the name rather than the word: "an OpenAI
+     * API key", "a Claude Code token".
+     */
+    const name = chosen.label.replace(/\s*\([^)]*\)\s*$/, "");
+    const article = /^[aeiou]/i.test(name) ? "an" : "a";
+
     throw new ExtensionSetupError(
-      "That does not look like a Claude Code token. Run `claude setup-token` on your own computer and paste what it prints — it begins sk-ant-oat.",
+      `That does not look like ${article} ${name} ${chosen.credentialFormat.word}. To get one, ${chosen.credentialFormat.source} — it begins ${chosen.credentialFormat.looksLike}.`,
     );
   }
 
@@ -254,8 +279,15 @@ export async function setMyExtension(
     const wantsAvailable = input.available && !input.forget;
 
     if (wantsAvailable && !willHold) {
+      // The provider's own word and its own source. This sent everybody to
+      // `claude setup-token` whatever they had chosen, which for somebody
+      // setting up Gemini is an instruction to install a different product.
       throw new ExtensionSetupError(
-        "Paste a token first. Run `claude setup-token` on your own computer; it prints one.",
+        chosen
+          ? `Paste ${chosen.credentialFormat.word === "token" ? "a" : "an"} ${
+              chosen.credentialFormat.word
+            } first — to get one, ${chosen.credentialFormat.source}.`
+          : "Choose a provider and paste its credential first.",
       );
     }
 

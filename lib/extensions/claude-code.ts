@@ -248,6 +248,13 @@ export const claudeCodeProvider: AiProvider = {
   description:
     "Uses your own Claude subscription, through a token you generate on your own computer with `claude setup-token`. Not an API key: no per-token cost, and it draws on the subscription you already pay for rather than a shared one.",
   writesFiles: true,
+  credentialFormat: {
+    word: "token",
+    // Printed by `claude setup-token`: sk-ant-oat01-…
+    shape: /^sk-ant-oat[0-9]{2}-[A-Za-z0-9_-]{20,}$/,
+    source: "run `claude setup-token` on your own computer; it prints one",
+    looksLike: "sk-ant-oat",
+  },
   defaultModel: "claude-opus-5",
 
   availability(tenantId?: string): Availability {

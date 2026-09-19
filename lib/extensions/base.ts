@@ -67,6 +67,30 @@ export type AiProvider = {
    * ran but wrote nothing that could be read as a plan".
    */
   writesFiles: boolean;
+  /**
+   * What this provider's credential is called, and what a valid one looks
+   * like.
+   *
+   * The shape check used to be a single constant matching Claude's
+   * `sk-ant-oat…` token, applied to whatever anybody pasted. So a Gemini key
+   * beginning `AIza` was refused with "That does not look like a Claude Code
+   * token", which is both wrong and impossible to act on: the person is
+   * holding exactly the right thing and being told to go and fetch a different
+   * one. It made Gemini unusable however correctly it had been set up.
+   *
+   * `word` is what the screen and the errors should call it - "token" for a
+   * subscription, "API key" for a provider that bills per call - and `source`
+   * completes the sentence "paste one first", so each provider says where its
+   * own comes from rather than sending everybody to `claude setup-token`.
+   */
+  credentialFormat: {
+    word: string;
+    shape: RegExp;
+    /** How to get one, as a phrase that can follow "Paste a … first." */
+    source: string;
+    /** What a valid one starts with, for the error. */
+    looksLike: string;
+  };
   availability(tenantId?: string): Promise<Availability> | Availability;
   run(input: {
     prompt: string;

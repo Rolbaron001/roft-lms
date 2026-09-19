@@ -294,6 +294,7 @@ export default async function SettingsPage({
                       description: provider.description,
                       runsHere: here.available,
                       reason: here.reason ?? null,
+                      credentialWord: provider.credentialFormat.word,
                     };
                   }),
                 ),

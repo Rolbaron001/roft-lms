@@ -156,6 +156,16 @@ export const geminiProvider: AiProvider = {
   description:
     "Uses your own Google AI Studio API key. Not a Gemini Advanced subscription — that is a separate product and does not include API access. The API has a free tier, so this can be used without buying anything, within its rate limits.",
   writesFiles: false,
+  credentialFormat: {
+    word: "API key",
+    // Google AI Studio keys are AIza followed by 35 characters. The length
+    // is left loose deliberately - refusing a valid key because Google
+    // changed its length by one is a worse failure than passing a wrong one
+    // through, which the provider itself rejects with a clear message.
+    shape: /^AIza[A-Za-z0-9_-]{20,}$/,
+    source: "sign in at aistudio.google.com and choose Get API key",
+    looksLike: "AIza",
+  },
   defaultModel: "gemini-2.5-flash",
 
   /**

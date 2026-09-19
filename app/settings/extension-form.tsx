@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   updateMyExtensionAction,
   type ExtensionState,
@@ -42,6 +48,8 @@ export type ExtensionView = {
     runsHere: boolean;
     /** Why not, where it cannot. */
     reason: string | null;
+    /** What this provider calls its credential: a token, or an API key. */
+    credentialWord: string;
   }[];
 };
 
@@ -79,6 +87,21 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
       "",
   );
 
+  /**
+   * Puts the chosen provider back into the select after every render.
+   *
+   * The same reset that empties a file input empties this, and a controlled
+   * select is only written to when its value changes - which it has not, so
+   * React leaves the browser's reset in place and the box shows the wrong
+   * provider. Re-asserting it on every render costs nothing and keeps the
+   * screen honest. `app/qualifications/from-document.tsx` holds the chosen
+   * files back the same way, for the same reason.
+   */
+  const providerSelect = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (providerSelect.current) providerSelect.current.value = provider;
+  });
+
   const chosen = current.providers.find((row) => row.name === provider);
 
   /*
@@ -89,9 +112,14 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
    * call against a key, and a Gemini Advanced or ChatGPT Plus subscription
    * does not include one - which everybody assumes it does, Roland included,
    * so the screen says so rather than waiting to be asked.
+   *
+   * Taken from the provider rather than from its name. `provider !==
+   * "claude_code"` was right for the three that exist and wrong for the first
+   * subscription-backed one anybody adds next, which would be asked for an
+   * API key it does not have.
    */
-  const isKeyProvider = provider !== "claude_code";
-  const credentialWord = isKeyProvider ? "API key" : "token";
+  const credentialWord = chosen?.credentialWord ?? "token";
+  const isKeyProvider = credentialWord !== "token";
 
   return (
     <form action={action} className="space-y-4">
@@ -129,11 +157,33 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
         A field whose meaning depends on an answer cannot come before the
         question.
       */}
+      {/*
+        The provider is posted from state, not from the select.
+
+        React resets a form's DOM once a form action resolves. The select is
+        controlled, so React only writes to it when its value changes - and
+        after a failed save the state has not changed, so nothing re-writes it
+        and the browser's reset stands. The box snaps back to the first option,
+        Claude Code, while the panel below it still reads from state and still
+        shows Gemini.
+
+        Roland photographed exactly that on 19 September: "Which one" saying
+        Claude, over Gemini's description, Gemini's "Your API key" field and
+        Gemini's guide. The display being wrong is the visible half. The
+        dangerous half is that the DOM is what a form submits, so the next save
+        would post claude_code while the person read Gemini on the screen - and
+        the error that came back was Claude's, about a token they had never
+        been asked for.
+
+        So a hidden field carries the answer and the select is only a control.
+      */}
+      <input type="hidden" name="provider" value={provider} />
+
       {current.providers.length > 1 ? (
         <label className="block text-sm">
           <span className="font-medium">Which one</span>
           <select
-            name="provider"
+            ref={providerSelect}
             value={provider}
             onChange={(event) => setProvider(event.target.value)}
             className={`${inputClass} mt-1 block w-full max-w-md`}

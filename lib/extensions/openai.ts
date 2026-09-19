@@ -109,6 +109,13 @@ export const openAiProvider: AiProvider = {
   description:
     "Uses your own OpenAI API key, created at platform.openai.com. Not a ChatGPT Plus subscription — that is a separate product and does not include API access. Unlike Gemini there is no free tier, so calls are charged to the account the key belongs to.",
   writesFiles: false,
+  credentialFormat: {
+    word: "API key",
+    // Both the classic sk-… and the newer project keys sk-proj-… fit this.
+    shape: /^sk-[A-Za-z0-9_-]{20,}$/,
+    source: "create one at platform.openai.com under API keys",
+    looksLike: "sk-",
+  },
   defaultModel: "gpt-5",
 
   /** Nothing to install and nothing signed in on the machine. */
