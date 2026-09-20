@@ -374,7 +374,10 @@ export async function uploadProgrammeDocument(
       .from(programmeDocuments)
       .where(
         and(
-          eq(programmeDocuments.kind, parsed.kind),
+          // The kind it is being filed as, not the one that was chosen. A
+          // document whose kind the contents corrected would otherwise look
+          // for its predecessor under a kind it is not, and supersede nothing.
+          eq(programmeDocuments.kind, kind),
           eq(programmeDocuments.title, parsed.title),
         ),
       )
