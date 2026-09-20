@@ -391,22 +391,42 @@ export function Proposal({
           <input type="hidden" name="jobId" value={jobId} />
 
           {target.mode === "qualification" ? (
+            /*
+              Creating the qualification this folder describes is the default,
+              because that is what "build it from a folder" means.
+
+              This used to be a required list of qualifications that already
+              exist, with no other option. Roland emptied the platform, read
+              the 121151 folder with Claude - which worked - and met "Into
+              which qualification" with nothing in it and no way past. The
+              folder route could read a whole qualification and not create one.
+            */
             <label className="block text-sm">
               <span className="text-[var(--muted)]">
-                Into which qualification
+                Where this goes
               </span>
               <select
                 name="qualificationId"
-                required
                 className={`${inputClass} mt-1 block w-full max-w-md`}
+                defaultValue=""
               >
-                <option value="">Choose one</option>
-                {qualifications.map((qualification) => (
-                  <option key={qualification.id} value={qualification.id}>
-                    {qualification.title}
-                  </option>
-                ))}
+                <option value="">
+                  Create it: {plan.qualification.title || "the qualification this folder describes"}
+                </option>
+                {qualifications.length > 0 ? (
+                  <optgroup label="Or add it to one already here">
+                    {qualifications.map((qualification) => (
+                      <option key={qualification.id} value={qualification.id}>
+                        {qualification.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
               </select>
+              <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">
+                Adding it to one already here leaves everything that is there
+                untouched and puts in only what is missing.
+              </span>
             </label>
           ) : (
             // Already decided: this folder was read from the thing it belongs

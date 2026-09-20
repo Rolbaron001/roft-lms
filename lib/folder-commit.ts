@@ -6,6 +6,7 @@ import {
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
+  qualifications,
   studyUnits,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -13,6 +14,7 @@ import {
   addAssessmentCriterion,
   addCurriculumModule,
   AuthoringError,
+  createQualification,
 } from "./authoring";
 import { addTopic, addTopicElement } from "./curriculum-editor";
 import { uploadProgrammeDocument } from "./programme-documents";
@@ -44,6 +46,8 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 export type CommitReport = {
   qualificationId: string;
+  /** Its title, where this commit is what brought it into existence. */
+  createdQualification?: string | null;
   modules: number;
   topics: number;
   elements: number;
@@ -101,13 +105,76 @@ export async function commitPlan(
     );
   }
 
+  /*
+   * Building the qualification this folder describes, where there is not one
+   * already.
+   *
+   * Roland, 20 September: he emptied the platform, read the 121151 folder with
+   * Claude Code - which worked, and reported 15 modules, 52 topics, 331
+   * elements and 160 criteria - and then found "Into which qualification" with
+   * nothing in it. There was nothing to choose, because the only qualification
+   * had just been deleted, and this function had no way to make one.
+   *
+   * So the folder route could read a whole qualification and not create one.
+   * It could only add to a qualification built some other way first, which
+   * makes "build it from a folder" a promise the screen could not keep. The
+   * plan already carries the title, the SAQA id, the curriculum code, the
+   * level and the credits; nothing was missing except the step that uses them.
+   *
+   * Refused where the code is already held, for the same reason the documents
+   * route refuses it: two qualifications carrying one curriculum code is an
+   * ambiguity nothing downstream can resolve.
+   */
+  let qualificationId = input.qualificationId;
+  let created: string | null = null;
+
+  if (!qualificationId && job.target?.mode === "qualification") {
+    const details = plan.qualification;
+
+    if (!details?.title?.trim()) {
+      throw new IngestError(
+        "This folder was read as a new qualification, but no title was found in it, so there is nothing to create. Choose an existing qualification to add it to instead.",
+        "no_plan",
+      );
+    }
+
+    if (details.curriculumCode) {
+      const [clash] = await withTenant(session.organisationId, (tx) =>
+        tx
+          .select({ id: qualifications.id, title: qualifications.title })
+          .from(qualifications)
+          .where(eq(qualifications.curriculumCode, details.curriculumCode!)),
+      );
+
+      if (clash) {
+        throw new IngestError(
+          `"${clash.title}" already carries the curriculum code ${details.curriculumCode}. Two qualifications on one code is an ambiguity nothing downstream can resolve. Choose it above to add this folder to it instead.`,
+          "no_plan",
+        );
+      }
+    }
+
+    const made = await createQualification(session, {
+      title: details.title.trim(),
+      curriculumCode: details.curriculumCode ?? undefined,
+      saqaId: details.saqaId ?? undefined,
+      nqfLevel: details.nqfLevel ?? undefined,
+      totalCredits: details.credits ?? undefined,
+      description: details.purpose ?? undefined,
+    });
+
+    qualificationId = made.id;
+    created = made.title;
+  }
+
   // A course or a programme takes documents and nothing else: there is no
   // curriculum under it to build, and its study units belong to the
   // qualification rather than to it.
-  const intoQualification = Boolean(input.qualificationId);
+  const intoQualification = Boolean(qualificationId);
 
   const report: CommitReport = {
-    qualificationId: input.qualificationId ?? "",
+    qualificationId: qualificationId ?? "",
+    createdQualification: created,
     modules: 0,
     topics: 0,
     elements: 0,
@@ -130,7 +197,7 @@ export async function commitPlan(
           .from(studyUnits)
           .where(
             and(
-              eq(studyUnits.qualificationId, input.qualificationId!),
+              eq(studyUnits.qualificationId, qualificationId!),
               eq(studyUnits.code, unit.code),
             ),
           );
@@ -147,7 +214,7 @@ export async function commitPlan(
           .insert(studyUnits)
           .values({
             organisationId: session.organisationId,
-            qualificationId: input.qualificationId!,
+            qualificationId: qualificationId!,
             code: unit.code,
             title: unit.title,
           })
@@ -163,7 +230,7 @@ export async function commitPlan(
 
   // --- the curriculum ------------------------------------------------------
   for (const planned of intoQualification ? plan.modules : []) {
-    await commitModule(session, input.qualificationId!, planned, report);
+    await commitModule(session, qualificationId!, planned, report);
   }
 
   // --- the documents -------------------------------------------------------
@@ -217,7 +284,7 @@ export async function commitPlan(
           // to whichever thing the import was started from. The upload guard
           // requires exactly one, which is why these are mutually exclusive.
           qualificationId:
-            unitId || !intoQualification ? undefined : input.qualificationId,
+            unitId || !intoQualification ? undefined : qualificationId,
           studyUnitId: intoQualification ? unitId : undefined,
           courseId: input.courseId,
           learningPathId: input.learningPathId,
@@ -238,7 +305,7 @@ export async function commitPlan(
     await tx
       .update(aiImportJobs)
       .set({
-        qualificationId: input.qualificationId ?? null,
+        qualificationId: qualificationId ?? null,
         committedById: session.userId,
         committedAt: new Date(),
         status: "committed",
@@ -252,7 +319,7 @@ export async function commitPlan(
       entityType: "ai_import_job",
       entityId: input.jobId,
       after: {
-        qualificationId: input.qualificationId,
+        qualificationId: qualificationId,
         source: plan.source,
         modules: report.modules,
         criteria: report.criteria,

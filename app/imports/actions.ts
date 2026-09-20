@@ -161,6 +161,15 @@ export async function commitPlanAction(
   revalidatePath(`/imports/${jobId}`);
   revalidatePath("/qualifications");
 
+  /*
+   * Said first, because it is the biggest thing that happened. A commit that
+   * brought a qualification into existence and reported only counts leaves
+   * somebody wondering whether it landed anywhere.
+   */
+  const made = report.createdQualification
+    ? `Created "${report.createdQualification}". `
+    : "";
+
   const built = [
     `${report.modules} modules`,
     `${report.topics} topics`,
@@ -186,7 +195,7 @@ export async function commitPlanAction(
       : "";
 
   return {
-    notice: `Committed: ${built}.${held}${refused}`,
+    notice: `${made}Committed: ${built}.${held}${refused}`,
     committedTo: report.qualificationId || undefined,
   };
 }
