@@ -202,6 +202,20 @@ export default async function QualificationPage({
     materialByUnit.set(document.studyUnitCode, held);
   }
 
+  /*
+   * Each step goes to the tab its control is on, not to an anchor.
+   *
+   * Roland, 20 September: "the 'Upload the alignment document' button doesn't
+   * work. It doesn't open a folder or anything to upload from."
+   *
+   * My own regression from splitting this page into tabs the day before. The
+   * steps pointed at "#documents" and "#material", written when everything was
+   * on one page. Afterwards "#documents" was the document *list* - on the
+   * other tab, with no uploader under it - so the button scrolled somewhere
+   * useless, and "#material" did not exist on the default tab at all, so that
+   * one did nothing whatever. A link within a page stops working the moment
+   * the page becomes two.
+   */
   const steps = [
     {
       title: "The curriculum",
@@ -221,7 +235,7 @@ export default async function QualificationPage({
         : studyUnits.length === 0
           ? "The curriculum publishes modules and says nothing about how you group them, so this is yours to decide. Your alignment document does it in one upload — Word or Excel."
           : `${unplacedModules.length} ${unplacedModules.length === 1 ? "module belongs" : "modules belong"} to no unit yet. A module no study unit delivers is a module nobody teaches.`,
-      href: "#documents",
+      href: `/qualifications/${id}?view=build#add-document`,
       action: "Upload the alignment document",
     },
     {
@@ -240,7 +254,7 @@ export default async function QualificationPage({
         teachingMaterial.length > 0
           ? `${teachingMaterial.length} theory guides, workbooks and assessments filed.`
           : "The theory guides, workbooks and assessments. The whole folder goes in at once, answer guides are recognised and withheld from learners, and no AI is involved at any point.",
-      href: "#material",
+      href: `/qualifications/${id}?view=build#material`,
       action: "Add the folder",
     },
   ];
@@ -472,7 +486,12 @@ export default async function QualificationPage({
                 </PointHere>
               ) : null}
               <Card>
-                <p className="mb-3 text-sm font-medium">Or one document</p>
+                <p
+                  id="add-document"
+                  className="mb-3 scroll-mt-24 text-sm font-medium"
+                >
+                  Or one document
+                </p>
                 <DocumentUploader
                   qualificationId={id}
                   kinds={DOCUMENT_KINDS.map((kind) => ({
@@ -580,7 +599,7 @@ export default async function QualificationPage({
                 */}
                 <p className="mt-2">
                   <Link
-                    href="#documents"
+                    href={`/qualifications/${id}?view=build#add-document`}
                     className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
                     style={{ background: "var(--brand-primary)" }}
                   >

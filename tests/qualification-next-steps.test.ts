@@ -116,11 +116,32 @@ describe("what the page no longer says", () => {
     expect(rendered).not.toMatch(/build them by hand here/);
   });
 
-  it("sends every step to a destination that exists", () => {
-    for (const anchor of ["#curriculum", "#documents", "#material"]) {
-      expect(page).toContain(`href: "${anchor}"`);
-      expect(page).toContain(`id="${anchor.slice(1)}"`);
-    }
+  /**
+   * Every step goes to the tab its control is actually on.
+   *
+   * Splitting this page into tabs broke both outstanding steps, and neither
+   * failed loudly. "#documents" became the document list on the other tab - a
+   * real anchor, with no uploader under it - so the button scrolled somewhere
+   * useless. "#material" did not exist on the default tab at all, so that one
+   * did nothing whatever. A link within a page stops working the moment the
+   * page becomes two.
+   */
+  it("sends every step to a destination that exists, on the right tab", () => {
+    // The curriculum is on the default tab, so a bare anchor is correct.
+    expect(page).toContain('href: "#curriculum"');
+    expect(page).toContain('id="curriculum"');
+
+    // The two upload controls live on the build tab, so these must cross.
+    expect(page).toContain('?view=build#add-document');
+    expect(page).toContain('?view=build#material');
+    expect(page).toContain('id="add-document"');
+    expect(page).toContain('id="material"');
+  });
+
+  it("does not point at an anchor on a tab it is not on", () => {
+    // The bare "#documents" and "#material" of the one-page version.
+    expect(page).not.toContain('href: "#documents"');
+    expect(page).not.toContain('href: "#material"');
   });
 });
 
