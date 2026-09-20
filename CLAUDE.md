@@ -102,3 +102,35 @@ them; raise it with him if one looks wrong.
   change makes it fail, the change is wrong.
 - Roland's account is `Rolbaron001`. Do not create GitHub repositories,
   purchase hosting, or sign up for services on his behalf without asking.
+
+## Before you state an external fact, go and look
+
+Four wrong answers in two days (19-20 September 2026), all the same shape: a
+detail about something outside this codebase asserted from recall when a
+moment's checking would have settled it. A Gemini key prefix that would have
+refused Roland's real key. A model name Google had retired. A token format
+pinned to a version number. And, most expensively, "Claude Code cannot run on
+the production server" - repeated for a day and written into the job sheet,
+when it has been installed in the image throughout and answers
+`claude --version` in the container.
+
+That last one pointed a whole day of testing at the wrong provider and led
+toward a paid API key that may not be needed.
+
+So: **a credential format, a model name, what is installed where, what a
+provider returns - check it.** `docker compose exec app sh -c 'command -v X'`,
+the provider's own error text, the actual key in front of him. A comment in
+this codebase stating an environmental fact is a claim to verify, not a source;
+several of them outlived the thing they described.
+
+Where a format genuinely moves, do not encode it at all: ask the provider
+(`listModels`), or check only what is knowable - that a credential is not
+another provider's, rather than that it is valid.
+
+## The AI extension is going to be reused
+
+Roland intends to build the same extension into the NBTC Management Dashboard
+at `F:\CHRISTO-CLAUDE\Projects\BMA\Apps\National Border Targeting Centre Management App\` once it is proven here. **`AI-EXTENSION.md` in this folder is the
+portable design** - the contract, the credential handling, and the four fields
+that each exist because their absence caused a specific failure. Read it before
+building that one; do not rebuild from recollection.
