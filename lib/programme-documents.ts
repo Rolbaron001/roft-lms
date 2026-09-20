@@ -17,7 +17,10 @@ import {
   OfficeReadError,
 } from "./office";
 import { importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
-import { looksLikeAlignmentDocument } from "./alignment-document";
+import {
+  looksLikeAlignmentDocument,
+  readAlignmentDocument,
+} from "./alignment-document";
 import {
   applyAlignmentDocument,
   type AlignmentApplied,
@@ -217,6 +220,10 @@ export async function uploadProgrammeDocument(
   matrix?: MatrixImportSummary;
   alignment?: AlignmentApplied;
   notice?: string;
+  /** What it was filed as, which is not always what was chosen. */
+  kind: DocumentKind;
+  /** True when the contents overrode the choice. Always reported. */
+  reclassified?: boolean;
 }> {
   assertSessionCan(session, "qualification:manage");
   const parsed = documentInput.parse(input);
@@ -256,9 +263,49 @@ export async function uploadProgrammeDocument(
     detected.mimeType,
   );
 
+  /*
+   * What the file is, decided by what is in it rather than by the dropdown.
+   *
+   * Roland, 20 September: "Uploading the alignment document still doesn't
+   * work. The document is uploaded but nothing seems to happen from it."
+   *
+   * It had been filed and nothing more, because the reading below was gated on
+   * the kind somebody chose in a select whose first option - and so its
+   * default - is "SAQA qualification document". The pointer on the screen said
+   * to set the kind to Curriculum Alignment Matrix; leaving it as it came was
+   * a single missed click, it produced no error, and the only sign was a
+   * progress map that still said study units were outstanding.
+   *
+   * This file already held the right principle two hundred lines down - "the
+   * platform decides by what a document contains rather than by what it is
+   * called" - and applied it only *inside* the alignment branch, to tell the
+   * spreadsheet from the Word table. Applying it to reach the branch at all is
+   * the same rule one step earlier.
+   *
+   * The test is deliberately narrow: the text must name a numbered study unit
+   * and a numbered ELO, and the reader must then find at least one study unit
+   * with modules under it. A theory guide mentioning "Study Unit 1" does not
+   * qualify. And the correction is reported, never silent - see the returned
+   * `reclassified`.
+   */
+  let kind = parsed.kind;
+  let reclassified = false;
+
+  if (
+    kind !== "alignment_matrix" &&
+    extractedText &&
+    looksLikeAlignmentDocument(extractedText) &&
+    readAlignmentDocument(extractedText).studyUnits.some(
+      (unit) => unit.moduleCodes.length > 0,
+    )
+  ) {
+    kind = "alignment_matrix";
+    reclassified = true;
+  }
+
   const key = buildStorageKey(
     session.organisationId,
-    parsed.kind,
+    kind,
     file.filename,
     "programme",
   );
@@ -343,7 +390,7 @@ export async function uploadProgrammeDocument(
         curriculumModuleId: parsed.curriculumModuleId ?? null,
         courseId: parsed.courseId ?? null,
         learningPathId: parsed.learningPathId ?? null,
-        kind: parsed.kind,
+        kind,
         title: parsed.title,
         version: parsed.version ?? null,
         filename: file.filename,
@@ -398,7 +445,7 @@ export async function uploadProgrammeDocument(
   let matrix: MatrixImportSummary | undefined;
   let alignment: AlignmentApplied | undefined;
 
-  if (parsed.kind === "alignment_matrix") {
+  if (kind === "alignment_matrix") {
     const target = parsed.qualificationId;
     if (target) {
       if (extractedText && looksLikeAlignmentDocument(extractedText)) {
@@ -409,7 +456,7 @@ export async function uploadProgrammeDocument(
     }
   }
 
-  return { id, matrix, alignment, notice };
+  return { id, matrix, alignment, notice, kind, reclassified };
 }
 
 export async function listProgrammeDocuments(
