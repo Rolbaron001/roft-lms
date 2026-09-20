@@ -157,10 +157,16 @@ export function FolderPicker({
    * Said before anything is chosen, not after it fails.
    *
    * The qualification test on 16 September failed here. Reading a folder that
-   * does not describe itself needs an AI extension, and on the hosted server
-   * no extension can run at all - the only provider shells out to a CLI that
-   * is not in the container. So the screen invited Heidi to do the one thing
-   * that could not work, and said so only once she had tried it.
+   * does not describe itself needs an AI extension, and Heidi's was switched
+   * off - it is per person and starts off every sitting - so the screen
+   * invited her to do the one thing that could not work, and said so only
+   * once she had tried it.
+   *
+   * This comment used to add "and on the hosted server no extension can run at
+   * all". That was wrong: Claude Code is installed in the production image and
+   * answers there. The claim came from a stale docstring and was repeated to
+   * Roland for a day on 19 September. Whether a provider can run is asked of
+   * the provider, at read time, and never assumed here.
    *
    * Nothing is disabled. A folder that carries a blueprint.json imports with
    * no extension whatever, and a folder of material never needed one. What is

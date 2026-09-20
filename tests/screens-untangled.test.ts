@@ -135,3 +135,72 @@ describe("a study unit's material", () => {
     expect(detail).toMatch(/const materialByUnit = new Map/);
   });
 });
+
+/**
+ * Three ways in, and only the one you picked.
+ *
+ * Roland, 20 September: "When adding a new qualification there are basically 3
+ * options... Initially only display the 3 options with 'or' in-between,
+ * selecting one will display its specific window to work from. That window can
+ * be closed should the user decide against the selection and opt to see
+ * another. This just makes the process clearer. You don't need to read a whole
+ * page for something you're not going to use."
+ *
+ * Before this all three were open at once: a documents panel, a folder card, a
+ * drive card and a dashed box holding a form of eight fields. Four hundred
+ * words of explanation for three jobs, of which somebody is doing one.
+ *
+ * He suggested a modal and this is not one, deliberately. Two of the three are
+ * work surfaces rather than dialogs - the folder route runs for minutes with a
+ * progress counter, and the documents route is read, review, then commit. A
+ * modal dismissed by a stray Escape or a backdrop click throws that away, and
+ * a modal that refuses to be dismissed is not a modal. A panel chosen by the
+ * URL closes to a link, survives a reload, and can be sent to somebody.
+ */
+describe("choosing how to add a qualification", () => {
+  const chooser = source("app/qualifications/how-chooser.tsx");
+  const page = source("app/qualifications/page.tsx");
+
+  it("offers exactly the three ways Roland named", () => {
+    for (const id of ["documents", "folder", "blank"]) {
+      expect(chooser).toContain(`id: "${id}"`);
+    }
+    expect(chooser).toMatch(/From its documents/);
+    expect(chooser).toMatch(/From a folder/);
+    expect(chooser).toMatch(/From scratch/);
+  });
+
+  it("puts 'or' between them", () => {
+    expect(chooser).toMatch(/>or</);
+    // Between, not before the first.
+    expect(chooser).toMatch(/index > 0 \?/);
+  });
+
+  it("says what each needs and what it costs", () => {
+    // "From its documents" and "From a folder" are not told apart by name.
+    expect(chooser).toMatch(/needs: string/);
+    expect(chooser).toMatch(/speed: string/);
+  });
+
+  it("shows nothing but the choice until one is made", () => {
+    expect(page).toMatch(/how === null \? \(\s*<HowChooser/);
+  });
+
+  it("opens one panel per choice, and only that one", () => {
+    expect(page).toMatch(/how === "documents" \? \(/);
+    expect(page).toMatch(/how === "folder" \? \(/);
+    expect(page).toMatch(/how === "blank" \? \(/);
+  });
+
+  it("can be closed again to choose differently", () => {
+    expect(page).toMatch(/<ChooseDifferently basePath="\/qualifications" \/>/);
+    // The documents panel has its own Close, which must go back to the
+    // chooser rather than collapsing to a button on an empty page.
+    expect(page).toMatch(/closeHref="\/qualifications\?view=add"/);
+  });
+
+  it("ignores a way that does not exist rather than showing nothing", () => {
+    // ?how=nonsense falls back to the chooser.
+    expect(page).toMatch(/HOW_OPTIONS\.some\(\(option\) => option\.id === params\.how\)/);
+  });
+});

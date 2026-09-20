@@ -9,12 +9,17 @@ import { connectionsFor } from "@/lib/drive";
 import { Card } from "@/components/ui";
 import { EmptyState } from "@/components/empty-state";
 import { ViewTabs } from "@/components/view-tabs";
+import {
+  ChooseDifferently,
+  HowChooser,
+  HOW_OPTIONS,
+} from "./how-chooser";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 
 export default async function QualificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; how?: string }>;
 }) {
   /*
    * Reading what you have, or adding one. Two jobs on one screen.
@@ -24,7 +29,20 @@ export default async function QualificationsPage({
    * please." The list sat under three upload cards and above a dashed box for
    * building another, so neither job had a screen of its own.
    */
-  const view = (await searchParams).view === "add" ? "add" : "list";
+  const params = await searchParams;
+  const view = params.view === "add" ? "add" : "list";
+  /*
+   * Which of the three ways in, if one has been chosen yet.
+   *
+   * Roland, 20 September: "Initially only display the 3 options with 'or'
+   * in-between... You don't need to read a whole page for something you're not
+   * going to use." Before this all three were open at once - a panel, a folder
+   * card, a drive card and a form of eight fields, for three jobs of which
+   * somebody is doing one.
+   */
+  const how = HOW_OPTIONS.some((option) => option.id === params.how)
+    ? params.how
+    : null;
   const tenant = await requireTenant();
   // Read by everybody who delivers or judges against a qualification; built
   // and changed by an administrator. See the detail page for the reasoning.
@@ -81,30 +99,28 @@ export default async function QualificationsPage({
       ) : null}
 
       {view === "add" ? (
-        <>
-      {canManage ? (
-        <>
-          {/*
-            The documents come first, and that ordering is the fix rather than
-            a preference.
+        canManage ? (
+          how === null ? (
+            <HowChooser basePath="/qualifications" />
+          ) : (
+            <>
+              <ChooseDifferently basePath="/qualifications" />
 
-            This route needs no AI at any point: the curriculum document is
-            parsed directly, and it reads the whole thing — 22 modules, 85
-            topics and 182 internal assessment criteria out of the Commercial
-            Cleaner. The folder route below needs an AI extension unless the
-            folder describes itself, and on the hosted server no extension can
-            run at all, because the only provider shells out to a CLI that is
-            not in the container.
+              {how === "documents" ? (
+                /*
+                  No AI at any point: the curriculum document is parsed
+                  directly, and it reads the whole thing - 22 modules, 85
+                  topics and 182 internal assessment criteria out of the
+                  Commercial Cleaner.
+                */
+                <FromDocument
+                  startOpen
+                  closeHref="/qualifications?view=add"
+                />
+              ) : null}
 
-            On 16 September the folder route was at the top and this was
-            beneath it, so the qualification test with Heidi was spent on the
-            one path that could not succeed while the one that works sat
-            further down the page.
-          */}
-          <div className="mb-6">
-            <FromDocument />
-          </div>
-
+              {how === "folder" ? (
+                <>
           <div className="mb-6">
             <Card
               title="Or build it from a folder"
@@ -152,15 +168,19 @@ export default async function QualificationsPage({
               </Card>
             </div>
           ) : null}
-        </>
-      ) : null}
+                </>
+              ) : null}
 
-          <QualificationsManager
-            qualifications={withModules}
-            canManage={canManage}
-            show="create"
-          />
-        </>
+              {how === "blank" ? (
+                <QualificationsManager
+                  qualifications={withModules}
+                  canManage={canManage}
+                  show="create"
+                />
+              ) : null}
+            </>
+          )
+        ) : null
       ) : (
         <>
       {/*

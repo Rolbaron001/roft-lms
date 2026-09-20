@@ -54,7 +54,15 @@ const SOURCES = [
  * create button post the same form — so nothing is uploaded twice by the person
  * and nothing is parked on the server waiting to be come back to.
  */
-export function FromDocument() {
+export function FromDocument({
+  startOpen = false,
+  closeHref,
+}: {
+  /** Already chosen on the screen before this, so there is nothing to open. */
+  startOpen?: boolean;
+  /** Where "Close" goes when the choice was made by a link rather than here. */
+  closeHref?: string;
+} = {}) {
   const [reading, read, readPending] = useActionState<ReadingState, FormData>(
     readCurriculumAction,
     {},
@@ -64,7 +72,7 @@ export function FromDocument() {
     FormData
   >(createFromDocumentAction, {});
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [chosen, setChosen] = useState<Record<string, string>>({});
 
   const formRef = useRef<HTMLFormElement>(null);
@@ -167,13 +175,27 @@ export function FromDocument() {
             found, correct anything it got wrong, and it is written in one go.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
-        >
-          Close
-        </button>
+        {/*
+          A link where the choice was made on the screen before this one, so
+          closing returns to the three options rather than collapsing to a
+          button on an otherwise empty page.
+        */}
+        {closeHref ? (
+          <Link
+            href={closeHref}
+            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+          >
+            Close
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+          >
+            Close
+          </button>
+        )}
       </div>
 
       {/* One form, two submit buttons: read, then create. */}
