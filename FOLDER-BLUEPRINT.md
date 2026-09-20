@@ -5,10 +5,11 @@ Written 20 September 2026, against `lib/folder-plan.ts` and
 "summary of itself" comes from, whether it has a format, and whether a
 provider can write one.
 
-**Short answers.** Nothing in the LMS creates it — the platform only reads it.
-It is written by whatever builds the programme. Yes, it has an exact format,
-below. And yes, a provider can write one by hand: it is ordinary JSON in a
-folder they control, with nothing to register and nothing to sign.
+**Short answers.** It is written by whatever builds the programme — and, since
+20 September, the platform will also write one for a qualification it already
+holds. Yes, it has an exact format, below. And yes, a provider can write one by
+hand: it is ordinary JSON in a folder they control, with nothing to register
+and nothing to sign.
 
 **Why it is worth doing.** A folder carrying one of these is read *directly*:
 no model, no token, no quota, in seconds, and exactly the same every time. The
@@ -16,6 +17,40 @@ review screen says so — *"nothing in it has been inferred"*. A folder without
 one has its structure worked out from the documents by an AI extension, which
 on 20 September read 331 of 121151's 503 curriculum lines. The blueprint is the
 most accurate of the four ways in, not a convenience.
+
+---
+
+## The platform will write one for you
+
+On a qualification's **Add to it** tab, at the foot: **Save its blueprint**.
+It downloads the file described below, built from what the platform holds, and
+it is the cheapest thing on this page.
+
+That makes the expensive route a one-off. Read the qualification in once,
+however you like — the curriculum document, an AI extension over the folder,
+by hand — then download the blueprint and drop it into the folder's
+`_control/`. Every import of that folder afterwards, by this tenant or a second
+site or after a restore, is free, instant and exactly the same.
+
+It is also the worked example to generate against: a real file from a real
+qualification says more about the format than this document does.
+
+**What it will not carry** is listed on the screen beside the button, per
+qualification, rather than left to be discovered. Three things recur:
+
+- **Study units**, for the reason below.
+- **Element kinds.** The curriculum parser distinguishes six — a topic element,
+  a required performance, applied knowledge, a work activity, contextual
+  knowledge, supporting evidence. A blueprint carries one list per topic and
+  the import re-derives the kind from the module's component, so applied
+  knowledge under a practical module returns as a required performance. Every
+  line's wording survives exactly; the label does not.
+- **Criteria that sit on a module rather than under a topic.** A blueprint
+  carries criteria under topics. Move them under one first if they matter.
+
+`tests/blueprint-round-trip.test.ts` puts a curriculum out through the writer
+and back in through the reader and compares it line for line, so the two halves
+cannot drift apart — and neither can this document.
 
 ---
 

@@ -19,6 +19,7 @@ import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { ViewTabs } from "@/components/view-tabs";
 import { qualificationUsage } from "@/lib/qualification-removal";
+import { blueprintFrom } from "@/lib/blueprint-export";
 import { RemoveQualification } from "./remove-qualification";
 import { connectionsFor } from "@/lib/drive";
 
@@ -100,8 +101,9 @@ export default async function QualificationPage({
   // a drive. Absent for everybody else rather than offered and refused.
   const drives = canManage ? await connectionsFor(session) : [];
 
+  const outline = await curriculumOutline(session, id);
   const { qualification, modules, studyUnits, outcomes, unplacedModules } =
-    await curriculumOutline(session, id);
+    outline;
   const [documents, uploadTargets] = await Promise.all([
     listProgrammeDocuments(session, id),
     // Only where something will be uploaded. It asserts the permission to
@@ -117,6 +119,15 @@ export default async function QualificationPage({
    * counting queries, and a facilitator has no use for them.
    */
   const removal = canManage ? await qualificationUsage(session, id) : null;
+
+  /*
+   * The blueprint this qualification would export, built from the outline
+   * already in hand rather than by reading it all again. Offered only where
+   * there is a curriculum to describe - a blueprint of no modules is not a
+   * file worth downloading, and the reader would ignore it anyway.
+   */
+  const blueprint =
+    canManage && modules.length > 0 ? blueprintFrom(outline) : null;
 
   // Read only so the top-up form can say what an extension would add. A folder
   // that includes a summary of itself needs none.
@@ -505,6 +516,54 @@ export default async function QualificationPage({
             </div>
           </>
         ) : null}
+          {/*
+            The way out, which is also the cheapest way back in.
+
+            A folder carrying _control/blueprint.json is read directly - no
+            model, no token, no quota - and until now nothing could produce
+            one. Reading a qualification in the expensive way once and
+            downloading this makes every later import of that folder free and
+            exact. See lib/blueprint-export.ts.
+          */}
+          {blueprint ? (
+            <div className="mt-6">
+            <Card>
+              <p className="text-sm font-medium">Save its blueprint</p>
+              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+                A file describing this curriculum exactly:{" "}
+                {blueprint.file.knowledge_modules.length +
+                  blueprint.file.practical_modules.length +
+                  blueprint.file.workplace_modules.length}{" "}
+                modules, with their topics, what each teaches and what each is
+                assessed by. Put it in the qualification folder&rsquo;s{" "}
+                <code className="rounded bg-[var(--surface)] px-1">_control</code>{" "}
+                directory and every import of that folder afterwards reads it
+                straight off — in seconds, with no AI extension involved at any
+                point.
+              </p>
+              <a
+                href={`/api/blueprint/${id}`}
+                className="mt-3 inline-block rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                style={{ background: "var(--brand-primary)" }}
+              >
+                Download {blueprint.filename}
+              </a>
+              {blueprint.notes.length > 0 ? (
+                <div className="mt-3 border-t border-[var(--border)] pt-3">
+                  <p className="text-xs font-medium text-[var(--muted)]">
+                    What the file does not carry
+                  </p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-[var(--muted)]">
+                    {blueprint.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </Card>
+            </div>
+          ) : null}
+
           {/*
             At the foot of the tab that changes things, and nowhere near the
             curriculum somebody is reading. A destructive control belongs with
