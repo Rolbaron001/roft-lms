@@ -18,6 +18,8 @@ import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { ViewTabs } from "@/components/view-tabs";
+import { qualificationUsage } from "@/lib/qualification-removal";
+import { RemoveQualification } from "./remove-qualification";
 import { connectionsFor } from "@/lib/drive";
 
 const COMPONENT_LABELS: Record<string, string> = {
@@ -107,6 +109,14 @@ export default async function QualificationPage({
     // page into a server error for the facilitators it was just opened to.
     canManage ? qualificationForDocumentUpload(session, id) : null,
   ]);
+
+  /*
+   * Whether this may be removed, and what would go with it.
+   *
+   * Only asked for somebody who could act on the answer - it is several
+   * counting queries, and a facilitator has no use for them.
+   */
+  const removal = canManage ? await qualificationUsage(session, id) : null;
 
   // Read only so the top-up form can say what an extension would add. A folder
   // that includes a summary of itself needs none.
@@ -476,6 +486,19 @@ export default async function QualificationPage({
             </div>
           </>
         ) : null}
+          {/*
+            At the foot of the tab that changes things, and nowhere near the
+            curriculum somebody is reading. A destructive control belongs with
+            the other controls, last.
+          */}
+          {removal ? (
+            <RemoveQualification
+              qualificationId={id}
+              title={qualification.title}
+              holds={removal.holds}
+              removes={removal.removes}
+            />
+          ) : null}
         </section>
       ) : (
       <>

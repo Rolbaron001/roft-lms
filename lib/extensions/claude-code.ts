@@ -20,15 +20,23 @@ import type { AiProvider, Availability, ExtensionResult } from "./base";
  *   - It works where Claude Code is installed and signed in. On a desktop that
  *     is one `claude` then `/login`.
  *
- *   - It does not work on the production server, where nobody is signed in and
- *     the application runs in a container. There the provider reports itself
- *     unavailable and the platform behaves exactly as it does today.
+ *   - It works on the production server too. The Dockerfile installs the CLI
+ *     into the application image, and each person's own token is handed to it
+ *     per run, so nothing shared is signed in anywhere.
  *
- * That second point is not a limitation to be engineered around. Signing a
- * personal subscription into a multi-tenant server would put one person's
- * usage limits behind every tenant's work and is a licensing question rather
- * than a technical one. The honest shape is a provider that is available where
- * somebody is signed in and absent where nobody is.
+ * **This paragraph used to say the opposite, and it was wrong.** It said the
+ * provider "does not work on the production server, where nobody is signed in"
+ * - true when it was written, before the CLI was added to the image and before
+ * per-person tokens replaced a machine-wide sign-in. The comment outlived both
+ * changes, and on 19 September I read it and repeated it to Roland as current
+ * fact, several times and in writing, without ever looking in the container.
+ * It steered a day of testing towards Gemini and nearly towards a paid API
+ * key he did not need. Claude Code 2.1.278 has been in that image throughout.
+ *
+ * The licensing question is still real and is still his to answer: a personal
+ * subscription driving a multi-tenant server puts one person's usage limits
+ * behind everybody's work. Per-person tokens are what make that a choice
+ * rather than a default - each run uses the credential of whoever asked.
  *
  * The executable moves whenever the desktop application updates, so it is
  * discovered at call time rather than configured, with LMS_CLAUDE_CLI as an

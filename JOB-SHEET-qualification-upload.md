@@ -540,3 +540,42 @@ and Part Qualifications deliberately rather than by pattern-match:
 
 **And Roland's item 1:** a floating sub-menu for long pages, which is the same
 idea as the Settings nav and belongs on every long screen rather than one.
+
+## 20 September — a correction, and a delete button
+
+**Claude Code runs on the production server. It always has.** The Dockerfile
+installs `@anthropic-ai/claude-code` into the application image; version
+2.1.278 is in the container now and answers `claude --version`.
+
+Everything said on 19 September to the contrary was wrong. "Claude Code cannot
+run on the server", "the only provider shells out to a CLI that is not in the
+container", "a Claude subscription cannot run on the server, that is a
+licensing question" — all of it repeated to Roland as current fact, in
+conversation and in this file, and all of it taken from a docstring in
+`lib/extensions/claude-code.ts` written before the CLI was added to the image
+and before per-person tokens replaced a machine-wide sign-in. The comment
+outlived both changes and was never checked against the container.
+
+The cost: a day of testing pointed at Gemini, three 503s attributed to the free
+tier, and a decision to enable paid billing on a Google key that may not be
+needed at all. The docstring is corrected and says what it got wrong.
+
+**What that changes for the plan.** The folder route with Claude Code is worth
+testing on production, which is what Roland is doing now. The licensing
+question is still real and still his: a personal subscription driving a
+multi-tenant server puts one person's usage limits behind everybody's work.
+Per-person tokens make that a choice rather than a default — each run uses the
+credential of whoever asked.
+
+**Deleting a qualification is now in the product.** Roland's rule, and it is
+the right one: not possible once learners have been enrolled or cohorts run
+against it, possible where nothing has happened. `lib/qualification-removal.ts`
+counts eight kinds of record — enrolments, Statements of Results, EISA
+sittings, RPL applications, workplace agreements, certificates, cohorts and
+assessment submissions — and names each one rather than refusing with "this is
+in use". Where nothing blocks it, what would go is counted first and the title
+has to be typed.
+
+`scripts/scrub-qualifications.ts` stays as the break-glass path for test data.
+It runs on the server, bypasses all of this, and is deliberately unreachable
+from a browser.
