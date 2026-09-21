@@ -43,11 +43,45 @@ export function normaliseCode(code: string): string {
   return code.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
+/**
+ * The module code inside a longer identifier.
+ *
+ * The QCTO numbers a module twice. Its curriculum document calls knowledge
+ * module one `242303-001-00-KM-01` - the qualification's own curriculum code
+ * with the module code on the end - and the provider's alignment document
+ * calls the same module `KM-01`. Both are correct, and both are the published
+ * convention for the document they appear in.
+ *
+ * That is the failure Roland hit on 21 September. Fifteen modules had been
+ * loaded under their full identifiers, the alignment document named the short
+ * forms, and nothing matched - correctly, since `24230300100KM01` and `KM01`
+ * are not the same string. Renaming fifteen modules by hand would have fixed
+ * the symptom and thrown away the identifier the QCTO actually publishes.
+ *
+ * So: the code is the last run of letters followed by digits. It is a rule
+ * rather than a list, because a curriculum code is a different length for
+ * every qualification and no table could enumerate them.
+ */
+export function moduleCodeCore(code: string): string | null {
+  /*
+   * Anchored at the end, which is stricter than finding the last match.
+   *
+   * Unanchored, `KM01A` yields `KM01` - and a curriculum holding `KM01A` but
+   * not `KM01` would then accept a document's `KM01` as meaning it. That is a
+   * guess, and the whole design is that an unreadable code is reported rather
+   * than guessed at. A trailing letter is somebody distinguishing two modules,
+   * so it must not be discarded.
+   */
+  return /[A-Z]+\d+$/.exec(normaliseCode(code))?.[0] ?? null;
+}
+
 /** A code split into its letters and its number, where it has both. */
 export function splitCode(
   code: string,
 ): { prefix: string; digits: string; number: number } | null {
-  const match = /^([A-Za-z]+)(\d+)$/.exec(normaliseCode(code));
+  // The core, so a full QCTO identifier splits as well as a bare code does.
+  const core = moduleCodeCore(code);
+  const match = core ? /^([A-Z]+)(\d+)$/.exec(core) : null;
   if (!match) return null;
 
   return {
@@ -101,7 +135,30 @@ export function permutationsFor(code: string): string[] {
   return [...found].sort();
 }
 
+/**
+ * The standards a set of loaded codes implies.
+ *
+ * Roland, 21 September: "the user only needs to input the standard (in fact
+ * the system could ask to read particular documents during setup which would
+ * allow the system to infer the standards)."
+ *
+ * Inferred rather than asked for, because the documents already say it. Every
+ * module in a curriculum carries its code, and the code inside a full QCTO
+ * identifier is its last letters-and-digits run - so a curriculum loaded under
+ * `242303-001-00-KM-01` implies the standard `KM01` without anybody typing it.
+ * Somebody can still add one in Settings for a scheme the loaded documents do
+ * not yet show.
+ */
+export function standardsFrom(codes: string[]): string[] {
+  const cores = codes
+    .map(moduleCodeCore)
+    .filter((core): core is string => Boolean(core));
+
+  return [...new Set(cores)].sort((a, b) => a.localeCompare(b));
+}
+
 export type AliasRow = {
+  /** The provider's own form, as they write it. */
   canonical: string;
   aliases: string[];
   /** Proposed and withheld, with the reason, so nothing vanishes silently. */
@@ -109,7 +166,7 @@ export type AliasRow = {
 };
 
 /**
- * The whole table for one set of codes, with the ambiguous ones removed.
+ * The whole table for one set of standards, with the ambiguous ones removed.
  *
  * Generating per code is not enough. `KM01` proposes `K01`, and on its own
  * that is a fair reading - but a qualification whose components are Knowledge,
@@ -118,15 +175,20 @@ export type AliasRow = {
  * guess. The same applies to digit widths: a curriculum with `KM1` and `KM01`
  * as two different modules cannot have either abbreviate to the other.
  *
- * So anything proposed by more than one canonical code is dropped, and
- * anything that collides with a canonical code is dropped, and both are
- * reported rather than quietly discarded. A provider looking at the table
- * should be able to see that `K01` was considered and why it is not there -
- * otherwise the first thing they do is add it by hand.
+ * So anything proposed by more than one standard is dropped, and anything that
+ * collides with a standard is dropped, and both are reported rather than
+ * quietly discarded. A provider looking at the table should be able to see
+ * that `K01` was considered and why it is not there - otherwise the first
+ * thing they do is add it by hand.
+ *
+ * What is NOT in the table, and does not need to be: the full QCTO identifier.
+ * `242303-001-00-KM-01` is read by rule, in `moduleCodeCore`, because the
+ * curriculum code differs for every qualification and enumerating it would
+ * make the table a different length for each one.
  */
-export function aliasTable(codes: string[]): AliasRow[] {
-  const canonicals = codes
-    .map(normaliseCode)
+export function aliasTable(standards: string[]): AliasRow[] {
+  const canonicals = standards
+    .map((code) => moduleCodeCore(code) ?? normaliseCode(code))
     .filter(Boolean)
     .filter((code, index, all) => all.indexOf(code) === index);
 
@@ -166,11 +228,22 @@ export function aliasTable(codes: string[]): AliasRow[] {
 }
 
 /**
- * What a document's code means, under a tenant's table.
+ * What a document's code means, against the codes a curriculum holds.
  *
- * Returns the canonical code, or null. Checked in one order and only one
- * order: an exact match first, always, so a tenant who adds a careless alias
- * can never shadow a real module code with it.
+ * Four steps, in this order, and the order is the safety:
+ *
+ *   1. The same string, once punctuation and case are removed. `KM-01` and
+ *      `km 01` were always one code.
+ *   2. The same *core*. This is what crosses the QCTO's two conventions:
+ *      a curriculum holding `242303-001-00-KM-01` and a document naming
+ *      `KM-01` are the same module, and neither document is wrong.
+ *   3. The tenant's own table, matched on cores at both ends, which crosses a
+ *      dropped leading zero or a shortened prefix.
+ *   4. Nothing. A code that means nothing is reported, never guessed at.
+ *
+ * Returns the curriculum's own code, normalised, so a caller can look the
+ * module up by it. Ambiguity at any step returns null rather than picking one:
+ * two modules sharing a core is not a thing to resolve by ordering.
  */
 export function resolveCode(
   code: string,
@@ -180,20 +253,37 @@ export function resolveCode(
   const wanted = normaliseCode(code);
   if (!wanted) return null;
 
-  const canonicals = known.map(normaliseCode);
+  const canonicals = known.map(normaliseCode).filter(Boolean);
+
   const exact = canonicals.indexOf(wanted);
   if (exact !== -1) return canonicals[exact];
 
+  const wantedCore = moduleCodeCore(wanted);
+  if (!wantedCore) return null;
+
+  // One curriculum code whose core is the same. Two would mean the curriculum
+  // itself holds an ambiguity, which is not this function's to resolve.
+  const byCore = canonicals.filter(
+    (one) => moduleCodeCore(one) === wantedCore,
+  );
+  if (byCore.length === 1) return byCore[0];
+  if (byCore.length > 1) return null;
+
   for (const [canonical, accepted] of Object.entries(aliases)) {
-    const target = normaliseCode(canonical);
-    if (!canonicals.includes(target)) continue;
-    if (accepted.map(normaliseCode).includes(wanted)) return target;
+    const target = moduleCodeCore(canonical);
+    if (!target) continue;
+    if (!accepted.map((one) => moduleCodeCore(one) ?? "").includes(wantedCore)) {
+      continue;
+    }
+
+    const holders = canonicals.filter((one) => moduleCodeCore(one) === target);
+    if (holders.length === 1) return holders[0];
   }
 
   return null;
 }
 
-/** The generated table as it is stored: canonical to accepted spellings. */
+/** The generated table as it is stored: standard to accepted spellings. */
 export function aliasesFrom(rows: AliasRow[]): CodeAliases {
   const stored: CodeAliases = {};
   for (const row of rows) {

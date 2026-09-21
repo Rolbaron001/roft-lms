@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
-  normaliseCode,
+  moduleCodeCore,
   permutationsFor,
   type AliasRow,
 } from "@/lib/module-codes";
@@ -48,6 +48,7 @@ export function ModuleCodesForm({
   const [open, setOpen] = useState(false);
   const [table, setTable] = useState(rows);
   const [adding, setAdding] = useState<Record<string, string>>({});
+  const [newStandard, setNewStandard] = useState("");
 
   // showModal() rather than the open attribute: only the method gives the
   // top layer, the backdrop and the focus trap.
@@ -81,8 +82,41 @@ export function ModuleCodesForm({
     );
   }
 
+  /*
+   * A standard the loaded documents have not shown yet.
+   *
+   * Roland, 21 September: "the user only needs to input the standard ... Then
+   * the system will automatically create the permutations/variations of the
+   * code that might be relevant." So one box, and the variations appear.
+   * Generated here in the browser, which is why lib/module-codes.ts imports
+   * nothing.
+   */
+  function addStandard() {
+    const standard = moduleCodeCore(newStandard);
+    if (!standard) return;
+    if (table.some((row) => row.canonical === standard)) {
+      setNewStandard("");
+      return;
+    }
+
+    const held = new Set(table.map((row) => row.canonical));
+    setTable(
+      [
+        ...table,
+        {
+          canonical: standard,
+          aliases: permutationsFor(standard).filter(
+            (alias) => !held.has(alias),
+          ),
+          rejected: [],
+        },
+      ].sort((a, b) => a.canonical.localeCompare(b.canonical)),
+    );
+    setNewStandard("");
+  }
+
   function addAlias(canonical: string) {
-    const typed = normaliseCode(adding[canonical] ?? "");
+    const typed = moduleCodeCore(adding[canonical] ?? "");
     if (!typed) return;
 
     setTable((current) =>
@@ -124,10 +158,12 @@ export function ModuleCodesForm({
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
         One module is written down differently in different documents &mdash;
-        KM01 in the curriculum, KM-01 in the alignment table, K1 in a workbook
-        filename. Punctuation and capitals are always ignored. This is where
-        the App is told about the rest, so an upload links the module instead
-        of reporting it missing.
+        <span className="font-mono"> 242303-001-00-KM-01 </span> in the
+        curriculum, <span className="font-mono">KM-01</span> in the alignment
+        table, <span className="font-mono">KM1</span> in a summary. The long
+        identifier, the punctuation and the capitals are handled by rule. This
+        is where the App is told about the rest, so an upload links the module
+        instead of reporting it missing.
       </p>
 
       {state.error ? (
@@ -151,8 +187,9 @@ export function ModuleCodesForm({
       <p className="mt-3 text-sm">
         {rows.length === 0 ? (
           <span className="text-[var(--muted)]">
-            No curriculum has been loaded yet, so there are no module codes to
-            read. Load a qualification and this fills itself in.
+            No curriculum has been loaded yet, so there are no standards to
+            infer. Load a qualification and this fills itself in from its
+            module codes.
           </span>
         ) : confirmed ? (
           <>
@@ -190,9 +227,15 @@ export function ModuleCodesForm({
           <div className="border-b border-[var(--border)] px-6 py-4">
             <h3 className="text-base font-semibold">Module codes</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              The code on the left is what the curriculum holds. The spellings
-              beside it are what a document may use instead. Remove any that do
-              not belong, add your own, then confirm.
+              The code on the left is your standard. The spellings beside it
+              are what a document may use instead. Remove any that do not
+              belong, add your own, then confirm.
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              A full QCTO identifier &mdash;{" "}
+              <span className="font-mono">242303-001-00-KM-01</span> &mdash; is
+              read as its module code by rule, and needs no row here. So are
+              hyphens, spaces and capitals.
             </p>
           </div>
 
@@ -281,6 +324,40 @@ export function ModuleCodesForm({
                 ))}
               </tbody>
             </table>
+
+            {/*
+              A standard the loaded documents have not shown. The rows above
+              are inferred from the curriculum, which covers the ordinary case;
+              this is for a scheme that is coming rather than one already here.
+            */}
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
+              <label htmlFor="new-standard" className="text-sm">
+                Add a standard code
+              </label>
+              <input
+                id="new-standard"
+                value={newStandard}
+                onChange={(event) => setNewStandard(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addStandard();
+                  }
+                }}
+                placeholder="KM-06"
+                className={`${field} w-28 font-mono text-xs`}
+              />
+              <button
+                type="button"
+                onClick={addStandard}
+                className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
+              >
+                Add
+              </button>
+              <span className="text-xs text-[var(--muted)]">
+                Its variations are worked out for you.
+              </span>
+            </div>
           </div>
 
           {/* The edited table, as the server reads it. The chips above are the

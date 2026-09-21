@@ -97,12 +97,18 @@ beforeAll(async () => {
     title: "A qualification",
   });
 
-  for (const code of ["KM01", "PM01", "WM01"]) {
+  // Loaded the way the curriculum document actually numbers them: the
+  // qualification's curriculum code with the module code on the end.
+  for (const code of [
+    "242303-001-00-KM-01",
+    "242303-001-00-PM-01",
+    "242303-001-00-WM-01",
+  ]) {
     await addCurriculumModule(admin, {
       qualificationId: qualification.id,
-      component: code.startsWith("KM")
+      component: code.includes("KM")
         ? "knowledge"
-        : code.startsWith("PM")
+        : code.includes("PM")
           ? "practical"
           : "workplace",
       code,
@@ -121,10 +127,19 @@ afterAll(async () => {
 });
 
 describe("what the App proposes", () => {
-  it("reads the codes from the curriculum rather than from a declaration", () => {
-    // Proposing against a scheme somebody typed would describe an intention;
-    // proposing against the loaded curriculum describes the provider.
-    return expect(moduleCodesInUse(admin)).resolves.toEqual([
+  it("offers the module codes, not the identifiers they are stored under", async () => {
+    /*
+     * Roland, 21 September, on being shown fifteen rows reading
+     * "Only 24230300100KM04 itself": "The codes are straight forward ...
+     * KM1=KM01=K1=KM-01=KM-1. These are the codes that the system must look
+     * for."
+     *
+     * The curriculum is loaded under the QCTO's full identifiers because that
+     * is what the curriculum document prints. The table's rows are the module
+     * codes inside them, which is also what every other document writes, and
+     * they are inferred rather than typed.
+     */
+    await expect(moduleCodesInUse(admin)).resolves.toEqual([
       "KM01",
       "PM01",
       "WM01",

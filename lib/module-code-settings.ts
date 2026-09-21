@@ -5,7 +5,9 @@ import { recordAudit } from "./audit";
 import {
   aliasTable,
   aliasesFrom,
+  moduleCodeCore,
   normaliseCode,
+  standardsFrom,
   type AliasRow,
   type CodeAliases,
 } from "./module-codes";
@@ -76,9 +78,21 @@ export async function moduleCodesInUse(
       )
       .where(eq(qualifications.organisationId, session.organisationId));
 
-    return [...new Set(rows.map((row) => normaliseCode(row.code)))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
+    /*
+     * The standard, not the stored string.
+     *
+     * Curiosa's curriculum is loaded under the QCTO's full identifiers -
+     * 242303-001-00-KM-01 - because that is what the curriculum document
+     * prints. Offering those as the rows of the table gave fifteen rows of
+     * "Only 24230300100KM01 itself", which is what Roland saw on 21 September
+     * and is useless: the curriculum code in front changes per qualification,
+     * so no permutation of it means anything.
+     *
+     * The standard is the module code itself, KM01, which is also what every
+     * other document in the folder writes. Inferred from what is loaded rather
+     * than typed, because the documents already say it.
+     */
+    return standardsFrom(rows.map((row) => row.code));
   });
 }
 
@@ -120,7 +134,12 @@ export async function proposeModuleCodeTable(
      * generator still proposes. Re-adding it on every visit would undo the
      * edit silently and repeatedly, which is worse than never proposing it.
      */
-    return { ...row, aliases: held.map(normaliseCode).filter(Boolean) };
+    return {
+      ...row,
+      aliases: held
+        .map((one) => moduleCodeCore(one) ?? normaliseCode(one))
+        .filter(Boolean),
+    };
   });
 
   return { rows, stored, confirmed: Object.keys(stored).length > 0 };
@@ -163,18 +182,20 @@ export async function setModuleCodeAliases(
    */
   const canonicals = new Set([
     ...(await moduleCodesInUse(session)),
-    ...Object.keys(table).map(normaliseCode).filter(Boolean),
+    ...Object.keys(table)
+      .map((one) => moduleCodeCore(one) ?? normaliseCode(one))
+      .filter(Boolean),
   ]);
   const claimedBy = new Map<string, string>();
 
   for (const [rawCanonical, rawAliases] of Object.entries(table)) {
-    const canonical = normaliseCode(rawCanonical);
+    const canonical = moduleCodeCore(rawCanonical) ?? normaliseCode(rawCanonical);
     if (!canonical) continue;
 
     const accepted: string[] = [];
 
     for (const rawAlias of rawAliases) {
-      const alias = normaliseCode(rawAlias);
+      const alias = moduleCodeCore(rawAlias) ?? normaliseCode(rawAlias);
       if (!alias || alias === canonical) continue;
 
       if (canonicals.has(alias)) {
@@ -223,4 +244,4 @@ export async function setModuleCodeAliases(
 }
 
 /** The generated table, for a caller that wants it without the stored one. */
-export { aliasTable, aliasesFrom };
+export { aliasTable, aliasesFrom, standardsFrom };

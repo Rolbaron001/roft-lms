@@ -16,10 +16,12 @@ import { describe, expect, it } from "vitest";
 import {
   aliasTable,
   aliasesFrom,
+  moduleCodeCore,
   normaliseCode,
   permutationsFor,
   resolveCode,
   splitCode,
+  standardsFrom,
 } from "@/lib/module-codes";
 
 describe("reducing a code to what matters", () => {
@@ -265,5 +267,100 @@ describe("the spellings Curiosa's documents really use", () => {
   it("also proposes single-letter forms, which Curiosa can remove", () => {
     expect(aliases.KM01).toContain("K1");
     expect(resolveCode("K1", curriculum, aliases)).toBe("KM01");
+  });
+});
+
+/**
+ * The QCTO's two names for the same module.
+ *
+ * This is the fault that started all of it, and it took a screenshot to see.
+ * Curiosa's curriculum document numbers knowledge module one
+ * `242303-001-00-KM-01` - the qualification's curriculum code with the module
+ * code on the end - and their alignment document numbers the same module
+ * `KM-01`. Both are the published convention for the document they appear in.
+ * Neither is a mistake, and the curriculum was loaded correctly.
+ *
+ * All fifteen modules failed to link because `24230300100KM01` and `KM01` are
+ * not the same string, and no table of permutations could have fixed it: the
+ * curriculum code is different for every qualification, so the variations
+ * would have to be regenerated per qualification and would never be a
+ * *standard* at all.
+ *
+ * It is a rule instead. The code is the last run of letters followed by
+ * digits.
+ */
+describe("a module code inside a full QCTO identifier", () => {
+  it("is the last letters-and-digits run", () => {
+    expect(moduleCodeCore("242303-001-00-KM-01")).toBe("KM01");
+    expect(moduleCodeCore("24230300100KM01")).toBe("KM01");
+    expect(moduleCodeCore("KM-01")).toBe("KM01");
+    expect(moduleCodeCore("KM1")).toBe("KM1");
+  });
+
+  it("is nothing where there is no code to find", () => {
+    // A bare curriculum code is not a module. Returning "00" from
+    // "242303-001-00-00" would match a module numbered zero.
+    expect(moduleCodeCore("242303-001-00-00")).toBeNull();
+    expect(moduleCodeCore("")).toBeNull();
+    expect(moduleCodeCore("Module")).toBeNull();
+  });
+
+  it("links the long form to the short one, with no table at all", () => {
+    /*
+     * The actual repair. An empty alias table, a curriculum holding the full
+     * identifiers, an alignment document naming the short codes - and they
+     * match. Nothing has to be renamed and nothing has to be confirmed in
+     * Settings first.
+     */
+    const curriculum = [
+      "242303-001-00-KM-01",
+      "242303-001-00-PM-01",
+      "242303-001-00-WM-01",
+    ];
+
+    expect(resolveCode("KM-01", curriculum, {})).toBe("24230300100KM01");
+    expect(resolveCode("PM01", curriculum, {})).toBe("24230300100PM01");
+    expect(resolveCode("WM 1", curriculum, {})).toBeNull();
+  });
+
+  it("reads the short form's variations once the table is confirmed", () => {
+    // WM 1 above is unpadded, so it needs the table - which is exactly the
+    // division of labour: the rule crosses the identifier, the table crosses
+    // the spelling.
+    const curriculum = [
+      "242303-001-00-KM-01",
+      "242303-001-00-PM-01",
+      "242303-001-00-WM-01",
+    ];
+    const aliases = aliasesFrom(aliasTable(standardsFrom(curriculum)));
+
+    expect(resolveCode("WM 1", curriculum, aliases)).toBe("24230300100WM01");
+    expect(resolveCode("KM1", curriculum, aliases)).toBe("24230300100KM01");
+  });
+
+  it("infers the standards from what is loaded, not the stored strings", () => {
+    /*
+     * Roland, 21 September, on being shown fifteen rows of
+     * "Only 24230300100KM04 itself": "The codes are straight forward ...
+     * KM1=KM01=K1=KM-01=KM-1. These are the codes that the system must look
+     * for." The table's rows are the module codes, never the identifiers they
+     * happen to be stored under.
+     */
+    const standards = standardsFrom([
+      "242303-001-00-KM-01",
+      "242303-001-00-KM-02",
+      "KM-03",
+    ]);
+
+    expect(standards).toEqual(["KM01", "KM02", "KM03"]);
+    expect(aliasTable(standards)[0].aliases).toContain("KM1");
+  });
+
+  it("refuses to choose when two modules share a core", () => {
+    // Two qualifications' modules in one list, both ending KM01. Picking the
+    // first would link a learner's evidence to whichever happened to sort
+    // earlier, and nothing on any screen would look wrong.
+    const ambiguous = ["242303-001-00-KM-01", "118709-001-00-KM-01"];
+    expect(resolveCode("KM-01", ambiguous, {})).toBeNull();
   });
 });
