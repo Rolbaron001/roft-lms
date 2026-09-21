@@ -21,6 +21,8 @@ import { ViewTabs } from "@/components/view-tabs";
 import { PageNav } from "@/components/page-nav";
 import { qualificationUsage } from "@/lib/qualification-removal";
 import { blueprintFrom } from "@/lib/blueprint-export";
+import { capturableDocuments } from "@/lib/capture-from-documents";
+import { CaptureList } from "./capture/capture-list";
 import { RemoveQualification } from "./remove-qualification";
 import { connectionsFor } from "@/lib/drive";
 
@@ -120,6 +122,23 @@ export default async function QualificationPage({
    * counting queries, and a facilitator has no use for them.
    */
   const removal = canManage ? await qualificationUsage(session, id) : null;
+
+  /*
+   * How many of this qualification's papers a learner can actually answer.
+   *
+   * Gated on authoring assessments rather than on managing qualifications: an
+   * instructor writes material without being entitled to change a curriculum,
+   * and they are exactly who does this.
+   */
+  const capturable = session.permissions.includes("assessment:author")
+    ? await capturableDocuments(session, id)
+    : [];
+  const capture = capturable.length
+    ? {
+        total: capturable.length,
+        captured: capturable.filter((one) => one.captured).length,
+      }
+    : null;
 
   /*
    * The blueprint this qualification would export, built from the outline
@@ -269,6 +288,33 @@ export default async function QualificationPage({
       href: `/qualifications/${id}?view=build#material`,
       action: "Add the folder",
     },
+    /*
+     * The step that was missing entirely.
+     *
+     * Roland, 21 September: "once a qualification has been uploaded from a
+     * folder, there is nothing that tells a user that he still needs to
+     * capture workbooks and assessments."
+     *
+     * Nothing did. The map ended at "the material", which is filing - the
+     * files are held and downloadable, and no learner can answer any of them.
+     * Turning a workbook into questions somebody types into is a separate job,
+     * and the only sign of it was a Capture entry in the menu that never
+     * mentioned this qualification.
+     */
+    ...(capture && capture.total > 0
+      ? [
+          {
+            title: "Workbooks and assessments",
+            done: capture.captured === capture.total,
+            state:
+              capture.captured === capture.total
+                ? `All ${capture.total} captured. Learners can answer them on screen.`
+                : `${capture.captured} of ${capture.total} captured. The rest are files a learner can only download.`,
+            href: `/qualifications/${id}?view=build#capture`,
+            action: "Capture them",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -517,6 +563,25 @@ export default async function QualificationPage({
             </div>
           </>
         ) : null}
+          {/*
+            Turning the filed workbooks into something a learner can answer.
+
+            Roland, 21 September: "The workbooks and assessments are in the
+            folder, they have been read and linked. Why can't they just be
+            captured?" They can now - the second upload is gone. The review is
+            not, because that is the step that catches a misread answer.
+          */}
+          {capturable.length > 0 ? (
+            <div id="capture" className="mt-6 scroll-mt-24">
+              <Card>
+                <p className="mb-2 text-sm font-medium">
+                  Workbooks and assessments
+                </p>
+                <CaptureList qualificationId={id} rows={capturable} />
+              </Card>
+            </div>
+          ) : null}
+
           {/*
             The way out, which is also the cheapest way back in.
 

@@ -20,10 +20,34 @@ export default async function CapturePage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Capture a paper</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Choose the qualification, then upload a workbook or an assessment
-          with its answer guide. The App reads what it can, shows you what it
-          made of it and what it could not work out, and waits. Nothing becomes
-          an assessment until you confirm it.
+          The App reads what it can, shows you what it made of it and what it
+          could not work out, and waits. Nothing becomes an assessment until
+          you confirm it.
+        </p>
+
+        {/*
+          Said here because this screen never mentioned it.
+
+          Roland, 21 September: "This process needs a link to the qualification
+          upload ... The workbooks and assessments are in the folder, they have
+          been read and linked. Why can't they just be captured?"
+
+          They can, and the shorter route is the one a provider who imported a
+          folder should take: the files are already held, so uploading them a
+          second time is work this screen was inventing. The form below stays
+          for a paper that never came in with a folder.
+        */}
+        <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
+          If the workbook came in with a folder, it is already here:{" "}
+          <Link
+            href="/qualifications"
+            className="underline underline-offset-2"
+          >
+            open the qualification
+          </Link>{" "}
+          and capture it from what is filed &mdash; no second upload, and the
+          answer guide is paired for you. Use the form below only for a paper
+          the platform does not already hold.
         </p>
       </div>
 
@@ -59,10 +83,10 @@ export default async function CapturePage() {
           Uploaded
         </h2>
         {jobs.length === 0 ? (
-          <EmptyState title="Nothing uploaded yet">
-            Choose a qualification above and upload a workbook with its answer
-            guide. What the App reads is shown to you before any of it becomes
-            an assessment.
+          <EmptyState title="Nothing captured yet">
+            Open a qualification and capture the workbooks already filed
+            against it, or upload one above. What the App reads is shown to you
+            before any of it becomes an assessment.
           </EmptyState>
         ) : (
           <ul className="space-y-2">

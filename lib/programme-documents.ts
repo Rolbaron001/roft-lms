@@ -513,6 +513,7 @@ export async function listProgrammeDocuments(
 export async function readProgrammeDocument(
   session: AuthenticatedSession,
   documentId: string,
+  options: { forAuthoring?: boolean } = {},
 ) {
   assertSessionCan(session, "course:read");
 
@@ -530,7 +531,8 @@ export async function readProgrammeDocument(
 
   if (
     RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind) &&
-    !session.permissions.includes("assessment:assess")
+    !session.permissions.includes("assessment:assess") &&
+    !(options.forAuthoring && session.permissions.includes("assessment:author"))
   ) {
     throw new ProgrammeDocumentError(
       "Marking memoranda and summative assessments are limited to assessors.",
@@ -587,4 +589,35 @@ export async function qualificationForDocumentUpload(
 
     return { qualification, units, modules };
   });
+}
+
+/**
+ * The same bytes, read in order to build an assessment from them.
+ *
+ * This looks like a hole in the rule above and is the opposite of one. That
+ * rule exists to stop a *download* of a summative or a marking memorandum
+ * reaching somebody who should not have it - a facilitator, a learner with a
+ * guessed address. It is about distribution.
+ *
+ * Capture is not distribution. It reads a workbook and its answer guide in
+ * order to turn them into questions, and the review screen it produces shows
+ * the correct answers, because those are the thing being confirmed. The
+ * permission that governs it is `assessment:author`, held by the administrator
+ * and the instructor - the two roles whose job is writing assessments.
+ *
+ * Insisting on `assessment:assess` here, as the plain reader does, would have
+ * meant only an assessor could author an assessment. That is exactly backwards
+ * from what the roles say: the assessor's own definition in lib/rbac.ts is
+ * that they mark evidence and "cannot author the assessment they mark".
+ *
+ * Found by pressing the button rather than by reading the code - capturing a
+ * summative from the qualification page was refused with "limited to
+ * assessors" for the tenant administrator who had just filed it.
+ */
+export async function readProgrammeDocumentForAuthoring(
+  session: AuthenticatedSession,
+  documentId: string,
+) {
+  assertSessionCan(session, "assessment:author");
+  return readProgrammeDocument(session, documentId, { forAuthoring: true });
 }
