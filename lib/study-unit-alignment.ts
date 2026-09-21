@@ -89,6 +89,9 @@ export async function applyAlignmentDocument(
       modules.map((one) => [one.code.replace(/[-\s]/g, "").toUpperCase(), one.id]),
     );
 
+    /** Codes the document names that the curriculum does not hold. */
+    const unmatched: string[] = [];
+
     for (const [index, unit] of reading.studyUnits.entries()) {
       // --- the outcome it serves ------------------------------------------
       let outcomeId: string | null = null;
@@ -205,9 +208,21 @@ export async function applyAlignmentDocument(
         const moduleId = moduleByCode.get(code);
 
         if (!moduleId) {
-          applied.notes.push(
-            `${unit.code} names ${code}, which is not in this qualification's curriculum. Import the curriculum first, or check the code.`,
-          );
+          /*
+           * Collected, not reported one at a time.
+           *
+           * Roland, 21 September, looking at fifteen of these in a row: every
+           * module of a fifteen-module qualification failed to match, and the
+           * message repeated the same sentence fifteen times without once
+           * saying what the curriculum's codes actually are. Fifteen lines
+           * that each say "KM01 is not there" cannot be told apart from one
+           * line saying it, and neither tells you what IS there - which is the
+           * only fact that identifies the problem.
+           *
+           * So they are gathered and summarised below, alongside the codes the
+           * curriculum holds.
+           */
+          unmatched.push(code);
           continue;
         }
 
@@ -255,6 +270,31 @@ export async function applyAlignmentDocument(
           }
         }
       }
+    }
+
+    /*
+     * One note for the lot, and it says what the curriculum actually holds.
+     *
+     * The codes matter more than the count. Matching is done without
+     * punctuation or spaces - the alignment document writes KM-01 and the
+     * curriculum writes KM01 - so a failure here is almost always a genuinely
+     * different naming scheme, and the two lists side by side identify it in
+     * one glance. Without them, "KM01 is not in this curriculum" is true and
+     * useless, because the reader cannot see what to compare it against.
+     */
+    if (unmatched.length > 0) {
+      const wanted = [...new Set(unmatched)];
+      const held = modules
+        .map((one) => one.code)
+        .sort((a, b) => a.localeCompare(b));
+
+      applied.notes.push(
+        held.length === 0
+          ? `The document names ${wanted.length} modules (${wanted.join(", ")}) and this qualification has no curriculum yet. Import the curriculum first; the study units and their outcomes are recorded either way, and uploading this document again afterwards will link them.`
+          : applied.modulesLinked === 0
+            ? `None of the ${wanted.length} modules this document names could be matched, so nothing has been placed under a study unit. The document names ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Matching ignores spaces and hyphens, so the two schemes genuinely differ - correct the codes on either side and upload the document again.`
+            : `${wanted.length} of the modules this document names could not be matched: ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Everything else was linked.`,
+      );
     }
 
     await recordAudit(tx, {

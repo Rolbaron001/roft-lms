@@ -373,7 +373,31 @@ describe("a module the curriculum does not have", () => {
       invented,
     );
 
-    expect(applied.notes.join(" ")).toContain("KM99");
-    expect(applied.notes.join(" ")).toMatch(/not in this qualification/i);
+    const notes = applied.notes.join(" ");
+
+    expect(notes).toContain("KM99");
+
+    /*
+     * And what the curriculum actually holds, which is the half that was
+     * missing.
+     *
+     * Roland, 21 September, on fifteen of these in a row: every module of a
+     * fifteen-module qualification failed to match, and the message said "KM01
+     * is not in this qualification's curriculum" fifteen times without once
+     * naming a code that IS in it. True, repeated, and impossible to act on -
+     * you cannot spot a different naming scheme without seeing both schemes.
+     *
+     * Matching already ignores spaces and hyphens, so a failure here is nearly
+     * always the two documents numbering modules differently. The two lists
+     * side by side identify that in one glance.
+     */
+    expect(notes).toMatch(/this curriculum holds/i);
+    expect(notes).toContain("KM01");
+
+    // One note for the lot, not one per code. Fifteen identical sentences say
+    // no more than one and bury everything else in the panel.
+    expect(applied.notes.filter((note) => note.includes("KM99"))).toHaveLength(
+      1,
+    );
   });
 });

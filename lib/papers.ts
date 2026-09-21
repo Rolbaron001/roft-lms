@@ -980,3 +980,160 @@ async function assertAssessmentStepOpen(
     throw error;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Seeing it before a learner does
+// ---------------------------------------------------------------------------
+
+/**
+ * A paper as the learner will meet it, for the person who wrote it.
+ *
+ * Roland, 20 September: "Workbooks and assessments are supposed to be 'Built
+ * into' the LMS ... screens with textboxes that a user types into, completes
+ * checkboxes, etc. Is this working? How do I see it (outside of being a
+ * learner)?"
+ *
+ * It was working and there was no way to look at it. `/learn/[id]/paper/...`
+ * needs an enrolment, and opening it starts a real attempt against a real
+ * submission - so the only way to see a paper was to become a learner on it
+ * and begin sitting it, which is both wrong and unrepeatable.
+ *
+ * This reads the same paper into the same shape and writes nothing. No
+ * submission, no attempt, no clock, no responses. Every answer comes back
+ * empty, and the page that renders it disables the controls, so there is
+ * nothing to save even by accident.
+ *
+ * What it adds, because the reader is the author rather than the candidate, is
+ * `answers`: which option is correct and what the marking guide says. That is
+ * the half `LearnerItem` deliberately withholds, and the half somebody
+ * checking a captured workbook most needs to see - a parser that got question
+ * three's correct answer wrong is invisible until a learner appeals.
+ */
+export type PreviewItem = LearnerItem & {
+  /** Option ids the memorandum marks correct, where the engine marks it. */
+  correctOptionIds: string[] | null;
+  /** What an assessor is told to look for, where a person marks it. */
+  markingGuide: string | null;
+  /** Whether the platform can mark this one at all. */
+  markedBy: "app" | "assessor";
+};
+
+export type PaperPreview = {
+  paperId: string;
+  paperCode: string;
+  mode: string;
+  status: string;
+  assessmentId: string;
+  assessmentTitle: string;
+  purpose: "formative" | "summative";
+  timeLimitMinutes: number | null;
+  declarationText: string;
+  sections: (Omit<LearnerSection, "items"> & { items: PreviewItem[] })[];
+  totalMarks: number;
+};
+
+export async function previewPaper(
+  session: AuthenticatedSession,
+  paperId: string,
+): Promise<PaperPreview> {
+  // The author's permission, not the learner's. Nothing here is a delivery
+  // route: it reads a paper for the people who build and moderate them.
+  assertSessionCan(session, "assessment:author");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [paper] = await tx
+      .select()
+      .from(assessmentPapers)
+      .where(eq(assessmentPapers.id, paperId));
+
+    if (!paper) throw new PaperError("No such paper.", "not_found");
+
+    const [assessment] = await tx
+      .select()
+      .from(assessments)
+      .where(eq(assessments.id, paper.assessmentId));
+
+    if (!assessment) throw new PaperError("No such assessment.", "not_found");
+
+    const sections = await tx
+      .select()
+      .from(assessmentSections)
+      .where(eq(assessmentSections.paperId, paper.id))
+      .orderBy(asc(assessmentSections.sortOrder));
+
+    const items =
+      sections.length === 0
+        ? []
+        : await tx
+            .select()
+            .from(assessmentItems)
+            .where(
+              inArray(
+                assessmentItems.sectionId,
+                sections.map((section) => section.id),
+              ),
+            )
+            .orderBy(asc(assessmentItems.sortOrder));
+
+    let totalMarks = 0;
+
+    const built = sections.map((section) => {
+      const own = items.filter((item) => item.sectionId === section.id);
+
+      return {
+        id: section.id,
+        title: section.title,
+        instruction: section.instruction,
+        stimulus: section.stimulus,
+        markTotal: section.markTotal,
+        items: own.map((item) => {
+          totalMarks += item.points;
+
+          /*
+           * Only an item with recorded correct options can be marked by the
+           * engine. Everything else is a person's judgement, including a
+           * true/false that asks for a justification - the verdict is
+           * checkable and the reasoning is not, and the marks are for the
+           * reasoning.
+           */
+          const markedBy =
+            item.correctOptionIds && item.correctOptionIds.length > 0
+              ? ("app" as const)
+              : ("assessor" as const);
+
+          return {
+            id: item.id,
+            type: item.type,
+            stem: item.stem,
+            options: item.options ?? null,
+            points: item.points,
+            // Empty, always. A preview has nothing to resume and nothing to
+            // save; the form it feeds is disabled throughout.
+            answer: {
+              selectedOptionIds: null,
+              answerText: null,
+              answerNumber: null,
+            },
+            correctOptionIds: item.correctOptionIds ?? null,
+            markingGuide: item.markingGuide,
+            markedBy,
+          };
+        }),
+      };
+    });
+
+    return {
+      paperId: paper.id,
+      paperCode: paper.code,
+      mode: paper.mode,
+      status: paper.status,
+      assessmentId: assessment.id,
+      assessmentTitle: assessment.title,
+      purpose: assessment.purpose as "formative" | "summative",
+      timeLimitMinutes: assessment.timeLimitMinutes,
+      declarationText: assessment.declarationText ?? DEFAULT_DECLARATION,
+      sections: built,
+      totalMarks,
+    };
+  });
+}

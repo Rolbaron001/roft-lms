@@ -16,6 +16,21 @@ export type UploadState = {
   message?: string;
   /** Reported when the file was an alignment matrix and was read. */
   detail?: string[];
+  /**
+   * Where to go now.
+   *
+   * Roland, 21 September: "there is no clear navigation after the upload
+   * message. The display still looks like I should be doing something else on
+   * the page. Put a navigation button to go back to the Qualification, or
+   * somewhere that will address the issues displayed."
+   *
+   * The form reported what happened and then left him standing in an upload
+   * form, beside a pointer still telling him to upload the thing he had just
+   * uploaded. A result that finishes a task has to offer the way out of it -
+   * and where the result lists problems, the way out is to wherever those
+   * problems get fixed, not merely back to the top.
+   */
+  links?: { href: string; label: string }[];
 };
 
 export async function uploadDocumentAction(
@@ -102,7 +117,44 @@ export async function uploadDocumentAction(
         };
       }
 
-      return { message: "Alignment document read. Study units built.", detail };
+      /*
+       * Where to go, chosen by what actually happened.
+       *
+       * Study units built and modules placed: the job is done, go and look at
+       * it. Study units built and nothing placed: the job is half done and the
+       * thing to fix is the curriculum's module codes, so the button goes to
+       * the curriculum rather than to the top of the page.
+       */
+      const links =
+        applied.modulesLinked === 0
+          ? [
+              {
+                // The curriculum listing, where the codes are actually
+                // visible. #curriculum is on the default tab, so this lands
+                // on the modules rather than on a tab that has to be found.
+                href: `/qualifications/${qualificationId}#curriculum`,
+                label: "Check the curriculum's module codes",
+              },
+              {
+                href: `/qualifications/${qualificationId}`,
+                label: "Back to the qualification",
+              },
+            ]
+          : [
+              {
+                href: `/qualifications/${qualificationId}`,
+                label: "See the study units",
+              },
+            ];
+
+      return {
+        message:
+          applied.modulesLinked === 0
+            ? "Alignment document read. Study units built, but no modules placed under them."
+            : "Alignment document read. Study units built.",
+        detail,
+        links,
+      };
     }
 
     if (!result.matrix) {
@@ -111,6 +163,12 @@ export async function uploadDocumentAction(
         // Said plainly, because "uploaded" reads as though something happened.
         detail: [
           `Filed as ${DOCUMENT_KIND_LABELS[result.kind]}. Nothing was read out of it — only an alignment document or an alignment matrix is read.`,
+        ],
+        links: [
+          {
+            href: `/qualifications/${qualificationId}`,
+            label: "Back to the qualification",
+          },
         ],
       };
     }
@@ -128,7 +186,16 @@ export async function uploadDocumentAction(
       );
     }
 
-    return { message: "Alignment matrix uploaded and read.", detail };
+    return {
+      message: "Alignment matrix uploaded and read.",
+      detail,
+      links: [
+        {
+          href: `/qualifications/${qualificationId}`,
+          label: "Back to the qualification",
+        },
+      ],
+    };
   } catch (error) {
     if (
       error instanceof ProgrammeDocumentError ||

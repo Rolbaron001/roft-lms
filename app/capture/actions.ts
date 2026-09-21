@@ -82,6 +82,10 @@ export async function commitCaptureAction(
   const paperCode = String(formData.get("paperCode") ?? "").trim();
   const edited = String(formData.get("confirmed") ?? "");
 
+  // Set inside the try and read after it, so the redirect below is not itself
+  // inside a catch that would treat its control-flow throw as a failure.
+  let paperId: string | null = null;
+
   if (!assessmentId) return { error: "Choose which assessment this belongs to." };
   if (!paperCode) return { error: "Give the paper a code, such as V1." };
 
@@ -150,6 +154,17 @@ export async function commitCaptureAction(
           result.published.reasons.join(" "),
       };
     }
+
+    /*
+     * To the paper, not back to the list.
+     *
+     * Roland, 20 September: "Is this working? How do I see it (outside of
+     * being a learner)?" Committing a captured workbook redirected here to
+     * /capture, which shows the job that produced the paper and never the
+     * paper. So the one moment somebody most wants to look at what they have
+     * just built took them away from it, and nothing anywhere led back.
+     */
+    paperId = result.paperId;
   } catch (error) {
     if (
       error instanceof CaptureError ||
@@ -161,7 +176,9 @@ export async function commitCaptureAction(
     throw error;
   }
 
-  redirect("/capture");
+  // Outside the try: redirect() throws to do its work, and catching it here
+  // would swallow the navigation and report it as an error.
+  redirect(paperId ? `/papers/${paperId}/preview` : "/capture");
 }
 
 /**

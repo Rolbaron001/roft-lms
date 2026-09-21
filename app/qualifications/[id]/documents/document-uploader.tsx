@@ -59,6 +59,39 @@ export function DocumentUploader({
               ))}
             </ul>
           ) : null}
+          {/*
+            The way out of the form.
+
+            Roland, 21 September: "there is no clear navigation after the
+            upload message. The display still looks like I should be doing
+            something else on the page." It did, because the form is still
+            there under the result and the pointer above it still says to
+            upload. The first link is the one to take, so it is the solid
+            button; where nothing matched it goes to the problem rather than
+            to the top of the page.
+          */}
+          {state.links && state.links.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--success)]/20 pt-3">
+              {state.links.map((link, index) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={
+                    index === 0
+                      ? "rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                      : "rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
+                  }
+                  style={
+                    index === 0
+                      ? { background: "var(--brand-primary)" }
+                      : undefined
+                  }
+                >
+                  {link.label} &rarr;
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

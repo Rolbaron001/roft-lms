@@ -29,6 +29,7 @@ import {
   getSitting,
   PaperError,
   paperProblems,
+  previewPaper,
   publishPaper,
   saveAnswer,
   startAttempt,
@@ -712,5 +713,103 @@ describe("a paper that does not add up", () => {
         points: 1,
       }),
     ).rejects.toThrow(/correct answer recorded/);
+  });
+});
+
+/**
+ * Looking at a paper without sitting it.
+ *
+ * Roland, 20 September: "Workbooks and assessments are supposed to be 'Built
+ * into' the LMS ... screens with textboxes that a user types into, completes
+ * checkboxes, etc. Is this working? How do I see it (outside of being a
+ * learner)?"
+ *
+ * It was working and nothing showed it. Capture read a workbook into a paper,
+ * committed it and redirected to a list of jobs; the only screen that rendered
+ * a paper required an enrolment and started a real attempt on arrival. So the
+ * only way to look at your own paper was to enrol on it and begin sitting it,
+ * which both writes a submission and can only be done once.
+ *
+ * The two things that make a preview a preview are tested here: it writes
+ * nothing at all, and it shows the author the half that is kept from the
+ * candidate.
+ */
+describe("previewing a paper", () => {
+  it("writes nothing - no attempt, no submission", async () => {
+    const { paperId } = await buildWorkbook();
+
+    const before = await withTenant(organisationId, (tx) =>
+      tx.select().from(assessmentSubmissions),
+    );
+
+    await previewPaper(author, paperId);
+    // Twice, because an idempotent-looking read that quietly creates something
+    // on first call would still pass a single-call check.
+    await previewPaper(author, paperId);
+
+    const after = await withTenant(organisationId, (tx) =>
+      tx.select().from(assessmentSubmissions),
+    );
+
+    expect(after.length).toBe(before.length);
+  });
+
+  it("shows every question with nothing filled in", async () => {
+    const { paperId } = await buildWorkbook();
+    const preview = await previewPaper(author, paperId);
+
+    const items = preview.sections.flatMap((section) => section.items);
+    expect(items).toHaveLength(13);
+    expect(preview.totalMarks).toBe(58);
+
+    // A preview has nothing to resume. Any answer arriving here would be
+    // somebody else's, which is the one thing it must never show.
+    for (const item of items) {
+      expect(item.answer.selectedOptionIds).toBeNull();
+      expect(item.answer.answerText).toBeNull();
+      expect(item.answer.answerNumber).toBeNull();
+    }
+  });
+
+  it("shows the author the correct answers a learner is never shown", async () => {
+    const { paperId } = await buildWorkbook();
+    const preview = await previewPaper(author, paperId);
+
+    const choice = preview.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.stem === "Multiple choice 1");
+
+    // Option B, as buildWorkbook records it. A parser that got a correct
+    // answer wrong is invisible until a learner appeals, so this is the whole
+    // reason the screen exists.
+    expect(choice?.correctOptionIds).toHaveLength(1);
+    expect(
+      choice?.options?.find((one) => one.id === choice.correctOptionIds?.[0])
+        ?.text,
+    ).toBe("Option B");
+  });
+
+  it("says which questions the App can mark and which need an assessor", async () => {
+    const { paperId } = await buildWorkbook();
+    const preview = await previewPaper(author, paperId);
+    const items = preview.sections.flatMap((section) => section.items);
+
+    // Eight with a recorded correct option; five long answers judged by a
+    // person. Getting this backwards on a screen would tell a provider their
+    // summative marks itself.
+    expect(items.filter((item) => item.markedBy === "app")).toHaveLength(8);
+    expect(items.filter((item) => item.markedBy === "assessor")).toHaveLength(5);
+    expect(
+      items.find((item) => item.stem === "Structured question 1.3.1")
+        ?.markingGuide,
+    ).toBe("Award marks against the four-level rubric.");
+  });
+
+  it("is refused to a learner", async () => {
+    const { paperId } = await buildWorkbook();
+
+    // It carries every correct answer on the paper. The permission is the
+    // author's, and the check lives in the library rather than in the page.
+    await expect(previewPaper(learner, paperId)).rejects.toThrow();
   });
 });
