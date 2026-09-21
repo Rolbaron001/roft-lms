@@ -91,6 +91,55 @@ function textFrom(xml: string): string {
 // ----------------------------------------------------------------------- docx
 
 /**
+ * Removes text somebody struck through.
+ *
+ * Roland, 21 September 2026, after two rounds of me reading a document back to
+ * him with his own deletions still in it: "I think the problem is that you are
+ * not reading strikethrough text correctly."
+ *
+ * He was right, and it matters far beyond a job sheet. This reader is what the
+ * platform uses on every Word document a provider uploads: the curriculum it
+ * transcribes modules and assessment criteria from, the alignment document it
+ * builds study units from, the workbooks and memoranda Capture turns into
+ * questions a learner answers.
+ *
+ * Strikethrough is how people delete things in a document under review. A
+ * curriculum with a withdrawn criterion struck through, a workbook with a
+ * question struck out before a cohort sits it, an answer guide with a
+ * superseded answer struck and the correct one beside it: every one of those
+ * was read as live text. The struck line would have been transcribed as a
+ * criterion learners must meet, or captured as a question with the wrong
+ * answer marked correct, and nothing on any screen would have looked wrong.
+ *
+ * Both forms count, single and double. A run carrying w:val="0" or "false" is
+ * switching it off, usually to escape a style that had it on, so that is not a
+ * deletion.
+ *
+ * Anything this cannot parse is left alone, which is the safe direction:
+ * showing text somebody deleted is a fault, and dropping text they kept would
+ * be a worse one.
+ */
+function withoutStruckRuns(xml: string): string {
+  if (!/<w:(?:d)?strike\b/.test(xml)) return xml;
+
+  return xml.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, (run) => {
+    const properties = /<w:rPr>([\s\S]*?)<\/w:rPr>/.exec(run)?.[1];
+    if (!properties) return run;
+
+    const struck = /<w:(?:d)?strike(?:\s[^>]*)?\/?>/.exec(properties);
+    if (!struck) return run;
+    if (/w:val="(?:0|false|off)"/.test(struck[0])) return run;
+
+    /*
+     * Emptied rather than removed, so the paragraph and table structure the
+     * reader below depends on stays exactly as it was. Dropping the element
+     * would merge a struck cell into its neighbour.
+     */
+    return "<w:r></w:r>";
+  });
+}
+
+/**
  * The visible text of a Word document, one line per paragraph and table cells
  * separated by tabs.
  *
@@ -100,7 +149,7 @@ function textFrom(xml: string): string {
  */
 export function readDocxText(bytes: Uint8Array): string {
   const entries = open(bytes);
-  const xml = xmlOf(entries, "word/document.xml");
+  const xml = withoutStruckRuns(xmlOf(entries, "word/document.xml"));
 
   return xml
     .replace(/<w:tab\b[^>]*\/>/g, "\t")
