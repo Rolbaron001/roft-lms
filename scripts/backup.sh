@@ -16,25 +16,48 @@
 # Every step fails loudly. A backup script that quietly does nothing is worse
 # than none at all, because you stop worrying about it.
 #
-#   ./backup.sh              dump, archive, encrypt, upload, prune
-#   ./backup.sh --local-only skip the upload, leave both files in BACKUP_DIR
+#   ./backup.sh                 dump, archive, encrypt, upload, prune
+#   ./backup.sh --local-only    skip the upload, leave both files in BACKUP_DIR
+#   ./backup.sh --database-only dump the database; do not archive the evidence
+#
+# --database-only exists because the evidence archive is a FULL copy of every
+# uploaded file, and a full copy is the wrong thing to take several times a day.
+# On 20 September 2026 the evidence store passed 1 GB, every deploy took a
+# backup before deploying, and eleven backups in one day put 4 GB on a 19 GB
+# disk that was already 93% full. The database dump - the part that actually
+# changes between two deploys ten minutes apart - is under 1.5 MB.
+#
+# So the pre-deploy backup takes the database only, and the nightly run takes
+# both. See scripts/auto-deploy.sh.
 #
 # Required environment:
 #   PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
-#   BACKUP_PASSPHRASE   long random string; without it the backup is unreadable
-#   BACKUP_DIR          local staging directory
-#   STORAGE_LOCAL_ROOT  where evidence files live (default /app/storage)
-#   BACKUP_BUCKET       s3://bucket/prefix
-#   BACKUP_S3_ENDPOINT  S3-compatible endpoint (Oracle Object Storage, etc.)
-#   BACKUP_RETAIN_DAYS  default 30
+#   BACKUP_PASSPHRASE     long random string; without it the backup is unreadable
+#   BACKUP_DIR            local staging directory
+#   STORAGE_LOCAL_ROOT    where evidence files live (default /app/storage)
+#   BACKUP_BUCKET         s3://bucket/prefix
+#   BACKUP_S3_ENDPOINT    S3-compatible endpoint (Oracle Object Storage, etc.)
+#   BACKUP_RETAIN_DAYS    dumps, in days; default 30
+#   BACKUP_KEEP_EVIDENCE  evidence archives, as a COUNT; default 3
 
 set -Eeuo pipefail
 
 LOCAL_ONLY="no"
-[[ "${1:-}" == "--local-only" ]] && LOCAL_ONLY="yes"
+DATABASE_ONLY="no"
+for arg in "$@"; do
+  case "$arg" in
+    --local-only) LOCAL_ONLY="yes" ;;
+    --database-only) DATABASE_ONLY="yes" ;;
+    *) echo "Unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
 
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/roft-lms}"
 BACKUP_RETAIN_DAYS="${BACKUP_RETAIN_DAYS:-30}"
+# A count, not a number of days, and the difference is the whole point. Age
+# releases nothing when the weight is recent: on 20 September everything older
+# than seven days came to 0.08 GB while the previous three days came to 8.4 GB.
+BACKUP_KEEP_EVIDENCE="${BACKUP_KEEP_EVIDENCE:-3}"
 STORAGE_ROOT="${STORAGE_LOCAL_ROOT:-/app/storage}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 
@@ -115,8 +138,17 @@ log "Encrypted: ${ENCRYPTED}"
 # condition under which it will ever actually be restored.
 
 STORAGE_DRIVER="${STORAGE_DRIVER:-local}"
+EV_BYTES=0
+FILE_COUNT="not counted"
 
-if [[ "$STORAGE_DRIVER" != "local" ]]; then
+if [[ "$DATABASE_ONLY" == "yes" ]]; then
+  EVIDENCE_ENC=""
+  log ""
+  log "--database-only: the evidence files were NOT archived by this run."
+  log "This backup restores the database and nothing else. It is meant to sit"
+  log "alongside a nightly run that takes both, never to replace one."
+  log ""
+elif [[ "$STORAGE_DRIVER" != "local" ]]; then
   # Evidence is in a bucket, not on this disk. The storage directory still
   # exists and is empty, so archiving it would produce a tidy encrypted file
   # containing nothing and report success — which is the failure this whole
@@ -165,7 +197,7 @@ fi
 # A full archive every night is right while the evidence is small and wrong
 # once it is large — video evidence makes that turn quickly. Say so before it
 # becomes a three-hour nightly job nobody noticed growing.
-if [[ "$STORAGE_DRIVER" == "local" ]] && (( EV_BYTES > 2000000000 )); then
+if [[ "$DATABASE_ONLY" == "no" && "$STORAGE_DRIVER" == "local" ]] && (( EV_BYTES > 2000000000 )); then
   log ""
   log "NOTE: the evidence archive has passed 2 GB."
   log "A full copy every night is no longer the right shape. Move evidence to"
@@ -201,12 +233,40 @@ fi
 
 # --------------------------------------------------------------------- prune
 #
-# Last, and only after everything above succeeded. Both halves are pruned on
-# the same schedule so a surviving dump never outlives its evidence: a database
-# restored against missing files is the failure this script exists to prevent.
+# Last, and only after everything above succeeded. The two halves are pruned on
+# different rules now - dumps by age, evidence by count - and why that is safe
+# is set out below the dump prune.
 
-log "Pruning local copies older than ${BACKUP_RETAIN_DAYS} days..."
-find "$BACKUP_DIR" \( -name 'roft-lms-*.dump.enc' -o -name 'roft-lms-*.evidence.tar.gz.enc' \) \
+log "Pruning database dumps older than ${BACKUP_RETAIN_DAYS} days..."
+find "$BACKUP_DIR" -name 'roft-lms-*.dump.enc' \
   -type f -mtime "+${BACKUP_RETAIN_DAYS}" -print -delete
 
-log "Backup complete: database and ${FILE_COUNT} evidence files."
+# Evidence by count, and dumps may now outlive their evidence. That reverses
+# what this script used to do, so the reasoning is worth writing down.
+#
+# The old rule - prune both on the same schedule, so a dump never outlives its
+# evidence - exists to stop a restore producing a database full of references
+# to files that were never captured. Keeping the newest evidence archives
+# rather than the newest fortnight does not break it, because the evidence
+# store is append-only: a file, once uploaded, is not modified. So the most
+# recent archive holds everything an older dump refers to, and a ten-day-old
+# dump restored against today's evidence finds every file it names.
+#
+# What is genuinely lost is the ability to go back to how the files looked on
+# an older date, which matters if something removes or corrupts evidence and
+# nobody notices for longer than these copies cover. That is an accepted
+# position for the development period and not a permanent one. See
+# "Design/Server/Disk Capacity Note - lms.curiosa.academy.md".
+log "Keeping the newest ${BACKUP_KEEP_EVIDENCE} evidence archives..."
+ls -1t "$BACKUP_DIR"/roft-lms-*.evidence.tar.gz.enc 2>/dev/null \
+  | tail -n "+$((BACKUP_KEEP_EVIDENCE + 1))" \
+  | while read -r OLD; do
+      log "  removing $(basename "$OLD")"
+      rm -f "$OLD"
+    done
+
+if [[ "$DATABASE_ONLY" == "yes" ]]; then
+  log "Backup complete: database only. Evidence was not archived by this run."
+else
+  log "Backup complete: database and ${FILE_COUNT} evidence files."
+fi

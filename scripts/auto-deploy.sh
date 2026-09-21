@@ -201,7 +201,17 @@ log "Images fetched after ${WAITED}s."
 
 if [ -n "${BACKUP_PASSPHRASE:-}" ] || grep -q '^BACKUP_PASSPHRASE=' "$REPO/.env" 2>/dev/null; then
   log "Taking a database copy first."
-  $COMPOSE run --rm tools ./scripts/backup.sh --local-only >/dev/null 2>&1 \
+  # --database-only, and the reason is disk.
+  #
+  # The evidence half of a backup is a full copy of every uploaded file. Once
+  # the first qualification's material was in, that was ~1 GB a time, and this
+  # runs before EVERY deploy: on 19 September eleven of them put 4 GB onto a
+  # 19 GB disk that was already 93% full.
+  #
+  # What actually changes between two deploys ten minutes apart is the
+  # database, and that dump is under 1.5 MB. The evidence is still archived in
+  # full every night, by the same script without this flag.
+  $COMPOSE run --rm tools ./scripts/backup.sh --local-only --database-only >/dev/null 2>&1 \
     || log "WARNING: the pre-deploy backup failed. Continuing — the nightly backup is unaffected."
 else
   log "No BACKUP_PASSPHRASE set, so no pre-deploy copy. Set one."
