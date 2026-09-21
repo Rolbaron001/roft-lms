@@ -4,7 +4,11 @@ import { DEFAULT_TIME_ZONE, supportedTimeZones } from "@/lib/timezone";
 
 import { useActionState, useState } from "react";
 import { createTenantAction, type PlatformState } from "./actions";
-import { CAPABILITIES, CAPABILITY_KEYS } from "@/lib/features";
+import {
+  AWARD_CHOICES,
+  DELIVERY_CHOICES,
+  DEFAULT_STRUCTURE,
+} from "@/lib/features";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -225,42 +229,91 @@ export function NewTenantForm() {
           </legend>
 
           {/*
-            Switched on unless somebody says otherwise, and each one
-            independent of the others.
+            Two questions rather than a row of switches.
 
-            Roland, 21 September: "I need the system to be flexible per
-            client." The switch is about what a tenant does, never about what
-            kind of organisation it is. His own correction made the point: a
-            corporate client may be accredited to offer a qualification, as the
-            prospective Ranger clients would be, so "corporate" and
-            "accredited" cannot be one choice.
+            Roland, 21 September: "We have already determined that Course and
+            Study Unit are the same thing in terms of where they rank. What the
+            selection needs to do is to determine how the users view them." A
+            checkbox each would let somebody create a tenant with study units
+            and no qualification for them to sit in.
 
-            The label said "Learning paths" until 21 September. Roland's
-            working paper of 28 August recommended standardising on Programme
-            and retiring learning path to a first use synonym at most, and this
-            form was the one place left where a new tenant met the retired
-            word.
+            Neither word belongs to the regulator, and this form does not
+            suggest otherwise. Counted in the project's own documents, "study
+            unit" appears nowhere in the QCTO curriculum, qualification
+            document, assessment specification or SAQA's NQFpedia.
+
+            The full set is editable afterwards under Settings, so a wrong
+            answer here is not permanent.
           */}
-          {CAPABILITY_KEYS.map((key) => (
-            <label key={key} className="flex items-start gap-2 text-sm">
+          <p className="text-xs font-medium">What sits at the top</p>
+          {AWARD_CHOICES.map((choice) => (
+            <label key={choice.value} className="flex items-start gap-2 text-sm">
               <input
-                type="checkbox"
-                name={key}
-                defaultChecked
+                type="radio"
+                name="award"
+                value={choice.value}
+                defaultChecked={choice.value === DEFAULT_STRUCTURE.award}
                 className="mt-1"
               />
               <span>
-                {CAPABILITIES[key].label}
+                {choice.label}
                 <span className="block text-xs text-[var(--muted)]">
-                  {CAPABILITIES[key].covers}
-                </span>
-                <span className="block text-xs text-[var(--muted)]">
-                  <strong>Switch it off when:</strong>{" "}
-                  {CAPABILITIES[key].offWhen}
+                  {choice.chooseWhen}
                 </span>
               </span>
             </label>
           ))}
+
+          <p className="mt-3 text-xs font-medium">
+            What a learner works through
+          </p>
+          {DELIVERY_CHOICES.map((choice) => (
+            <label key={choice.value} className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="delivery"
+                value={choice.value}
+                defaultChecked={choice.value === DEFAULT_STRUCTURE.delivery}
+                className="mt-1"
+              />
+              <span>
+                {choice.label}
+                <span className="block text-xs text-[var(--muted)]">
+                  {choice.chooseWhen}
+                </span>
+              </span>
+            </label>
+          ))}
+
+          <label className="mt-3 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="statutory_reporting"
+              defaultChecked
+              className="mt-1"
+            />
+            <span>
+              Statutory reporting
+              <span className="block text-xs text-[var(--muted)]">
+                NLRD exports and WSP/ATR returns.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="workplace_experience"
+              defaultChecked
+              className="mt-1"
+            />
+            <span>
+              Workplace experience
+              <span className="block text-xs text-[var(--muted)]">
+                Agreements, coach guides and sign off sheets.
+              </span>
+            </span>
+          </label>
 </fieldset>
 
         <fieldset className="grid gap-3 rounded-md border border-[var(--border)] p-4 sm:grid-cols-3">

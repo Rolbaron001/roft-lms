@@ -4,8 +4,9 @@ import { dateInZone } from "@/lib/timezone";
 import { requireSession, requireTenant } from "@/lib/request";
 import { namingConventionFor } from "@/lib/capture";
 import { proposeModuleCodeTable } from "@/lib/module-code-settings";
-import { capabilitiesOf } from "@/lib/features";
+import { settledTerms, structureOf } from "@/lib/features";
 import { arrangeNavigation } from "@/lib/navigation";
+import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { BrandingForm } from "./branding-form";
@@ -96,9 +97,19 @@ export default async function SettingsPage({
    * of the sections below are even relevant, so reading it last would be
    * reading it in the wrong order.
    */
-  const capabilities = canManageSettings
-    ? capabilitiesOf(tenant.featureFlags)
-    : null;
+  const structure = canManageSettings ? structureOf(tenant.featureFlags) : null;
+  const words = vocabulary(tenant.terminology);
+
+  /*
+   * Words the shape has already settled, which nobody should be asked to set
+   * twice.
+   *
+   * Roland, 21 September: "pointless displaying courses if the user has
+   * already selected Courses/Study Units." Choosing study units is choosing
+   * the word; offering a box to rename "course" afterwards invites somebody to
+   * set a word the platform will never show, then wonder why.
+   */
+  const settled = new Set(settledTerms(tenant.featureFlags));
 
   // The extension is against this person's own profile, so it is offered to
   // anybody whose role includes model assistance rather than to administrators
@@ -152,9 +163,16 @@ export default async function SettingsPage({
       />
       </div>
 
-      {capabilities ? (
+      {structure ? (
         <div className="mt-6">
-          <CapabilitiesForm current={capabilities} />
+          <CapabilitiesForm
+            current={structure}
+            words={{
+              programme: words.one("programme"),
+              studyUnit: words.one("studyUnit"),
+              course: words.one("course"),
+            }}
+          />
         </div>
       ) : null}
 
@@ -194,7 +212,7 @@ export default async function SettingsPage({
             description="Use your own vocabulary. A provider outside South Africa may not say programme, and a provider inside it may not say course — the platform should not insist."
           >
             <TerminologyForm
-              terms={TERM_KEYS.map((key) => ({
+              terms={TERM_KEYS.filter((key) => !settled.has(key)).map((key) => ({
                 key,
                 defaultOne: TERMS[key].one,
                 defaultMany: TERMS[key].many,

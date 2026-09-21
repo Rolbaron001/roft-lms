@@ -1,32 +1,199 @@
 /**
- * What a tenant's platform actually does.
+ * What a tenant's platform is, and how its people see it.
  *
- * Roland, 21 September 2026: "I'm trying to think for different clients, not
- * all of whom will be located in South Africa and some even when in South
- * Africa won't care about accrediting a qualification, but will want a course
- * to present to employees. I need the system to be flexible per client."
+ * Roland, 21 September 2026: "I need the system to be flexible per client."
+ * Not every client is in South Africa, not every client seeks accreditation,
+ * and a corporate client may be accredited all the same, as the prospective
+ * Ranger clients would be. The choice is about what a tenant does, never about
+ * what kind of organisation it is.
  *
- * The switch is about what a tenant does, never about what kind of
- * organisation it is. Roland's own correction made the point: a corporate
- * client may be accredited to offer a qualification, as the prospective Ranger
- * clients would be. "Corporate" and "accredited" are independent facts, so
- * tying one capability to the other would be wrong the first time it was used.
+ * **This began as five independent switches and that was wrong.** Roland, the
+ * same afternoon: "We have already determined that Course and Study Unit are
+ * the same thing in terms of where they rank. What the selection needs to do
+ * is to determine how the users view them."
  *
- * Three things were needed to make this work and only one was missing.
- * Terminology already exists per tenant, with a settings screen. Navigation
- * already exists per tenant, with an editor. Feature flags existed as a form
- * and a database column and were **read by nothing**: a tenant created with
- * learning paths switched off still saw the Programmes menu. This module is
- * the missing reader.
+ * Independent switches let somebody produce a platform that cannot exist: study
+ * units with no qualification to sit inside, or a separate Programme layer on a
+ * provider for whom the qualification *is* the programme. A checkbox each says
+ * the layers are optional. They are not optional, they are named differently by
+ * different providers, and two of them are one thing seen twice.
  *
- * The structure does not change. Roland's working paper of 28 August checked
- * the Qualification / Programme / Course model against SAQA, DHET, the QCTO,
- * Ofqual, the US CEDS standard, Moodle Workplace, Coursera and edX, and none
- * of the seven collapses the atomic teaching unit into the bundle above it.
- * What changes is what each tenant sees and what each tenant calls it.
+ * So there are two questions rather than five, each with one answer:
+ *
+ *   **What sits at the top.** Some providers deliver one qualification as one
+ *   learning programme, so the two are one thing to them. Heidi: "we have
+ *   programmes, not courses ... at this stage a qualification is a programme."
+ *   Elsewhere they are two different things, or there is no qualification.
+ *
+ *   **What a learner works through.** A Course and a Study Unit occupy the same
+ *   rank. Choosing one is choosing the word and the shape together, which is
+ *   why choosing it also settles the terminology.
+ *
+ * **Neither word is the regulator's, and the platform must not imply it is.**
+ * Counted on 21 September in the project's own documents: "study unit" appears
+ * zero times in the 121151 curriculum, its qualification document, its
+ * assessment specification, the 118709 curriculum and SAQA's NQFpedia.
+ * "Course" appears zero times in the four QCTO documents and three times in
+ * NQFpedia, never as a defined term. The regulator's word for this layer is
+ * **learning programme**, and SAQA keeps it distinct from a qualification: a
+ * learning programme "leads to" one. So these are offered as a provider's own
+ * vocabulary, and no screen claims the QCTO requires either.
+ *
+ * Two ordinary switches remain beside them, because statutory returns and
+ * workplace assessment genuinely are independent of both questions.
+ *
+ * The three tier model underneath does not change. Roland's working paper of
+ * 28 August checked it against SAQA, DHET, the QCTO, Ofqual, the US CEDS
+ * standard, Moodle Workplace, Coursera and edX, and none of the seven collapses
+ * the atomic teaching unit into the bundle above it. What changes is which
+ * layers a provider is shown and what each is called.
  *
  * This module imports nothing, so a form can use it.
  */
+
+/** What sits at the top of this provider's world. */
+export type Award =
+  | "qualification_programme"
+  | "qualification_and_programme"
+  | "programmes_only"
+  | "standalone";
+
+/** What a learner is put onto and works through. */
+export type Delivery = "courses" | "study_units";
+
+export type Structure = {
+  award: Award;
+  delivery: Delivery;
+  statutory_reporting: boolean;
+  workplace_experience: boolean;
+};
+
+export type Choice<T extends string> = {
+  value: T;
+  label: string;
+  covers: string;
+  /** Who this is for, in the words a provider would use about themselves. */
+  chooseWhen: string;
+};
+
+export const AWARD_CHOICES: Choice<Award>[] = [
+  {
+    value: "qualification_programme",
+    label: "Qualification / Programme",
+    covers:
+      "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
+    chooseWhen:
+      "You deliver one occupational qualification as one learning programme. This is Curiosa's shape.",
+  },
+  {
+    value: "qualification_and_programme",
+    label: "Qualification and Programme, separately",
+    covers:
+      "Two different things. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
+    chooseWhen:
+      "You run accredited qualifications and also bundle deliverables into sequences that are not one qualification each.",
+  },
+  {
+    value: "programmes_only",
+    label: "Programmes only",
+    covers:
+      "Programmes bundle what a learner works through. No accreditation record, no curriculum, no statements of results.",
+    chooseWhen:
+      "Nothing you deliver answers to a registered qualification: induction, compliance refreshers, internal skills programmes.",
+  },
+  {
+    value: "standalone",
+    label: "Neither",
+    covers:
+      "Everything stands on its own. Nothing bundles it and nothing accredits it.",
+    chooseWhen:
+      "Every piece of training you run is taken on its own, one at a time.",
+  },
+];
+
+export const DELIVERY_CHOICES: Choice<Delivery>[] = [
+  {
+    value: "courses",
+    label: "Courses",
+    covers:
+      "A course is what a learner is put onto and works through: its lessons, its workbooks, its assessments. It may sit under a programme, and it need answer to no qualification.",
+    chooseWhen:
+      "Your people say course, or you build training that no qualification governs.",
+  },
+  {
+    value: "study_units",
+    label: "Study units",
+    covers:
+      "A study unit is what a learner works through, and it replaces the course entirely. It sits inside a qualification, bundling the knowledge, practical and workplace modules that serve one exit level outcome.",
+    chooseWhen:
+      "Your people say study unit rather than course. The curriculum publishes modules and leaves the grouping to you, so this is your own structure. Requires a qualification at the top.",
+  },
+];
+
+/**
+ * The default, which is today's behaviour rather than an opinion.
+ *
+ * Every tenant created before this existed has an empty record, and Curiosa's
+ * is empty on production. They currently see Qualifications, Programmes and
+ * Courses, so that is what an unconfigured tenant must keep seeing. Anything
+ * else would change a live provider's platform on the deploy that shipped
+ * this, silently.
+ */
+export const DEFAULT_STRUCTURE: Structure = {
+  award: "qualification_and_programme",
+  delivery: "courses",
+  statutory_reporting: true,
+  workplace_experience: true,
+};
+
+/** Whatever is stored, read as a whole structure. Absent parts take the default. */
+export function structureOf(
+  stored: Partial<Structure> | null | undefined,
+): Structure {
+  const award = AWARD_CHOICES.some((one) => one.value === stored?.award)
+    ? (stored!.award as Award)
+    : DEFAULT_STRUCTURE.award;
+
+  const delivery = DELIVERY_CHOICES.some((one) => one.value === stored?.delivery)
+    ? (stored!.delivery as Delivery)
+    : DEFAULT_STRUCTURE.delivery;
+
+  return {
+    award,
+    // Study units cannot exist without a qualification to sit inside. Stored
+    // state can say otherwise if somebody edits the record by hand or changes
+    // the award without the delivery; reading it back corrects it rather than
+    // producing a platform that cannot exist.
+    delivery: delivery === "study_units" && !hasQualification(award)
+      ? "courses"
+      : delivery,
+    statutory_reporting: stored?.statutory_reporting !== false,
+    workplace_experience: stored?.workplace_experience !== false,
+  };
+}
+
+function hasQualification(award: Award): boolean {
+  return (
+    award === "qualification_programme" ||
+    award === "qualification_and_programme"
+  );
+}
+
+/**
+ * Whether study units may be chosen at all, given what sits at the top.
+ *
+ * Roland: "Selecting one of the 2 makes the other un-selectable." This is the
+ * rule behind that. A study unit is a grouping inside a registered
+ * qualification, so a provider with no qualification has nothing for one to
+ * live in.
+ */
+export function deliveryAvailable(award: Award, delivery: Delivery): boolean {
+  return delivery === "courses" || hasQualification(award);
+}
+
+// ---------------------------------------------------------------------------
+// What the rest of the platform asks
+// ---------------------------------------------------------------------------
 
 export type Capability =
   | "qualifications"
@@ -35,105 +202,171 @@ export type Capability =
   | "statutory_reporting"
   | "workplace_experience";
 
-export type CapabilityShape = {
-  label: string;
-  /** What switching it off takes away, in the words a provider would use. */
-  covers: string;
-  /**
-   * Why a provider might not want it, which is the half a settings screen
-   * usually leaves out. A switch with no stated reason gets left at whatever
-   * it came as.
-   */
-  offWhen: string;
-};
-
-export const CAPABILITIES: Record<Capability, CapabilityShape> = {
-  qualifications: {
-    label: "Accredited qualifications",
-    covers:
-      "Qualifications, their curriculum and assessment criteria, EISA readiness, statements of results and certificates.",
-    offWhen:
-      "This provider delivers training that answers to no qualification: induction, compliance refreshers, internal skills courses.",
-  },
-  study_units: {
-    label: "Study units",
-    covers:
-      "The grouping between a qualification and its material, bundling the knowledge, practical and workplace modules that serve one exit level outcome.",
-    offWhen:
-      "This provider builds courses straight against modules, or against nothing at all. Common outside the occupational framework.",
-  },
-  programmes: {
-    label: "Programmes",
-    covers:
-      "Bundling several courses into one ordered sequence a learner moves through.",
-    offWhen:
-      "Everything this provider runs is a single course taken on its own.",
-  },
-  statutory_reporting: {
-    label: "Statutory reporting",
-    covers:
-      "NLRD and Edu.Dex exports, WSP and ATR returns, and the statutory register behind them.",
-    offWhen:
-      "This provider is outside South Africa, or somebody else files on their behalf.",
-  },
-  workplace_experience: {
-    label: "Workplace experience",
-    covers:
-      "Workplace agreements, coach guides, sign off sheets and the hours a learner logs against a host employer.",
-    offWhen:
-      "Nothing this provider delivers is assessed in a workplace.",
-  },
-};
-
-export const CAPABILITY_KEYS = Object.keys(CAPABILITIES) as Capability[];
-
-/** What a tenant has switched on. Absent keys are on. */
-export type CapabilityFlags = Partial<Record<Capability, boolean>>;
+/** What a tenant has, derived from the two choices rather than stored twice. */
+export type CapabilityFlags = Partial<Structure>;
 
 /**
  * Whether a capability is available to this tenant.
  *
- * **Absent means on, and that is the whole safety property.** Every tenant
- * created before this existed carries an empty `featureFlags`, and Curiosa's
- * is empty on production today. Reading a missing key as "off" would have
- * removed qualifications, study units and statutory reporting from a live
- * provider on the deploy that shipped this, silently, with the data still
- * there and no screen to reach it from.
- *
- * So a capability is off only where somebody has said so.
+ * Derived, so the answer cannot disagree with the choices. Storing both the
+ * choices and the capabilities would eventually produce a tenant whose
+ * qualification layer is on and whose award says there is none.
  */
-export function can(flags: CapabilityFlags | null | undefined, capability: Capability): boolean {
-  return flags?.[capability] !== false;
+export function can(
+  stored: CapabilityFlags | null | undefined,
+  capability: Capability,
+): boolean {
+  const structure = structureOf(stored);
+
+  switch (capability) {
+    case "qualifications":
+      return hasQualification(structure.award);
+    /*
+     * A separate Programmes screen, which is not the same question as whether
+     * this provider has programmes. Under "Qualification / Programme" they
+     * have one, and it is the qualification, so a second screen listing
+     * programmes would be listing the same objects again under another name.
+     */
+    case "programmes":
+      return (
+        structure.award === "qualification_and_programme" ||
+        structure.award === "programmes_only"
+      );
+    case "study_units":
+      return structure.delivery === "study_units";
+    case "statutory_reporting":
+      return structure.statutory_reporting;
+    case "workplace_experience":
+      return structure.workplace_experience;
+  }
 }
 
-/**
- * The capabilities a tenant has, filled in.
- *
- * Used where a screen needs several at once, so it reads one object rather
- * than calling `can` five times and getting one of them wrong.
- */
+export const CAPABILITY_KEYS: Capability[] = [
+  "qualifications",
+  "study_units",
+  "programmes",
+  "statutory_reporting",
+  "workplace_experience",
+];
+
 export function capabilitiesOf(
-  flags: CapabilityFlags | null | undefined,
+  stored: CapabilityFlags | null | undefined,
 ): Record<Capability, boolean> {
   return Object.fromEntries(
-    CAPABILITY_KEYS.map((key) => [key, can(flags, key)]),
+    CAPABILITY_KEYS.map((key) => [key, can(stored, key)]),
   ) as Record<Capability, boolean>;
 }
 
+// ---------------------------------------------------------------------------
+// What it is called
+// ---------------------------------------------------------------------------
+
 /**
- * The flags a form posted, as they should be stored.
+ * Terms this structure has already settled, which nobody should be asked to
+ * name a second time.
  *
- * Only the ones switched off are written. Storing `true` for everything else
- * would work, and would mean a capability added later arrives switched off for
- * every tenant that has ever saved this form, because their stored object says
- * nothing about it and the form that wrote it did not know it existed. Storing
- * the exceptions keeps "absent means on" true for the future as well as the
- * past.
+ * Roland: "These selections should then also impact on 'What you call things'
+ * - pointless displaying courses if the user has already selected
+ * Courses/Study Units."
+ *
+ * Choosing study units is choosing the word. Offering a box to rename "course"
+ * afterwards invites somebody to set a word the platform will never show, and
+ * then to wonder why it never appears.
  */
-export function flagsFrom(chosen: Record<string, boolean>): CapabilityFlags {
-  const stored: CapabilityFlags = {};
-  for (const key of CAPABILITY_KEYS) {
-    if (chosen[key] === false) stored[key] = false;
+export function settledTerms(
+  stored: CapabilityFlags | null | undefined,
+): string[] {
+  const structure = structureOf(stored);
+  const settled: string[] = [];
+
+  // The delivery choice named it. Whichever was not chosen is not shown.
+  if (structure.delivery === "study_units") settled.push("course");
+  else settled.push("studyUnit");
+
+  // Under one combined award there is no separate programme to name.
+  if (
+    structure.award === "qualification_programme" ||
+    structure.award === "standalone"
+  ) {
+    settled.push("programme");
   }
-  return stored;
+
+  return settled;
+}
+
+// ---------------------------------------------------------------------------
+// Saying it back
+// ---------------------------------------------------------------------------
+
+export type ShapeLayer = { name: string; note?: string };
+
+/**
+ * The shape these choices produce, said back to the reader.
+ *
+ * Roland, looking at the first version: "Neither is it clear that Programme can
+ * equal Qualification and in Curiosa's case actually be the same thing."
+ *
+ * Derived from the choices rather than written alongside them, because a second
+ * description drifts from the first, and the way it drifts is somebody changing
+ * a choice while the sentence stays put.
+ */
+export function platformShape(
+  stored: CapabilityFlags | null | undefined,
+): ShapeLayer[] {
+  const structure = structureOf(stored);
+  const layers: ShapeLayer[] = [];
+
+  if (structure.award === "qualification_programme") {
+    layers.push({
+      name: "Qualification / Programme",
+      note: "One thing. A learner is put onto the qualification, and that is the programme they work through.",
+    });
+  }
+
+  if (structure.award === "qualification_and_programme") {
+    layers.push({
+      name: "Qualification",
+      note: "The accreditation record: its curriculum, criteria and exit level outcomes.",
+    });
+    layers.push({
+      name: "Programme",
+      note: "An ordered sequence, which may answer to a qualification or to none.",
+    });
+  }
+
+  if (structure.award === "programmes_only") {
+    layers.push({
+      name: "Programme",
+      note: "An ordered sequence, answering to no registered qualification.",
+    });
+  }
+
+  layers.push(
+    structure.delivery === "study_units"
+      ? {
+          name: "Study unit",
+          note: "What a learner works through. There is nothing below it.",
+        }
+      : {
+          name: "Course",
+          note: "What a learner works through. There is nothing below it.",
+        },
+  );
+
+  return layers;
+}
+
+/** The structure a form posted, checked rather than trusted. */
+export function structureFrom(posted: {
+  award?: string | null;
+  delivery?: string | null;
+  statutory_reporting?: boolean;
+  workplace_experience?: boolean;
+}): Structure {
+  return structureOf({
+    award: posted.award as Award,
+    delivery: posted.delivery as Delivery,
+    statutory_reporting: posted.statutory_reporting,
+    workplace_experience: posted.workplace_experience,
+  });
 }

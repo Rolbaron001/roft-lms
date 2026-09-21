@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
-import { CAPABILITY_KEYS, flagsFrom } from "@/lib/features";
+import { structureFrom } from "@/lib/features";
 import {
   createTenant,
   ProvisioningError,
@@ -57,15 +57,16 @@ function readTenantFields(formData: FormData): TenantInput {
     qualityAssurancePartner: text("qualityAssurancePartner"),
     dataRetentionYears: Number(formData.get("dataRetentionYears") ?? 5),
     /*
-     * Only what was switched OFF is stored. See lib/features.ts: a capability
-     * added later would otherwise arrive switched off for every tenant whose
-     * record was written by a form that did not know it existed.
+     * The shape of this tenant's platform, checked against the known choices
+     * rather than trusted. structureFrom also refuses the one combination that
+     * cannot exist: study units with no qualification above them.
      */
-    featureFlags: flagsFrom(
-      Object.fromEntries(
-        CAPABILITY_KEYS.map((key) => [key, formData.get(key) === "on"]),
-      ),
-    ),
+    featureFlags: structureFrom({
+      award: String(formData.get("award") ?? ""),
+      delivery: String(formData.get("delivery") ?? ""),
+      statutory_reporting: formData.get("statutory_reporting") === "on",
+      workplace_experience: formData.get("workplace_experience") === "on",
+    }),
   };
 }
 

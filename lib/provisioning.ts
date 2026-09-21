@@ -1,5 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { flagsFrom } from "./features";
+import { structureFrom } from "./features";
 import { z } from "zod";
 import { withPlatformScope, withTenant } from "@/db/client";
 import { organisations, userRoles, users } from "@/db/schema";
@@ -122,7 +122,9 @@ export const tenantInput = z.object({
    * which is what keeps every tenant created before this existed working
    * unchanged. See lib/features.ts.
    */
-  featureFlags: z.record(z.string(), z.boolean()).default({}),
+  featureFlags: z
+    .record(z.string(), z.union([z.string(), z.boolean()]))
+    .default({}),
 });
 
 export type TenantInput = z.input<typeof tenantInput>;
@@ -666,10 +668,20 @@ export { RESERVED_SLUGS };
  */
 export async function setTenantCapabilities(
   session: AuthenticatedSession,
-  chosen: Record<string, boolean>,
+  chosen: {
+    award?: string | null;
+    delivery?: string | null;
+    statutory_reporting?: boolean;
+    workplace_experience?: boolean;
+  },
 ) {
   assertSessionCan(session, "tenant:manage_settings");
-  const flags = flagsFrom(chosen);
+  /*
+   * Read back through structureOf, which refuses a shape that cannot exist:
+   * study units with no qualification above them correct themselves to
+   * courses rather than being stored as a platform nobody can navigate.
+   */
+  const flags = structureFrom(chosen);
 
   const result = await withTenant(session.organisationId, async (tx) => {
     const [before] = await tx

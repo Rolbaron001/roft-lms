@@ -209,9 +209,17 @@ export const organisations = pgTable(
      * gets the portfolio-of-evidence and statutory reporting modules.
      * Read through lib/features.ts rather than touched directly.
      */
+    /**
+     * The shape of this tenant's platform.
+     *
+     * Two choices and two switches, read through lib/features.ts. Loosely
+     * typed on purpose: an absent key means "as it has always been", which is
+     * what keeps every tenant created before this existed working unchanged.
+     * See DEFAULT_STRUCTURE.
+     */
     featureFlags: jsonb("feature_flags")
       .notNull()
-      .$type<Record<string, boolean>>()
+      .$type<Record<string, string | boolean>>()
       .default({}),
 
     // Provider identity, used by the NLRD Provider Record export.
