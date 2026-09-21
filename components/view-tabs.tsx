@@ -41,7 +41,15 @@ export function ViewTabs({
 }) {
   return (
     <nav
-      aria-label="Sections of this page"
+      /*
+        Named apart from the in-page navigation.
+        
+        Both were "Sections of this page", and a qualification page carries
+        both at once - so a screen reader announced two landmarks with the same
+        name and no way to tell which was which. They are different things:
+        this switches between views of the page, PageNav moves within one.
+      */
+      aria-label="Views of this page"
       className="mb-6 flex flex-wrap gap-1 border-b border-[var(--border)]"
     >
       {tabs.map((tab, index) => {

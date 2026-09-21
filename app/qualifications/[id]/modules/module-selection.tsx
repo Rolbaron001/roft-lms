@@ -165,9 +165,26 @@ export function ModuleSelection({
         </p>
       ) : null}
       {state.notice ? (
-        <p className="rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm text-[var(--success)]">
-          {state.notice}
-        </p>
+        <div className="rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm">
+          <p className="text-[var(--success)]">{state.notice}</p>
+          {/*
+            The way onward, which this did not offer.
+
+            Roland, 21 September, about the same omission on the document
+            uploader: "there is no clear navigation after the upload message.
+            The display still looks like I should be doing something else on
+            the page." It did there and it did here - a tick list, a sentence
+            saying it saved, and nothing to press. Ticking modules is a job
+            somebody finishes, so the screen has to say where finished leads.
+          */}
+          <a
+            href={`/qualifications/${qualificationId}`}
+            className="mt-2 inline-block rounded-md px-3 py-1.5 text-sm font-medium text-white"
+            style={{ background: "var(--brand-primary)" }}
+          >
+            Back to the qualification &rarr;
+          </a>
+        </div>
       ) : null}
 
       <button

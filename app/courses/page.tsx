@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCourses } from "@/lib/authoring";
-import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { AppShell, StatusBadge } from "@/components/app-shell";
+import { EmptyState } from "@/components/empty-state";
 import { vocabulary } from "@/lib/terms";
 
 const COMPONENT_LABELS: Record<string, string> = {
@@ -35,14 +36,40 @@ export default async function CoursesPage() {
       </div>
 
       {courses.length === 0 ? (
-        <Card>
-          <p className="text-sm text-[var(--muted)]">
-            No courses yet.
-            {canAuthor
-              ? " Create one to get started."
-              : " Nothing has been published for you yet."}
-          </p>
-        </Card>
+        /*
+          Said with a way out of it.
+
+          "Create one to get started" is a direction with nothing to press, the
+          same fault Roland raised on the qualification screens on 19
+          September. The button is the one thing to do here, so it is a button.
+        */
+        <EmptyState
+          title={`No ${words.many("course").toLowerCase()} yet`}
+          action={
+            canAuthor ? (
+              <Link
+                href="/courses/new"
+                className="rounded-md px-4 py-2 text-sm font-semibold text-white"
+                style={{ background: "var(--brand-primary)" }}
+              >
+                New {words.one("course").toLowerCase()} &rarr;
+              </Link>
+            ) : null
+          }
+        >
+          {canAuthor ? (
+            <p>
+              A course is what a learner actually works through. It hangs off a
+              study unit or a curriculum module, so a qualification is worth
+              loading first.
+            </p>
+          ) : (
+            <p>
+              Nothing has been published for you yet. When it has been, what
+              you are enrolled on will be here.
+            </p>
+          )}
+        </EmptyState>
       ) : (
         <div className="space-y-3">
           {courses.map((course) => (

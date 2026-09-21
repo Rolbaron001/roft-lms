@@ -18,6 +18,7 @@ import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { ViewTabs } from "@/components/view-tabs";
+import { PageNav } from "@/components/page-nav";
 import { qualificationUsage } from "@/lib/qualification-removal";
 import { blueprintFrom } from "@/lib/blueprint-export";
 import { RemoveQualification } from "./remove-qualification";
@@ -581,6 +582,20 @@ export default async function QualificationPage({
       ) : (
       <>
 
+      {/*
+        The way around the long tab.
+
+        Roland, 19 September: "A floating navigation bar or sub-menu would work
+        better for such long pages." This one runs to fifteen modules, five
+        hundred curriculum lines and eighty documents; by the time somebody is
+        reading a criterion the headings are a screen and a half above them.
+
+        Only on this tab. The build tab is a column of forms somebody works
+        down in order, and a menu over the top of it would be answering a
+        question nobody is asking there.
+      */}
+      <PageNav />
+
       {notCaptured.length > 0 ? (
         <div
           className="mb-6 rounded-lg border-2 p-4"
@@ -603,7 +618,11 @@ export default async function QualificationPage({
       ) : null}
 
       {studyUnits.length > 0 || outcomes.length > 0 ? (
-        <section id="structure" className="mb-8 scroll-mt-24">
+        <section
+          id="structure"
+          data-page-section="Study units"
+          className="mb-8 scroll-mt-24"
+        >
           <h2 className="mb-2 font-semibold">Delivery structure</h2>
           <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
             The curriculum publishes modules; a provider teaches study units.
@@ -816,7 +835,11 @@ export default async function QualificationPage({
         </section>
       ) : null}
 
-      <section id="documents" className="mb-8 scroll-mt-24">
+      <section
+        id="documents"
+        data-page-section="Documents"
+        className="mb-8 scroll-mt-24"
+      >
         <h2 className="mb-2 font-semibold">Programme documents</h2>
         <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
           Filed here are the authoritative copies: the source documents this
@@ -895,7 +918,11 @@ export default async function QualificationPage({
         )}
       </section>
 
-      <h2 id="curriculum" className="mb-2 scroll-mt-24 font-semibold">
+      <h2
+        id="curriculum"
+        data-page-section="Curriculum"
+        className="mb-2 scroll-mt-24 font-semibold"
+      >
         Curriculum
       </h2>
       <div className="space-y-4">
