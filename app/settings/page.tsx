@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
 import { requireSession, requireTenant } from "@/lib/request";
 import { namingConventionFor } from "@/lib/capture";
+import { proposeModuleCodeTable } from "@/lib/module-code-settings";
 import { arrangeNavigation } from "@/lib/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
+import { ModuleCodesForm } from "./module-codes-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
@@ -81,6 +83,9 @@ export default async function SettingsPage({
   );
   const convention = canManageSettings
     ? await namingConventionFor(session)
+    : null;
+  const moduleCodes = canManageSettings
+    ? await proposeModuleCodeTable(session)
     : null;
 
   // The extension is against this person's own profile, so it is offered to
@@ -309,6 +314,20 @@ export default async function SettingsPage({
       {convention ? (
         <div className="mt-6">
           <NamingForm current={convention} />
+        </div>
+      ) : null}
+
+      {/*
+        Beside the filename convention, because it is the same kind of setting:
+        what this provider's documents look like, told to the App once rather
+        than corrected on every upload.
+      */}
+      {moduleCodes ? (
+        <div className="mt-6">
+          <ModuleCodesForm
+            rows={moduleCodes.rows}
+            confirmed={moduleCodes.confirmed}
+          />
         </div>
       ) : null}
     </AppShell>

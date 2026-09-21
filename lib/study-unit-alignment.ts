@@ -32,6 +32,8 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { readAlignmentDocument } from "./alignment-document";
+import { normaliseCode, resolveCode } from "./module-codes";
+import { moduleCodeAliasesFor } from "./module-code-settings";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 export type AlignmentApplied = {
@@ -51,6 +53,12 @@ export async function applyAlignmentDocument(
   assertSessionCan(session, "qualification:manage");
 
   const reading = readAlignmentDocument(text);
+
+  // This tenant's own spellings, read once before the transaction rather than
+  // per module. Empty until somebody has confirmed a table in Settings, and an
+  // empty table leaves the exact and punctuation-insensitive matches exactly
+  // as they were.
+  const aliases = await moduleCodeAliasesFor(session);
 
   const applied: AlignmentApplied = {
     studyUnitsCreated: 0,
@@ -83,11 +91,34 @@ export async function applyAlignmentDocument(
       .from(curriculumModules)
       .where(inArray(curriculumModules.qualificationId, owners));
 
-    // Matched without punctuation: the alignment document writes KM-01 and the
-    // curriculum document writes KM01.
+    /*
+     * Matched three ways, in order, and the order is the safety.
+     *
+     * Exactly, first: the code as the curriculum holds it.
+     *
+     * Then without punctuation, because the alignment document writes KM-01
+     * and the curriculum document writes KM01. That was already here and
+     * covers the easy third of it.
+     *
+     * Then through this tenant's own table of spellings, which is what crosses
+     * a dropped leading zero or a shortened prefix - the failure that took all
+     * fifteen modules of 121151 at once on 21 September. The table is
+     * generated, shown and confirmed by a person in Settings; it is empty
+     * until then, and an empty table changes nothing about the two steps
+     * above. See lib/module-codes.ts.
+     */
     const moduleByCode = new Map(
-      modules.map((one) => [one.code.replace(/[-\s]/g, "").toUpperCase(), one.id]),
+      modules.map((one) => [normaliseCode(one.code), one.id]),
     );
+
+    const known = modules.map((one) => one.code);
+    const findModule = (code: string): string | undefined => {
+      const direct = moduleByCode.get(normaliseCode(code));
+      if (direct) return direct;
+
+      const resolved = resolveCode(code, known, aliases);
+      return resolved ? moduleByCode.get(resolved) : undefined;
+    };
 
     /** Codes the document names that the curriculum does not hold. */
     const unmatched: string[] = [];
@@ -205,7 +236,7 @@ export async function applyAlignmentDocument(
 
       // --- the modules it covers -------------------------------------------
       for (const code of unit.moduleCodes) {
-        const moduleId = moduleByCode.get(code);
+        const moduleId = findModule(code);
 
         if (!moduleId) {
           /*
