@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAnyPermission, requireTenant } from "@/lib/request";
+import { requireAnyPermission, requireCapability } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
@@ -78,7 +78,7 @@ export default async function QualificationPage({
    * another.
    */
   const view = (await searchParams).view === "build" ? "build" : "holds";
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("qualifications");
   /*
    * Read by everybody who delivers or judges against it; changed by an
    * administrator.

@@ -134,3 +134,16 @@ at `F:\CHRISTO-CLAUDE\Projects\BMA\Apps\National Border Targeting Centre Managem
 portable design** - the contract, the credential handling, and the four fields
 that each exist because their absence caused a specific failure. Read it before
 building that one; do not rebuild from recollection.
+
+## How generated text must read
+
+Heidi, 21 September 2026: Claude must not start sentences with conjunctions
+such as "and" or "but", and must not use em dashes.
+
+This governs everything the platform produces and everything written for the
+client: screen copy, error messages, generated documents, reports, notes. Use
+a colon, a semicolon, a comma or a full stop where an em dash would have gone.
+Start the sentence with its subject.
+
+It is a house style decision, not a preference to be weighed. Curiosa hand
+these documents to the QCTO and to their own clients.

@@ -4,6 +4,7 @@ import { DEFAULT_TIME_ZONE, supportedTimeZones } from "@/lib/timezone";
 
 import { useActionState, useState } from "react";
 import { createTenantAction, type PlatformState } from "./actions";
+import { CAPABILITIES, CAPABILITY_KEYS } from "@/lib/features";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -223,32 +224,44 @@ export function NewTenantForm() {
             What this client gets
           </legend>
 
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="learning_paths" defaultChecked className="mt-1" />
-            <span>Learning paths</span>
-          </label>
+          {/*
+            Switched on unless somebody says otherwise, and each one
+            independent of the others.
 
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="qcto_portfolio" className="mt-1" />
-            <span>
-              Portfolio of evidence
-              <span className="block text-xs text-[var(--muted)]">
-                For an accredited Skills Development Provider. An internal
-                training department does not need it.
-              </span>
-            </span>
-          </label>
+            Roland, 21 September: "I need the system to be flexible per
+            client." The switch is about what a tenant does, never about what
+            kind of organisation it is. His own correction made the point: a
+            corporate client may be accredited to offer a qualification, as the
+            prospective Ranger clients would be, so "corporate" and
+            "accredited" cannot be one choice.
 
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="statutory_reporting" className="mt-1" />
-            <span>
-              SAQA and SETA returns
-              <span className="block text-xs text-[var(--muted)]">
-                NLRD exports and WSP/ATR reporting.
+            The label said "Learning paths" until 21 September. Roland's
+            working paper of 28 August recommended standardising on Programme
+            and retiring learning path to a first use synonym at most, and this
+            form was the one place left where a new tenant met the retired
+            word.
+          */}
+          {CAPABILITY_KEYS.map((key) => (
+            <label key={key} className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                name={key}
+                defaultChecked
+                className="mt-1"
+              />
+              <span>
+                {CAPABILITIES[key].label}
+                <span className="block text-xs text-[var(--muted)]">
+                  {CAPABILITIES[key].covers}
+                </span>
+                <span className="block text-xs text-[var(--muted)]">
+                  <strong>Switch it off when:</strong>{" "}
+                  {CAPABILITIES[key].offWhen}
+                </span>
               </span>
-            </span>
-          </label>
-        </fieldset>
+            </label>
+          ))}
+</fieldset>
 
         <fieldset className="grid gap-3 rounded-md border border-[var(--border)] p-4 sm:grid-cols-3">
           <legend className="px-1 text-sm font-medium">

@@ -1,4 +1,4 @@
-import { requireAnyPermission, requireTenant } from "@/lib/request";
+import { requireAnyPermission, requireCapability } from "@/lib/request";
 import { listCurriculumModules, listQualifications } from "@/lib/authoring";
 import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
@@ -43,7 +43,7 @@ export default async function QualificationsPage({
   const how = HOW_OPTIONS.some((option) => option.id === params.how)
     ? params.how
     : null;
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("qualifications");
   // Read by everybody who delivers or judges against a qualification; built
   // and changed by an administrator. See the detail page for the reasoning.
   const session = await requireAnyPermission([

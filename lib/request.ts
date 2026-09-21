@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   resolveSession,
   SESSION_COOKIE,
@@ -9,6 +9,7 @@ import {
 } from "./session";
 import { preferredHost, resolveTenant, type TenantIdentity } from "./tenant";
 import type { Permission } from "./rbac";
+import { can, type Capability } from "./features";
 
 /**
  * Request-scoped helpers. Everything a page or action needs to know about who
@@ -99,6 +100,29 @@ export async function requireSessionForPasswordChange(): Promise<AuthenticatedSe
  * not entitled to see is a different situation from not being signed in — and
  * quietly bouncing them to a login form they have already passed is confusing.
  */
+/**
+ * Refuses a page belonging to a capability this tenant does not have.
+ *
+ * Hiding a menu entry is not hiding a feature. Every one of these pages stays
+ * reachable by typing the address, by a link in an old email, by a bookmark
+ * kept from before somebody switched the capability off. A provider told that
+ * statutory reporting is not part of their platform, who can still open the
+ * statutory register and see a form, has been told something untrue.
+ *
+ * `notFound` rather than `/not-permitted`: the two say different things, and
+ * the difference matters. "You may not" invites somebody to ask for the right.
+ * The honest answer here is that the page is not part of this platform at all.
+ */
+export async function requireCapability(
+  capability: Capability,
+): Promise<TenantIdentity> {
+  const tenant = await requireTenant();
+  if (!can(tenant.featureFlags, capability)) {
+    notFound();
+  }
+  return tenant;
+}
+
 export async function requirePermission(
   permission: Permission,
 ): Promise<AuthenticatedSession> {

@@ -4,6 +4,7 @@ import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
 import { arrangeNavigation } from "@/lib/navigation";
+import { can } from "@/lib/features";
 import { vocabulary } from "@/lib/terms";
 import { OfflineRegistration } from "./offline-registration";
 import { TenantLogo } from "./tenant-logo";
@@ -48,7 +49,13 @@ export async function AppShell({
         // A capability the tenant has not switched on has no link, whoever is
         // looking. Checked before the permission, because "this does not exist
         // here" comes before "you may not".
-        .filter((item) => (item.feature === "offline" ? tenant.offlineEnabled : true))
+        .filter((item) =>
+          item.feature === undefined
+            ? true
+            : item.feature === "offline"
+              ? tenant.offlineEnabled
+              : can(tenant.featureFlags, item.feature),
+        )
         .filter((item) =>
           item.permission
             ? session.permissions.includes(item.permission)

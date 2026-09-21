@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireCapability, requirePermission } from "@/lib/request";
 import { listLearningPaths } from "@/lib/learning-paths";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
@@ -24,7 +24,7 @@ export default async function PathsPage({
 }: {
   searchParams: Promise<{ view?: string }>;
 }) {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("programmes");
   const words = vocabulary(tenant.terminology);
   const session = await requirePermission("course:read");
   const paths = await listLearningPaths(session);

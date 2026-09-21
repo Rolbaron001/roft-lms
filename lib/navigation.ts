@@ -1,3 +1,4 @@
+import type { Capability } from "./features";
 import type { Permission } from "./rbac";
 import type { TermKey, Vocabulary } from "./terms";
 
@@ -34,8 +35,12 @@ export type NavItem = {
    * exists here at all. Offline was reachable by URL and in no menu, so on a
    * tenant that had switched it on there was no way for a learner to find the
    * one page the whole feature is for.
+   *
+   * Offline was the only one of these for a long time and has a column of its
+   * own. The five capabilities beside it live in `featureFlags` and are read
+   * through lib/features.ts, where a missing flag means on rather than off.
    */
-  feature?: "offline";
+  feature?: Capability | "offline";
 };
 
 /**
@@ -57,7 +62,13 @@ export const NAV: NavSection[] = [
     label: "Learning",
     items: [
       { href: "/courses", label: "Courses", term: "course", permission: "course:read" },
-      { href: "/paths", label: "Programmes", term: "programme", permission: "course:author" },
+      {
+        href: "/paths",
+        label: "Programmes",
+        term: "programme",
+        permission: "course:author",
+        feature: "programmes",
+      },
       /*
         Read by everybody who delivers or judges against it.
 
@@ -70,6 +81,7 @@ export const NAV: NavSection[] = [
       {
         href: "/qualifications",
         label: "Qualifications",
+        feature: "qualifications",
         anyPermission: [
           "qualification:manage",
           "course:author",
@@ -103,6 +115,7 @@ export const NAV: NavSection[] = [
       {
         href: "/workplace",
         label: "Work experience",
+        feature: "workplace_experience",
         anyPermission: ["workplace:sign", "workplace:manage", "workplace:log"],
       },
       { href: "/conduct", label: "Conduct", permission: "grievance:manage" },
@@ -158,11 +171,17 @@ export const NAV: NavSection[] = [
           "assessment:assess",
         ],
       },
-      { href: "/eisa", label: "EISA entry", permission: "enrolment:read_all" },
+      {
+        href: "/eisa",
+        label: "EISA entry",
+        permission: "enrolment:read_all",
+        feature: "qualifications",
+      },
       {
         href: "/readiness",
         label: "EISA readiness",
         permission: "enrolment:read_all",
+        feature: "qualifications",
       },
     ],
   },
@@ -178,7 +197,12 @@ export const NAV: NavSection[] = [
         label: "Reports",
         anyPermission: ["report:team", "report:tenant"],
       },
-      { href: "/statutory", label: "Statutory", permission: "report:statutory" },
+      {
+        href: "/statutory",
+        label: "Statutory",
+        permission: "report:statutory",
+        feature: "statutory_reporting",
+      },
       /*
         Its own entry rather than a tab inside Statutory: this one has a clock
         on it. A coordinator needs to see that something is overdue without
@@ -188,6 +212,7 @@ export const NAV: NavSection[] = [
         href: "/statutory/notify",
         label: "Enrolment notification",
         permission: "report:statutory",
+        feature: "statutory_reporting",
       },
       /*
         The two reports about the material rather than about the people, and

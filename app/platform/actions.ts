@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/request";
+import { CAPABILITY_KEYS, flagsFrom } from "@/lib/features";
 import {
   createTenant,
   ProvisioningError,
@@ -55,11 +56,16 @@ function readTenantFields(formData: FormData): TenantInput {
     wardCode: text("wardCode"),
     qualityAssurancePartner: text("qualityAssurancePartner"),
     dataRetentionYears: Number(formData.get("dataRetentionYears") ?? 5),
-    featureFlags: {
-      qcto_portfolio: formData.get("qcto_portfolio") === "on",
-      statutory_reporting: formData.get("statutory_reporting") === "on",
-      learning_paths: formData.get("learning_paths") === "on",
-    },
+    /*
+     * Only what was switched OFF is stored. See lib/features.ts: a capability
+     * added later would otherwise arrive switched off for every tenant whose
+     * record was written by a form that did not know it existed.
+     */
+    featureFlags: flagsFrom(
+      Object.fromEntries(
+        CAPABILITY_KEYS.map((key) => [key, formData.get(key) === "on"]),
+      ),
+    ),
   };
 }
 

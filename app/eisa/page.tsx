@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireCapability, requirePermission } from "@/lib/request";
 import {
   registrationDue,
   upcomingSittings,
@@ -23,7 +23,7 @@ import { SittingForm } from "./sitting-form";
  * deadline passed in August, and nobody notices until it has.
  */
 export default async function EisaPage() {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("qualifications");
   const words = vocabulary(tenant.terminology);
   const session = await requirePermission("enrolment:read_all");
 

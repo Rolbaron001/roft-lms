@@ -1,6 +1,7 @@
 import { eq, or } from "drizzle-orm";
 import { withPlatformScope } from "@/db/client";
 import { organisations } from "@/db/schema";
+import type { CapabilityFlags } from "./features";
 import type { TermOverrides } from "./terms";
 
 /**
@@ -45,6 +46,15 @@ export type TenantIdentity = {
    * service worker is ever registered.
    */
   offlineEnabled: boolean;
+  /**
+   * The capabilities this tenant has switched off, if any.
+   *
+   * Absent keys mean on. See lib/features.ts: every tenant created before
+   * these existed carries an empty object, so reading a missing key as "off"
+   * would remove qualifications and statutory reporting from a live provider
+   * on the deploy that shipped it.
+   */
+  featureFlags: CapabilityFlags | null;
   status: (typeof organisations.$inferSelect)["status"];
 };
 
@@ -188,6 +198,7 @@ export async function resolveTenant(
           navigation: organisations.navigation,
           terminology: organisations.terminology,
           offlineEnabled: organisations.offlineEnabled,
+          featureFlags: organisations.featureFlags,
           status: organisations.status,
         })
         .from(organisations)

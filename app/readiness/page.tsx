@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireCapability, requirePermission } from "@/lib/request";
 import { cohortReadiness } from "@/lib/eisa";
 import { AppShell, Card } from "@/components/app-shell";
 
@@ -11,7 +11,7 @@ import { AppShell, Card } from "@/components/app-shell";
  * page exists to answer is "who can go", not "who is doing well".
  */
 export default async function ReadinessPage() {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("qualifications");
   const session = await requirePermission("enrolment:read_all");
   const rows = await cohortReadiness(session);
 

@@ -1,9 +1,9 @@
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireCapability, requirePermission } from "@/lib/request";
 import { buildNlrdDataset, buildWspAtr } from "@/lib/statutory";
 import { AppShell, Card } from "@/components/app-shell";
 
 export default async function StatutoryPage() {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("statutory_reporting");
   const session = await requirePermission("report:statutory");
 
   const [dataset, wspAtr] = await Promise.all([

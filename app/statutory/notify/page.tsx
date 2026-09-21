@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { dateInZone } from "@/lib/timezone";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requireCapability, requirePermission } from "@/lib/request";
 import {
   listNotifications,
   notificationDue,
@@ -26,7 +26,7 @@ import {
  * submission whose deadline is not theirs.
  */
 export default async function NotifyPage() {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("statutory_reporting");
   const session = await requirePermission("report:statutory");
 
   const today = dateInZone(new Date(), tenant.timezone);

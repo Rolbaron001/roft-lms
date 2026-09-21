@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { requireCapability, requireSession } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { myLogbooks } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
  * not something a permission can express.
  */
 export default async function WorkplacePage() {
-  const tenant = await requireTenant();
+  const tenant = await requireCapability("workplace_experience");
   const session = await requireSession();
   const logbooks = await myLogbooks(session);
   // The client calls this a workplace experience sign-off rather than a

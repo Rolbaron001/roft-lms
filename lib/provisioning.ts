@@ -114,17 +114,14 @@ export const tenantInput = z.object({
     .refine(isSupportedTimeZone, "That is not a time zone this server knows.")
     .default(DEFAULT_TIME_ZONE),
   dataRetentionYears: z.coerce.number().int().min(1).max(50).default(5),
-  featureFlags: z
-    .object({
-      qcto_portfolio: z.boolean().default(false),
-      statutory_reporting: z.boolean().default(false),
-      learning_paths: z.boolean().default(true),
-    })
-    .default({
-      qcto_portfolio: false,
-      statutory_reporting: false,
-      learning_paths: true,
-    }),
+  /*
+   * The capabilities this tenant has switched off.
+   *
+   * Partial and loose on purpose. A missing key means the capability is on,
+   * which is what keeps every tenant created before this existed working
+   * unchanged. See lib/features.ts.
+   */
+  featureFlags: z.record(z.string(), z.boolean()).default({}),
 });
 
 export type TenantInput = z.input<typeof tenantInput>;
