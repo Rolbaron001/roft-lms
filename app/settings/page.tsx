@@ -4,12 +4,14 @@ import { dateInZone } from "@/lib/timezone";
 import { requireSession, requireTenant } from "@/lib/request";
 import { namingConventionFor } from "@/lib/capture";
 import { proposeModuleCodeTable } from "@/lib/module-code-settings";
+import { capabilitiesOf } from "@/lib/features";
 import { arrangeNavigation } from "@/lib/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { BrandingForm } from "./branding-form";
 import { NamingForm } from "./naming-form";
 import { ModuleCodesForm } from "./module-codes-form";
+import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
@@ -87,6 +89,16 @@ export default async function SettingsPage({
   const moduleCodes = canManageSettings
     ? await proposeModuleCodeTable(session)
     : null;
+  /*
+   * What this provider's platform is for.
+   *
+   * Placed near the top of the page rather than at the foot: it decides which
+   * of the sections below are even relevant, so reading it last would be
+   * reading it in the wrong order.
+   */
+  const capabilities = canManageSettings
+    ? capabilitiesOf(tenant.featureFlags)
+    : null;
 
   // The extension is against this person's own profile, so it is offered to
   // anybody whose role includes model assistance rather than to administrators
@@ -139,6 +151,12 @@ export default async function SettingsPage({
         }}
       />
       </div>
+
+      {capabilities ? (
+        <div className="mt-6">
+          <CapabilitiesForm current={capabilities} />
+        </div>
+      ) : null}
 
       {canManageSettings ? (
         <div

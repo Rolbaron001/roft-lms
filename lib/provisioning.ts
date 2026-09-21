@@ -1,4 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
+import { flagsFrom } from "./features";
 import { z } from "zod";
 import { withPlatformScope, withTenant } from "@/db/client";
 import { organisations, userRoles, users } from "@/db/schema";
@@ -642,3 +643,59 @@ export async function setTenantTimeZone(
 }
 
 export { RESERVED_SLUGS };
+
+/**
+ * Which capabilities this tenant's platform has.
+ *
+ * Roland, 21 September 2026: "please apply it, but in such a way that it is
+ * seen to be applied and can be changed. Not hard-coded for Curiosa."
+ *
+ * The switches existed only on the tenant creation form until now, which meant
+ * a tenant already running could not see what it had or change any of it. A
+ * setting nobody can see is indistinguishable from a setting that does not
+ * work, and the whole point of the five is that a provider chooses.
+ *
+ * Its own permission, alongside the clock rather than alongside the logo.
+ * Switching a capability off changes what the platform is for this provider,
+ * not how it looks.
+ *
+ * Nothing is deleted. A capability switched off hides its screens and refuses
+ * its addresses; the qualifications, the returns and the workplace records
+ * stay exactly where they are, and switching it back on brings them back. That
+ * is what makes this safe to try, and the screen says so.
+ */
+export async function setTenantCapabilities(
+  session: AuthenticatedSession,
+  chosen: Record<string, boolean>,
+) {
+  assertSessionCan(session, "tenant:manage_settings");
+  const flags = flagsFrom(chosen);
+
+  const result = await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({ featureFlags: organisations.featureFlags })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+
+    const [updated] = await tx
+      .update(organisations)
+      .set({ featureFlags: flags, updatedAt: new Date() })
+      .where(eq(organisations.id, session.organisationId))
+      .returning({ featureFlags: organisations.featureFlags });
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.capabilities_updated",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { featureFlags: before?.featureFlags ?? null },
+      after: { featureFlags: updated.featureFlags },
+    });
+
+    return updated.featureFlags;
+  });
+
+  clearTenantCache();
+  return result;
+}

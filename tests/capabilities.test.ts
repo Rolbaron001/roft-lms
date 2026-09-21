@@ -180,3 +180,62 @@ describe("what a person setting this up is told", () => {
     expect(CAPABILITIES.programmes.label).toBe("Programmes");
   });
 });
+
+/**
+ * Seen to be applied, and changeable.
+ *
+ * Roland, 21 September: "The two settings don't appear in the LMS yet. So
+ * please apply it, but in such a way that it is seen to be applied and can be
+ * changed. Not hard-coded for Curiosa."
+ *
+ * The switches existed only on the form that creates a tenant, so a provider
+ * already running could neither see what they had nor change any of it. A
+ * setting nobody can see is indistinguishable from a setting that does not
+ * work.
+ */
+describe("a running tenant can see and change its own switches", () => {
+  function source(path: string): string {
+    return readFileSync(join(process.cwd(), path), "utf8");
+  }
+
+  it("has a settings section built from the capability list", () => {
+    const form = source("app/settings/capabilities-form.tsx");
+    // Built from the list rather than written out, so a sixth capability
+    // appears here without anybody editing this file.
+    expect(form).toMatch(/CAPABILITY_KEYS\.map/);
+    expect(source("app/settings/page.tsx")).toMatch(/<CapabilitiesForm/);
+  });
+
+  it("reads every switch from the known list, not from the post", () => {
+    /*
+     * An unchecked box posts nothing at all. Reading the form's keys would
+     * make "switched off" and "not sent" the same thing, which is fine here
+     * and wrong the moment a browser sends a partial form.
+     */
+    const action = source("app/settings/capabilities-actions.ts");
+    expect(action).toMatch(/CAPABILITY_KEYS\.map/);
+    expect(action).toMatch(/requirePermission\("tenant:manage_settings"\)/);
+  });
+
+  it("says that switching one off deletes nothing", () => {
+    // The sentence that makes this safe to try. Without it the honest reading
+    // of an unchecked box is that the records went with it.
+    expect(source("app/settings/capabilities-form.tsx")).toMatch(
+      /Nothing is deleted/i,
+    );
+  });
+
+  it("is audited, because it changes what the platform is", () => {
+    expect(source("lib/provisioning.ts")).toMatch(
+      /action: "tenant\.capabilities_updated"/,
+    );
+  });
+
+  it("clears the cached tenant, or the menu would not move", () => {
+    // The tenant record is cached. Saving without clearing it leaves the menu
+    // exactly as it was, which reads as the setting having failed.
+    const lib = source("lib/provisioning.ts");
+    const at = lib.indexOf("setTenantCapabilities");
+    expect(lib.slice(at)).toMatch(/clearTenantCache\(\)/);
+  });
+});
