@@ -160,7 +160,7 @@ log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
 # was fine. Six days of deploys were lost to a disk check that took one line.
 FREE_MB=$(df -Pm / | awk 'NR==2 {print $4}')
 if [ "${FREE_MB:-0}" -lt 3000 ]; then
-  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af --filter until=72h' and 'docker builder prune -af'. Nothing has been changed. Both commands run on the server, over SSH - run on your own machine they talk to Docker Desktop and do nothing for this."
+  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af' and 'docker builder prune -af'. Nothing has been changed. Both commands run on the server, over SSH - run on your own machine they talk to Docker Desktop and do nothing for this."
 fi
 log "${FREE_MB}MB free before pulling."
 
@@ -342,8 +342,49 @@ fi
 # Three days still leaves two local rollback targets, and nothing is ever
 # really lost: every one of these images is in ghcr.io and re-pulls if a
 # rollback needs one. The local copy only saves the download.
-log "Clearing images older than three days."
-docker image prune -af --filter "until=72h" 2>/dev/null | tail -1 | sed 's/^/  /' || true
+# Kept by count, not by age, for the same reason the backups are.
+#
+# Three days looked generous when it was written, and the arithmetic assumed
+# one deploy a day. On 21 September 2026 there were six, and a deploy lands
+# 972MB of app image and 1.36GB of tools image - 2.33GB a time. Every one of
+# them was inside the 72-hour window, so the age filter released nothing at
+# all: 4.6GB of unused images sat on a 19GB disk while the prune reported
+# "Total reclaimed space: 0B" after each deploy.
+#
+# That is the same shape as the backup retention fixed earlier the same day.
+# Age is the wrong unit whenever the churn is faster than the window, and a
+# development day is much faster than a day.
+#
+# Two versions plus the running one is two local rollback targets, and nothing
+# is ever really lost: every one of these images is in ghcr.io and re-pulls if
+# a rollback needs it. The local copy only saves the download.
+KEEP_VERSIONS="${KEEP_VERSIONS:-2}"
+log "Keeping the newest ${KEEP_VERSIONS} image versions."
+
+# Newest first, one entry per commit tag. Both the app and the tools image
+# carry the same tag, so a version is kept or dropped as a pair - keeping an
+# app image whose tools image had gone would leave a rollback unable to
+# migrate.
+KEEP_TAGS=$(docker images --format '{{.CreatedAt}}|{{.Tag}}' 2>/dev/null \
+  | grep 'roft-lms' \
+  | sort -r \
+  | cut -d'|' -f2 \
+  | awk '!seen[$0]++' \
+  | head -n "$KEEP_VERSIONS")
+
+docker images --format '{{.Repository}}:{{.Tag}}|{{.Tag}}' 2>/dev/null \
+  | grep 'roft-lms' \
+  | while IFS='|' read -r REF TAG; do
+      if ! printf '%s\n' "$KEEP_TAGS" | grep -qx "$TAG"; then
+        # An image a container is using is refused by docker, which is the
+        # safety net rather than the plan: the running version is the newest
+        # and so is always in KEEP_TAGS.
+        docker rmi "$REF" >/dev/null 2>&1 || true
+      fi
+    done
+
+# Anything left untagged by the above, plus build layers.
+docker image prune -f >/dev/null 2>&1 || true
 docker builder prune -af >/dev/null 2>&1 || true
 log "$(df -Pm / | awk 'NR==2 {print $4}')MB free after tidying."
 

@@ -98,3 +98,52 @@ describe("what pruning keeps", () => {
     expect(backup).toMatch(/append-only/);
   });
 });
+
+/**
+ * The same lesson, one layer down.
+ *
+ * The backups above were kept by age, and age released nothing because the
+ * churn was faster than the window. On 21 September 2026 the images did it
+ * again: six deploys in a day, 2.33 GB each (972 MB of app image and 1.36 GB
+ * of tools image), all of them inside a 72-hour retention. The prune printed
+ * "Total reclaimed space: 0B" after every one while 4.6 GB of unused images
+ * sat on a 19 GB disk.
+ *
+ * The comment defending three days had done the arithmetic for one deploy a
+ * day. A development day is not one deploy.
+ */
+describe("how many image versions the server keeps", () => {
+  it("counts versions rather than measuring their age", () => {
+    expect(deploy).toMatch(/KEEP_VERSIONS="\$\{KEEP_VERSIONS:-2\}"/);
+    // The age filter that could not release anything is gone, not merely
+    // supplemented - leaving it beside a count would re-impose the rule the
+    // count exists to replace.
+    expect(deploy).not.toMatch(/image prune -af --filter "until=72h"/);
+  });
+
+  it("keeps each version as a pair", () => {
+    /*
+     * The app image carries the code and the tools image carries the
+     * migrations, and they share a commit tag. Keeping an app image whose
+     * tools image had been removed would leave a rollback able to start and
+     * unable to migrate - which is the failure this script's own comments
+     * describe as the worst outcome, because the site comes up healthy against
+     * the wrong schema.
+     */
+    expect(deploy).toMatch(/KEEP_TAGS=/);
+    expect(deploy).toMatch(/grep -qx "\$TAG"/);
+  });
+
+  it("still clears dangling layers, which have no version at all", () => {
+    expect(deploy).toMatch(/docker image prune -f/);
+    expect(deploy).toMatch(/docker builder prune -af/);
+  });
+
+  it("tells somebody the right command when the disk is already full", () => {
+    // The failure message named the filter that cannot help. Somebody reading
+    // it at 100% full would run it, reclaim nothing, and conclude the disk was
+    // genuinely in use.
+    expect(deploy).not.toMatch(/prune -af --filter until=72h/);
+    expect(deploy).toMatch(/Reclaim space first: 'docker image prune -af'/);
+  });
+});
