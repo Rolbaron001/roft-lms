@@ -54,6 +54,28 @@
   --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /**
+   * The smallest text on the platform, 13px rather than 12px.
+   *
+   * Heidi could not read the delivery structure panel on 21 September. Two
+   * things were true of it, and only one was obvious. The colour was grey,
+   * which is fixed above. The other was size: 28 of that panel's elements were
+   * 12px, and across the platform 431 places put 12px and the muted colour on
+   * the same element.
+   *
+   * Contrast was never the failing measurement. The old grey gave 5.76:1
+   * against a 4.5:1 requirement, so it passed and was still unreadable. Twelve
+   * pixel grey on a bright screen defeats a reader whatever the ratio says, and
+   * fixing only the colour would have left half the cause in place.
+   *
+   * One line rather than 574 edits, because this is a theme decision and not a
+   * per screen one. Everything using text-xs grows by a pixel: the secondary
+   * lines this is for, and the badges and chips beside them, which is the
+   * proportion being preserved rather than a side effect to regret.
+   */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
 }
 
 body {
