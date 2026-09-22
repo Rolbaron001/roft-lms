@@ -1,10 +1,15 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { withTenant } from "@/db/client";
 import { assessmentCriteria, assessments } from "@/db/schema";
-import { CaptureError, getCaptureJob } from "@/lib/capture";
+import {
+  CaptureError,
+  captureOrigin,
+  getCaptureJob,
+  wayBackFrom,
+} from "@/lib/capture";
 import { AppShell, Card } from "@/components/app-shell";
 import { ReviewForm } from "./review-form";
 
@@ -41,7 +46,22 @@ export default async function ReviewCapturePage({
     throw error;
   }
 
-  const [available, criteria] = await Promise.all([
+  /*
+   * A committed job has nothing left to review, and the paper it became is
+   * what anybody arriving here actually wants.
+   *
+   * Roland, 22 September: the button on a committed upload "serves no purpose.
+   * It doesn't open the document, nor does it actually show a preview screen
+   * (of what a student would see)". There is such a screen, and this job knows
+   * which paper it is, so the dead end goes to it instead of describing
+   * itself.
+   */
+  if (job.committedAt && job.paperId) {
+    redirect(`/papers/${job.paperId}/preview`);
+  }
+
+  const [origin, available, criteria] = await Promise.all([
+    captureOrigin(session, { jobId: id }),
     withTenant(session.organisationId, (tx) =>
       tx
         .select({
@@ -59,11 +79,16 @@ export default async function ReviewCapturePage({
     ),
   ]);
 
+  const back = wayBackFrom(origin);
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <Link href="/capture" className="text-sm text-[var(--muted)] hover:underline">
-          ← Uploads
+        <Link
+          href={back.href}
+          className="text-sm text-[var(--muted)] hover:underline"
+        >
+          ← {back.label}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{job.paperFilename}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">

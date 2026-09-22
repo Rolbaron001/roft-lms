@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { previewPaper, PaperError } from "@/lib/papers";
+import { captureOrigin, wayBackFrom } from "@/lib/capture";
 import { AppShell, Card } from "@/components/app-shell";
 
 /**
@@ -45,15 +46,20 @@ export default async function PaperPreviewPage({
 
   const items = paper.sections.flatMap((section) => section.items);
   const byApp = items.filter((item) => item.markedBy === "app").length;
+  const back = wayBackFrom(await captureOrigin(session, { paperId: id }));
 
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
+        {/*
+          Back to where the work started, which after a commit is the
+          qualification rather than the upload list. Roland, 22 September.
+        */}
         <Link
-          href="/capture"
+          href={back.href}
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          &larr; Capture
+          &larr; {back.label}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">
           {paper.assessmentTitle}{" "}

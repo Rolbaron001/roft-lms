@@ -19,6 +19,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { wayBackFrom } from "@/lib/capture";
 
 function source(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -97,6 +98,88 @@ describe("a result that finishes a job offers the way out of it", () => {
     const selection = code("app/qualifications/[id]/modules/module-selection.tsx");
     expect(selection).toMatch(/state\.notice/);
     expect(selection).toMatch(/Back to the qualification/);
+  });
+});
+
+/**
+ * A screen reached from somewhere offers the way back to it.
+ *
+ * Roland, 22 September: capturing a workbook from inside a qualification
+ * "works nicely", and then "there is a small link to Uploads, but this link
+ * takes you to 'Capture a paper'. It needs to take you back to Workbooks and
+ * Assessments inside the qualification."
+ *
+ * The same link is on the review screen and on the paper preview, which is
+ * where a commit actually lands, so the rule is tested once and both screens
+ * are held to it.
+ */
+describe("a capture screen goes back to where the work started", () => {
+  it("offers the qualification when it came from one", () => {
+    expect(
+      wayBackFrom({ qualificationId: "abc", title: "HRM Officer" }),
+    ).toEqual({
+      href: "/qualifications/abc#capture",
+      label: "Workbooks and assessments",
+    });
+  });
+
+  it("lands on the anchor, not the top of a very long page", () => {
+    // The qualification page runs to fifteen modules and eighty documents.
+    // Returning somebody to the top of it is not returning them to where
+    // they were.
+    expect(wayBackFrom({ qualificationId: "abc", title: "x" }).href).toMatch(
+      /#capture$/,
+    );
+
+    const page = source("app/qualifications/[id]/page.tsx");
+    expect(page).toMatch(/id="capture"/);
+  });
+
+  it("falls back to the upload list for a paper uploaded on its own", () => {
+    expect(wayBackFrom(null)).toEqual({ href: "/capture", label: "Uploads" });
+  });
+
+  it.each([
+    "app/capture/[id]/page.tsx",
+    "app/papers/[id]/preview/page.tsx",
+  ])("%s uses the shared rule rather than a hardcoded link", (path) => {
+    const page = code(path);
+    expect(page).toMatch(/wayBackFrom/);
+    expect(page).not.toMatch(/href="\/capture"/);
+  });
+});
+
+/**
+ * A button that only explains why it does nothing is not a button.
+ *
+ * Roland, 22 September: "the view button on an assessment or workbook after it
+ * has been captured ... serves no purpose. It doesn't open the document, nor
+ * does it actually show a preview screen (of what a student would see) ... It
+ * gives a message which is meaningless, and could rather be displayed in the
+ * box under the file name."
+ */
+describe("a committed upload offers its paper, not a message", () => {
+  const list = code("app/capture/page.tsx");
+
+  it("sends a committed upload to the preview", () => {
+    expect(list).toMatch(/\/papers\/\$\{job\.paperId\}\/preview/);
+  });
+
+  it("says what happened in the line rather than on another screen", () => {
+    expect(list).toMatch(/An upload is committed once/);
+  });
+
+  it("keeps the review route for what is still outstanding", () => {
+    expect(list).toMatch(/\/capture\/\$\{job\.id\}/);
+    expect(list).toMatch(/Review/);
+  });
+
+  it("does not strand a committed job on the message it used to show", () => {
+    // The review screen has nothing to review once a job is committed, so it
+    // hands over to the paper instead of describing itself.
+    const review = code("app/capture/[id]/page.tsx");
+    expect(review).toMatch(/job\.committedAt && job\.paperId/);
+    expect(review).toMatch(/redirect\(`\/papers\/\$\{job\.paperId\}\/preview`\)/);
   });
 });
 

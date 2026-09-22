@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { listCaptureJobs, namingConventionFor } from "@/lib/capture";
+import { dateInZone } from "@/lib/timezone";
 import { listProgrammeReadiness } from "@/lib/programme-readiness";
 import { EmptyState } from "@/components/empty-state";
 import { AppShell } from "@/components/app-shell";
@@ -95,20 +96,47 @@ export default async function CapturePage() {
                 key={job.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
               >
+                {/*
+                  What happened to it, said here rather than on a screen of
+                  its own.
+
+                  Roland, 22 September: the button on a committed upload
+                  "serves no purpose ... It gives a message which is
+                  meaningless, and could rather be displayed in the box under
+                  the file name." The message was the whole of that screen, so
+                  it belongs in the line it describes.
+                */}
                 <span className="text-sm">
                   <span className="font-medium">{job.paperFilename}</span>
                   <span className="block text-xs text-[var(--muted)]">
                     {job.committedAt
-                      ? "Committed"
+                      ? `Committed on ${dateInZone(job.committedAt, tenant.timezone)}. An upload is committed once; upload the document again to make another paper from it.`
                       : `${(job.problems ?? []).length} outstanding`}
                   </span>
                 </span>
-                <Link
-                  href={`/capture/${job.id}`}
-                  className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
-                >
-                  {job.committedAt ? "View" : "Review"}
-                </Link>
+                {/*
+                  And the button offers the paper rather than the job that
+                  made it. A committed upload with no paper has nothing to
+                  show, so it is given no button at all instead of one that
+                  leads to a message already printed above.
+                */}
+                {job.committedAt ? (
+                  job.paperId ? (
+                    <Link
+                      href={`/papers/${job.paperId}/preview`}
+                      className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
+                    >
+                      Preview
+                    </Link>
+                  ) : null
+                ) : (
+                  <Link
+                    href={`/capture/${job.id}`}
+                    className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
+                  >
+                    Review
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

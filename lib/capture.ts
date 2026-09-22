@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { captureJobs, organisations } from "@/db/schema";
+import { captureJobs, organisations, qualifications } from "@/db/schema";
 import { readDocxText, OfficeReadError } from "./office";
 import { buildStorageKey, putObject } from "./storage";
 import { recordAudit } from "./audit";
@@ -315,6 +315,72 @@ export async function listCaptureJobs(session: AuthenticatedSession) {
   return withTenant(session.organisationId, (tx) =>
     tx.select().from(captureJobs).orderBy(captureJobs.uploadedAt),
   );
+}
+
+// ---------------------------------------------------------------------------
+// The way back
+// ---------------------------------------------------------------------------
+
+/** The qualification a capture started from, where it started from one. */
+export type CaptureOrigin = { qualificationId: string; title: string };
+
+/**
+ * Where this work began.
+ *
+ * Roland, 22 September: capturing a workbook from inside a qualification
+ * "works nicely", and then "the link takes you to 'Capture a paper'. It needs
+ * to take you back to Workbooks and Assessments inside the qualification."
+ *
+ * He is describing a screen that knows where it came from and offers the way
+ * back to somewhere else. The job records the qualification at upload, so the
+ * answer is held rather than guessed: asked by job for the review screen, and
+ * by paper for the preview, which is where a commit actually lands.
+ */
+export async function captureOrigin(
+  session: AuthenticatedSession,
+  of: { jobId: string } | { paperId: string },
+): Promise<CaptureOrigin | null> {
+  assertSessionCan(session, "assessment:author");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        qualificationId: qualifications.id,
+        title: qualifications.title,
+      })
+      .from(captureJobs)
+      .innerJoin(
+        qualifications,
+        eq(qualifications.id, captureJobs.qualificationId),
+      )
+      .where(
+        "jobId" in of
+          ? eq(captureJobs.id, of.jobId)
+          : eq(captureJobs.paperId, of.paperId),
+      );
+
+    return row ?? null;
+  });
+}
+
+/**
+ * The link a capture screen puts at the top, as href and words.
+ *
+ * Pure, so the rule can be tested without a database, and shared so the review
+ * screen and the preview cannot drift apart. A paper uploaded on its own still
+ * belongs to the upload list; only one that came from a qualification has
+ * somewhere better to go.
+ */
+export function wayBackFrom(origin: CaptureOrigin | null): {
+  href: string;
+  label: string;
+} {
+  return origin
+    ? {
+        href: `/qualifications/${origin.qualificationId}#capture`,
+        label: "Workbooks and assessments",
+      }
+    : { href: "/capture", label: "Uploads" };
 }
 
 // ---------------------------------------------------------------------------

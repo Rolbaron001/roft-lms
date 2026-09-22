@@ -1,6 +1,6 @@
 # Process flow, value chain and unit costs
 
-**For:** Heidi Els, Curiosa Academy  
+**For:** Heidi Edwards, Curiosa Academy  
 **From:** Roland Jones, ROFT Strategic Workforce Advisory  
 **Date:** 22 September 2026  
 **For the meeting of:** Wednesday 23 September 2026, 10:00
