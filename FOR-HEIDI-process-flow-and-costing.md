@@ -17,7 +17,7 @@ at each step, and keeps three kinds of number strictly apart:
 |---|---|
 | **Measured** | Taken off the running platform or out of the QCTO document. A date is given. |
 | **Quoted** | Waiting on a supplier. Named, not guessed. |
-| **To supply** | Curiosa's own figure, which ROFT cannot know. |
+| **To supply** | Curiosa's own figure |
 
 Nothing here is an estimate presented as a measurement. Five figures are still
 outstanding and they are listed in section 6. The structure of the model holds
@@ -38,7 +38,7 @@ part that makes the chain traceable.
 | C | Cohort setup | Enrols learners, assigns facilitators, assessors and moderators | Once per cohort |
 | D | Delivery | Serves the material, tracks progress, holds workbooks | Per learner, per programme |
 | E | Internal assessment and moderation | Holds submissions, marks, moderation decisions and appeals | Per learner, per module |
-| F | External assessment and certification | EISA readiness, the sitting, the Statement of Results, the certificate | Per learner |
+| F | External assessment and certification | EISA readiness, the sitting, the Statement of Results, the Badge | Per learner |
 | G | Retention and availability | Keeps the record and its evidence available for the retention period | **Per learner, per year, after they have left** |
 
 Stage G is the one that is easy to leave out of a price and expensive to leave
@@ -170,7 +170,7 @@ Three are supplier figures, two are Curiosa's.
 
 | # | Figure | From | Why it matters |
 |---|---|---|---|
-| 1 | Monthly cost of the virtual server as fitted | Roland, from the invoice | The fixed base of every price |
+| 1 | Monthly cost of the virtual server as fitted | Linda/Heidi, from the invoice | The fixed base of every price |
 | 2 | Cost of disk beyond 19 GB, per GB per month | Linda, InspireTec | Turns every gigabyte above into rand |
 | 3 | Whether backups can go on a separate attached volume | Linda, InspireTec | Changes the 2.8 to 4.0 multiplier |
 | 4 | **Curiosa's own retention period** | Heidi, from the QMS policy | Multiplies per-learner storage by the number of years |
