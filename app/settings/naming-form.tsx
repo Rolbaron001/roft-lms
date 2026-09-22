@@ -58,7 +58,23 @@ export function NamingForm({ current }: { current: NamingConvention }) {
   const read = classifyFilename(sample, draft);
 
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+    /*
+      Marked so the list at the top of Settings names it.
+
+      Roland, 22 September: "'How filenames are read' under Settings is an
+      important part of how the LMS works. It needs to be added to the Settings
+      menu bar please."
+
+      It was the only section on the page carrying no marker, so the list built
+      itself from every other section and silently left this one out. That is
+      the exact fault the list was built to prevent, and it was hiding the
+      setting that decides whether an upload arrives filled in or blank.
+    */
+    <section
+      id="filenames"
+      data-settings-section="How filenames are read"
+      className="scroll-mt-24 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
+    >
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
         How filenames are read
       </h2>

@@ -134,3 +134,64 @@ describe("a long page keeps its own navigation in view", () => {
     expect(page.match(/data-page-section=/g) ?? []).toHaveLength(3);
   });
 });
+
+/**
+ * Every section of Settings names itself in the list at the top.
+ *
+ * Roland, 18 September: Settings was "very difficult to navigate especially if
+ * you don't know all the options that can be found there." The answer was a
+ * list built from the page's own sections, so a section added later names
+ * itself rather than waiting for somebody to update a second list.
+ *
+ * Roland, 22 September: "'How filenames are read' under Settings is an
+ * important part of how the LMS works. It needs to be added to the Settings
+ * menu bar please."
+ *
+ * It was the one section carrying no marker. The list built itself from every
+ * other section and left that one out silently, which is the exact fault the
+ * list exists to prevent, and it was hiding the setting that decides whether
+ * an upload arrives filled in or blank.
+ *
+ * So this checks the rule rather than the instance: every form the Settings
+ * page renders is either wrapped in a marked container there, or marks itself.
+ */
+describe("the Settings list leaves nothing out", () => {
+  const page = source("app/settings/page.tsx");
+
+  /** The form components Settings renders, from its own imports. */
+  const components = [...page.matchAll(/import \{ (\w+) \} from "\.\/([\w-]+)"/g)]
+    .map((match) => ({ name: match[1], file: `app/settings/${match[2]}.tsx` }))
+    // SettingsNav is the list itself, so it is not a section in it.
+    .filter((one) => one.name !== "SettingsNav");
+
+  it("finds the forms to check", () => {
+    // A guard on the test rather than on the code: if the import shape
+    // changes, this notices rather than passing vacuously on an empty list.
+    expect(components.length).toBeGreaterThan(5);
+  });
+
+  it.each(components.map((one) => [one.name, one.file]))(
+    "%s is named in the list",
+    (name, file) => {
+      const rendered = new RegExp(`<${name}\b`);
+      if (!rendered.test(page)) return; // imported but not rendered
+
+      const wrappedOnThePage = new RegExp(
+        `data-settings-section=[\s\S]{0,400}?<${name}\b`,
+      ).test(page);
+
+      const marksItself = source(file).includes("data-settings-section");
+
+      expect(
+        wrappedOnThePage || marksItself,
+        `${name} renders a Settings section that the list cannot see`,
+      ).toBe(true);
+    },
+  );
+
+  it("names the filename rules, which were the ones missing", () => {
+    expect(source("app/settings/naming-form.tsx")).toMatch(
+      /data-settings-section="How filenames are read"/,
+    );
+  });
+});
