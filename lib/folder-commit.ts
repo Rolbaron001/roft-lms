@@ -18,7 +18,7 @@ import {
 } from "./authoring";
 import { addTopic, addTopicElement } from "./curriculum-editor";
 import { uploadProgrammeDocument } from "./programme-documents";
-import { fileLibraryDocument } from "./records";
+import { fileLibraryDocument, type LibraryCategory } from "./records";
 import { getIngestJob, IngestError } from "./folder-import";
 import { getObject } from "./storage";
 import type { IngestionPlan, PlannedModule } from "./folder-plan";
@@ -255,21 +255,34 @@ export async function commitPlan(
 
     try {
       if (document.target === "library") {
-        await fileLibraryDocument(session, {
-          category: document.category as
-            | "policy"
-            | "accreditation"
-            | "contract"
-            | "statutory"
-            | "operational"
-            | "other",
+        const filed = await fileLibraryDocument(session, {
+          category: document.category as LibraryCategory,
           title: document.title,
           version: document.version ?? undefined,
           filename: document.filename,
           mimeType: "application/octet-stream",
           bytes,
         });
-        report.libraryDocuments += 1;
+
+        /*
+         * Counted by what happened, not by what was offered.
+         *
+         * Roland, 22 September: the library held every QMS policy four times.
+         * Re-importing a folder is an ordinary thing to do, and it used to
+         * add a second copy of everything in it with no sign that it had.
+         */
+        if (filed.outcome === "already_held") {
+          report.alreadyHeld.push(
+            `${document.title}: already in the library, byte for byte. Not filed again.`,
+          );
+        } else if (filed.outcome === "superseded") {
+          report.alreadyHeld.push(
+            `${document.title}: a newer version of one already filed. It is now the current one, and the previous version is kept.`,
+          );
+          report.libraryDocuments += 1;
+        } else {
+          report.libraryDocuments += 1;
+        }
         continue;
       }
 

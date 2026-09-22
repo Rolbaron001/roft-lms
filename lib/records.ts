@@ -146,6 +146,21 @@ const uploadInput = z.object({
 });
 
 /**
+ * What filing a document did, so the caller can say so.
+ *
+ * Roland, 22 September: every QMS policy was in the library four times over.
+ * "There's not supposed to be duplicates. The QMS policy shouldn't file 4
+ * times without overwriting with a warning and decision."
+ */
+export type LibraryFiling =
+  /** New to the library. */
+  | "filed"
+  /** The same bytes are already here. Nothing was written. */
+  | "already_held"
+  /** A new version of something held, which it now supersedes. */
+  | "superseded";
+
+/**
  * Files a business document.
  *
  * Superseding is one act: naming the document this replaces marks that one
@@ -156,6 +171,23 @@ const uploadInput = z.object({
  * The superseded one is kept. The policy that governed in March is what an
  * audit of March asks about, and a library holding only the current version
  * cannot answer it.
+ *
+ * Two things the caller no longer has to get right, both taken from
+ * lib/programme-documents.ts, which solved this for programme material and
+ * left the library behind:
+ *
+ *   The same bytes again are not a new version. Re-importing a folder filed
+ *   its nine QMS policies again every time, and four imports produced
+ *   thirty-six documents where nine were distinct, none of them marked as a
+ *   copy of any other. Matched on the digest rather than the name, because
+ *   the same file under two names is still the same file, and a different
+ *   file under the same name is not.
+ *
+ *   The same title again *is* a new version, so it supersedes rather than
+ *   sitting beside its predecessor. Inferred where the caller did not name
+ *   one, which is what stops two documents both claiming to be current: the
+ *   outcome this function's own comment above warns about was reachable by
+ *   simply not filling in the supersedes field.
  */
 export async function fileLibraryDocument(
   session: AuthenticatedSession,
@@ -164,7 +196,7 @@ export async function fileLibraryDocument(
     mimeType: string;
     bytes: Uint8Array;
   },
-) {
+): Promise<{ id: string; title: string; outcome: LibraryFiling }> {
   assertSessionCan(session, "records:manage");
   const parsed = uploadInput.parse(input);
 
@@ -179,6 +211,24 @@ export async function fileLibraryDocument(
   }
 
   const contentHash = hashBytes(input.bytes);
+
+  /*
+   * Asked before the bytes are written, not after.
+   *
+   * Storing first and then discovering the row is redundant leaves an orphan
+   * object behind on every repeated import, which is the same waste one level
+   * down.
+   */
+  const [same] = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: libraryDocuments.id, title: libraryDocuments.title })
+      .from(libraryDocuments)
+      .where(eq(libraryDocuments.contentHash, contentHash))
+      .limit(1),
+  );
+
+  if (same) return { ...same, outcome: "already_held" as const };
+
   const storageKey = buildStorageKey(
     session.organisationId,
     "library",
@@ -188,6 +238,25 @@ export async function fileLibraryDocument(
   await putObject(storageKey, input.bytes, input.mimeType);
 
   return withTenant(session.organisationId, async (tx) => {
+    // The current document of the same name and kind, which this replaces
+    // unless the caller named a different one.
+    const [previous] = parsed.supersedesId
+      ? []
+      : await tx
+          .select({ id: libraryDocuments.id })
+          .from(libraryDocuments)
+          .where(
+            and(
+              eq(libraryDocuments.title, parsed.title),
+              eq(libraryDocuments.category, parsed.category),
+              eq(libraryDocuments.status, "current"),
+            ),
+          )
+          .orderBy(desc(libraryDocuments.createdAt))
+          .limit(1);
+
+    const supersedesId = parsed.supersedesId ?? previous?.id ?? null;
+
     const [created] = await tx
       .insert(libraryDocuments)
       .values({
@@ -204,17 +273,17 @@ export async function fileLibraryDocument(
         contentHash,
         effectiveFrom: parsed.effectiveFrom ?? null,
         expiresOn: parsed.expiresOn ?? null,
-        supersedesId: parsed.supersedesId ?? null,
+        supersedesId,
         visibleToAll: visibilityFor(parsed.category, parsed.visibleToAll ?? false),
         uploadedById: session.userId,
       })
       .returning();
 
-    if (parsed.supersedesId) {
+    if (supersedesId) {
       await tx
         .update(libraryDocuments)
         .set({ status: "superseded", updatedAt: new Date() })
-        .where(eq(libraryDocuments.id, parsed.supersedesId));
+        .where(eq(libraryDocuments.id, supersedesId));
     }
 
     await recordAudit(tx, {
@@ -231,7 +300,11 @@ export async function fileLibraryDocument(
       },
     });
 
-    return created;
+    return {
+      id: created.id,
+      title: created.title,
+      outcome: supersedesId ? ("superseded" as const) : ("filed" as const),
+    };
   });
 }
 
@@ -285,6 +358,58 @@ export async function library(
         uploadedByName: `${uploadedFirstName} ${uploadedLastName}`,
       }));
   });
+}
+
+/**
+ * What filing these documents would do, before any of them are filed.
+ *
+ * Roland, 22 September: a repeated import must not file the same policy again
+ * "without overwriting with a warning and decision." The decision belongs
+ * before the commit, on the screen that already shows a proposal and waits, so
+ * this answers the same two questions fileLibraryDocument will ask and answers
+ * them early enough to be read.
+ *
+ * Nothing is written and nothing is locked. A document filed between this and
+ * the commit is caught by the commit itself, which asks again.
+ */
+export async function libraryFilingPreview(
+  session: AuthenticatedSession,
+  incoming: { title: string; category: string; contentHash: string }[],
+): Promise<{ alreadyHeld: string[]; willReplace: string[] }> {
+  if (incoming.length === 0) return { alreadyHeld: [], willReplace: [] };
+
+  const held = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({
+        title: libraryDocuments.title,
+        category: libraryDocuments.category,
+        contentHash: libraryDocuments.contentHash,
+        status: libraryDocuments.status,
+      })
+      .from(libraryDocuments),
+  );
+
+  const hashes = new Set(held.map((row) => row.contentHash));
+  const current = new Set(
+    held
+      .filter((row) => row.status === "current")
+      .map((row) => `${row.category}::${row.title}`),
+  );
+
+  const alreadyHeld: string[] = [];
+  const willReplace: string[] = [];
+
+  for (const one of incoming) {
+    // The digest first: the same bytes are not a new version, whatever the
+    // document is called.
+    if (hashes.has(one.contentHash)) {
+      alreadyHeld.push(one.title);
+      continue;
+    }
+    if (current.has(`${one.category}::${one.title}`)) willReplace.push(one.title);
+  }
+
+  return { alreadyHeld, willReplace };
 }
 
 /**

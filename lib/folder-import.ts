@@ -21,7 +21,8 @@ import {
 import { extensionState, readJson, runExtension } from "./extensions";
 import { readDocxText, readPdfText } from "./office";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
-import { buildStorageKey, putObject } from "./storage";
+import { buildStorageKey, hashBytes, putObject } from "./storage";
+import { libraryFilingPreview } from "./records";
 
 /**
  * Reading an uploaded folder into a plan.
@@ -249,6 +250,7 @@ async function buildPlan(
   }
 
   const gathered = documentsFor(files, warnings);
+  await warnAboutLibraryDuplicates(session, files, gathered.documents, warnings);
 
   return {
     ...plan,
@@ -257,6 +259,58 @@ async function buildPlan(
     documents: gathered.documents,
     warnings: [...plan.warnings, ...warnings],
   };
+}
+
+/**
+ * Says what the library already holds, before anything is committed.
+ *
+ * Roland, 22 September: every QMS policy was filed four times over. "The QMS
+ * policy shouldn't file 4 times without overwriting with a warning and
+ * decision." The commit no longer duplicates them, which is the defect; this
+ * is the warning, on the screen that already waits for a person.
+ *
+ * Re-importing a folder is an ordinary thing to do - a document is added, the
+ * curriculum is corrected, the whole folder goes back in - so "you already
+ * have all nine of these" is the normal answer rather than an error.
+ */
+async function warnAboutLibraryDuplicates(
+  session: AuthenticatedSession,
+  files: UploadedFile[],
+  documents: PlannedDocument[],
+  warnings: string[],
+): Promise<void> {
+  const bytesByPath = new Map(files.map((file) => [file.path, file.bytes]));
+
+  const incoming = documents
+    .filter((document) => document.target === "library")
+    .flatMap((document) => {
+      const bytes = bytesByPath.get(document.path);
+      if (!bytes) return [];
+      return [
+        {
+          title: document.title,
+          category: document.category ?? "other",
+          contentHash: hashBytes(bytes),
+        },
+      ];
+    });
+
+  const { alreadyHeld, willReplace } = await libraryFilingPreview(
+    session,
+    incoming,
+  );
+
+  if (alreadyHeld.length > 0) {
+    warnings.push(
+      `${alreadyHeld.length} of these documents ${alreadyHeld.length === 1 ? "is" : "are"} already in the library, byte for byte, so ${alreadyHeld.length === 1 ? "it" : "they"} will not be filed again: ${alreadyHeld.slice(0, 6).join(", ")}${alreadyHeld.length > 6 ? `, and ${alreadyHeld.length - 6} more` : ""}.`,
+    );
+  }
+
+  if (willReplace.length > 0) {
+    warnings.push(
+      `${willReplace.length} ${willReplace.length === 1 ? "document has" : "documents have"} changed since the version the library holds and will become the current one, with the version held kept as superseded: ${willReplace.slice(0, 6).join(", ")}${willReplace.length > 6 ? `, and ${willReplace.length - 6} more` : ""}.`,
+    );
+  }
 }
 
 /** A plan with no qualification in it, for a material-only import. */
