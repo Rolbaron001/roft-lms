@@ -19,7 +19,24 @@
   --background: #f6f7f9;
   --surface: #ffffff;
   --foreground: #16202c;
-  --muted: #5c6773;
+  /**
+   * Secondary text, and it is near black rather than grey.
+   *
+   * Heidi, 21 September 2026, on the delivery structure panel: she could not
+   * read it. Roland agreed that every grey area becomes black, for readability
+   * and for brand consistency.
+   *
+   * Worth recording what the measurement showed, because the obvious diagnosis
+   * was wrong. The old #5c6773 gave 5.76:1 on white, which passes WCAG AA for
+   * normal text. Contrast was not the fault on paper. What the panel actually
+   * held was 28 elements at 12px in that grey, and 12px grey on a bright screen
+   * defeats a real reader whatever the ratio says.
+   *
+   * So this is now 12.78:1, more than twice the old contrast and past AAA. It
+   * reads as black at a glance and keeps a hair of separation from a heading,
+   * which is what stops a dense panel becoming a wall of identical text.
+   */
+  --muted: #2b333d;
   --border: #dfe3e8;
   --danger: #a3271f;
   --success: #1f6b45;
