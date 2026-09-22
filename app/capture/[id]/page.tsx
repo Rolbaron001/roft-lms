@@ -16,10 +16,20 @@ import { ReviewForm } from "./review-form";
  */
 export default async function ReviewCapturePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ assessment?: string }>;
 }) {
   const { id } = await params;
+  /*
+   * Which assessment this paper was captured for, where it was captured from a
+   * qualification rather than uploaded on its own.
+   *
+   * A suggestion for this screen and nothing more. The reviewer may choose a
+   * different one, and nothing is committed until they do.
+   */
+  const suggested = (await searchParams).assessment ?? null;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
 
@@ -76,6 +86,7 @@ export default async function ReviewCapturePage({
         </Card>
       ) : (
         <ReviewForm
+        suggestedAssessmentId={suggested}
           jobId={job.id}
           proposal={job.proposal}
           classified={job.classified}

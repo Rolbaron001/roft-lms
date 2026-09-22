@@ -15,11 +15,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { zipSync, strToU8 } from "fflate";
 import { withPlatformScope, withTenant } from "@/db/client";
-import { organisations, studyUnits, userRoles, users } from "@/db/schema";
 import {
+  assessments,
+  courses,
+  organisations,
+  studyUnits,
+  userRoles,
+  users,
+} from "@/db/schema";
+import {
+  assessmentForPaper,
   capturableDocuments,
   captureFiledDocument,
   captureProgress,
+  courseForStudyUnit,
 } from "@/lib/capture-from-documents";
 import {
   readProgrammeDocument,
@@ -321,5 +330,148 @@ describe("reading a restricted paper in order to author from it", () => {
     expect(
       after.find((one) => one.documentId === summative.documentId)?.captured,
     ).toBe(true);
+  }, 120_000);
+});
+
+/**
+ * Somewhere for a captured paper to land.
+ *
+ * A capture commits into a draft assessment, an assessment belongs to a
+ * course, and a folder import creates study units and no courses. So the
+ * review screen offered an empty list and the work stopped one step from the
+ * end: the paper read, the questions checked, and nowhere to put them.
+ *
+ * It is also what blocks Heidi walking a qualification as a learner, which is
+ * item 3.1 on the job sheet. A learner is put onto a course.
+ */
+describe("the course a study unit is delivered by", () => {
+  it("is created once and found thereafter", async () => {
+    /*
+     * The failure worth guarding. Capturing four workbooks from one study unit
+     * must not leave four courses with the same name and the material split
+     * between them, which looks tidy in a list and is unusable.
+     */
+    const [unit] = await withTenant(organisationId, (tx) =>
+      tx
+        .select({ id: studyUnits.id })
+        .from(studyUnits)
+        .where(eq(studyUnits.qualificationId, qualificationId)),
+    );
+
+    const first = await courseForStudyUnit(admin, unit.id);
+    const second = await courseForStudyUnit(admin, unit.id);
+    const third = await courseForStudyUnit(admin, unit.id);
+
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+
+    const made = await withTenant(organisationId, (tx) =>
+      tx
+        .select({ id: courses.id, title: courses.title })
+        .from(courses)
+        .where(eq(courses.studyUnitId, unit.id)),
+    );
+    expect(made).toHaveLength(1);
+  });
+
+  it("is named after the study unit, not after the paper", async () => {
+    // Somebody reading a list of these is looking for SU1. A course called
+    // "Workbook 2" says nothing about where it belongs.
+    const [unit] = await withTenant(organisationId, (tx) =>
+      tx
+        .select({ id: studyUnits.id })
+        .from(studyUnits)
+        .where(eq(studyUnits.qualificationId, qualificationId)),
+    );
+
+    const courseId = await courseForStudyUnit(admin, unit.id);
+    const [course] = await withTenant(organisationId, (tx) =>
+      tx.select({ title: courses.title }).from(courses).where(eq(courses.id, courseId)),
+    );
+
+    expect(course.title).toContain("SU1");
+    expect(course.title).toContain("Organisational Architecture");
+  });
+});
+
+describe("the assessment a paper commits into", () => {
+  async function courseId() {
+    const [unit] = await withTenant(organisationId, (tx) =>
+      tx
+        .select({ id: studyUnits.id })
+        .from(studyUnits)
+        .where(eq(studyUnits.qualificationId, qualificationId)),
+    );
+    return courseForStudyUnit(admin, unit.id);
+  }
+
+  it("is made once per paper, not once per capture", async () => {
+    const course = await courseId();
+
+    const first = await assessmentForPaper(admin, {
+      courseId: course,
+      title: "CA 121151 SU1 WB1",
+      kind: "workbook",
+    });
+    const again = await assessmentForPaper(admin, {
+      courseId: course,
+      title: "CA 121151 SU1 WB1",
+      kind: "workbook",
+    });
+
+    expect(again).toBe(first);
+  });
+
+  it("marks a summative as one, which decides how it is moderated", async () => {
+    /*
+     * Not a label. A summative is moderated in full and a formative is
+     * sampled, so getting this wrong silences the moderation a qualification
+     * depends on, quietly, on every paper captured that way.
+     */
+    const course = await courseId();
+
+    const summative = await assessmentForPaper(admin, {
+      courseId: course,
+      title: "CA 121151 SU1 SA1 V1",
+      kind: "summative_assessment",
+    });
+    const workbook = await assessmentForPaper(admin, {
+      courseId: course,
+      title: "CA 121151 SU1 WB2",
+      kind: "workbook",
+    });
+
+    const rows = await withTenant(organisationId, (tx) =>
+      tx
+        .select({
+          id: assessments.id,
+          purpose: assessments.purpose,
+          status: assessments.status,
+        })
+        .from(assessments)
+        .where(eq(assessments.courseId, course)),
+    );
+
+    expect(rows.find((r) => r.id === summative)?.purpose).toBe("summative");
+    expect(rows.find((r) => r.id === workbook)?.purpose).toBe("formative");
+
+    // Draft, always. An assessment that published itself the moment a workbook
+    // was read would put an unreviewed paper in front of a learner.
+    for (const row of rows) expect(row.status).toBe("draft");
+  });
+
+  it("is handed back by a capture, so the review screen can preselect it", async () => {
+    const paper = (await capturableDocuments(admin, qualificationId)).find(
+      (one) => one.kind === "workbook" && one.guide && !one.captured,
+    );
+
+    if (!paper) return; // every workbook already captured by an earlier test
+
+    const result = await captureFiledDocument(admin, {
+      qualificationId,
+      documentId: paper.documentId,
+    });
+
+    expect(result.assessmentId).toMatch(/^[0-9a-f-]{36}$/);
   }, 120_000);
 });

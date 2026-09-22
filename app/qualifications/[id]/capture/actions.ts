@@ -29,12 +29,14 @@ export async function captureFiledAction(
   const documentId = String(formData.get("documentId") ?? "");
 
   let jobId: string;
+  let assessmentId: string | null = null;
   try {
     const result = await captureFiledDocument(session, {
       qualificationId,
       documentId,
     });
     jobId = result.jobId;
+    assessmentId = result.assessmentId;
   } catch (error) {
     if (error instanceof NotReadyError || error instanceof CaptureError) {
       return { error: error.message };
@@ -45,5 +47,14 @@ export async function captureFiledAction(
 
   // Outside the try: redirect() throws to do its work, and catching it here
   // would swallow the navigation and report it as a failure.
-  redirect(`/capture/${jobId}`);
+  /*
+   * The assessment travels in the address rather than being stored on the job.
+   * It is a suggestion for one screen, not a decision: the reviewer can pick a
+   * different one, and nothing has been committed to it yet.
+   */
+  redirect(
+    assessmentId
+      ? `/capture/${jobId}?assessment=${assessmentId}`
+      : `/capture/${jobId}`,
+  );
 }

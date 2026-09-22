@@ -23,12 +23,22 @@ export function ReviewForm({
   classified,
   assessments,
   criteria,
+  suggestedAssessmentId,
 }: {
   jobId: string;
   proposal: ParsedPaper;
   classified: Classified | null;
   assessments: { id: string; title: string; purpose: string }[];
   criteria: { id: string; code: string }[];
+  /**
+   * Chosen already, where the capture came from a qualification.
+   *
+   * A paper captured from a qualification's own screen knows its study unit,
+   * so the course and the draft assessment were made for it on the way here.
+   * Landing on "Choose..." after all that would ask somebody to find in a list
+   * the thing the platform had just created.
+   */
+  suggestedAssessmentId?: string | null;
 }) {
   const [state, commit, committing] = useActionState<CaptureState, FormData>(
     commitCaptureAction,
@@ -281,6 +291,7 @@ export function ReviewForm({
             <select
               name="assessmentId"
               required
+              defaultValue={suggestedAssessmentId ?? ""}
               className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             >
               <option value="">Choose…</option>

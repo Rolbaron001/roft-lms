@@ -1,10 +1,14 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import {
+  assessments,
   captureJobs,
+  courses,
   programmeDocuments,
   studyUnits,
 } from "@/db/schema";
+import { createCourse } from "./authoring";
+import { createAssessment } from "./assessment";
 import { namingConventionFor, proposeCapture } from "./capture";
 import { classifyFilename } from "./naming-convention";
 import { readProgrammeDocumentForAuthoring } from "./programme-documents";
@@ -187,7 +191,7 @@ export async function capturableDocuments(
 export async function captureFiledDocument(
   session: AuthenticatedSession,
   input: { qualificationId: string; documentId: string },
-): Promise<{ jobId: string }> {
+): Promise<{ jobId: string; assessmentId: string | null }> {
   assertSessionCan(session, "assessment:author");
 
   const candidates = await capturableDocuments(
@@ -229,7 +233,31 @@ export async function captureFiledDocument(
       : undefined,
   });
 
-  return { jobId };
+  /*
+   * Somewhere for it to land, made now rather than left to the review screen.
+   *
+   * A capture commits into a draft assessment, and a folder import creates no
+   * courses at all, so the review screen offered an empty list and the work
+   * stopped: the paper was read, checked, and had nowhere to go. Creating the
+   * course and the assessment here means the person arrives at a screen that
+   * can be finished.
+   *
+   * Only where the document names a study unit. A paper filed against the
+   * qualification as a whole has no unit to deliver it, and guessing one would
+   * put a workbook under a unit it does not belong to.
+   */
+  let assessmentId: string | null = null;
+
+  if (chosen.studyUnitId) {
+    const courseId = await courseForStudyUnit(session, chosen.studyUnitId);
+    assessmentId = await assessmentForPaper(session, {
+      courseId,
+      title: chosen.title,
+      kind: chosen.kind,
+    });
+  }
+
+  return { jobId, assessmentId };
 }
 
 /** How far this qualification's papers have got, for a progress map. */
@@ -244,4 +272,104 @@ export async function captureProgress(
     captured: papers.filter((one) => one.captured).length,
     withoutGuide: papers.filter((one) => !one.guide).length,
   };
+}
+
+/**
+ * Somewhere for a captured paper to land.
+ *
+ * A capture becomes an assessment, an assessment belongs to a course, and a
+ * course is what a learner is put onto. A folder import creates study units
+ * and no courses, so until now the review screen offered an empty list and the
+ * work stopped there: the paper was read, checked, and had nowhere to go.
+ *
+ * The course is the study unit's own delivery record. It carries the unit's
+ * guide, its workbooks and its summative, which is what `courses.studyUnitId`
+ * exists for. A provider who calls that thing a study unit rather than a
+ * course sees their own word for it, because the word is a tenant setting and
+ * this is the record beneath it. See lib/features.ts.
+ *
+ * Found rather than made wherever possible. Running this twice on the same
+ * study unit must not leave two courses with the same name and the material
+ * split between them.
+ */
+export async function courseForStudyUnit(
+  session: AuthenticatedSession,
+  studyUnitId: string,
+): Promise<string> {
+  assertSessionCan(session, "course:author");
+
+  const existing = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.studyUnitId, studyUnitId))
+      .limit(1),
+  );
+
+  if (existing[0]) return existing[0].id;
+
+  const [unit] = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ code: studyUnits.code, title: studyUnits.title })
+      .from(studyUnits)
+      .where(eq(studyUnits.id, studyUnitId)),
+  );
+
+  if (!unit) {
+    throw new Error("That study unit does not exist, so nothing can deliver it.");
+  }
+
+  /*
+   * Named after the study unit rather than after the qualification or the
+   * paper. Somebody looking at a list of these is looking for SU3, and a
+   * course called "Workbook 2" tells them nothing about where it belongs.
+   */
+  const created = await createCourse(session, {
+    title: `${unit.code} ${unit.title}`.trim(),
+    studyUnitId,
+  });
+
+  return created.id;
+}
+
+/**
+ * The draft assessment a captured paper commits into, made if it is missing.
+ *
+ * Draft, always. `commitCapture` writes the questions into it and publishing is
+ * a separate, deliberate act with its own checks: an assessment that published
+ * itself the moment a workbook was read would put an unreviewed paper in front
+ * of a learner.
+ *
+ * A summative is marked as one. It is not a label: a summative is moderated in
+ * full rather than sampled, and getting that wrong silences the moderation the
+ * qualification depends on.
+ */
+export async function assessmentForPaper(
+  session: AuthenticatedSession,
+  input: { courseId: string; title: string; kind: string },
+): Promise<string> {
+  assertSessionCan(session, "assessment:author");
+
+  const existing = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: assessments.id })
+      .from(assessments)
+      .where(
+        and(
+          eq(assessments.courseId, input.courseId),
+          eq(assessments.title, input.title),
+        ),
+      )
+      .limit(1),
+  );
+
+  if (existing[0]) return existing[0].id;
+
+  const created = await createAssessment(session, {
+    courseId: input.courseId,
+    title: input.title,
+    purpose: input.kind === "summative_assessment" ? "summative" : "formative",
+  });
+
+  return created.id;
 }
