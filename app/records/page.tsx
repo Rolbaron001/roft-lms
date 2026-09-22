@@ -117,7 +117,20 @@ export default async function RecordsPage() {
                 <ul className="mt-2 space-y-1 text-sm">
                   {rows.map((row) => (
                     <li key={row.id} className="flex flex-wrap gap-x-3">
-                      <span className="font-medium">{row.title}</span>
+                      {/*
+                        Openable, which it was not.
+
+                        The library listed every document by name and offered
+                        no way to read one, so a learner guide filed for
+                        learners was a title they could look at. The route
+                        applies the same rule as this list.
+                      */}
+                      <a
+                        href={`/api/library/${row.id}`}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        {row.title}
+                      </a>
                       {row.version ? (
                         <span className="text-[var(--muted)]">
                           {row.version}
@@ -133,7 +146,11 @@ export default async function RecordsPage() {
                           from {row.effectiveFrom}
                         </span>
                       ) : null}
-                      {row.visibleToAll ? (
+                      {row.category === "learner_guide" ? (
+                        <span className="text-[var(--muted)]">
+                          written for learners
+                        </span>
+                      ) : row.visibleToAll ? (
                         <span className="text-[var(--muted)]">
                           everybody can read this
                         </span>

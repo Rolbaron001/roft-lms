@@ -1429,6 +1429,18 @@ export const libraryCategory = pgEnum("library_category", [
   "statutory",
   /** Insurance, leases, licences. */
   "operational",
+  /**
+   * Written for learners: the learner quality management guide, the learner
+   * code of conduct, the appeals guide.
+   *
+   * Heidi, 21 September: "a learner must not see internal policies. Learners
+   * get a learner quality management guide instead." The library already had
+   * a switch for who may read a document and no category that meant "this one
+   * is for them", so the audience was a checkbox somebody had to remember on
+   * every upload. It is now the category itself. See LEARNER_FACING in
+   * lib/records.ts.
+   */
+  "learner_guide",
   "other",
 ]);
 

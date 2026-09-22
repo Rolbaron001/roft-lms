@@ -130,11 +130,57 @@ const phase = (() => {
   return value;
 })();
 
+/**
+ * Enum values that must exist before the schema is pushed.
+ *
+ * `drizzle-kit push` will offer to recreate a type rather than extend it, and
+ * recreating one that columns already depend on is not something to discover
+ * on a deploy. `add value if not exists` is idempotent and cheap, so the value
+ * is simply there before the push looks.
+ */
+const ENUM_VALUES: { type: string; value: string; why: string }[] = [
+  {
+    type: "library_category",
+    value: "learner_guide",
+    why: "Heidi, 21 September: learners get a learner quality management guide and must not see internal policies. The audience is now the category.",
+  },
+];
+
 async function main() {
   const sql = postgres(adminUrl!, { max: 1, onnotice: () => {} });
   let applied = 0;
 
   try {
+    for (const entry of phase === "reshapes" ? [] : ENUM_VALUES) {
+      const [type] = await sql<{ exists: boolean }[]>`
+        select exists (
+          select 1 from pg_type where typname = ${entry.type}
+        ) as exists
+      `;
+
+      // A type that is not there yet belongs to a table the push has not
+      // created. Nothing to extend, and the push will build it complete.
+      if (!type.exists) continue;
+
+      const [already] = await sql<{ exists: boolean }[]>`
+        select exists (
+          select 1
+          from pg_enum
+          join pg_type on pg_type.oid = pg_enum.enumtypid
+          where pg_type.typname = ${entry.type}
+            and pg_enum.enumlabel = ${entry.value}
+        ) as exists
+      `;
+
+      if (already.exists) continue;
+
+      console.log(`Adding ${entry.type}.${entry.value}
+  ${entry.why}`);
+      await sql.unsafe(
+        `alter type "${entry.type}" add value if not exists '${entry.value}'`,
+      );
+    }
+
     for (const rename of phase === "reshapes" ? [] : RENAMES) {
       const [column] = await sql<{ exists: boolean }[]>`
         select exists (

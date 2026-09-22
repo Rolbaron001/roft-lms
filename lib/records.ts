@@ -10,7 +10,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
-import { buildStorageKey, hashBytes, putObject } from "./storage";
+import { buildStorageKey, getObject, hashBytes, putObject } from "./storage";
 
 /**
  * The general document library, retention and controlled disposal.
@@ -49,18 +49,86 @@ export class RecordsError extends Error {
 export const MAX_LIBRARY_BYTES = 25 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
+// Who a document is for
+// ---------------------------------------------------------------------------
+
+export const LIBRARY_CATEGORIES = [
+  "policy",
+  "accreditation",
+  "contract",
+  "statutory",
+  "operational",
+  "learner_guide",
+  "other",
+] as const;
+
+export type LibraryCategory = (typeof LIBRARY_CATEGORIES)[number];
+
+/**
+ * The categories a learner may ever be shown.
+ *
+ * Heidi, 21 September: "a learner must not see internal policies. Learners get
+ * a learner quality management guide instead." The library had one switch,
+ * `visibleToAll`, and nothing stopping it being ticked on a facilitator's
+ * contract or the assessment policy. A rule that depends on whoever uploads
+ * remembering is not a rule.
+ *
+ * So the audience follows the category:
+ *
+ *   learner_guide  written for them, so always shown to them
+ *   statutory      the PAIA manual and POPIA notices, which are meant to be
+ *                  available rather than internal, so the switch is a real
+ *                  choice here and only here
+ *   everything else  internal, and never shown, whatever the switch says
+ *
+ * "other" is internal deliberately. It is the catch-all, and the safe
+ * direction for a document nobody has classified is not visible.
+ */
+export const LEARNER_FACING = new Set<LibraryCategory>([
+  "learner_guide",
+  "statutory",
+]);
+
+/** Whether this category can carry a learner-visible document at all. */
+export function mayBeLearnerVisible(category: string): boolean {
+  return LEARNER_FACING.has(category as LibraryCategory);
+}
+
+/**
+ * Whether a learner may read this document.
+ *
+ * Applied on the way in and on the way out. Enforcing it only on upload would
+ * leave every row filed before this rule existed exactly as visible as it was,
+ * which is the case the rule is for: the fix has to close the documents
+ * already there, not only the next one.
+ */
+export function isLearnerVisible(row: {
+  category: string;
+  visibleToAll: boolean;
+}): boolean {
+  if (row.category === "learner_guide") return true;
+  return row.visibleToAll && mayBeLearnerVisible(row.category);
+}
+
+/**
+ * What `visibleToAll` should be stored as, given the category.
+ *
+ * A learner guide is for learners by definition, so it is not left to a
+ * checkbox somebody may forget. An internal category is forced off, so the
+ * stored row says what is true rather than carrying a tick that the read path
+ * quietly overrules.
+ */
+export function visibilityFor(category: string, asked: boolean): boolean {
+  if (category === "learner_guide") return true;
+  return asked && mayBeLearnerVisible(category);
+}
+
+// ---------------------------------------------------------------------------
 // The library
 // ---------------------------------------------------------------------------
 
 const uploadInput = z.object({
-  category: z.enum([
-    "policy",
-    "accreditation",
-    "contract",
-    "statutory",
-    "operational",
-    "other",
-  ]),
+  category: z.enum(LIBRARY_CATEGORIES),
   title: z.string().trim().min(3).max(300),
   description: z.string().trim().max(2000).optional(),
   reference: z.string().trim().max(100).optional(),
@@ -137,7 +205,7 @@ export async function fileLibraryDocument(
         effectiveFrom: parsed.effectiveFrom ?? null,
         expiresOn: parsed.expiresOn ?? null,
         supersedesId: parsed.supersedesId ?? null,
-        visibleToAll: parsed.visibleToAll ?? false,
+        visibleToAll: visibilityFor(parsed.category, parsed.visibleToAll ?? false),
         uploadedById: session.userId,
       })
       .returning();
@@ -205,7 +273,7 @@ export async function library(
       .orderBy(libraryDocuments.category, libraryDocuments.title);
 
     return rows
-      .filter((row) => mayReadAll || row.visibleToAll)
+      .filter((row) => mayReadAll || isLearnerVisible(row))
       .filter(
         (row) =>
           options.includeSuperseded ||
@@ -217,6 +285,46 @@ export async function library(
         uploadedByName: `${uploadedFirstName} ${uploadedLastName}`,
       }));
   });
+}
+
+/**
+ * Reads one library document's bytes, for the download route.
+ *
+ * The library listed titles and had no way to open any of them, so a learner
+ * guide filed for learners was a line of text they could read the name of. The
+ * same rule as the listing decides this, in one place rather than two: a
+ * filter on a list that a URL walks straight past is not a restriction.
+ */
+export async function readLibraryDocument(
+  session: AuthenticatedSession,
+  id: string,
+) {
+  const mayReadAll = session.permissions.includes("records:read");
+
+  const [row] = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({
+        category: libraryDocuments.category,
+        visibleToAll: libraryDocuments.visibleToAll,
+        filename: libraryDocuments.filename,
+        mimeType: libraryDocuments.mimeType,
+        storageKey: libraryDocuments.storageKey,
+      })
+      .from(libraryDocuments)
+      .where(eq(libraryDocuments.id, id)),
+  );
+
+  // Not found and not permitted answer the same way on purpose. Telling
+  // somebody that a document exists but is not theirs is itself a disclosure.
+  if (!row || !(mayReadAll || isLearnerVisible(row))) {
+    throw new RecordsError("No such document.", "not_found");
+  }
+
+  return {
+    filename: row.filename,
+    mimeType: row.mimeType,
+    bytes: await getObject(row.storageKey),
+  };
 }
 
 /**

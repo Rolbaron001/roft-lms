@@ -18,6 +18,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   contract: "Contracts",
   statutory: "Statutory",
   operational: "Operational",
+  learner_guide: "Learner guides",
   other: "Other",
 };
 
@@ -111,9 +112,26 @@ export function FileDocument({
         className={`${inputClass} block w-full`}
       />
 
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="visibleToAll" />
-        Anybody signed in may read this
+      {/*
+        Who may read it, said as the consequence rather than as a flag.
+
+        Heidi, 21 September: "a learner must not see internal policies."
+        Ticking this on a facilitator's contract used to be possible and is
+        now refused, so the words say which categories it applies to instead
+        of leaving somebody to find out by being overruled silently. A learner
+        guide is shown to learners whether or not this is ticked, because that
+        is what the category means. See LEARNER_FACING in lib/records.ts.
+      */}
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="visibleToAll" className="mt-1" />
+        <span>
+          Anybody signed in may read this
+          <span className="block text-xs text-[var(--muted)]">
+            Applies to statutory documents. A learner guide is always shown to
+            learners; policies, contracts, accreditation and operational
+            documents never are.
+          </span>
+        </span>
       </label>
 
       <input type="file" name="file" required className="block text-sm" />
