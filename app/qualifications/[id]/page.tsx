@@ -100,6 +100,8 @@ export default async function QualificationPage({
     "assessment:moderate",
   ]);
   const canManage = session.permissions.includes("qualification:manage");
+  // Administrators and facilitators, which is who job sheet 2.1 named.
+  const canAuthorCourses = session.permissions.includes("course:author");
   // Reading the material where it already lives, for somebody who connected
   // a drive. Absent for everybody else rather than offered and refused.
   const drives = canManage ? await connectionsFor(session) : [];
@@ -698,6 +700,31 @@ export default async function QualificationPage({
             this is the provider&rsquo;s structure rather than the
             curriculum&rsquo;s.
           </p>
+
+          {/*
+            The way to see whether any of it actually reaches a learner.
+
+            Job sheet 2.1. Every screen here shows what exists; that one shows
+            what is reachable, and names the study units a learner would open
+            and find empty. A tested pipeline with no screen is a feature that
+            does not exist, and a screen with no link to it is the same thing.
+          */}
+          {canAuthorCourses ? (
+            <p className="mb-4 text-sm">
+              <Link
+                href={`/qualifications/${id}/preview`}
+                className="underline underline-offset-2"
+              >
+                See it as a learner will
+              </Link>
+              <span className="text-[var(--muted)]">
+                {" "}
+                shows the whole programme in the order it is walked, with
+                anything a learner would not find named. Nothing is started and
+                nothing is recorded.
+              </span>
+            </p>
+          ) : null}
 
           {/*
             Two different situations, and they were being told apart by nobody.
