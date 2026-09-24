@@ -365,16 +365,41 @@ log "Keeping the newest ${KEEP_VERSIONS} image versions."
 # carry the same tag, so a version is kept or dropped as a pair - keeping an
 # app image whose tools image had gone would leave a rollback unable to
 # migrate.
-KEEP_TAGS=$(docker images --format '{{.CreatedAt}}|{{.Tag}}' 2>/dev/null \
+#
+# Two bugs lived in these five lines from the day they were written, and
+# together they stopped every deploy tidying up after itself. Found on
+# 24 September with the disk at 84%, 16 images and 6.5 GB of them.
+#
+# The format string listed CreatedAt and Tag and not Repository, so
+# `grep roft-lms` was searching a date and a commit hash and matched
+# nothing. KEEP_TAGS came out empty, which made the loop below judge every
+# image unwanted, the running one included.
+#
+# Worse, a grep that matches nothing exits 1. Under `set -euo pipefail`
+# that killed the script on the spot, before it removed a single image and
+# before it logged either the free space or "Deployed". The deploy itself
+# had already finished, so the operator was told nothing and the disk
+# climbed quietly.
+#
+# `|| true` is deliberate rather than defensive: a machine with no images
+# yet is the ordinary first deploy, and it must not be an error.
+KEEP_TAGS=$(docker images --format '{{.Repository}}|{{.CreatedAt}}|{{.Tag}}' 2>/dev/null \
   | grep 'roft-lms' \
-  | sort -r \
-  | cut -d'|' -f2 \
+  | sort -t'|' -k2 -r \
+  | cut -d'|' -f3 \
   | awk '!seen[$0]++' \
-  | head -n "$KEEP_VERSIONS")
+  | head -n "$KEEP_VERSIONS" || true)
+
+if [ -z "$KEEP_TAGS" ]; then
+  log "No roft-lms images found to tidy."
+fi
 
 docker images --format '{{.Repository}}:{{.Tag}}|{{.Tag}}' 2>/dev/null \
   | grep 'roft-lms' \
   | while IFS='|' read -r REF TAG; do
+      # Nothing to keep means the list is wrong, not that everything is
+      # disposable. Removing the running image is not a tidy-up.
+      if [ -z "$KEEP_TAGS" ]; then continue; fi
       if ! printf '%s\n' "$KEEP_TAGS" | grep -qx "$TAG"; then
         # An image a container is using is refused by docker, which is the
         # safety net rather than the plan: the running version is the newest
