@@ -21,6 +21,10 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import {
+  RESTRICTED_TO_ASSESSORS,
+  type DocumentKind,
+} from "./programme-documents";
 import { can } from "./rbac";
 import { scheduleForLearner } from "./schedule";
 
@@ -748,6 +752,35 @@ export async function addStep(
       .where(eq(courses.id, input.courseId));
 
     if (!course) throw new SpineError("No such course.", "not_found");
+
+    /*
+     * A memorandum cannot be put on a learner's path.
+     *
+     * A document step hands the file to whoever reaches it, and a spine is
+     * the definition of what a learner reaches. The documents screen has kept
+     * memoranda and summative papers from learners since it was built; until
+     * this check, a step could hand one straight over.
+     *
+     * Checked here rather than only in the screen that offers the choice,
+     * because a filter on a list that a posted identifier walks past is not a
+     * restriction.
+     */
+    if (input.kind === "document") {
+      const [document] = await tx
+        .select({ kind: programmeDocuments.kind })
+        .from(programmeDocuments)
+        .where(eq(programmeDocuments.id, target));
+
+      if (
+        document &&
+        RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind)
+      ) {
+        throw new SpineError(
+          "That document is kept from learners, so it cannot be a step on their path. A summative paper reaches them as a captured assessment instead.",
+          "invalid",
+        );
+      }
+    }
 
     const existing = await loadSteps(tx, input.courseId);
 

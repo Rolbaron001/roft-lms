@@ -5,6 +5,7 @@ import { previewQualification, PreviewError } from "@/lib/qualification-preview"
 import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
+import { StartUnit } from "./start-unit";
 
 /**
  * A qualification walked as a learner will meet it.
@@ -128,9 +129,25 @@ export default async function QualificationPreviewPage({
             ) : null}
 
             {unit.steps.length === 0 ? (
-              <p className="mt-3 text-sm text-[var(--danger)]">
-                {unit.gaps[0]}
-              </p>
+              <>
+                <p className="mt-3 text-sm text-[var(--danger)]">
+                  {unit.gaps[0]}
+                </p>
+                {/*
+                  Naming a gap and offering no way to close it is half a
+                  screen, so each one ends with the next thing to do.
+                */}
+                {unit.courseId ? (
+                  <Link
+                    href={`/courses/${unit.courseId}/steps`}
+                    className="mt-2 inline-block text-sm underline underline-offset-2"
+                  >
+                    Build what a learner works through
+                  </Link>
+                ) : (
+                  <StartUnit qualificationId={id} studyUnitId={unit.id} />
+                )}
+              </>
             ) : (
               <ol className="mt-3 space-y-2">
                 {unit.steps.map((step, index) => (
@@ -174,6 +191,15 @@ export default async function QualificationPreviewPage({
                 ))}
               </ol>
             )}
+
+            {unit.courseId && unit.steps.length > 0 ? (
+              <Link
+                href={`/courses/${unit.courseId}/steps`}
+                className="mt-3 inline-block text-xs underline underline-offset-2"
+              >
+                Change the order or what is on it
+              </Link>
+            ) : null}
           </Card>
         ))}
       </div>

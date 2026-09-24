@@ -61,6 +61,20 @@ export default async function CoursePage({
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{detail.course.title}</h1>
           <div className="flex items-center gap-3">
+            {/*
+              The order a learner walks it in, which is what turns everything
+              held against this course into something anybody meets. Listed
+              first because a course with no steps delivers nothing, however
+              much material is filed against it.
+            */}
+            {canAuthorHere ? (
+              <Link
+                href={`/courses/${id}/steps`}
+                className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
+              >
+                What a learner works through
+              </Link>
+            ) : null}
             {session.permissions.includes("assessment:author") ? (
               <Link
                 href={`/courses/${id}/assessments`}
