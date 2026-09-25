@@ -12,6 +12,7 @@
  * decision Roland took or a fault found while building this, and each is the
  * kind of thing a later edit could quietly undo.
  */
+import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -279,6 +280,32 @@ describe("changing the schedule", () => {
 
   it("can show the change without making it", () => {
     expect(schedule).toMatch(/diff "\$BEFORE" "\$AFTER"/);
+  });
+});
+
+/**
+ * Every shell script is committed executable.
+ *
+ * Git on Windows does not see the executable bit, so a script created there is
+ * committed as an ordinary file and the Linux server refuses to run it. All
+ * five scripts for the development site went up that way on 25 September: cron
+ * would have failed with "Permission denied" every fifteen minutes, setup would
+ * not have started, and live's deploy would have skipped its tidying. Caught by
+ * looking at the index before the server pulled, which a later script will not
+ * be lucky enough to get.
+ */
+describe("the server can run the scripts", () => {
+  it("records every shell script as executable", () => {
+    const index = execSync("git ls-files -s -- scripts", { encoding: "utf8" });
+    const scripts = index
+      .split("\n")
+      .filter((line) => line.trim().endsWith(".sh"))
+      .map((line) => ({ mode: line.split(/\s+/)[0], path: line.split("\t")[1] }));
+
+    expect(scripts.length).toBeGreaterThan(5);
+    for (const script of scripts) {
+      expect(script.mode, `${script.path} is not executable: git update-index --chmod=+x ${script.path}`).toBe("100755");
+    }
   });
 });
 
