@@ -29,13 +29,19 @@
 	}
 }
 
+# Everything a site needs, given the application it sends requests to.
+#
+# The upstream is an argument because there are two applications on the
+# Curiosa server since 24 September: live, as `app`, and the development site
+# beside it, as `app-dev`. One snippet for both means a security header added
+# here reaches both sites, rather than one of them drifting.
 (lms) {
 	encode zstd gzip
 
 	# The application resolves the tenant from the hostname, so the original
 	# Host must survive the hop. Getting this wrong is what makes every page
 	# report "this address is not in use".
-	reverse_proxy app:3000 {
+	reverse_proxy {args[0]} {
 		header_up Host {host}
 		header_up X-Forwarded-Host {host}
 		header_up X-Forwarded-Proto {scheme}
@@ -70,8 +76,17 @@
 # The platform console. Named explicitly so its certificate is obtained at
 # startup rather than waiting for the first visitor.
 {$LMS_DOMAIN} {
-	import lms
+	import lms app:3000
 }
+
+# Sites a particular server adds for itself, such as a development site.
+#
+# Each is a file in caddy-sites/ on that server, written by the script that
+# sets the site up and never committed: the hostnames are that operator's,
+# and this file is shared by every deployment of the platform. A server with
+# no such files, or no such folder, runs exactly as before; that was checked
+# against Caddy itself on 24 September rather than assumed.
+import /etc/caddy/sites/*.caddy
 
 # Every tenant hostname: subdomains of the platform domain, and clients on
 # their own domains. Matched only when nothing above matches.
@@ -79,5 +94,5 @@ https:// {
 	tls {
 		on_demand
 	}
-	import lms
+	import lms app:3000
 }

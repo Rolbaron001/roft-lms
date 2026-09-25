@@ -5,9 +5,18 @@
 # Run from cron every couple of minutes. Does nothing at all when the remote
 # has not changed, so it is cheap to run often and safe to run repeatedly.
 #
-#   ./auto-deploy.sh            deploy if origin/main has moved
-#   ./auto-deploy.sh --force    deploy even if it has not
-#   ./auto-deploy.sh --dry-run  say what it would do, change nothing
+#   ./auto-deploy.sh             deploy if origin/main has moved
+#   ./auto-deploy.sh --force     deploy even if it has not
+#   ./auto-deploy.sh --dry-run   say what it would do, change nothing
+#   ./auto-deploy.sh --to <sha>  deploy that commit rather than the newest
+#
+# Since 24 September 2026 this is not run on a schedule of its own on Curiosa's
+# server. Changes land on the development site first (scripts/deploy-
+# development.sh), and live takes the version that ran there on Friday night,
+# through scripts/promote-to-production.sh, which calls this with --to.
+#
+# Exits 75 when another deploy holds the lock, so that a caller wanting this
+# deploy to happen can tell "stood down" from "done" and try again.
 #
 # Why polling rather than a webhook or a GitHub Action:
 #
@@ -29,20 +38,31 @@ cd "$(dirname "$0")/.."
 REPO="$PWD"
 COMPOSE="docker compose -f docker-compose.production.yml"
 BRANCH="${DEPLOY_BRANCH:-main}"
+# Shared with scripts/deploy-development.sh, so the two sites never pull,
+# migrate or tidy images at the same time: one tidying while the other has just
+# pulled could remove the image that is about to start.
 LOCKDIR="/tmp/roft-lms-deploy.lock.d"
 # Anything older than this is assumed to be a crashed run rather than a live
-# one. Twenty minutes is longer than a slow build and shorter than a working
-# day, so a genuine crash does not block tonight's deploys.
-STALE_MINUTES=20
+# one. It was twenty minutes, while a deploy may wait thirty for its images:
+# a slow but healthy run could have its lock taken from under it. Forty-five is
+# longer than the longest wait and shorter than a working day.
+STALE_MINUTES=45
 
 FORCE=false
 DRY_RUN=false
-for arg in "$@"; do
-  case "$arg" in
+TO=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --force) FORCE=true ;;
     --dry-run) DRY_RUN=true ;;
-    *) echo "Unknown option: $arg" >&2; exit 2 ;;
+    --to)
+      shift
+      TO="${1:-}"
+      [ -n "$TO" ] || { echo "--to needs a commit" >&2; exit 2; }
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
 log() {
@@ -75,7 +95,7 @@ elif ! mkdir "$LOCKDIR" 2>/dev/null; then
     mkdir "$LOCKDIR" || fail "could not take the lock"
   else
     log "Another deploy is running. Standing down."
-    exit 0
+    exit 75
   fi
 fi
 trap 'rm -rf "$LOCKDIR"' EXIT
@@ -85,7 +105,19 @@ trap 'rm -rf "$LOCKDIR"' EXIT
 git -C "$REPO" fetch --quiet origin "$BRANCH" || fail "could not reach GitHub"
 
 LOCAL="$(git -C "$REPO" rev-parse HEAD)"
-REMOTE="$(git -C "$REPO" rev-parse "origin/$BRANCH")"
+
+if [ -n "$TO" ]; then
+  # A particular commit: the one the development site has been running.
+  #
+  # Only one already on the branch. Anything else is either a typing mistake
+  # or a commit that never went through the build, and this is live.
+  REMOTE="$(git -C "$REPO" rev-parse --verify --quiet "${TO}^{commit}")" \
+    || fail "there is no commit ${TO} here. Nothing has been changed."
+  git -C "$REPO" merge-base --is-ancestor "$REMOTE" "origin/$BRANCH" \
+    || fail "${TO:0:7} is not on ${BRANCH}. Nothing has been changed."
+else
+  REMOTE="$(git -C "$REPO" rev-parse "origin/$BRANCH")"
+fi
 
 if [ "$LOCAL" = "$REMOTE" ] && [ "$FORCE" = false ]; then
   # Silent on the ordinary path: this runs every couple of minutes and a log
@@ -94,19 +126,26 @@ if [ "$LOCAL" = "$REMOTE" ] && [ "$FORCE" = false ]; then
   exit 0
 fi
 
-SUBJECT="$(git -C "$REPO" log -1 --format=%s "origin/$BRANCH")"
+SUBJECT="$(git -C "$REPO" log -1 --format=%s "$REMOTE")"
 log "Deploying ${LOCAL:0:7} -> ${REMOTE:0:7}: $SUBJECT"
 
 if [ "$DRY_RUN" = true ]; then
   log "--dry-run: stopping here."
-  git -C "$REPO" --no-pager log --oneline "HEAD..origin/$BRANCH" | sed 's/^/    /'
+  git -C "$REPO" --no-pager log --oneline "HEAD..$REMOTE" | sed 's/^/    /'
   exit 0
 fi
 
 # --- pull the code, fetch the images, migrate ---------------------------------------------------
 
-git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
-  || fail "pull was not a fast-forward. Somebody has committed on the server."
+# Forward only, in both cases: the same refusal protects anything committed on
+# the server by hand, whichever commit is being deployed.
+if [ -n "$TO" ]; then
+  git -C "$REPO" merge --ff-only --quiet "$REMOTE" \
+    || fail "moving to ${REMOTE:0:7} was not a fast-forward. Either somebody has committed on the server, or ${REMOTE:0:7} is older than what live runs."
+else
+  git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
+    || fail "pull was not a fast-forward. Somebody has committed on the server."
+fi
 
 # The pull may have just replaced this script while bash is part-way through
 # reading it. Until this re-exec existed, a change to the deploy process took
@@ -122,6 +161,11 @@ git -C "$REPO" pull --ff-only --quiet origin "$BRANCH" \
 if [ -z "${DEPLOY_RELOADED:-}" ]; then
   export DEPLOY_RELOADED=1
   log "Reloading the deploy script at $(git -C "$REPO" rev-parse --short HEAD)."
+  # --to is carried across, or the reloaded script would deploy the newest
+  # commit instead of the one it was asked for.
+  if [ -n "$TO" ]; then
+    exec "$REPO/scripts/auto-deploy.sh" --force --to "$REMOTE"
+  fi
   exec "$REPO/scripts/auto-deploy.sh" --force
 fi
 
@@ -160,7 +204,11 @@ log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
 # was fine. Six days of deploys were lost to a disk check that took one line.
 FREE_MB=$(df -Pm / | awk 'NR==2 {print $4}')
 if [ "${FREE_MB:-0}" -lt 3000 ]; then
-  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first: 'docker image prune -af' and 'docker builder prune -af'. Nothing has been changed. Both commands run on the server, over SSH - run on your own machine they talk to Docker Desktop and do nothing for this."
+  # Not `docker image prune -af`, which this message used to recommend. That
+  # removes every image without a running container, and between deploys the
+  # tools image has none, so it would take the image live's nightly backup runs
+  # in. prune-images.sh keeps what is running or pinned.
+  fail "only ${FREE_MB}MB free on this server and a pull needs a few gigabytes. Reclaim space first with './scripts/prune-images.sh --dry-run' to see what would go, then './scripts/prune-images.sh'. Nothing has been changed. Both run on the server, over SSH."
 fi
 log "${FREE_MB}MB free before pulling."
 
@@ -322,95 +370,33 @@ else
   log "*** docker-compose.production.yml exec app node scripts/smoke-pdf.mjs ***"
 fi
 
+# --- pin the scheduled jobs to what was just deployed ------------------------
+#
+# The nightly backup, the monthly restore test and the hourly notifications
+# all run in the tools image, and none of them is told which version to use.
+# Compose fills the gap from .env, and without an IMAGE_TAG there it falls
+# back to `latest`.
+#
+# That was harmless while live was the only site. It stopped being harmless on
+# 24 September: CI publishes `latest` on every build, and with a development
+# site running ahead of live, `latest` in the registry is development's newest,
+# untried code. A backup pulling it would run tomorrow's backup script against
+# today's live data. So the version is written down, and every compose command
+# in this directory, scheduled or by hand, uses what live actually runs.
+
+if grep -q '^IMAGE_TAG=' "$REPO/.env" 2>/dev/null; then
+  sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" "$REPO/.env"
+else
+  printf '\nIMAGE_TAG=%s\n' "$IMAGE_TAG" >> "$REPO/.env"
+fi
+log "Scheduled jobs now use ${IMAGE_TAG:0:7}."
+
 # --- tidy up after a successful deploy --------------------------------------
 #
-# Every deploy pulls an image tagged with its commit, and nothing ever removed
-# the old ones. By 15 September 2026 there were forty-seven of them, fourteen
-# gigabytes on a nineteen-gigabyte disk, and the next pull had nowhere to go.
-#
-# Only after a success, and only images older than three days: the last couple
-# of days are what a rollback would reach for, and throwing those away to save
-# disk would be trading one bad afternoon for a worse one.
-#
-# A week was too generous, and the arithmetic says why. Each deploy lands about
-# 950MB of app image and 1.36GB of tools image, so a week of daily deploys is
-# more disk than this machine has. On 18 September the free space had drifted
-# to 5.9GB with 4.85GB of it sitting in unused images, and a hand-run prune at
-# 72h returned 1.5GB - which is exactly the clean-up this step should have been
-# doing on its own.
-#
-# Three days still leaves two local rollback targets, and nothing is ever
-# really lost: every one of these images is in ghcr.io and re-pulls if a
-# rollback needs one. The local copy only saves the download.
-# Kept by count, not by age, for the same reason the backups are.
-#
-# Three days looked generous when it was written, and the arithmetic assumed
-# one deploy a day. On 21 September 2026 there were six, and a deploy lands
-# 972MB of app image and 1.36GB of tools image - 2.33GB a time. Every one of
-# them was inside the 72-hour window, so the age filter released nothing at
-# all: 4.6GB of unused images sat on a 19GB disk while the prune reported
-# "Total reclaimed space: 0B" after each deploy.
-#
-# That is the same shape as the backup retention fixed earlier the same day.
-# Age is the wrong unit whenever the churn is faster than the window, and a
-# development day is much faster than a day.
-#
-# Two versions plus the running one is two local rollback targets, and nothing
-# is ever really lost: every one of these images is in ghcr.io and re-pulls if
-# a rollback needs it. The local copy only saves the download.
-KEEP_VERSIONS="${KEEP_VERSIONS:-2}"
-log "Keeping the newest ${KEEP_VERSIONS} image versions."
+# Shared with the development deploy, so the two cannot disagree about which
+# images may go. What it keeps and why is written there.
 
-# Newest first, one entry per commit tag. Both the app and the tools image
-# carry the same tag, so a version is kept or dropped as a pair - keeping an
-# app image whose tools image had gone would leave a rollback unable to
-# migrate.
-#
-# Two bugs lived in these five lines from the day they were written, and
-# together they stopped every deploy tidying up after itself. Found on
-# 24 September with the disk at 84%, 16 images and 6.5 GB of them.
-#
-# The format string listed CreatedAt and Tag and not Repository, so
-# `grep roft-lms` was searching a date and a commit hash and matched
-# nothing. KEEP_TAGS came out empty, which made the loop below judge every
-# image unwanted, the running one included.
-#
-# Worse, a grep that matches nothing exits 1. Under `set -euo pipefail`
-# that killed the script on the spot, before it removed a single image and
-# before it logged either the free space or "Deployed". The deploy itself
-# had already finished, so the operator was told nothing and the disk
-# climbed quietly.
-#
-# `|| true` is deliberate rather than defensive: a machine with no images
-# yet is the ordinary first deploy, and it must not be an error.
-KEEP_TAGS=$(docker images --format '{{.Repository}}|{{.CreatedAt}}|{{.Tag}}' 2>/dev/null \
-  | grep 'roft-lms' \
-  | sort -t'|' -k2 -r \
-  | cut -d'|' -f3 \
-  | awk '!seen[$0]++' \
-  | head -n "$KEEP_VERSIONS" || true)
-
-if [ -z "$KEEP_TAGS" ]; then
-  log "No roft-lms images found to tidy."
-fi
-
-docker images --format '{{.Repository}}:{{.Tag}}|{{.Tag}}' 2>/dev/null \
-  | grep 'roft-lms' \
-  | while IFS='|' read -r REF TAG; do
-      # Nothing to keep means the list is wrong, not that everything is
-      # disposable. Removing the running image is not a tidy-up.
-      if [ -z "$KEEP_TAGS" ]; then continue; fi
-      if ! printf '%s\n' "$KEEP_TAGS" | grep -qx "$TAG"; then
-        # An image a container is using is refused by docker, which is the
-        # safety net rather than the plan: the running version is the newest
-        # and so is always in KEEP_TAGS.
-        docker rmi "$REF" >/dev/null 2>&1 || true
-      fi
-    done
-
-# Anything left untagged by the above, plus build layers.
-docker image prune -f >/dev/null 2>&1 || true
+"$REPO/scripts/prune-images.sh" || log "WARNING: tidying images failed. The deploy itself succeeded."
 docker builder prune -af >/dev/null 2>&1 || true
-log "$(df -Pm / | awk 'NR==2 {print $4}')MB free after tidying."
 
 log "Deployed ${REMOTE:0:7}."

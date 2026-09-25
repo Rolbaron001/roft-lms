@@ -26,6 +26,10 @@ services:
       - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Sites this server adds for itself, such as the development site. See
+      # the import in the Caddyfile and caddy-sites/README.md. Empty, or
+      # missing, on a deployment that adds none.
+      - ./caddy-sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:

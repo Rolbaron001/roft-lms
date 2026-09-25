@@ -345,7 +345,76 @@ worse than one who was never sent it.
 
 ## Everyday operations
 
+### A development site beside live
+
+**On Curiosa's server since 24 September 2026.** Changes no longer go straight
+to live. A second copy of the application runs beside it, at
+`https://lms.roftbusiness.org`, and takes every change as soon as GitHub
+Actions has built it. Live takes **the version that ran there**, on Friday at
+22:00. Decided at the costing meeting of 23 September on Linda's
+recommendation, after an upload landed three seconds before a deploy restarted
+live on 19 September.
+
+| | Live | Development |
+|---|---|---|
+| Address | `LMS_DOMAIN` in `~/roft-lms/.env` | `LMS_DOMAIN` in `~/roft-lms-dev/.env` |
+| Checkout | `~/roft-lms`, moves on Friday | `~/roft-lms-dev`, moves on every push |
+| Compose file | `docker-compose.production.yml` | `docker-compose.development.yml` |
+| Database and files | its own | its own, copied from live at setup |
+| Mail, drives, AI tokens | as configured | none: it holds real staff addresses |
+| Memory and processor | uncapped | capped, so it cannot starve live |
+| Backed up | nightly | no: it is a copy |
+| Takes changes | Friday 22:00, `promote-to-production.sh` | every 15 minutes, `deploy-development.sh` |
+
+Every page of the development site carries a strip saying so, the sign-in page
+included, because the two are otherwise identical by design.
+
+**Setting it up** is one script, run once from the live checkout after live has
+been deployed with it:
+
+```bash
+cd ~/roft-lms && ./scripts/setup-development.sh lms.roftbusiness.org
+```
+
+It checks before each step and says what it found: that live is healthy, that
+the address points at this server, that there is room. It copies live's
+database and files (reading them only), clears copied sign-ins, AI tokens and
+drive connections, compares row counts on both sides, starts the site with its
+caps and confirms they took, validates the proxy before reloading it, and checks
+live is still answering at the end. Run again, it reports what is already in
+place; `--refresh` copies live's data across again.
+
+**The proxy is shared.** `lms.roftbusiness.org` reaches the development site
+through `caddy-sites/development.caddy`, a file the setup writes on this server
+and never commits: the Caddyfile is shared by every deployment of the platform
+and names nobody's hosts. See `caddy-sites/README.md`.
+
+**The schedule** is changed by `scripts/schedule-development.sh`, which setup
+calls. Run it with `--dry-run` first to see the change as a diff. It keeps every
+other job, backups and notifications included, and refuses to install a
+schedule that has lost one.
+
+**Releasing to live sooner than Friday**, for a change that cannot wait:
+
+```bash
+cd ~/roft-lms && ./scripts/promote-to-production.sh --now
+```
+
+Without `--now` it refuses a version development has run for less than six
+hours, so a commit pushed at 21:50 on a Friday is not on live at 22:00 untried.
+It also refuses if the development site is not healthy. Either way the log says
+why, and live is left as it was.
+
+**Images.** Both deploys tidy through `scripts/prune-images.sh`, which keeps
+whatever is running or pinned in either site's `.env` and removes the rest. Live
+now writes the version it deployed into its `.env`, so its backup and
+notification jobs run that version and never `latest`: CI publishes `latest` on
+every build, which since development runs ahead is untried code.
+
 ### Automatic deploys
+
+*Superseded on Curiosa's server by the development site above; still how a
+deployment without one is kept up to date.*
 
 `scripts/auto-deploy.sh` deploys whatever is on `main`, if it has moved. It
 does nothing when the remote has not changed, so it is safe to run as often as

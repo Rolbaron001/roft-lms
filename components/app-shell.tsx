@@ -13,6 +13,7 @@ import { platformIllustration } from "@/lib/platform";
 import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
+import { DeploymentBanner } from "./deployment-banner";
 
 /**
  * The shared frame. Navigation is filtered by permission rather than by role,
@@ -83,6 +84,8 @@ export async function AppShell({
         and the server refuses to serve /sw.js to them as well.
       */}
       {tenant.offlineEnabled ? <OfflineRegistration /> : null}
+
+      <DeploymentBanner />
 
       <header
         className="border-b-4 text-white"

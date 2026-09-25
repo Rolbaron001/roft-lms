@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { currentSession, currentTenant } from "@/lib/request";
 import { TenantLogo } from "@/components/tenant-logo";
+import { DeploymentBanner } from "@/components/deployment-banner";
 import { LoginForm } from "./login-form";
 import { platformName } from "@/lib/platform";
 
@@ -39,6 +40,9 @@ export default async function LoginPage() {
           : undefined
       }
     >
+      {/* Where a mistake between development and live would start. */}
+      <DeploymentBanner />
+
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1.1fr_minmax(0,26rem)] lg:gap-16">
         <section className="hidden lg:block">
           {tenant?.signInGraphicUrl ? (

@@ -111,14 +111,28 @@ describe("what pruning keeps", () => {
  *
  * The comment defending three days had done the arithmetic for one deploy a
  * day. A development day is not one deploy.
+ *
+ * Then, on 24 September, the count itself turned out never to have run. Its
+ * filter looked for "roft-lms" in a line holding only a date and a commit
+ * hash, matched nothing, and under `set -euo pipefail` stopped the deploy
+ * before it removed a single image: 16 images and 84% full. The same day a
+ * development site started running ahead of live, and "the newest two" stopped
+ * being a safe rule, because both could be development's. The rule is now
+ * "whatever is running or pinned", shared by both sites in
+ * scripts/prune-images.sh. What these tests protect has not changed; where it
+ * lives has.
  */
 describe("how many image versions the server keeps", () => {
-  it("counts versions rather than measuring their age", () => {
-    expect(deploy).toMatch(/KEEP_VERSIONS="\$\{KEEP_VERSIONS:-2\}"/);
-    // The age filter that could not release anything is gone, not merely
-    // supplemented - leaving it beside a count would re-impose the rule the
-    // count exists to replace.
-    expect(deploy).not.toMatch(/image prune -af --filter "until=72h"/);
+  const prune = readFileSync(join(process.cwd(), "scripts/prune-images.sh"), "utf8");
+
+  it("keeps by what is needed, never by age", () => {
+    expect(deploy).toMatch(/scripts\/prune-images\.sh/);
+    expect(prune).toMatch(/docker ps -a/);
+    // The age filter that could not release anything is gone, and stays gone:
+    // leaving it anywhere would re-impose the rule it failed at.
+    for (const script of [deploy, prune]) {
+      expect(script).not.toMatch(/--filter "?until=/);
+    }
   });
 
   it("keeps each version as a pair", () => {
@@ -129,21 +143,26 @@ describe("how many image versions the server keeps", () => {
      * unable to migrate - which is the failure this script's own comments
      * describe as the worst outcome, because the site comes up healthy against
      * the wrong schema.
+     *
+     * Kept as a pair because the keep-list is of tags, and the removal checks
+     * every app and every tools image against the same list.
      */
-    expect(deploy).toMatch(/KEEP_TAGS=/);
-    expect(deploy).toMatch(/grep -qx "\$TAG"/);
+    expect(prune).toMatch(/roft-lms-\(app\|tools\):/);
+    expect(prune).toMatch(/grep -qx "\$TAG"/);
   });
 
   it("still clears dangling layers, which have no version at all", () => {
-    expect(deploy).toMatch(/docker image prune -f/);
+    expect(prune).toMatch(/docker image prune -f/);
     expect(deploy).toMatch(/docker builder prune -af/);
   });
 
   it("tells somebody the right command when the disk is already full", () => {
-    // The failure message named the filter that cannot help. Somebody reading
-    // it at 100% full would run it, reclaim nothing, and conclude the disk was
-    // genuinely in use.
+    // First it named a filter that could not help. Then it named
+    // `docker image prune -af`, which removes every image without a running
+    // container, and between deploys that is the tools image live's nightly
+    // backup runs in. The right command keeps what is running or pinned.
     expect(deploy).not.toMatch(/prune -af --filter until=72h/);
-    expect(deploy).toMatch(/Reclaim space first: 'docker image prune -af'/);
+    expect(deploy).not.toMatch(/Reclaim space first: 'docker image prune -af'/);
+    expect(deploy).toMatch(/Reclaim space first with '\.\/scripts\/prune-images\.sh --dry-run'/);
   });
 });

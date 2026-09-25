@@ -1,0 +1,161 @@
+# The development site: the same application as live, beside it on the same
+# server, with its own database, its own files and its own address.
+#
+#   Set up once, from the live checkout:  ./scripts/setup-development.sh <address>
+#   Kept up to date by cron:              ./scripts/deploy-development.sh
+#
+# Decided on 23 September 2026, at Linda's recommendation, after changes had
+# been going straight to live: on 19 September an upload landed three seconds
+# before a deploy restarted the application, and the modules did not link.
+# Every change now lands here first, and live takes the image that ran here,
+# on Friday night. See scripts/promote-to-production.sh.
+#
+# Separate in everything that holds state, because that is the whole point:
+#
+#   - its own database, so a schema push from here can never alter live's
+#     structure, and test data never sits beside real learners' records;
+#   - its own file storage, for the same reason;
+#   - its own compose project (roft-lms-dev), so its volumes are named apart
+#     from live's and nothing run here can address live's containers.
+#
+# It shares one thing with live: the proxy. Caddy runs in live's project and
+# reaches this application over live's `edge` network as `app-dev`, through a
+# site file the setup script writes into caddy-sites/. One proxy means one set
+# of certificates and ports 80 and 443 bound once.
+#
+# It is capped, and live is not. The server has one processor and 929 MB of
+# memory, and a stress test here must slow this site down, not live. The caps
+# leave live at least 40 per cent of the processor in ordinary running, and 20
+# per cent for the minute or so a development deploy spends migrating, when
+# the tools container runs beside the other two. Checked with `docker inspect`
+# after the first start rather than trusted.
+
+name: roft-lms-dev
+
+services:
+  app:
+    # Always a commit, never "latest". CI publishes "latest" on every build,
+    # which is exactly what must not reach a site by accident. IMAGE_TAG is
+    # written into this project's .env by scripts/deploy-development.sh.
+    image: ghcr.io/rolbaron001/roft-lms-app:${IMAGE_TAG:?set by scripts/deploy-development.sh}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      # Fewer than live's ten: this database has a quarter of the memory.
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
+      # Its own, never live's. A session sealed on one site means nothing on
+      # the other, and each person's stored AI token, sealed under live's key,
+      # cannot be opened here even if one were copied across.
+      AUTH_SECRET: "${AUTH_SECRET:?}"
+      AUTH_URL: https://${LMS_DOMAIN:?}
+      PLATFORM_HOST: ${LMS_DOMAIN:?}
+      PLATFORM_ORG_SLUG: ${PLATFORM_ORG_SLUG:-roft}
+      PLATFORM_NAME: ${PLATFORM_NAME:-ROFT}
+      PLATFORM_REFERENCE_PREFIX: ${PLATFORM_REFERENCE_PREFIX:-ROFT}
+      PLATFORM_ILLUSTRATION: ${PLATFORM_ILLUSTRATION:-}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage
+      # The strip across every page. See components/deployment-banner.tsx.
+      DEPLOYMENT_LABEL: Development
+      # Node sizes its heap from the machine, not the container, and would
+      # reach past the cap below and be killed. This keeps it inside.
+      NODE_OPTIONS: --max-old-space-size=320
+
+      # Deliberately absent, and each absence is a decision:
+      #
+      #   MAIL_*           The data here is a copy of live, including the real
+      #                    email addresses of real staff. A development site
+      #                    that could send mail would one day send some to them.
+      #                    Without these the platform reports mail as not set
+      #                    up and sends nothing.
+      #   GOOGLE_DRIVE_*,  Connecting a drive here would store a real
+      #   ONE_DRIVE_*      person's access to their own files on a test site.
+      #   AI_TOKEN_KEY     Tokens are per person and sealed; this site holds
+      #                    none (the setup script removes the copied ones).
+      #   S3_*             Nothing here is backed up. It is a copy, refreshed
+      #                    from live, and live is what the backups protect.
+    volumes:
+      - evidence:/app/storage
+    mem_limit: 384m
+    cpus: 0.4
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      internal: {}
+      edge:
+        aliases:
+          - app-dev
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-roft_lms}
+      TZ: Africa/Johannesburg
+    volumes:
+      # The parent, not /data, for the reason given in the production file:
+      # Postgres 18 keeps its data in a version-numbered folder beneath it.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-roft_lms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 256m
+    cpus: 0.2
+    # Internal only. Nothing outside this project can reach it, live included.
+    networks:
+      - internal
+
+  # Migrations, run by the deploy script. Never started with the site.
+  tools:
+    image: ghcr.io/rolbaron001/roft-lms-tools:${IMAGE_TAG:?set by scripts/deploy-development.sh}
+    profiles: ["tools"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://roft_app:${ROFT_APP_DB_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      DATABASE_ADMIN_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-roft_lms}
+      ROFT_APP_DB_PASSWORD: ${ROFT_APP_DB_PASSWORD:?}
+      AUTH_SECRET: ${AUTH_SECRET:?}
+      AUTH_URL: https://${LMS_DOMAIN:?}
+      PLATFORM_HOST: ${LMS_DOMAIN:?}
+      PLATFORM_ORG_SLUG: ${PLATFORM_ORG_SLUG:-roft}
+      PLATFORM_NAME: ${PLATFORM_NAME:-ROFT}
+      PLATFORM_REFERENCE_PREFIX: ${PLATFORM_REFERENCE_PREFIX:-ROFT}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_ROOT: /app/storage
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:-roft_lms}
+    volumes:
+      - evidence:/app/storage
+    mem_limit: 512m
+    cpus: 0.2
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  # Named by compose as roft-lms-dev_pgdata and roft-lms-dev_evidence, which
+  # is what keeps them apart from live's roft-lms_pgdata and roft-lms_evidence.
+  pgdata:
+  evidence:
+
+networks:
+  internal: {}
+  # Live's proxy network, joined rather than created. The development
+  # application is on it only so that Caddy can reach it.
+  edge:
+    external: true
+    name: roft-lms_edge
