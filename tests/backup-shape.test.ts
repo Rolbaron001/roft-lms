@@ -39,6 +39,42 @@ const deploy = script("auto-deploy.sh");
  * without a word. Checked as a rule over every BACKUP_ setting the script
  * reads, so the next one added cannot be left out the same way.
  */
+/**
+ * The scheduled jobs can reach the world they send to.
+ *
+ * The tools container runs the nightly backup and the hourly notification
+ * sender. It sat on the `internal` network alone, which has no route out, so it
+ * could not resolve or reach mail.curiosa.academy: proved from that network on
+ * 25 September. Every queued notification would have failed, and off-site
+ * backups could never have run. The database, and only the database, belongs
+ * on `internal` alone.
+ */
+describe("the scheduled jobs can reach beyond the server", () => {
+  const compose = readFileSync(join(process.cwd(), "docker-compose.production.yml"), "utf8");
+
+  /** One service's block, from its name at two spaces' indent to the next. */
+  function service(name: string): string {
+    const lines = compose.split("\n");
+    const start = lines.findIndex((line) => line === `  ${name}:`);
+    const end = lines.findIndex((line, i) => i > start && /^ {2}[a-z][\w-]*:\s*$|^\S/.test(line));
+    return lines.slice(start, end === -1 ? undefined : end).join("\n");
+  }
+
+  it("puts the tools container on the network with a way out", () => {
+    expect(service("tools")).toMatch(/networks:\n(?:\s+#.*\n)*\s+- edge\n\s+- internal/);
+  });
+
+  it("keeps the database off it", () => {
+    const db = service("db");
+    expect(db).toMatch(/- internal/);
+    expect(db).not.toMatch(/- edge/);
+  });
+
+  it("keeps the no-route-out network for the database's sake", () => {
+    expect(compose).toMatch(/internal:\n\s+internal: true/);
+  });
+});
+
 describe("every backup setting reaches the backup", () => {
   const compose = readFileSync(join(process.cwd(), "docker-compose.production.yml"), "utf8");
   const read = [...backup.matchAll(/^(BACKUP_[A-Z_]+)=/gm)].map((match) => match[1]);

@@ -222,7 +222,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Both networks, like the application: `internal` to reach the database,
+    # `edge` to reach anything beyond this server.
+    #
+    # It was on `internal` alone, and `internal` is declared `internal: true`,
+    # which gives it no route out at all. Noted on 16 September as "cannot
+    # resolve DNS, harmless today"; proved on 25 September to be anything but.
+    # The hourly `notify.mts send` delivers queued mail from this container,
+    # and could neither resolve nor reach mail.curiosa.academy:465, so the
+    # first notification ever queued would have failed, and every one after
+    # it. It had only looked fine because the outbox had always been empty.
+    # Off-site backups (BACKUP_BUCKET) run from here too and could not have
+    # worked either. The database stays on `internal` alone, which is what
+    # that network exists to protect.
     networks:
+      - edge
       - internal
 
   # Inbound mail. Its own container, so a bug in mail handling cannot take the
