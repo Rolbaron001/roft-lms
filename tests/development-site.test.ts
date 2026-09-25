@@ -197,11 +197,18 @@ describe("the two deploys cannot interfere", () => {
 describe("tidying images keeps what is running or pinned", () => {
   const prune = code("scripts/prune-images.sh");
 
-  it("keeps images in use, pinned versions and latest", () => {
+  it("keeps images in use and pinned versions", () => {
     expect(prune).toMatch(/docker ps -a/);
     expect(prune).toMatch(/pinned "\$LIVE_ENV"/);
     expect(prune).toMatch(/pinned "\$DEV_ENV"/);
-    expect(prune).toMatch(/latest/);
+  });
+
+  it("does not keep `latest` for its own sake", () => {
+    // On 25 September `latest` pointed at a version nothing ran, and keeping
+    // it held back the development site's next update on a full disk. Live
+    // pins its version in .env, so nothing needs the tag.
+    expect(prune).not.toMatch(/\\nlatest\\n|grep -vx latest/);
+    expect(prune).toMatch(/KEEP=\$\(printf '%s\\n%s\\n%s\\n' "\$IN_USE"/);
   });
 
   it("removes nothing when it cannot tell what is in use", () => {

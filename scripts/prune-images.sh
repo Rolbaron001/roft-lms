@@ -14,12 +14,20 @@
 #   - every image a container uses, running or stopped, in either project;
 #   - the version pinned in live's .env and in development's .env, which is how
 #     the tools image is kept: no container runs it between deploys, but the
-#     nightly backup and the hourly notifications do;
-#   - anything tagged `latest`, so that nothing still invoked without a pinned
-#     version is sent to the registry, or worse, to a local build.
+#     nightly backup and the hourly notifications do.
 #
 # Nothing else. Every image is in ghcr.io and re-pulls if a rollback needs it;
 # a local copy only saves a download, and this disk cannot afford the saving.
+#
+# NOT `latest`
+#
+# The first version kept anything tagged `latest`, as a safety net for jobs
+# still run without a pinned version. Once live pinned its version in .env
+# (auto-deploy.sh does it after every release) the net had nothing to catch,
+# and it did harm instead: on 25 September `latest` still pointed at a version
+# nothing ran, and the rule kept it indefinitely while the disk it sat on was
+# too full for the development site to take its next update. A `latest` tag
+# is now removed like any other that nothing needs.
 #
 # WHY NOT "THE NEWEST TWO", AS BEFORE
 #
@@ -58,11 +66,12 @@ IN_USE=$(docker ps -a --format '{{.Image}}' 2>/dev/null \
   | grep -E 'roft-lms-(app|tools):' \
   | sed 's/.*://' || true)
 
-KEEP=$(printf '%s\n%s\n%s\nlatest\n' "$IN_USE" "$(pinned "$LIVE_ENV")" "$(pinned "$DEV_ENV")" \
+KEEP=$(printf '%s\n%s\n%s\n' "$IN_USE" "$(pinned "$LIVE_ENV")" "$(pinned "$DEV_ENV")" \
   | grep -v '^$' | sort -u || true)
 
-# `latest` alone is not a keep-list: it means nothing running was found.
-if [ -z "$(printf '%s\n' "$KEEP" | grep -vx latest || true)" ]; then
+# An empty list means nothing running was found, which is a reason to stop,
+# not a licence to remove everything.
+if [ -z "$KEEP" ]; then
   log "Could not tell which images are in use, so none were removed."
   exit 0
 fi
