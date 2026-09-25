@@ -196,6 +196,14 @@ services:
       BACKUP_DIR: /backups
       BACKUP_BUCKET: ${BACKUP_BUCKET:-}
       BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      # How many evidence archives, and how many days of database dumps, the
+      # backup keeps. backup.sh has read both since 21 September and nothing
+      # passed either to it, so they were always their defaults whatever .env
+      # said: found on 25 September when Roland chose two archives instead of
+      # three, which .env alone would have silently ignored. Curiosa's server
+      # sets BACKUP_KEEP_EVIDENCE=2 until its disk is upgraded to 1 TB.
+      BACKUP_KEEP_EVIDENCE: ${BACKUP_KEEP_EVIDENCE:-3}
+      BACKUP_RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-30}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}

@@ -28,6 +28,32 @@ function script(name: string): string {
 const backup = script("backup.sh");
 const deploy = script("auto-deploy.sh");
 
+/**
+ * A setting the script reads is a setting that reaches it.
+ *
+ * backup.sh runs inside the tools container, and a container receives only the
+ * variables its compose file names. BACKUP_KEEP_EVIDENCE and BACKUP_RETAIN_DAYS
+ * were read by the script and named nowhere, so they were always their
+ * defaults whatever .env said. Found on 25 September, when Roland chose two
+ * evidence archives rather than three and .env alone would have kept three
+ * without a word. Checked as a rule over every BACKUP_ setting the script
+ * reads, so the next one added cannot be left out the same way.
+ */
+describe("every backup setting reaches the backup", () => {
+  const compose = readFileSync(join(process.cwd(), "docker-compose.production.yml"), "utf8");
+  const read = [...backup.matchAll(/^(BACKUP_[A-Z_]+)=/gm)].map((match) => match[1]);
+
+  it("finds the settings to check", () => {
+    expect(read).toEqual(expect.arrayContaining(["BACKUP_KEEP_EVIDENCE", "BACKUP_RETAIN_DAYS"]));
+  });
+
+  it.each([...new Set(read)])("%s is passed to the tools container", (name) => {
+    expect(compose, `${name} is read by backup.sh and never passed to it`).toMatch(
+      new RegExp(`^\\s+${name}:`, "m"),
+    );
+  });
+});
+
 describe("the pre-deploy backup", () => {
   it("takes the database and not the evidence", () => {
     // The evidence half is ~1 GB; the database dump is under 1.5 MB, and it is
