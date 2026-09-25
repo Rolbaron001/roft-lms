@@ -95,12 +95,18 @@ healthy "$LIVE_DOMAIN" || fail "live is not healthy at https://$LIVE_DOMAIN. Not
 log "Live is healthy at https://$LIVE_DOMAIN."
 
 # The address has to reach this server, or the proxy cannot obtain a
-# certificate for it. Compared with live's own address rather than with an
-# outside service, so the check needs nothing beyond this machine.
+# certificate for it. Checked against the machine's own addresses, so it needs
+# nothing beyond this machine.
+#
+# Not against live's address, which is what the first version did. On this
+# server the hosts file maps live's name to 127.0.1.1, so live resolved to the
+# loopback and no public address could ever match it: the check refused a
+# development address that was correctly pointed here. It failed safely, before
+# changing anything, on 25 September.
 DEV_IP="$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}')"
-LIVE_IP="$(getent ahostsv4 "$LIVE_DOMAIN" | awk 'NR==1 {print $1}')"
-[ -n "$DEV_IP" ] && [ "$DEV_IP" = "$LIVE_IP" ] \
-  || fail "$DOMAIN resolves to '${DEV_IP:-nothing}', not to this server (${LIVE_IP}). Point its DNS here first."
+OWN_IPS="$(hostname -I 2>/dev/null || true)"
+[ -n "$DEV_IP" ] && printf ' %s ' "$OWN_IPS" | grep -q " $DEV_IP " \
+  || fail "$DOMAIN resolves to '${DEV_IP:-nothing}', which is not one of this server's addresses (${OWN_IPS}). Point its DNS here first."
 log "$DOMAIN points at this server ($DEV_IP)."
 
 docker inspect --format '{{range .Mounts}}{{.Destination}} {{end}}' roft-lms-caddy-1 2>/dev/null \
