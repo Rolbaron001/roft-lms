@@ -135,6 +135,13 @@ export type ArchivedLearner = {
     decidedAt: string | null;
     decidedBy: string | null;
     moderation: string | null;
+    /** Each criterion the assessor judged, with what they said about it. */
+    criteria?: {
+      code: string;
+      description: string;
+      judgement: string;
+      note: string | null;
+    }[];
   }[];
   files: ArchivedFile[];
 };
@@ -241,6 +248,16 @@ export function renderArchiveIndex(manifest: ArchiveManifest): string {
   );
 }
 
+function renderCriteria(criteria: ArchivedLearner["decisions"][number]["criteria"]): string {
+  if (!criteria?.length) return "";
+  return `<ul class="muted">${criteria
+    .map(
+      (c) =>
+        `<li>${escapeHtml(c.code)} ${escapeHtml(c.description)}: <strong>${escapeHtml(c.judgement)}</strong>${c.note ? `. ${escapeHtml(c.note)}` : ""}</li>`,
+    )
+    .join("")}</ul>`;
+}
+
 /** One learner's page: their record, in words, and every file. */
 export function renderLearnerIndex(manifest: ArchiveManifest, learner: ArchivedLearner): string {
   const certificates = learner.certificates.length
@@ -259,7 +276,7 @@ export function renderLearnerIndex(manifest: ArchiveManifest, learner: ArchivedL
     ? `<table><thead><tr><th>Assessment</th><th>Attempt</th><th>Outcome</th><th>Decided</th><th>Moderation</th></tr></thead><tbody>${learner.decisions
         .map(
           (d) =>
-            `<tr><td>${escapeHtml(d.assessment)}</td><td>${d.attempt}</td><td>${escapeHtml(d.outcome)}</td><td>${escapeHtml([d.decidedAt?.slice(0, 10), d.decidedBy].filter(Boolean).join(", "))}</td><td>${escapeHtml(d.moderation ?? "")}</td></tr>`,
+            `<tr><td>${escapeHtml(d.assessment)}${renderCriteria(d.criteria)}</td><td>${d.attempt}</td><td>${escapeHtml(d.outcome)}</td><td>${escapeHtml([d.decidedAt?.slice(0, 10), d.decidedBy].filter(Boolean).join(", "))}</td><td>${escapeHtml(d.moderation ?? "")}</td></tr>`,
         )
         .join("")}</tbody></table>`
     : `<p class="muted">No assessment decisions recorded.</p>`;

@@ -1612,6 +1612,95 @@ export const disposalDecisions = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Cohort archives
+// ---------------------------------------------------------------------------
+
+/**
+ * Where an archive has got to.
+ *
+ * In order: being written, which happens in the background because a large
+ * cohort takes longer than a web request is allowed; built on the server and
+ * waiting to be downloaded; checked by the provider's browser against the copy
+ * they saved; its files removed from the server; or brought back. "failed" is
+ * a build that did not finish, with the reason. "abandoned" is an archive
+ * somebody decided not to go on with. In both, the working file is gone and
+ * the learners are free to be archived again.
+ */
+export const archiveStatus = pgEnum("archive_status", [
+  "building",
+  "failed",
+  "built",
+  "verified",
+  "removed",
+  "restored",
+  "abandoned",
+]);
+
+/**
+ * One archive of a cohort's finished learners, taken off the server.
+ *
+ * Job sheet 4.3. The server's disk is small and evidence is large, so once a
+ * learner is certificated their files go to the provider in one zip that opens
+ * without the platform, and the platform keeps the record of what went and
+ * where. Nothing is removed until the provider's own saved copy has been
+ * fingerprinted in their browser and matched against this row: the platform
+ * never takes the provider's word, or its own, that the download worked.
+ */
+export const cohortArchives = pgTable(
+  "cohort_archives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+
+    status: archiveStatus("status").notNull().default("building"),
+    /** The learners in this archive, so the next one leaves them out. */
+    learnerIds: jsonb("learner_ids").$type<string[]>().notNull(),
+
+    /** The name the provider saves it under. */
+    filename: text("filename").notNull(),
+    /** Both known once the build finishes. */
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    /** See lib/archive-format.ts: chunked SHA-256, prefixed with its scheme. */
+    fingerprint: text("fingerprint"),
+    /** Everything in the archive and where each file came from. */
+    manifest: jsonb("manifest").notNull(),
+    /**
+     * Where the built file waits on the server until it is verified. Cleared
+     * when the working file is deleted: on removal, failure or abandonment.
+     */
+    workingPath: text("working_path"),
+    /** Why a build failed, in words an administrator can act on. */
+    failureReason: text("failure_reason"),
+
+    builtById: uuid("built_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    builtAt: timestamp("built_at", { withTimezone: true }),
+    verifiedById: uuid("verified_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    removedById: uuid("removed_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    restoredById: uuid("restored_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
+  },
+  (t) => [index("cohort_archives_cohort_idx").on(t.organisationId, t.cohortId)],
+);
+
+// ---------------------------------------------------------------------------
 // AI extensions
 // ---------------------------------------------------------------------------
 

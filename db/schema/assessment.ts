@@ -410,6 +410,17 @@ export const evidenceArtifacts = pgTable(
 
     /** Set when a later integrity check found the stored file altered. */
     integrityFailedAt: timestamp("integrity_failed_at", { withTimezone: true }),
+
+    /**
+     * Set when the file has left this server in a cohort archive.
+     *
+     * The row stays, so the learner's history is complete; only the bytes are
+     * elsewhere, in the archive the provider holds. See lib/cohort-archive.ts.
+     * No foreign key, because the archive table lives in another schema file
+     * and a record of where a file went must outlive any tidying of archives.
+     */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveId: uuid("archive_id"),
   },
   (t) => [
     index("evidence_artifacts_submission_idx").on(t.submissionId),
@@ -606,6 +617,9 @@ export const certificates = pgTable(
     storageKey: text("storage_key"),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     revokedReason: text("revoked_reason"),
+    /** Set when the certificate's file has left this server in a cohort archive. */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveId: uuid("archive_id"),
   },
   (t) => [
     uniqueIndex("certificates_verification_ref_idx").on(t.verificationReference),

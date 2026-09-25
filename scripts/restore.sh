@@ -64,12 +64,16 @@ count_evidence() {
 }
 
 # Every storage key the restored database expects to find on disk.
+#
+# A file that has left in a cohort archive is not expected: its row says where
+# it went (lib/cohort-archive.ts). Read through to_jsonb rather than by column
+# name so the same query works on a dump taken before archived_at existed.
 storage_keys_in() {
   local database="$1"
   psql --dbname="$database" --tuples-only --no-align --command "
-    select storage_key from evidence_artifacts where storage_key is not null
+    select storage_key from evidence_artifacts e where storage_key is not null and (to_jsonb(e) ->> 'archived_at') is null
     union
-    select storage_key from certificates       where storage_key is not null
+    select storage_key from certificates c where storage_key is not null and (to_jsonb(c) ->> 'archived_at') is null
     union
     select storage_key from lessons            where storage_key is not null
   "

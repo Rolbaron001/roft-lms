@@ -228,3 +228,15 @@ describe("how many image versions the server keeps", () => {
     expect(deploy).toMatch(/Reclaim space first with '\.\/scripts\/prune-images\.sh --dry-run'/);
   });
 });
+
+describe("cohort archives waiting on the server", () => {
+  it("are left out of the evidence backup, which already holds every byte of them", () => {
+    // A built archive waits in the storage volume until the provider checks
+    // their copy. It is a copy of evidence the same backup already takes, and
+    // taking it again would double the evidence on a disk with none to spare.
+    const archive = readFileSync(join(process.cwd(), "lib", "cohort-archive.ts"), "utf8");
+    expect(archive).toMatch(/process\.env\.STORAGE_LOCAL_ROOT \?\? "storage", "_archives"/);
+    expect(backup).toMatch(/tar -czf "\$EVIDENCE_TAR" --exclude=\.\/_archives -C "\$STORAGE_ROOT" \./);
+    expect(backup).toMatch(/-path "\$STORAGE_ROOT\/_archives" -prune/);
+  });
+});

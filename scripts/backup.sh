@@ -172,7 +172,7 @@ else
   fi
 
   log "Archiving evidence from ${STORAGE_ROOT}..."
-  FILE_COUNT=$(find "$STORAGE_ROOT" -type f | wc -l | tr -d ' ')
+  FILE_COUNT=$(find "$STORAGE_ROOT" -path "$STORAGE_ROOT/_archives" -prune -o -type f -print | wc -l | tr -d ' ')
 
   if (( FILE_COUNT == 0 )); then
     log "WARNING: no evidence files were found. That is expected on a new"
@@ -182,7 +182,12 @@ else
   # `tar -C` so the archive holds paths relative to the storage root, which are
   # exactly the storage keys recorded in the database. That is what lets the
   # restore check compare the two directly.
-  tar -czf "$EVIDENCE_TAR" -C "$STORAGE_ROOT" .
+  #
+  # _archives is left out. It holds cohort archives waiting for the provider to
+  # download and check them (lib/cohort-archive.ts), and every byte in one is a
+  # copy of evidence this same archive already holds. Backing it up would
+  # double the evidence on a disk that cannot spare it.
+  tar -czf "$EVIDENCE_TAR" --exclude=./_archives -C "$STORAGE_ROOT" .
 
   EV_BYTES=$(stat -c%s "$EVIDENCE_TAR" 2>/dev/null || stat -f%z "$EVIDENCE_TAR")
   log "Evidence archived: ${FILE_COUNT} files, $((EV_BYTES / 1024)) KB"

@@ -213,6 +213,15 @@ export const enrolmentDocuments = pgTable(
     /** Why it was refused, which the learner has to be told to fix it. */
     refusedReason: text("refused_reason"),
 
+    /**
+     * Set when the document has left this server in a cohort archive.
+     *
+     * Only once no other enrolment of the learner's still needs it: an
+     * identity document is the learner's, not the qualification's.
+     */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveId: uuid("archive_id"),
+
     uploadedById: uuid("uploaded_by_id").references(() => users.id, {
       onDelete: "set null",
     }),

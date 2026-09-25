@@ -73,6 +73,7 @@ export default async function CohortPage({
   const active = detail.members.filter((member) => member.leftAt === null);
 
   const canManage = session.permissions.includes("enrolment:manage");
+  const canArchive = session.permissions.includes("records:manage");
   const canSchedule = session.permissions.includes("session:manage");
   const canRegister = session.permissions.includes("attendance:record");
 
@@ -117,6 +118,14 @@ export default async function CohortPage({
         <p className="mt-1 text-sm text-[var(--muted)]">
           Starts {detail.cohort.startDate} · {active.length}{" "}
           {active.length === 1 ? "learner" : "learners"}
+          {canArchive ? (
+            <>
+              {" · "}
+              <Link href={`/cohorts/${detail.cohort.id}/archive`} className="hover:underline">
+                Archive evidence
+              </Link>
+            </>
+          ) : null}
         </p>
       </div>
 
