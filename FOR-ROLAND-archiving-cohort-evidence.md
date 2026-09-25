@@ -80,6 +80,15 @@ disposal is recorded in the register the platform already keeps.
 
 ---
 
+**Decided by Roland, 25 September: all five recommendations adopted.** The
+provider keeps the archive, with a second copy off-site once 10.4 exists; the
+archive is handed back and checked before any file is removed; only a provider
+administrator may archive; the archive is a single file that opens in a browser;
+and a cohort is archived without anyone resitting, who follow once their own
+certificate is issued. Decision 5 was marked for Heidi and she may still
+overturn it before any real archive is made. Decision 6, the source of the
+five-year period, is still Heidi's to supply and does not hold up the build.
+
 ## Cost and effort
 
 **Disk:** the archive is the same size as the evidence it holds, plus a few
