@@ -18,7 +18,7 @@ import { vocabulary } from "@/lib/terms";
  */
 export default async function CohortsPage() {
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
 
   // A cohort usually arrives as a spreadsheet of names, so the same import that

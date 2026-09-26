@@ -42,7 +42,9 @@ export async function AppShell({
   // Filtered by permission rather than by role, so a link never appears for a
   // page the person would be refused. A section left with nothing in it is
   // dropped by the menu rather than shown empty.
-  const words = vocabulary(tenant.terminology);
+  // With the structure, so a provider who chose study units reads "Study
+  // units" where the menu would otherwise say "Courses".
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const sections = arrangeNavigation(tenant.navigation ?? null, words)
     .map((section) => ({
       label: section.label,

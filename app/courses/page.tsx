@@ -14,7 +14,7 @@ const COMPONENT_LABELS: Record<string, string> = {
 
 export default async function CoursesPage() {
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("course:read");
   const courses = await listCourses(session);
 

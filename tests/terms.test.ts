@@ -123,3 +123,38 @@ describe("reading the platform in a provider's own words", () => {
     });
   });
 });
+
+/*
+ * Roland, 27 September: where the top is Qualification / Programme and the
+ * level below is study units, "Courses" does not appear; study units replace
+ * them. The menu said "Courses" for Curiosa whatever they chose, because the
+ * vocabulary never looked at the choice.
+ */
+describe("the structure a provider chose", () => {
+  it("answers study units wherever the platform asks for its word for a course", () => {
+    const words = vocabulary(null, { delivery: "study_units" });
+    expect(words.many("course")).toBe("Study units");
+    expect(words.one("course")).toBe("Study unit");
+  });
+
+  it("takes the provider's own word for a study unit, if they renamed it", () => {
+    const words = vocabulary(
+      { studyUnit: { one: "Learning unit", many: "Learning units" } },
+      { delivery: "study_units" },
+    );
+    expect(words.many("course")).toBe("Learning units");
+  });
+
+  it("leaves courses alone for a provider that chose courses", () => {
+    expect(vocabulary(null, { delivery: "courses" }).many("course")).toBe("Courses");
+    expect(vocabulary(null).many("course")).toBe("Courses");
+  });
+
+  it("puts no Courses in the menu of a provider that chose study units", async () => {
+    const { arrangeNavigation } = await import("@/lib/navigation");
+    const labels = arrangeNavigation(null, vocabulary(null, { delivery: "study_units" }))
+      .flatMap((section) => section.items.map((item) => item.label));
+    expect(labels).not.toContain("Courses");
+    expect(labels).toContain("Study units");
+  });
+});

@@ -30,7 +30,7 @@ export default async function TrackerPage({
 }) {
   const { all } = await searchParams;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
 
   const includeFinished = all === "1";

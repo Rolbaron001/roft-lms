@@ -22,7 +22,7 @@ export default async function CourseStepsPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:author");
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
 
   let spine;
   try {

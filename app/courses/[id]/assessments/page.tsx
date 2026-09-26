@@ -14,7 +14,7 @@ export default async function CourseAssessmentsPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("assessment:author");
 
   let detail;

@@ -58,7 +58,7 @@ export default async function CohortPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
 
   let detail;

@@ -46,7 +46,7 @@ export default async function LearnerReadinessPage({
   const tenant = await requireTenant();
   // Curiosa say "workplace experience sign-off" rather than "logbook", and
   // another provider says the opposite. The word is the tenant's to choose.
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requireSession();
 
   // The permission check lives in the engine: a learner may see their own,

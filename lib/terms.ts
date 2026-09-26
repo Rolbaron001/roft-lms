@@ -170,12 +170,28 @@ function midSentence(value: string): string {
  * "course" still gets every other word, and a key added to the platform later
  * appears with its default rather than as an empty string.
  */
-export function vocabulary(overrides: TermOverrides | null | undefined): Vocabulary {
+export function vocabulary(
+  overrides: TermOverrides | null | undefined,
+  /**
+   * The structure the provider chose, where it is in hand.
+   *
+   * Roland, 27 September: where a provider chose study units as what a
+   * learner works through, "Courses" must not appear; study units replace
+   * them. Choosing study units is choosing the word, so every place that asks
+   * for this provider's word for a course is answered with its word for a
+   * study unit: the menu, the headings, the buttons. Until then the menu read
+   * "Courses" for Curiosa whatever they had chosen, because the vocabulary
+   * never looked at the choice.
+   */
+  structure?: { delivery?: string | null } | null,
+): Vocabulary {
   const chosen = overrides ?? {};
+  const studyUnitsReplaceCourses = structure?.delivery === "study_units";
 
   const resolve = (key: TermKey, form: "one" | "many"): string => {
-    const override = chosen[key]?.[form]?.trim();
-    return override || TERMS[key][form];
+    const asked = studyUnitsReplaceCourses && key === "course" ? "studyUnit" : key;
+    const override = chosen[asked]?.[form]?.trim();
+    return override || TERMS[asked][form];
   };
 
   return {

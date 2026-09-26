@@ -22,7 +22,7 @@ export default async function CoursePage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("course:read");
   // Drive and OneDrive are offered wherever a folder is, so a provider
   // who keeps their material there never has to download it first.

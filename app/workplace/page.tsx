@@ -27,7 +27,7 @@ export default async function WorkplacePage() {
   // The client calls this a workplace experience sign-off rather than a
   // logbook (27 August). Both words are in use in the sector, so it is the
   // tenant's to choose rather than the platform's to insist on.
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
 
   const isCoach = session.permissions.includes("workplace:sign");
   const canManage = session.permissions.includes("workplace:manage");

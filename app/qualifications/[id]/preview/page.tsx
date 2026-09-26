@@ -40,7 +40,7 @@ export default async function QualificationPreviewPage({
     throw error;
   }
 
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const { qualification, counts } = preview;
 
   return (

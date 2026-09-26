@@ -25,7 +25,7 @@ export default async function PathsPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const tenant = await requireCapability("programmes");
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("course:read");
   const paths = await listLearningPaths(session);
 

@@ -24,7 +24,7 @@ import { SittingForm } from "./sitting-form";
  */
 export default async function EisaPage() {
   const tenant = await requireCapability("qualifications");
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
 
   const today = dateInZone(new Date(), tenant.timezone);
