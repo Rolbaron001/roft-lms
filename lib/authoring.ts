@@ -7,6 +7,7 @@ import {
   courseCompetencies,
   courseSections,
   courses,
+  criterionAlignment,
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
@@ -1075,11 +1076,23 @@ async function assertCourseIsEditable(tx: TenantDatabase, courseId: string) {
 export type CoverageReport = {
   /** Null when the course is not bound to an accredited curriculum module. */
   curriculumModuleId: string | null;
+  /**
+   * The study unit the course delivers, where it delivers one. Its criteria
+   * are every criterion in the unit's modules (job sheet W2).
+   */
+  studyUnit: { id: string; code: string } | null;
   criteria: {
     id: string;
     code: string;
     description: string;
     coveredByLessons: number;
+    /**
+     * What covers it, in words: "2 lessons", "SU1 Summative, Part 1, Task 1",
+     * "a captured question". Empty when nothing does.
+     */
+    coveredBy: string[];
+    /** The module it belongs to, for a study unit's several modules. */
+    moduleCode?: string;
   }[];
   uncovered: { id: string; code: string; description: string }[];
   /**
@@ -1118,8 +1131,11 @@ export async function coverageReport(
       .select({
         id: courses.id,
         curriculumModuleId: courses.curriculumModuleId,
+        studyUnitId: courses.studyUnitId,
+        studyUnitCode: studyUnits.code,
       })
       .from(courses)
+      .leftJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
       .where(eq(courses.id, courseId));
 
     if (!course) {
@@ -1137,9 +1153,31 @@ export async function coverageReport(
       .from(courseCompetencies)
       .where(eq(courseCompetencies.courseId, courseId));
 
+    if (!course.curriculumModuleId && course.studyUnitId) {
+      const criteria = await studyUnitCriteriaCoverage(tx, courseId, course.studyUnitId);
+      return {
+        curriculumModuleId: null,
+        studyUnit: { id: course.studyUnitId, code: course.studyUnitCode ?? "" },
+        criteria,
+        uncovered: criteria
+          .filter((criterion) => criterion.coveredBy.length === 0)
+          .map(({ id, code, description }) => ({ id, code, description })),
+        // Teaching is not enforced for a study unit. Its material is theory
+        // guides held as documents, which the matrix maps to topic elements
+        // and which the element pages already show; refusing to publish
+        // until every element had a lesson would refuse every provider that
+        // teaches from documents.
+        topicElements: [],
+        uncoveredElements: [],
+        competencyCount,
+        lessonCount,
+      };
+    }
+
     if (!course.curriculumModuleId) {
       return {
         curriculumModuleId: null,
+        studyUnit: null,
         criteria: [],
         uncovered: [],
         topicElements: [],
@@ -1198,7 +1236,11 @@ export async function coverageReport(
 
     return {
       curriculumModuleId: course.curriculumModuleId,
-      criteria,
+      studyUnit: null,
+      criteria: criteria.map((criterion) => ({
+        ...criterion,
+        coveredBy: lessonsLabel(criterion.coveredByLessons),
+      })),
       uncovered: criteria
         .filter((criterion) => criterion.coveredByLessons === 0)
         .map(({ id, code, description }) => ({ id, code, description })),
@@ -1210,6 +1252,89 @@ export async function coverageReport(
       lessonCount,
     };
   });
+}
+
+function lessonsLabel(count: number): string[] {
+  return count > 0 ? [`${count} ${count === 1 ? "lesson" : "lessons"}`] : [];
+}
+
+/**
+ * Every criterion a study unit's course must cover, and what covers each.
+ *
+ * Roland, 27 September (job sheet W2): the platform reads the provider's
+ * alignment matrix to check coverage. A study unit's criteria are those of
+ * every module the unit delivers, and a criterion is covered by any of three
+ * things: a lesson on this course that teaches it, something the provider's
+ * matrix names as assessing it (a workbook activity, a summative task, a
+ * simulation), or a question captured into one of this course's assessments
+ * that is linked to it. Until then the check skipped a study unit's course
+ * entirely, which is the shape Curiosa uses.
+ *
+ * Work experience modules have no criteria: they are proved by a signed
+ * logbook, which readiness already requires.
+ */
+async function studyUnitCriteriaCoverage(
+  tx: TenantDatabase,
+  courseId: string,
+  studyUnitId: string,
+): Promise<CoverageReport["criteria"]> {
+  const rows = await tx
+    .select({
+      id: assessmentCriteria.id,
+      code: assessmentCriteria.code,
+      description: assessmentCriteria.description,
+      moduleCode: curriculumModules.code,
+      coveredByLessons: sql<number>`(
+        select count(*)::int from lesson_criteria lc
+        join lessons l on l.id = lc.lesson_id
+        join course_sections cs on cs.id = l.section_id
+        where lc.criterion_id = assessment_criteria.id
+          and cs.course_id = ${courseId}
+      )`,
+      capturedQuestions: sql<number>`(
+        select count(*)::int from assessment_item_criteria aic
+        join assessment_items ai on ai.id = aic.item_id
+        join assessments a on a.id = ai.assessment_id
+        where aic.criterion_id = assessment_criteria.id
+          and a.course_id = ${courseId}
+      )`,
+    })
+    .from(assessmentCriteria)
+    .innerJoin(curriculumModules, eq(curriculumModules.id, assessmentCriteria.curriculumModuleId))
+    .innerJoin(studyUnitModules, eq(studyUnitModules.curriculumModuleId, curriculumModules.id))
+    .where(eq(studyUnitModules.studyUnitId, studyUnitId))
+    .orderBy(asc(curriculumModules.sortOrder), asc(assessmentCriteria.sortOrder));
+
+  const matrix = rows.length
+    ? await tx
+        .select({
+          criterionId: criterionAlignment.criterionId,
+          kind: criterionAlignment.kind,
+          reference: criterionAlignment.reference,
+        })
+        .from(criterionAlignment)
+        .where(
+          and(
+            inArray(criterionAlignment.criterionId, rows.map((row) => row.id)),
+            inArray(criterionAlignment.kind, ["workbook", "summative_assessment"]),
+          ),
+        )
+    : [];
+
+  return rows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    description: row.description,
+    moduleCode: row.moduleCode,
+    coveredByLessons: row.coveredByLessons,
+    coveredBy: [
+      ...lessonsLabel(row.coveredByLessons),
+      ...matrix.filter((entry) => entry.criterionId === row.id).map((entry) => entry.reference),
+      ...(row.capturedQuestions > 0
+        ? [`${row.capturedQuestions} captured ${row.capturedQuestions === 1 ? "question" : "questions"}`]
+        : []),
+    ],
+  }));
 }
 
 export type PublishRefusal = {
@@ -1261,7 +1386,17 @@ export async function publishCourse(
     );
   }
 
-  if (report.uncovered.length > 0) {
+  if (report.uncovered.length > 0 && report.studyUnit) {
+    const one = report.uncovered.length === 1;
+    const listed = report.criteria
+      .filter((criterion) => criterion.coveredBy.length === 0)
+      .map((criterion) => `${criterion.moduleCode ?? ""} ${criterion.code}`.trim());
+    reasons.push(
+      `${report.uncovered.length} of ${report.studyUnit.code}'s assessment criteria ${
+        one ? "has" : "have"
+      } nothing assessing ${one ? "it" : "them"}: ${listed.slice(0, 20).join(", ")}${listed.length > 20 ? "..." : ""}. Upload the alignment matrix on the qualification, or link the criteria to a lesson or a captured question.`,
+    );
+  } else if (report.uncovered.length > 0) {
     const one = report.uncovered.length === 1;
     reasons.push(
       `${report.uncovered.length} assessment ${

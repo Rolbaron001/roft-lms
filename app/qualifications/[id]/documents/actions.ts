@@ -8,8 +8,50 @@ import {
   DOCUMENT_KIND_LABELS,
   type DocumentKind,
 } from "@/lib/programme-documents";
-import { AlignmentMatrixError } from "@/lib/alignment-matrix";
+import {
+  AlignmentMatrixError,
+  importAlignmentMatrix,
+  type ProposedAddition,
+} from "@/lib/alignment-matrix";
 import { OfficeReadError } from "@/lib/office";
+import { readProgrammeDocument } from "@/lib/programme-documents";
+
+export type AdditionsState = { error?: string; message?: string };
+
+/**
+ * Adds the lines the provider ticked, from the matrix already filed.
+ *
+ * Read again from the stored document rather than from anything the browser
+ * sends back, so what is added is exactly what the matrix says: the form
+ * posts only which lines were chosen.
+ */
+export async function confirmMatrixAdditionsAction(
+  _previous: AdditionsState,
+  formData: FormData,
+): Promise<AdditionsState> {
+  const session = await requirePermission("qualification:manage");
+  const qualificationId = String(formData.get("qualificationId") ?? "");
+  const documentId = String(formData.get("documentId") ?? "");
+  const keys = formData.getAll("add").map(String);
+
+  if (keys.length === 0) {
+    return { error: "Tick at least one line to add, or leave the curriculum as it is." };
+  }
+
+  try {
+    const document = await readProgrammeDocument(session, documentId);
+    const summary = await importAlignmentMatrix(session, qualificationId, document.bytes, keys);
+    revalidatePath(`/qualifications/${qualificationId}`);
+    return {
+      message: `${summary.added} ${summary.added === 1 ? "line" : "lines"} added to the curriculum, each marked as the provider's own with the reason the matrix gives. Their coverage is recorded.`,
+    };
+  } catch (error) {
+    if (error instanceof AlignmentMatrixError || error instanceof ProgrammeDocumentError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+}
 
 export type UploadState = {
   error?: string;
@@ -31,6 +73,16 @@ export type UploadState = {
    * problems get fixed, not merely back to the top.
    */
   links?: { href: string; label: string }[];
+  /**
+   * Lines the matrix names that the curriculum does not have, for the
+   * provider to tick and confirm. Roland, 27 September: hold what the
+   * provider wants loaded, after they confirm it during the upload.
+   */
+  additions?: {
+    qualificationId: string;
+    documentId: string;
+    items: ProposedAddition[];
+  };
 };
 
 export async function uploadDocumentAction(
@@ -175,10 +227,18 @@ export async function uploadDocumentAction(
 
     const matrix = result.matrix;
     const detail = [
-      `Read the “${matrix.sheetName}” sheet.`,
+      matrix.sheetsRead.length > 1
+        ? `Read the ${matrix.sheetsRead.map((name) => `“${name}”`).join(", ")} sheets.`
+        : `Read the “${matrix.sheetName}” sheet.`,
       `Columns recognised: ${matrix.columnsRecognised.join(", ")}.`,
-      `${matrix.rowsRead} rows, ${matrix.elementsMatched} curriculum lines matched, ${matrix.alignmentsRecorded} links recorded.`,
+      `${matrix.rowsRead} rows, ${matrix.elementsMatched} curriculum lines and ${matrix.criteriaMatched} criteria matched, ${matrix.alignmentsRecorded} links recorded.`,
     ];
+
+    if (matrix.proposedAdditions.length > 0) {
+      detail.push(
+        `${matrix.proposedAdditions.length} lines in the matrix are not in the curriculum as held. They are listed below: tick the ones to add. Nothing is added until you confirm.`,
+      );
+    }
 
     if (matrix.unmatchedCodes.length > 0) {
       detail.push(
@@ -195,6 +255,10 @@ export async function uploadDocumentAction(
           label: "Back to the qualification",
         },
       ],
+      additions:
+        matrix.proposedAdditions.length > 0
+          ? { qualificationId, documentId: result.id, items: matrix.proposedAdditions }
+          : undefined,
     };
   } catch (error) {
     if (

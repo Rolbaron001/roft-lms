@@ -369,6 +369,12 @@ export const curriculumTopics = pgTable(
      */
     weightPercent: integer("weight_percent"),
 
+    /**
+     * Set where the provider added this, rather than the curriculum document.
+     * See `addedFrom` on assessment criteria.
+     */
+    addedFrom: text("added_from"),
+
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -422,6 +428,8 @@ export const curriculumTopicElements = pgTable(
     kind: topicElementKind("kind").notNull(),
     code: text("code").notNull(),
     description: text("description").notNull(),
+    /** Set where the provider added this. See `addedFrom` on assessment criteria. */
+    addedFrom: text("added_from"),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [
@@ -460,6 +468,21 @@ export const assessmentCriteria = pgTable(
 
     code: text("code").notNull(),
     description: text("description").notNull(),
+
+    /**
+     * Set where the provider added this criterion, rather than the curriculum
+     * document, and says where from: "Alignment matrix: Constructed, see
+     * DD-004".
+     *
+     * Roland, 27 September: hold what the provider wants loaded, once they
+     * have confirmed it at upload. Curiosa's 121151 matrix adds nine criteria
+     * the QCTO curriculum does not have, each citing the design decision
+     * behind it. Held, so readiness counts them, and marked, so a verifier
+     * can always tell the provider's criteria from the regulator's. Null for
+     * everything read from the curriculum itself.
+     */
+    addedFrom: text("added_from"),
+
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [
@@ -915,6 +938,37 @@ export const topicElementAlignment = pgTable(
       t.reference,
     ),
     index("topic_element_alignment_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * What the provider's alignment matrix says assesses and teaches each
+ * criterion.
+ *
+ * The element table above answers "what teaches KT0101". This one answers the
+ * question the coverage check asks: "what assesses IAC0101". Roland,
+ * 27 September (job sheet W2): the platform reads alignment matrices of this
+ * shape, from any provider, to check coverage. Curiosa's 121151 matrix maps
+ * every criterion to a theory guide chapter, a workbook activity and a
+ * summative task, and a practical criterion to its simulation.
+ */
+export const criterionAlignment = pgTable(
+  "criterion_alignment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    criterionId: uuid("criterion_id")
+      .notNull()
+      .references(() => assessmentCriteria.id, { onDelete: "cascade" }),
+    kind: alignmentResourceKind("kind").notNull(),
+    /** "SU1 Summative, Part 1, Task 1", as the matrix writes it. */
+    reference: text("reference").notNull(),
+  },
+  (t) => [
+    uniqueIndex("criterion_alignment_unique_idx").on(t.criterionId, t.kind, t.reference),
+    index("criterion_alignment_org_idx").on(t.organisationId),
   ],
 );
 

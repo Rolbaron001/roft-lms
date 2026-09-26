@@ -369,7 +369,7 @@ export function CourseEditor({
             Readiness
           </h2>
 
-          {report.curriculumModuleId ? (
+          {report.curriculumModuleId || report.studyUnit ? (
             <>
               <p className="mt-3 text-sm">
                 <span className="text-2xl font-semibold">
@@ -378,12 +378,20 @@ export function CourseEditor({
                 <span className="text-[var(--muted)]">
                   {" "}
                   of {report.criteria.length} assessment criteria covered
+                  {report.studyUnit ? ` across ${report.studyUnit.code}'s modules` : ""}
                 </span>
               </p>
+              {report.studyUnit ? (
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  Covered by a lesson on this course, a captured question, or
+                  what your alignment matrix names as assessing it. Upload the
+                  matrix on the qualification to record the last.
+                </p>
+              ) : null}
 
               <ul className="mt-4 space-y-2">
                 {report.criteria.map((criterion) => {
-                  const covered = criterion.coveredByLessons > 0;
+                  const covered = criterion.coveredBy.length > 0;
                   return (
                     <li key={criterion.id} className="flex gap-2 text-sm">
                       <span
@@ -396,18 +404,19 @@ export function CourseEditor({
                         }}
                       />
                       <span>
-                        <span className="font-medium">{criterion.code}</span>
+                        <span className="font-medium">
+                          {criterion.moduleCode ? `${criterion.moduleCode} ` : ""}
+                          {criterion.code}
+                        </span>
                         <span className="sr-only">
                           {covered ? " covered" : " not covered"}
                         </span>
                         <span className="block text-xs text-[var(--muted)]">
                           {covered
-                            ? `${criterion.coveredByLessons} ${
-                                criterion.coveredByLessons === 1
-                                  ? "lesson"
-                                  : "lessons"
-                              }`
-                            : "No lesson covers this"}
+                            ? criterion.coveredBy.join("; ")
+                            : report.studyUnit
+                              ? "Nothing assesses this yet"
+                              : "No lesson covers this"}
                         </span>
                       </span>
                     </li>

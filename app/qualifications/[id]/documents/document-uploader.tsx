@@ -2,7 +2,12 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { uploadDocumentAction, type UploadState } from "./actions";
+import {
+  confirmMatrixAdditionsAction,
+  uploadDocumentAction,
+  type AdditionsState,
+  type UploadState,
+} from "./actions";
 
 const FIELD =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -37,6 +42,8 @@ export function DocumentUploader({
   );
 
   return (
+    <div className="space-y-6">
+    {state.additions ? <MatrixAdditions additions={state.additions} /> : null}
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="qualificationId" value={qualificationId} />
 
@@ -182,6 +189,84 @@ export function DocumentUploader({
       </div>
 
       <SubmitButton />
+    </form>
+    </div>
+  );
+}
+
+const KIND_LABEL: Record<string, string> = {
+  topic: "Topic",
+  element: "Topic element",
+  criterion: "Criterion",
+};
+
+/**
+ * The lines an alignment matrix names that the curriculum does not have.
+ *
+ * Roland, 27 September: hold what the provider wants loaded, after they
+ * confirm it during the upload. Every line is listed with the reason the
+ * matrix gives, all ticked to begin with because the provider wrote the
+ * matrix, and nothing is added until the button is pressed.
+ */
+function MatrixAdditions({
+  additions,
+}: {
+  additions: NonNullable<UploadState["additions"]>;
+}) {
+  const [state, act, pending] = useActionState<AdditionsState, FormData>(
+    confirmMatrixAdditionsAction,
+    {},
+  );
+
+  if (state.message) {
+    return (
+      <p className="rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm" style={{ color: "var(--success)" }}>
+        {state.message}
+      </p>
+    );
+  }
+
+  return (
+    <form action={act} className="rounded-md border border-[var(--border)] p-4">
+      <input type="hidden" name="qualificationId" value={additions.qualificationId} />
+      <input type="hidden" name="documentId" value={additions.documentId} />
+      <p className="text-sm font-medium">
+        In the matrix, not in the curriculum as held
+      </p>
+      <p className="mt-1 text-xs text-[var(--muted)]">
+        Each is added marked as your own, with the reason shown, so a verifier
+        can always tell your lines from the regulator&rsquo;s. Untick anything
+        that should not be added.
+      </p>
+      <ul className="mt-3 max-h-96 space-y-2 overflow-y-auto text-sm">
+        {additions.items.map((item) => (
+          <li key={item.key}>
+            <label className="flex items-start gap-2">
+              <input type="checkbox" name="add" value={item.key} defaultChecked className="mt-1" />
+              <span>
+                <span className="font-medium">
+                  {KIND_LABEL[item.kind]} {item.moduleCode}
+                  {item.topicCode && item.kind !== "topic" ? ` ${item.topicCode}` : ""} {item.code}
+                </span>{" "}
+                {item.description}
+                <span className="block text-xs text-[var(--muted)]">{item.reason}</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      {state.error ? (
+        <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+          {state.error}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-3 rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {pending ? "Adding…" : "Add the ticked lines to the curriculum"}
+      </button>
     </form>
   );
 }

@@ -21,6 +21,7 @@ import {
   competencies,
   competencyFrameworks,
   courseCompetencies,
+  criterionAlignment,
   courses,
   organisations,
   statementsOfResults,
@@ -271,9 +272,22 @@ async function achieve(
 ) {
   const course = await createCourse(admin, { title: `EISA course ${suffix()}` });
   if (studyUnitId) {
-    await withTenant(admin.organisationId, (tx) =>
-      tx.update(courses).set({ studyUnitId }).where(eq(courses.id, course.id)),
-    );
+    await withTenant(admin.organisationId, async (tx) => {
+      await tx.update(courses).set({ studyUnitId }).where(eq(courses.id, course.id));
+      // A study unit's course is published only when every criterion in the
+      // unit has something assessing it (W2). Recorded here the way the
+      // provider's alignment matrix would record it.
+      if (criterionIds.length) {
+        await tx.insert(criterionAlignment).values(
+          criterionIds.map((criterionId) => ({
+            organisationId: admin.organisationId,
+            criterionId,
+            kind: "summative_assessment" as const,
+            reference: "Assessment",
+          })),
+        ).onConflictDoNothing();
+      }
+    });
   }
   const section = await addSection(admin, { courseId: course.id, title: "S" });
   await addLesson(admin, { sectionId: section.id, title: "L" });
@@ -1373,6 +1387,45 @@ describe("the Statement of Results", () => {
     // One framework for the qualification, shared by its units.
     expect(new Set(tagged.map((row) => row.frameworkId)).size).toBe(1);
     expect(tagged[0].source).toBe(`qualification:${imported.qualificationId}`);
+  });
+
+  /*
+   * Roland, 27 September (W2): a study unit's course is checked against every
+   * criterion in the unit's modules, covered by a lesson, a captured question
+   * or what the provider's alignment matrix names as assessing it. The walk
+   * of 26 September published SU1's course with none of its criteria covered.
+   */
+  it("publishes a study unit's course only once every criterion has something assessing it", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su1 = units.find((u) => u.code === "SU1")!;
+
+    const courseId = await courseForStudyUnit(admin, su1.id);
+    const section = await addSection(admin, { courseId, title: "S" });
+    await addLesson(admin, { sectionId: section.id, title: "L" });
+
+    const refused = await publishCourse(admin, courseId);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) {
+      expect(refused.reasons.join(" ")).toMatch(/1 of SU1's assessment criteria has nothing assessing it: .*KM-01 IAC0101/);
+    }
+    // Only SU1's own criteria: SU2's module is not this course's business.
+    expect(refused.report.criteria.map((c) => c.code)).toEqual(["IAC0101"]);
+
+    const [criterion] = await criteriaFor(imported.qualificationId, "KM-01");
+    await withTenant(admin.organisationId, (tx) =>
+      tx.insert(criterionAlignment).values({
+        organisationId: admin.organisationId,
+        criterionId: criterion,
+        kind: "summative_assessment",
+        reference: "SU1 Summative, Part 1, Task 1",
+      }),
+    );
+
+    const published = await publishCourse(admin, courseId);
+    expect(published.ok).toBe(true);
+    expect(published.report.criteria[0].coveredBy).toEqual(["SU1 Summative, Part 1, Task 1"]);
   });
 
   it("refuses a study unit whose own modules are outstanding", async () => {
