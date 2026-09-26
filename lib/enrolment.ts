@@ -15,7 +15,7 @@ import { assertLessonStepOpen } from "./spine";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
-import { issueCertificateAutomatically } from "./certificates";
+import { recogniseCompletion } from "./completion";
 import { advanceLearningPaths } from "./learning-paths";
 import { raise } from "./notifications";
 import { awardCompletionBadgeIn } from "./badges";
@@ -513,9 +513,10 @@ export async function markLessonComplete(
     // qualifying event, but their completed lesson must stick.
     if (result.completed) {
       try {
-        await issueCertificateAutomatically(session.organisationId, enrolmentId);
+        // A certificate, or for a study unit its statement and badge.
+        await recogniseCompletion(session.organisationId, enrolmentId);
       } catch (error) {
-        console.error("Automatic certificate issue failed", error);
+        console.error("Recognising a completion failed", error);
       }
     }
     return result;
@@ -584,11 +585,20 @@ async function refreshCompletion(
     // And the badge for finishing it, if one is designed - the course's own,
     // or the provider's default, or nothing at all. Same transaction as the
     // completion it recognises, so the two cannot disagree.
-    await awardCompletionBadgeIn(tx, session.organisationId, enrolment.userId, {
-      kind: "course",
-      id: enrolment.courseId!,
-      completedOn: completedAt.toISOString().slice(0, 10),
-    });
+    //
+    // Not for a study unit, whose badge waits for the unit to be completed
+    // successfully rather than for its lessons to be read (lib/completion.ts).
+    const [course] = await tx
+      .select({ studyUnitId: courses.studyUnitId })
+      .from(courses)
+      .where(eq(courses.id, enrolment.courseId!));
+    if (!course?.studyUnitId) {
+      await awardCompletionBadgeIn(tx, session.organisationId, enrolment.userId, {
+        kind: "course",
+        id: enrolment.courseId!,
+        completedOn: completedAt.toISOString().slice(0, 10),
+      });
+    }
   }
 
   return { total, done, completed: finished };

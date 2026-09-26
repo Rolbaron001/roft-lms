@@ -9,11 +9,17 @@
  * has a test.
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
+  assessmentDecisions,
+  assessmentSubmissions,
+  badgeAwards,
+  badges,
+  certificates,
   competencies,
   competencyFrameworks,
+  courses,
   organisations,
   statementsOfResults,
   studyUnits,
@@ -258,8 +264,15 @@ async function achieve(
   criterionIds: string[],
   outcomes: ("competent" | "not_yet_competent")[],
   moderate = true,
+  /** Makes the course the one that delivers this study unit. */
+  studyUnitId: string | null = null,
 ) {
   const course = await createCourse(admin, { title: `EISA course ${suffix()}` });
+  if (studyUnitId) {
+    await withTenant(admin.organisationId, (tx) =>
+      tx.update(courses).set({ studyUnitId }).where(eq(courses.id, course.id)),
+    );
+  }
   const section = await addSection(admin, { courseId: course.id, title: "S" });
   await addLesson(admin, { sectionId: section.id, title: "L" });
   await tagCourseCompetency(admin, course.id, competencyId);
@@ -1261,6 +1274,67 @@ describe("the Statement of Results", () => {
     // second module would say the learner achieved something nobody assessed.
     expect(statement.statement.modules).toHaveLength(1);
     expect(statement.statement.modules[0].code).toContain("KM-01");
+  });
+
+  /*
+   * Roland, 27 September (W3): successful completion of a study unit earns a
+   * Statement of Results and the provider's badge, not a certificate. The walk
+   * of 26 September found a "certificate" issued for SU1 on its own.
+   */
+  it("gives a completed study unit its statement and badge, and no certificate", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su1 = units.find((u) => u.code === "SU1")!;
+
+    // The provider's own badge: its default, earned by finishing anything.
+    const [badge] = await withTenant(admin.organisationId, (tx) =>
+      tx
+        .insert(badges)
+        .values({ organisationId: admin.organisationId, kind: "default", name: "Unit completed" })
+        .returning({ id: badges.id }),
+    );
+
+    const firstOnly = await criteriaFor(imported.qualificationId, "KM-01");
+    const decision = await achieve(
+      firstOnly,
+      firstOnly.map(() => "competent" as const),
+      true,
+      su1.id,
+    );
+
+    const found = await withTenant(admin.organisationId, async (tx) => {
+      const [submission] = await tx
+        .select({ enrolmentId: assessmentSubmissions.enrolmentId })
+        .from(assessmentSubmissions)
+        .innerJoin(assessmentDecisions, eq(assessmentDecisions.submissionId, assessmentSubmissions.id))
+        .where(eq(assessmentDecisions.id, decision.id));
+      const issued = await tx
+        .select({ id: certificates.id })
+        .from(certificates)
+        .where(eq(certificates.enrolmentId, submission.enrolmentId!));
+      const statements = await tx
+        .select({
+          studyUnitId: statementsOfResults.studyUnitId,
+          issuedById: statementsOfResults.issuedById,
+        })
+        .from(statementsOfResults)
+        .where(
+          and(
+            eq(statementsOfResults.userId, learner.userId),
+            eq(statementsOfResults.qualificationId, imported.qualificationId),
+          ),
+        );
+      const awarded = await tx
+        .select({ id: badgeAwards.id })
+        .from(badgeAwards)
+        .where(and(eq(badgeAwards.badgeId, badge.id), eq(badgeAwards.learnerId, learner.userId)));
+      return { issued, statements, awarded };
+    });
+
+    expect(found.issued).toHaveLength(0);
+    expect(found.statements).toEqual([{ studyUnitId: su1.id, issuedById: null }]);
+    expect(found.awarded).toHaveLength(1);
   });
 
   it("refuses a study unit whose own modules are outstanding", async () => {

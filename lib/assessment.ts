@@ -23,7 +23,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
 import { detectMedia } from "./media";
-import { issueCertificateAutomatically } from "./certificates";
+import { recogniseCompletion } from "./completion";
 import { awardEarnedBadges } from "./badges";
 import { qualificationReadiness } from "./eisa";
 import { DEFAULT_TIME_ZONE, dateInZone } from "./timezone";
@@ -1620,13 +1620,11 @@ export async function recordModeration(
         );
 
         if (enrolmentId) {
-          await issueCertificateAutomatically(
-            session.organisationId,
-            enrolmentId,
-          );
+          // A certificate, or for a study unit its statement and badge.
+          await recogniseCompletion(session.organisationId, enrolmentId);
         }
       } catch (error) {
-        console.error("Automatic certificate issue failed", error);
+        console.error("Recognising a completion failed", error);
       }
     }
 

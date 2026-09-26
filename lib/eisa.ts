@@ -338,7 +338,22 @@ export async function qualificationReadiness(
     assertSessionCan(session, "enrolment:read_all");
   }
 
-  return withTenant(session.organisationId, async (tx) => {
+  return readinessWithin(session.organisationId, qualificationId, userId);
+}
+
+/**
+ * The same answer, for the platform itself rather than for a person.
+ *
+ * Used when a study unit is completed and its statement is issued because the
+ * rules were met, which is the moment nobody is looking at the page. Checks no
+ * permission, so it must never be reachable from a request directly.
+ */
+export async function readinessWithin(
+  organisationId: string,
+  qualificationId: string,
+  userId: string,
+): Promise<QualificationReadiness> {
+  return withTenant(organisationId, async (tx) => {
     const [qualification] = await tx
       .select({
         id: qualifications.id,

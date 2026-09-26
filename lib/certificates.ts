@@ -335,9 +335,25 @@ async function issueWithin(
     }
 
     const [course] = await tx
-      .select({ title: courses.title, version: courses.version })
+      .select({
+        title: courses.title,
+        version: courses.version,
+        studyUnitId: courses.studyUnitId,
+      })
       .from(courses)
       .where(eq(courses.id, eligibility.enrolment.courseId!));
+
+    // Roland, 27 September (W3): a study unit earns a Statement of Results and
+    // the provider's badge. The certificate of competence for a qualification
+    // is the QCTO's, after the EISA, so the platform issues none of its own.
+    if (course.studyUnitId) {
+      return {
+        ok: false as const,
+        reasons: [
+          "A study unit earns a Statement of Results and a badge rather than a certificate. The certificate of competence for the qualification comes from the QCTO after the EISA.",
+        ],
+      };
+    }
 
     const [created] = await tx
       .insert(certificates)

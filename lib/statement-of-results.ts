@@ -10,7 +10,12 @@ import {
   studyUnits,
   users,
 } from "@/db/schema";
-import { qualificationReadiness } from "./eisa";
+import {
+  qualificationReadiness,
+  readinessWithin,
+  type QualificationReadiness,
+} from "./eisa";
+import type { Role } from "./rbac";
 import {
   generateVerificationReference,
   prefixFor,
@@ -89,11 +94,11 @@ export type IssueOutcome =
  * confirms an empty set.
  */
 async function studyUnitScope(
-  session: AuthenticatedSession,
+  issuer: { organisationId: string },
   qualificationId: string,
   studyUnitId: string,
 ): Promise<{ code: string; title: string; moduleCodes: Set<string> }> {
-  return withTenant(session.organisationId, async (tx) => {
+  return withTenant(issuer.organisationId, async (tx) => {
     const [unit] = await tx
       .select({
         code: studyUnits.code,
@@ -188,10 +193,64 @@ export async function issueStatementOfResults(
 
   const readiness = await qualificationReadiness(session, qualificationId, userId);
 
+  return issueWith(
+    { organisationId: session.organisationId, userId: session.userId, role: session.roles[0] ?? null },
+    readiness,
+    qualificationId,
+    userId,
+    studyUnitId,
+  );
+}
+
+/**
+ * A study unit's statement, issued by the platform when the unit is completed
+ * successfully.
+ *
+ * Roland, 27 September (W3): successful completion of a study unit earns a
+ * Statement of Results and the provider's badge, not a certificate. Issued the
+ * way certificates always were, because the rules were met rather than on
+ * anybody's say-so, and through exactly the same checks a person pressing the
+ * button meets: every criterion in the unit's modules achieved, moderation
+ * finished, work experience signed off. Anything short of that is refused
+ * silently here, and stays for a person to issue once it is met. The
+ * statement records no issuing person, which is the truth.
+ */
+export async function issueStudyUnitStatementAutomatically(
+  organisationId: string,
+  qualificationId: string,
+  userId: string,
+  studyUnitId: string,
+): Promise<IssueOutcome> {
+  const readiness = await readinessWithin(organisationId, qualificationId, userId);
+  try {
+    return await issueWith(
+      { organisationId, userId: null, role: null },
+      readiness,
+      qualificationId,
+      userId,
+      studyUnitId,
+    );
+  } catch (error) {
+    // Already holding one for this unit is the ordinary case on a second
+    // qualifying event, not a failure.
+    if (error instanceof StatementError && error.code === "already_issued") {
+      return { ok: false, reasons: [error.message] };
+    }
+    throw error;
+  }
+}
+
+async function issueWith(
+  issuer: { organisationId: string; userId: string | null; role: Role | null },
+  readiness: QualificationReadiness,
+  qualificationId: string,
+  userId: string,
+  studyUnitId: string | null,
+): Promise<IssueOutcome> {
   // Which modules this statement speaks for. Null means all of them, and the
   // checks below then behave exactly as they did before study units existed.
   const scope = studyUnitId
-    ? await studyUnitScope(session, qualificationId, studyUnitId)
+    ? await studyUnitScope(issuer, qualificationId, studyUnitId)
     : null;
 
   // Every check below is narrowed to what this statement actually claims. For
@@ -262,7 +321,7 @@ export async function issueStatementOfResults(
     };
   }
 
-  return withTenant(session.organisationId, async (tx) => {
+  return withTenant(issuer.organisationId, async (tx) => {
     const [existing] = await tx
       .select({ id: statementsOfResults.id })
       .from(statementsOfResults)
@@ -329,7 +388,7 @@ export async function issueStatementOfResults(
         physicalAddress: organisations.physicalAddress,
       })
       .from(organisations)
-      .where(eq(organisations.id, session.organisationId));
+      .where(eq(organisations.id, issuer.organisationId));
 
     /**
      * The next EISA on the calendar, which the QCTO's template asks for by
@@ -374,13 +433,13 @@ export async function issueStatementOfResults(
       }));
 
     const reference = generateVerificationReference(
-      await prefixFor(tx, session.organisationId),
+      await prefixFor(tx, issuer.organisationId),
     );
 
     const [created] = await tx
       .insert(statementsOfResults)
       .values({
-        organisationId: session.organisationId,
+        organisationId: issuer.organisationId,
         userId,
         qualificationId,
         studyUnitId,
@@ -418,15 +477,17 @@ export async function issueStatementOfResults(
           validUntil: validUntilFor(new Date()).toISOString(),
           modules,
         },
-        issuedById: session.userId,
+        issuedById: issuer.userId,
       })
       .returning({ id: statementsOfResults.id });
 
     await recordAudit(tx, {
-      organisationId: session.organisationId,
-      actorId: session.userId,
-      actorRole: session.roles[0],
-      action: "statement_of_results.issued",
+      organisationId: issuer.organisationId,
+      actorId: issuer.userId,
+      actorRole: issuer.role,
+      action: issuer.userId
+        ? "statement_of_results.issued"
+        : "statement_of_results.issued_automatically",
       entityType: "statement_of_results",
       entityId: created.id,
       after: {
