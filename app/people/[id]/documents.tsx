@@ -133,8 +133,19 @@ export function EnrolmentDocuments({
                     {DOCUMENT_LABEL[document.kind as DocumentKind] ??
                       document.kind}
                   </td>
-                  <td className="py-2 pr-3 text-[var(--muted)]">
-                    {document.filename}
+                  <td className="py-2 pr-3">
+                    {/*
+                      Opens in a new tab, so the check can be made against the
+                      file while the Accept and Refuse buttons stay in view.
+                    */}
+                    <a
+                      href={`/api/enrolment-documents/${document.id}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="underline underline-offset-2"
+                    >
+                      {document.filename}
+                    </a>
                   </td>
                   <td className="py-2 pr-3 tabular-nums">
                     {document.certifiedOn ?? "—"}

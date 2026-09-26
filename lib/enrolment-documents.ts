@@ -8,7 +8,7 @@ import {
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
-import { buildStorageKey, putObject } from "./storage";
+import { buildStorageKey, getObject, putObject } from "./storage";
 import { detectMedia } from "./media";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import {
@@ -310,6 +310,52 @@ export async function verifyEnrolmentDocument(
       after: { verification: outcome, reason: reason ?? null },
     });
   });
+}
+
+/**
+ * One held document's file, for somebody entitled to see it.
+ *
+ * Until 26 September nothing served these back. A coordinator was asked to
+ * accept or refuse a certified copy, including as illegible, without any way
+ * to look at it.
+ *
+ * Entitled means the learner it belongs to, or somebody who manages
+ * enrolments, which is who does the checking. Reading every learner's
+ * evidence is not enough: an identity document is the most sensitive file the
+ * platform holds, and an assessor has no reason to open one. The check is made
+ * here against the record, so a document id is worth nothing on its own.
+ */
+export async function readEnrolmentDocument(
+  session: AuthenticatedSession,
+  documentId: string,
+): Promise<{ bytes: Uint8Array; mimeType: string; filename: string; safeToEmbed: boolean }> {
+  const document = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        userId: enrolmentDocuments.userId,
+        storageKey: enrolmentDocuments.storageKey,
+        filename: enrolmentDocuments.filename,
+      })
+      .from(enrolmentDocuments)
+      .where(eq(enrolmentDocuments.id, documentId));
+    return row;
+  });
+
+  if (!document) throw new DocumentError("Document not found.", "not_found");
+
+  if (document.userId !== session.userId) {
+    assertSessionCan(session, "enrolment:manage");
+  }
+
+  const bytes = await getObject(document.storageKey);
+  const detected = detectMedia(bytes, document.filename);
+
+  return {
+    bytes,
+    mimeType: detected.ok ? detected.mimeType : "application/octet-stream",
+    filename: document.filename,
+    safeToEmbed: detected.ok ? detected.safeToEmbed : false,
+  };
 }
 
 /** Everything held for a learner, newest of each kind first. */
