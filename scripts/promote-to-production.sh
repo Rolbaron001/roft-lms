@@ -11,25 +11,37 @@
 # meeting of 23 September: live changes once a week, when nobody is working,
 # and only to something that has already been tried.
 #
-# "Already been tried" is taken literally. The version is read from the
-# development site's running container rather than from the newest commit, so
-# what live receives is exactly the image people have been using all week, and
-# nothing is built or chosen afresh between trying it and releasing it.
+# "Already been tried" is taken literally. The version is one the development
+# site actually ran, read from its deploy log, rather than the newest commit, so
+# what live receives is exactly an image people have used, and nothing is built
+# or chosen afresh between trying it and releasing it.
 #
-# Two refusals, each of which leaves live exactly as it was:
+# WHICH VERSION
 #
-#   - Development is not healthy. Promoting a site that is failing its own
-#     health check would carry the failure across.
-#   - Development changed less than MIN_SOAK_HOURS ago. A commit pushed at
-#     21:50 on a Friday would otherwise be on live at 22:00, untried. The
-#     release waits a week instead, and the log says so. --now overrides this,
-#     for the rare release that cannot wait.
+# The newest one development ran for MIN_SOAK_HOURS, worked out by
+# scripts/soaked-version.sh. Until 27 September (job sheet B2) this took only
+# what development was running at 22:00 and refused if that had run under six
+# hours, so a commit pushed at 17:00 on a Friday held back the whole week,
+# including versions development had already run for days. Now the week's
+# tried work goes out and the late commit waits for the next Friday.
+#
+# Refusals, each of which leaves live exactly as it was:
+#
+#   - Nothing development has run has had MIN_SOAK_HOURS yet.
+#   - The version is the one development runs now, and development is not
+#     healthy. Promoting a site that is failing its own health check would
+#     carry the failure across. An earlier version is not held back by a
+#     newer one failing: it passed its own health check and then ran for hours.
+#
+# --now releases whatever development runs now, however briefly, for the rare
+# release that cannot wait. It still needs development to be healthy.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 LIVE="$PWD"
 DEV_DIR="${DEV_DIR:-$HOME/roft-lms-dev}"
+DEV_LOG="${DEV_LOG:-$HOME/logs/development-deploy.log}"
 MIN_SOAK_HOURS="${MIN_SOAK_HOURS:-6}"
 
 NOW=false
@@ -63,28 +75,44 @@ DEV_IMAGE="$(docker inspect --format '{{.Config.Image}}' roft-lms-dev-app-1 2>/d
 DEV_TAG="${DEV_IMAGE##*:}"
 LIVE_TAG="$(docker inspect --format '{{.Config.Image}}' roft-lms-app-1 2>/dev/null | sed 's/.*://' || true)"
 
-if [ "$DEV_TAG" = "$LIVE_TAG" ]; then
-  log "Live already runs ${LIVE_TAG:0:7}, the version on development. Nothing to promote."
+# --- which version has been tried? ------------------------------------------
+
+if [ "$NOW" = true ]; then
+  TAG="$DEV_TAG"
+  STARTED="$(docker inspect --format '{{.State.StartedAt}}' roft-lms-dev-app-1)"
+  HOURS=$(( ( $(date +%s) - $(date -d "$STARTED" +%s) ) / 3600 ))
+else
+  SOAKED="$("$LIVE/scripts/soaked-version.sh" "$DEV_LOG" "$MIN_SOAK_HOURS")" \
+    || stop "nothing development has run has had the ${MIN_SOAK_HOURS} hours it needs first. It goes out next Friday, or now with --now."
+  HOURS="${SOAKED#* }"
+  # The log gives seven characters; images are tagged with the whole commit.
+  TAG="$(git -C "$DEV_DIR" rev-parse --verify --quiet "${SOAKED%% *}^{commit}")" \
+    || stop "the development log names ${SOAKED%% *}, which the development checkout does not know."
+fi
+
+if [ "$TAG" = "$LIVE_TAG" ]; then
+  log "Live already runs ${LIVE_TAG:0:7}, the newest version tried on development. Nothing to promote."
   exit 0
 fi
 
-# --- has it been tried? -----------------------------------------------------
-
-DEV_DOMAIN="$(grep -E '^LMS_DOMAIN=' "$DEV_DIR/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\"'")"
-curl -fsS --max-time 10 "https://$DEV_DOMAIN/api/health" 2>/dev/null | grep -q '"status":"ok"' \
-  || stop "the development site is not healthy at https://$DEV_DOMAIN."
-
-STARTED="$(docker inspect --format '{{.State.StartedAt}}' roft-lms-dev-app-1)"
-AGE_HOURS=$(( ( $(date +%s) - $(date -d "$STARTED" +%s) ) / 3600 ))
-
-if [ "$AGE_HOURS" -lt "$MIN_SOAK_HOURS" ] && [ "$NOW" = false ]; then
-  stop "development changed to ${DEV_TAG:0:7} only ${AGE_HOURS} hour(s) ago, under the ${MIN_SOAK_HOURS} it has to run first. It goes out next Friday, or now with --now."
+# Never backwards. After a --now release, live can be ahead of anything that
+# has finished its hours on development.
+if [ -n "$LIVE_TAG" ] && git -C "$DEV_DIR" merge-base --is-ancestor "$TAG" "$LIVE_TAG" 2>/dev/null; then
+  log "Live runs ${LIVE_TAG:0:7}, which already includes ${TAG:0:7}. Nothing to promote."
+  exit 0
 fi
 
-log "Promoting ${DEV_TAG:0:7} to live, after ${AGE_HOURS} hour(s) on development (live was ${LIVE_TAG:0:7})."
+if [ "$TAG" = "$DEV_TAG" ]; then
+  DEV_DOMAIN="$(grep -E '^LMS_DOMAIN=' "$DEV_DIR/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\"'")"
+  curl -fsS --max-time 10 "https://$DEV_DOMAIN/api/health" 2>/dev/null | grep -q '"status":"ok"' \
+    || stop "the development site is not healthy at https://$DEV_DOMAIN."
+  log "Promoting ${TAG:0:7} to live, after ${HOURS} hour(s) on development (live was ${LIVE_TAG:0:7})."
+else
+  log "Promoting ${TAG:0:7} to live, which ran ${HOURS} hour(s) on development (live was ${LIVE_TAG:0:7}). Development has since moved to ${DEV_TAG:0:7}, which has not had its ${MIN_SOAK_HOURS} hours yet and waits for next Friday."
+fi
 
 if [ "$DRY_RUN" = true ]; then
-  "$LIVE/scripts/auto-deploy.sh" --dry-run --to "$DEV_TAG"
+  "$LIVE/scripts/auto-deploy.sh" --dry-run --to "$TAG"
   exit 0
 fi
 
@@ -98,7 +126,7 @@ fi
 WAITED=0
 while true; do
   set +e
-  "$LIVE/scripts/auto-deploy.sh" --to "$DEV_TAG"
+  "$LIVE/scripts/auto-deploy.sh" --to "$TAG"
   STATUS=$?
   set -e
   [ "$STATUS" -ne 75 ] && break
@@ -116,4 +144,4 @@ if [ "$STATUS" -ne 0 ]; then
   log "PROMOTION FAILED: the live deploy stopped; its lines above say where and what state live is in."
   exit 1
 fi
-log "Promoted ${DEV_TAG:0:7} to live."
+log "Promoted ${TAG:0:7} to live."

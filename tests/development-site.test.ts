@@ -12,8 +12,9 @@
  * decision Roland took or a fault found while building this, and each is the
  * kind of thing a later edit could quietly undo.
  */
-import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execFileSync, execSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { deploymentLabel } from "@/components/deployment-banner";
@@ -143,9 +144,9 @@ describe("live is released only on purpose", () => {
     expect(deploy).toMatch(/exec "\$REPO\/scripts\/auto-deploy\.sh" --force --to "\$REMOTE"/);
   });
 
-  it("promotes what development is running, not the newest commit", () => {
-    expect(promote).toMatch(/docker inspect --format '\{\{\.Config\.Image\}\}' roft-lms-dev-app-1/);
-    expect(promote).toMatch(/auto-deploy\.sh" --to "\$DEV_TAG"/);
+  it("promotes a version development ran, not the newest commit", () => {
+    expect(promote).toMatch(/scripts\/soaked-version\.sh" "\$DEV_LOG" "\$MIN_SOAK_HOURS"/);
+    expect(promote).toMatch(/auto-deploy\.sh" --to "\$TAG"/);
     expect(promote).not.toMatch(/origin\/main/);
   });
 
@@ -153,6 +154,11 @@ describe("live is released only on purpose", () => {
     expect(promote).toMatch(/api\/health/);
     expect(promote).toMatch(/MIN_SOAK_HOURS/);
     expect(promote).toMatch(/--now\) NOW=true/);
+  });
+
+  it("never takes live backwards", () => {
+    // After a --now release live can be ahead of everything that has soaked.
+    expect(promote).toMatch(/merge-base --is-ancestor "\$TAG" "\$LIVE_TAG"/);
   });
 
   it("waits its turn rather than giving up the week's release", () => {
@@ -173,6 +179,73 @@ describe("live is released only on purpose", () => {
     // Twenty minutes, while a deploy may wait thirty for its images.
     expect(deploy).toMatch(/STALE_MINUTES=45/);
     expect(code("scripts/deploy-development.sh")).toMatch(/STALE_MINUTES=45/);
+  });
+});
+
+/**
+ * Which version Friday releases. Job sheet B2, 27 September 2026.
+ *
+ * The first rule looked only at what development ran at 22:00, so a push late
+ * on a Friday held back the whole week. These run the selector itself against
+ * a log in the shape the server writes, including the "X -> X" line every
+ * deploy adds when it reloads itself, which the server's own log showed.
+ */
+describe("Friday releases the newest version development ran long enough", () => {
+  /**
+   * Bash as the server has it. On Windows, `bash` on the PATH is usually the
+   * WSL launcher, so Git's own is used, found from git itself.
+   */
+  function bash(): string | null {
+    if (process.platform !== "win32") return "bash";
+    const gitExec = execSync("git --exec-path", { encoding: "utf8" }).trim();
+    const candidate = join(gitExec, "..", "..", "..", "bin", "bash.exe");
+    return existsSync(candidate) ? candidate : null;
+  }
+  const shell = bash();
+
+  const log = [
+    "[2026-09-21 08:00:00Z] Development healthy at https://dev.example.test on aaaaaaa.",
+    "[2026-09-23 09:00:00Z] Development aaaaaaa -> bbbbbbb: Something from Wednesday",
+    "[2026-09-23 09:00:06Z] Development bbbbbbb -> bbbbbbb: Something from Wednesday",
+    "[2026-09-23 09:03:00Z] Development healthy at https://dev.example.test on bbbbbbb.",
+    "[2026-09-23 09:04:00Z] Development deployed bbbbbbb.",
+    "[2026-09-25 17:00:00Z] Development bbbbbbb -> ccccccc: Late on Friday",
+    "[2026-09-25 17:00:06Z] Development ccccccc -> ccccccc: Late on Friday",
+    "[2026-09-25 17:03:00Z] Development healthy at https://dev.example.test on ccccccc.",
+  ].join("\n");
+
+  function soaked(at: string, hours = 6): string {
+    const dir = mkdtempSync(join(tmpdir(), "soak-"));
+    const path = join(dir, "development-deploy.log");
+    writeFileSync(path, `${log}\n`);
+    try {
+      return execFileSync(shell!, ["scripts/soaked-version.sh", path.replace(/\\/g, "/"), String(hours)], {
+        encoding: "utf8",
+        env: { ...process.env, NOW_EPOCH: String(Date.parse(at) / 1000) },
+      }).trim();
+    } catch {
+      return "none";
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it.skipIf(!shell)("releases the week's work when a late push has not had its hours", () => {
+    // 22:00 SAST is 20:00 UTC; ccccccc has run three hours, bbbbbbb ran two days.
+    expect(soaked("2026-09-25T20:00:00Z")).toBe("bbbbbbb 55");
+  });
+
+  it.skipIf(!shell)("releases the late push once it has had them", () => {
+    expect(soaked("2026-09-25T23:10:00Z")).toBe("ccccccc 6");
+  });
+
+  it.skipIf(!shell)("does not count a deploy reloading itself as a change of version", () => {
+    // Were "ccccccc -> ccccccc" an end, ccccccc would never be seen to run.
+    expect(soaked("2026-09-26T20:00:00Z")).toBe("ccccccc 26");
+  });
+
+  it.skipIf(!shell)("releases nothing when nothing has run long enough", () => {
+    expect(soaked("2026-09-21T10:00:00Z", 6)).toBe("none");
   });
 });
 
