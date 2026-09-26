@@ -97,6 +97,33 @@ export function TakeOffline({
       const cache = await caches.open("roft-lms-v1");
       await cache.addAll(paths);
 
+      /*
+       * And the code those pages need to run, read out of the pages
+       * themselves. Until 27 September only the pages were kept, so a held
+       * page opened with no signal but nothing on it worked. Kept in the
+       * service worker's code cache (app/sw.js); if any of it cannot be
+       * fetched, the pages are released again rather than half held.
+       */
+      try {
+        const code = await caches.open("roft-lms-code-v1");
+        const wanted = new Set<string>();
+        for (const path of paths) {
+          const held = await cache.match(path);
+          const type = held?.headers.get("content-type") ?? "";
+          if (!held || !type.includes("text/html")) continue;
+          // Backslashes excluded: the page also carries the same addresses
+          // inside escaped text, and taking the escape along makes a second,
+          // wrong address for every file.
+          for (const match of (await held.text()).matchAll(/(\/_next\/static\/[^"'\s)\\]+)/g)) {
+            wanted.add(match[1]);
+          }
+        }
+        await code.addAll([...wanted]);
+      } catch (error) {
+        await Promise.all(paths.map((path) => cache.delete(path)));
+        throw error;
+      }
+
       setState("held");
       setMessage(`${label} is on this phone. You can read it with no signal.`);
     } catch {

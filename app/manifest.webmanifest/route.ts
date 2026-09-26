@@ -20,7 +20,7 @@ export async function GET() {
   }
 
   const manifest = {
-    name: `${tenant.displayName} — Learning`,
+    name: `${tenant.displayName}: Learning`,
     short_name: tenant.displayName.slice(0, 12),
     description: "Study material, the rollout schedule, and work you can record with no signal.",
     start_url: "/",
@@ -29,17 +29,12 @@ export async function GET() {
     orientation: "portrait",
     background_color: "#ffffff",
     theme_color: tenant.primaryColour ?? "#1f2937",
-    icons: tenant.logoUrl
-      ? [
-          {
-            src: tenant.logoUrl,
-            sizes: "any",
-            // No purpose: "maskable" claim. The logo is the provider's own and
-            // has no safe zone, so Android would crop it badly.
-            type: "image/png",
-          },
-        ]
-      : [],
+    // Chrome installs only with a 192 and a 512 pixel icon. The logo, at no
+    // stated size, never qualified; these are drawn to size (app/icons).
+    icons: [
+      { src: "/icons/192", sizes: "192x192", type: "image/png" },
+      { src: "/icons/512", sizes: "512x512", type: "image/png" },
+    ],
   };
 
   return Response.json(manifest, {

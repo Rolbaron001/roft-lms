@@ -1,7 +1,12 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
+  courseSections,
+  courseSteps,
+  courses,
+  enrolments,
+  lessons,
   offlineSubmissions,
   organisations,
   qualifications,
@@ -42,6 +47,59 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * without telling anyone, which assessment evidence cannot tolerate. Where
  * something changed while the learner was away, a person decides.
  */
+
+/**
+ * What a learner can take with them: each course they are working through,
+ * with every page and file they need to study it with no signal.
+ *
+ * Until 27 September "Take it with you" offered four general pages (the home
+ * page, this page, the course list and the workplace page) and never the
+ * learner's own course, its lessons' files or its documents. A ranger in the
+ * field would have found nothing to study.
+ *
+ * Per course, because Roland's note of 10 September has the learner choose
+ * "their current study unit" and see what it costs in room, not download
+ * everything at once.
+ */
+export async function offlinePacksFor(
+  session: AuthenticatedSession,
+): Promise<{ label: string; paths: string[] }[]> {
+  return withTenant(session.organisationId, async (tx) => {
+    const running = await tx
+      .select({ id: enrolments.id, courseId: courses.id, title: courses.title })
+      .from(enrolments)
+      .innerJoin(courses, eq(courses.id, enrolments.courseId))
+      .where(
+        and(
+          eq(enrolments.userId, session.userId),
+          inArray(enrolments.status, ["assigned", "in_progress", "overdue"]),
+        ),
+      );
+
+    const packs: { label: string; paths: string[] }[] = [];
+    for (const enrolment of running) {
+      const files = await tx
+        .select({ id: lessons.id })
+        .from(lessons)
+        .innerJoin(courseSections, eq(courseSections.id, lessons.sectionId))
+        .where(and(eq(courseSections.courseId, enrolment.courseId), isNotNull(lessons.storageKey)));
+      const documents = await tx
+        .select({ id: courseSteps.programmeDocumentId })
+        .from(courseSteps)
+        .where(and(eq(courseSteps.courseId, enrolment.courseId), isNotNull(courseSteps.programmeDocumentId)));
+
+      packs.push({
+        label: enrolment.title,
+        paths: [
+          `/learn/${enrolment.id}`,
+          ...files.map((file) => `/api/lessons/${file.id}/media`),
+          ...documents.map((document) => `/api/programme-documents/${document.id}`),
+        ],
+      });
+    }
+    return packs;
+  });
+}
 
 export class OfflineError extends Error {
   constructor(

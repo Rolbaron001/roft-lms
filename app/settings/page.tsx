@@ -167,6 +167,7 @@ export default async function SettingsPage({
         <div className="mt-6">
           <CapabilitiesForm
             current={structure}
+            offline={tenant.offlineEnabled}
             words={{
               programme: words.one("programme"),
               studyUnit: words.one("studyUnit"),

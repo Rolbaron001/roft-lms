@@ -30,6 +30,7 @@ export async function updateCapabilitiesAction(
       // than a missing field.
       statutory_reporting: formData.get("statutory_reporting") === "on",
       workplace_experience: formData.get("workplace_experience") === "on",
+      offline: formData.get("offline") === "on",
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {

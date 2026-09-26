@@ -36,9 +36,12 @@ import {
  */
 export function CapabilitiesForm({
   current,
+  offline,
   words,
 }: {
   current: Structure;
+  /** Whether working without a signal is switched on. */
+  offline: boolean;
   /** This provider's own word for each layer, so the diagram reads as theirs. */
   words: { programme: string; studyUnit: string; course: string };
 }) {
@@ -194,7 +197,7 @@ export function CapabilitiesForm({
 
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">
-            Two things that stand on their own
+            Three things that stand on their own
           </legend>
 
           <label className="flex items-start gap-2 text-sm">
@@ -233,6 +236,28 @@ export function CapabilitiesForm({
               <span className="block text-xs text-[var(--muted)]">
                 <strong>Switch it off when:</strong> nothing you deliver is
                 assessed in a workplace.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="offline"
+              defaultChecked={offline}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">Working without a signal</span>
+              <span className="block text-xs text-[var(--muted)]">
+                Learners install the platform on their phone, download their
+                study material before they go out, read it with no signal, and
+                record their work to send back when they next have one.
+              </span>
+              <span className="block text-xs text-[var(--muted)]">
+                <strong>Switch it on when:</strong> learners spend days away
+                from a signal, such as in the field. Summatives stay online
+                unless a programme is deliberately set otherwise.
               </span>
             </span>
           </label>

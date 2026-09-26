@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
-import { awaitingResolution, capturedUnderRelaxedRule } from "@/lib/offline";
+import {
+  awaitingResolution,
+  capturedUnderRelaxedRule,
+  offlinePacksFor,
+} from "@/lib/offline";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { HeldOnDevice } from "./held-on-device";
@@ -30,6 +34,7 @@ export default async function OfflinePage() {
   const session = await requireSession();
 
   const canSeeQueue = session.permissions.includes("enrolment:read_all");
+  const packs = await offlinePacksFor(session);
   const [held, relaxed] = canSeeQueue
     ? await Promise.all([
         awaitingResolution(session),
@@ -61,10 +66,21 @@ export default async function OfflinePage() {
           title="Take it with you"
           description="Download what you need before you go. Nothing is kept that you did not ask for."
         >
-          <TakeOffline
-            label="Your current study material"
-            paths={["/", "/offline", "/courses", "/workplace"]}
-          />
+          {packs.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">
+              You have nothing to study at the moment. Anything you are
+              enrolled on appears here to download.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {packs.map((pack) => (
+                <div key={pack.paths[0]}>
+                  <p className="mb-2 text-sm font-medium">{pack.label}</p>
+                  <TakeOffline label={pack.label} paths={pack.paths} />
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card

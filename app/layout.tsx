@@ -23,12 +23,21 @@ const geistMono = Geist_Mono({
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await currentTenant();
   return {
+    // A colon rather than the em dash this used, which house style rules out
+    // in anything the platform produces (Heidi, 21 September).
     title: tenant
-      ? `${tenant.displayName} — Learning`
+      ? `${tenant.displayName}: Learning`
       : `${platformName()} Learning Management System`,
     description: tenant
       ? `Learning and competency records for ${tenant.displayName}.`
       : "Multi-tenant learning management and competency assurance.",
+    /*
+     * The install manifest, for a provider with offline switched on and no
+     * one else. It existed from 11 September and was linked from nowhere, so
+     * no phone was ever offered to install the platform, which is how the
+     * ranger programme's learners were meant to take it into the field.
+     */
+    ...(tenant?.offlineEnabled ? { manifest: "/manifest.webmanifest" } : {}),
   };
 }
 

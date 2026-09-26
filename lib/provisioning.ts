@@ -673,6 +673,15 @@ export async function setTenantCapabilities(
     delivery?: string | null;
     statutory_reporting?: boolean;
     workplace_experience?: boolean;
+    /**
+     * Working without a signal. Its own column rather than a feature flag,
+     * because it came first. Left unchanged when not given.
+     *
+     * Until 27 September nothing in the platform could switch it on: the
+     * service worker, the downloads and the capture were all built and all
+     * behind a switch no screen wrote, so no provider could reach any of it.
+     */
+    offline?: boolean;
   },
 ) {
   assertSessionCan(session, "tenant:manage_settings");
@@ -685,15 +694,25 @@ export async function setTenantCapabilities(
 
   const result = await withTenant(session.organisationId, async (tx) => {
     const [before] = await tx
-      .select({ featureFlags: organisations.featureFlags })
+      .select({
+        featureFlags: organisations.featureFlags,
+        offlineEnabled: organisations.offlineEnabled,
+      })
       .from(organisations)
       .where(eq(organisations.id, session.organisationId));
 
     const [updated] = await tx
       .update(organisations)
-      .set({ featureFlags: flags, updatedAt: new Date() })
+      .set({
+        featureFlags: flags,
+        ...(chosen.offline === undefined ? {} : { offlineEnabled: chosen.offline }),
+        updatedAt: new Date(),
+      })
       .where(eq(organisations.id, session.organisationId))
-      .returning({ featureFlags: organisations.featureFlags });
+      .returning({
+        featureFlags: organisations.featureFlags,
+        offlineEnabled: organisations.offlineEnabled,
+      });
 
     await recordAudit(tx, {
       organisationId: session.organisationId,
@@ -701,8 +720,8 @@ export async function setTenantCapabilities(
       action: "tenant.capabilities_updated",
       entityType: "organisation",
       entityId: session.organisationId,
-      before: { featureFlags: before?.featureFlags ?? null },
-      after: { featureFlags: updated.featureFlags },
+      before: { featureFlags: before?.featureFlags ?? null, offline: before?.offlineEnabled ?? false },
+      after: { featureFlags: updated.featureFlags, offline: updated.offlineEnabled },
     });
 
     return updated.featureFlags;
