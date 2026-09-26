@@ -9,7 +9,8 @@
  * has a test.
  */
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { courseForStudyUnit } from "@/lib/capture-from-documents";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   assessmentDecisions,
@@ -19,6 +20,7 @@ import {
   certificates,
   competencies,
   competencyFrameworks,
+  courseCompetencies,
   courses,
   organisations,
   statementsOfResults,
@@ -1335,6 +1337,42 @@ describe("the Statement of Results", () => {
     expect(found.issued).toHaveLength(0);
     expect(found.statements).toEqual([{ studyUnitId: su1.id, issuedById: null }]);
     expect(found.awarded).toHaveLength(1);
+  });
+
+  /*
+   * Roland, 27 September (W5): all learning covers a competency that is
+   * achieved. A study unit's course was offered an unrelated list; it now
+   * carries what the unit achieves.
+   */
+  it("tags a study unit's course with what the unit achieves", async () => {
+    const code = `su-${suffix()}`;
+    const imported = await importCurriculum(admin, twoUnits(code));
+    const units = await unitsOf(imported.qualificationId);
+    const su1 = units.find((u) => u.code === "SU1")!;
+    const su2 = units.find((u) => u.code === "SU2")!;
+
+    const first = await courseForStudyUnit(admin, su1.id);
+    const second = await courseForStudyUnit(admin, su2.id);
+
+    const tagged = await withTenant(admin.organisationId, (tx) =>
+      tx
+        .select({
+          courseId: courseCompetencies.courseId,
+          code: competencies.code,
+          frameworkId: competencies.frameworkId,
+          source: competencyFrameworks.source,
+        })
+        .from(courseCompetencies)
+        .innerJoin(competencies, eq(competencies.id, courseCompetencies.competencyId))
+        .innerJoin(competencyFrameworks, eq(competencyFrameworks.id, competencies.frameworkId))
+        .where(inArray(courseCompetencies.courseId, [first, second])),
+    );
+
+    expect(tagged.find((row) => row.courseId === first)?.code).toBe("SU1");
+    expect(tagged.find((row) => row.courseId === second)?.code).toBe("SU2");
+    // One framework for the qualification, shared by its units.
+    expect(new Set(tagged.map((row) => row.frameworkId)).size).toBe(1);
+    expect(tagged[0].source).toBe(`qualification:${imported.qualificationId}`);
   });
 
   it("refuses a study unit whose own modules are outstanding", async () => {

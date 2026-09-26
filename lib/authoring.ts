@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { raise } from "./notifications";
+import { ensureStudyUnitCompetency } from "./unit-competency";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -1234,6 +1235,18 @@ export async function publishCourse(
   courseId: string,
 ): Promise<PublishSuccess | PublishRefusal> {
   assertSessionCan(session, "course:publish");
+
+  // A study unit's course that has no competency yet is given the one the
+  // unit achieves, rather than refused and sent to an unrelated list (W5).
+  // Only when it has none: a competency somebody chose stands.
+  await withTenant(session.organisationId, async (tx) => {
+    const [tagged] = await tx
+      .select({ id: courseCompetencies.id })
+      .from(courseCompetencies)
+      .where(eq(courseCompetencies.courseId, courseId))
+      .limit(1);
+    if (!tagged) await ensureStudyUnitCompetency(tx, session.organisationId, courseId);
+  });
 
   const report = await coverageReport(session, courseId);
   const reasons: string[] = [];

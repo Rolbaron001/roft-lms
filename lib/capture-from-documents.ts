@@ -8,6 +8,7 @@ import {
   studyUnits,
 } from "@/db/schema";
 import { createCourse } from "./authoring";
+import { ensureStudyUnitCompetency } from "./unit-competency";
 import { createAssessment } from "./assessment";
 import { namingConventionFor, proposeCapture } from "./capture";
 import { classifyFilename } from "./naming-convention";
@@ -328,6 +329,12 @@ export async function courseForStudyUnit(
     title: `${unit.code} ${unit.title}`.trim(),
     studyUnitId,
   });
+
+  // Tagged with what the unit achieves from the start, so nobody has to find
+  // a competency in a list that has nothing to do with the qualification (W5).
+  await withTenant(session.organisationId, (tx) =>
+    ensureStudyUnitCompetency(tx, session.organisationId, created.id),
+  );
 
   return created.id;
 }
