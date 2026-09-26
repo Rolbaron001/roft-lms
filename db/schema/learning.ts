@@ -1,8 +1,11 @@
 import {
   bigint,
+  boolean,
   date,
   index,
   integer,
+  jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -223,5 +226,65 @@ export const enrolmentDocuments = pgTable(
   (t) => [
     index("enrolment_documents_user_idx").on(t.userId),
     index("enrolment_documents_org_idx").on(t.organisationId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Learning recorded elsewhere
+// ---------------------------------------------------------------------------
+
+/**
+ * One xAPI statement brought in from another learning system.
+ *
+ * Roland, 27 September (job sheet A10): a provider's learning records must be
+ * able to move to and from another system. Going out, the platform writes its
+ * own records as xAPI statements (lib/xapi.ts). Coming in, it keeps each
+ * statement as it arrived, matched to a learner by email where one matches,
+ * rather than turning it into an enrolment or a result on this platform: a
+ * course somebody finished elsewhere was not taught, assessed or moderated
+ * here, and the record must not suggest it was.
+ *
+ * The statement's own id is kept and is unique per provider, so importing the
+ * same export twice adds nothing the second time.
+ */
+export const externalLearningRecords = pgTable(
+  "external_learning_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** The learner here it belongs to; null when no learner matched. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+
+    statementId: uuid("statement_id").notNull(),
+    /** The actor as the statement names them: an email, or an account name. */
+    actor: text("actor").notNull(),
+    actorName: text("actor_name"),
+    verbId: text("verb_id").notNull(),
+    /** "completed", as the statement displays it. */
+    verb: text("verb").notNull(),
+    objectId: text("object_id").notNull(),
+    objectName: text("object_name"),
+    success: boolean("success"),
+    completion: boolean("completion"),
+    scoreScaled: numeric("score_scaled", { precision: 6, scale: 4 }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+
+    /** The file or system it came from, as the person importing named it. */
+    source: text("source").notNull(),
+    /** The statement exactly as received. */
+    statement: jsonb("statement").notNull(),
+
+    importedById: uuid("imported_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    importedAt: timestamp("imported_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("external_learning_records_statement_idx").on(t.organisationId, t.statementId),
+    index("external_learning_records_user_idx").on(t.userId),
   ],
 );

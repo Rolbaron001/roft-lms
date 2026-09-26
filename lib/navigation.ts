@@ -311,6 +311,12 @@ export const NAV: NavSection[] = [
         label: "Verify a certificate",
         permission: "enrolment:read_all",
       },
+      // Learning records in and out, as xAPI statements (job sheet A10).
+      {
+        href: "/learning-records",
+        label: "Learning records",
+        permission: "records:manage",
+      },
       {
         href: "/settings",
         // Reachable by anybody with something on it. An administrator sees the

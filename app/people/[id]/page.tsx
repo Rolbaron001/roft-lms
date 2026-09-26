@@ -17,6 +17,7 @@ import { Support } from "./support";
 import { Missed } from "./missed";
 import { Conduct } from "./conduct";
 import { learnerCases } from "@/lib/conduct";
+import { externalRecordsFor } from "@/lib/xapi";
 import { learnerMissedAssessments, learnerSupport } from "@/lib/support";
 import { dateInZone } from "@/lib/timezone";
 import {
@@ -105,6 +106,12 @@ export default async function PersonPage({
   const canManageConduct =
     isLearner && session.permissions.includes("conduct:manage");
   const conductCases = canManageConduct ? await learnerCases(session, id) : [];
+
+  // Learning recorded by another system and imported here (job sheet A10).
+  const elsewhere =
+    isLearner && session.permissions.includes("enrolment:read_all")
+      ? await externalRecordsFor(session, id)
+      : [];
 
   const [supportRecords, missed] = canActOnSupport
     ? await Promise.all([
@@ -325,6 +332,30 @@ export default async function PersonPage({
             }))}
             canManage={canManageEnrolments}
           />
+        </section>
+      ) : null}
+
+      {elsewhere.length > 0 ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Learning recorded elsewhere
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+            Imported from another system. Shown as it was recorded there; none
+            of it was taught, assessed or moderated on this platform.
+          </p>
+          <ul className="space-y-1 text-sm">
+            {elsewhere.map((row) => (
+              <li key={row.id}>
+                <span className="font-medium">{row.verb}</span>{" "}
+                {row.objectName ?? row.objectId}
+                {row.success === true ? " · passed" : row.success === false ? " · not passed" : ""}
+                <span className="ml-2 text-xs text-[var(--muted)]">
+                  {row.occurredAt ? row.occurredAt.toISOString().slice(0, 10) : "no date"} · {row.source}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
     </AppShell>
