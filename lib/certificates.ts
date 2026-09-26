@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
-import { referencePrefix } from "./platform";
+import { providerReferencePrefix, referencePrefix } from "./platform";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentDecisions,
@@ -62,14 +62,29 @@ export class CertificateError extends Error {
  */
 const ALPHABET = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
 
-export function generateVerificationReference(): string {
+export function generateVerificationReference(
+  /** The issuing provider's prefix; the operator's when none is given. */
+  prefix: string = referencePrefix(),
+): string {
   const bytes = randomBytes(20);
   const characters = Array.from(bytes, (byte) => ALPHABET[byte % ALPHABET.length]);
   const groups: string[] = [];
   for (let index = 0; index < characters.length; index += 5) {
     groups.push(characters.slice(index, index + 5).join(""));
   }
-  return `${referencePrefix()}-${groups.join("-")}`;
+  return `${prefix}-${groups.join("-")}`;
+}
+
+/** The prefix for references a provider issues. See providerReferencePrefix. */
+export async function prefixFor(
+  tx: TenantDatabase,
+  organisationId: string,
+): Promise<string> {
+  const [organisation] = await tx
+    .select({ slug: organisations.slug })
+    .from(organisations)
+    .where(eq(organisations.id, organisationId));
+  return providerReferencePrefix(organisation?.slug);
 }
 
 /**
@@ -330,7 +345,9 @@ async function issueWithin(
         organisationId,
         userId: eligibility.enrolment.userId,
         enrolmentId,
-        verificationReference: generateVerificationReference(),
+        verificationReference: generateVerificationReference(
+          await prefixFor(tx, organisationId),
+        ),
         title: course.title,
         competenciesAttested: eligibility.competencies,
       })

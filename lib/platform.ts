@@ -40,6 +40,24 @@ export function platformName(): string {
  * would be ambiguous against the reference body, which is what verification
  * actually matches on.
  */
+/**
+ * The prefix on a provider's own certificates and statements.
+ *
+ * Roland, 27 September: certificates are per provider, so a tenant's must not
+ * carry the operator's name. Until then every reference on a deployment took
+ * the operator's prefix, and an Acme certificate on Curiosa's server read
+ * `CURIOSA-...`. Taken from the provider's own short name, the slug it signs
+ * in under, letters only and at most twelve. The operator's prefix stands in
+ * only where a slug yields fewer than two letters.
+ *
+ * References already issued keep what they were printed with and still
+ * verify: verification matches the twenty random characters, never the prefix.
+ */
+export function providerReferencePrefix(slug: string | null | undefined): string {
+  const letters = (slug ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
+  return letters.length >= 2 ? letters : referencePrefix();
+}
+
 export function referencePrefix(): string {
   const configured = process.env.PLATFORM_REFERENCE_PREFIX?.trim().toUpperCase();
   if (configured && /^[A-Z]{2,12}$/.test(configured)) return configured;

@@ -164,7 +164,14 @@ export default async function TakeAssessmentPage({
         </section>
       ) : null}
 
-      {attemptsLeft !== null && attemptsLeft <= 0 ? (
+      {view.competent ? (
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <p className="text-sm">
+            You have been found competent on this assessment, so there is
+            nothing to sit again.
+          </p>
+        </section>
+      ) : attemptsLeft !== null && attemptsLeft <= 0 ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <p className="text-sm">
             You have used all your attempts at this assessment.

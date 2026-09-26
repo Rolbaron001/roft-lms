@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { DEFAULT_DECLARATION } from "./declaration";
+import { ALREADY_COMPETENT_MESSAGE, alreadyCompetent } from "./already-competent";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentItems,
@@ -441,6 +442,10 @@ export async function startAttempt(
 
       const inProgress = attempts.find((a) => a.status === "draft");
       if (inProgress) return inProgress.id;
+
+      if (await alreadyCompetent(tx, assessmentId, session.userId)) {
+        throw new PaperError(ALREADY_COMPETENT_MESSAGE, "closed");
+      }
 
       // Held, not failed.
       //

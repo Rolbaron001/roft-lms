@@ -398,6 +398,41 @@ describe("taking a quiz", () => {
     expect(row.declarationAcceptedAt).not.toBeNull();
   });
 
+  /*
+   * Roland, 27 September (W16): a learner found competent has no reason to sit
+   * the summative again, so it is not offered. Found by the walk of
+   * 26 September, where a second attempt reached the assessor as new work.
+   */
+  it("offers no new attempt once the learner stands competent", async () => {
+    const { assessmentId, items } = await publishedQuiz({ purpose: "summative" });
+    const responses = { [items[0].id]: [items[0].options![0].id] };
+
+    const first = await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses });
+    await recordAssessorDecision(assessorA, {
+      submissionId: first.submissionId,
+      outcome: "competent",
+    });
+
+    await expect(
+      submitQuiz(learner, { declarationAccepted: true, assessmentId, responses }),
+    ).rejects.toThrow(/already been found competent/);
+    expect((await getAssessmentForLearner(learner, assessmentId)).competent).toBe(true);
+  });
+
+  it("still allows another attempt after not yet competent", async () => {
+    const { assessmentId, items } = await publishedQuiz({ purpose: "summative" });
+    const responses = { [items[0].id]: [items[0].options![0].id] };
+
+    const first = await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses });
+    await recordAssessorDecision(assessorA, {
+      submissionId: first.submissionId,
+      outcome: "not_yet_competent",
+    });
+
+    const second = await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses });
+    expect(second.submissionId).not.toBe(first.submissionId);
+  });
+
   it("does not ask for a declaration on practice", async () => {
     const { assessmentId, items } = await publishedQuiz();
     const result = await submitQuiz(learner, {

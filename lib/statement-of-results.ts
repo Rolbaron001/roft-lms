@@ -11,7 +11,11 @@ import {
   users,
 } from "@/db/schema";
 import { qualificationReadiness } from "./eisa";
-import { generateVerificationReference, referenceBody } from "./certificates";
+import {
+  generateVerificationReference,
+  prefixFor,
+  referenceBody,
+} from "./certificates";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -369,7 +373,9 @@ export async function issueStatementOfResults(
           : null,
       }));
 
-    const reference = generateVerificationReference();
+    const reference = generateVerificationReference(
+      await prefixFor(tx, session.organisationId),
+    );
 
     const [created] = await tx
       .insert(statementsOfResults)

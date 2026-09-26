@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { DEFAULT_DECLARATION } from "./declaration";
+import { ALREADY_COMPETENT_MESSAGE, alreadyCompetent } from "./already-competent";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
@@ -396,6 +397,8 @@ export async function getAssessmentForLearner(
       assessment,
       items,
       attempts,
+      /** Found competent already, so the page offers no new attempt. */
+      competent: draft ? false : await alreadyCompetent(tx, assessmentId, session.userId),
       draft: draft
         ? {
             savedAt: draft.lastSavedAt,
@@ -540,6 +543,10 @@ export async function saveQuizDraft(
     const draft = existing.find((row) => row.status === "draft");
     const savedAt = new Date();
 
+    if (!draft && (await alreadyCompetent(tx, input.assessmentId, session.userId))) {
+      throw new AssessmentError(ALREADY_COMPETENT_MESSAGE, "invalid_state");
+    }
+
     if (draft) {
       await tx
         .update(assessmentSubmissions)
@@ -612,6 +619,11 @@ export async function submitQuiz(
     // submission takes attempt 2, and a learner who saved once has silently
     // spent two of the attempts they were allowed.
     const draft = previous.find((row) => row.status === "draft");
+
+    if (!draft && (await alreadyCompetent(tx, input.assessmentId, session.userId))) {
+      throw new AssessmentError(ALREADY_COMPETENT_MESSAGE, "invalid_state");
+    }
+
     const attemptNumber =
       draft?.attemptNumber ?? (previous[0]?.attemptNumber ?? 0) + 1;
 

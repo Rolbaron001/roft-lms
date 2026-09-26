@@ -46,7 +46,7 @@ import {
   revokeCertificate,
   verifyByReference,
 } from "@/lib/certificates";
-import { referencePrefix } from "@/lib/platform";
+import { providerReferencePrefix, referencePrefix } from "@/lib/platform";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -266,6 +266,22 @@ describe("verification references", () => {
     const mangled = reference.toLowerCase().replace(/-/g, " ");
     expect(normaliseReference(mangled)).toBe(reference);
   });
+
+  /*
+   * Roland, 27 September (W13): certificates are per provider. An Acme
+   * certificate on Curiosa's server used to read CURIOSA-..., because the
+   * prefix was the operator's.
+   */
+  it("carries the issuing provider's own prefix", () => {
+    expect(providerReferencePrefix("acme")).toBe("ACME");
+    expect(providerReferencePrefix("curiosa")).toBe("CURIOSA");
+    // Letters only, at most twelve, so it can never be read as part of the body.
+    expect(providerReferencePrefix("harbourtraining")).toBe("HARBOURTRAIN");
+    expect(providerReferencePrefix("cert-1790000000000")).toBe("CERT");
+    // Too short to stand alone: the operator's prefix stands in.
+    expect(providerReferencePrefix("x9")).toBe(referencePrefix());
+    expect(generateVerificationReference("ACME")).toMatch(/^ACME-/);
+  });
 });
 
 describe("eligibility", () => {
@@ -437,7 +453,7 @@ describe("issuing", () => {
     if (!result.ok) return;
 
     expect(result.certificate.verificationReference).toMatch(
-      new RegExp(`^${referencePrefix()}-`),
+      /^CERT-/, // the provider's own prefix, from its slug (W13)
     );
     expect(result.certificate.competenciesAttested).toEqual([
       { code: "CRT-01", name: "Demonstrated capability" },
@@ -512,7 +528,7 @@ describe("issuing automatically", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].verificationReference).toMatch(
-      new RegExp(`^${referencePrefix()}-`),
+      /^CERT-/, // the provider's own prefix, from its slug (W13)
     );
   });
 
@@ -681,7 +697,7 @@ describe("a learner's own certificates", () => {
 
     const mine = await listMyCertificates(learner);
     expect(mine.length).toBeGreaterThan(0);
-    expect(mine[0].reference).toMatch(new RegExp(`^${referencePrefix()}-`));
+    expect(mine[0].reference).toMatch(/^CERT-/);
   });
 
   it("does not list anyone else's", async () => {

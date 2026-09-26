@@ -44,7 +44,6 @@ import {
 } from "@/lib/south-african-id";
 import { PermissionDeniedError, permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
-import { referencePrefix } from "@/lib/platform";
 
 /** Confirmed valid by the checksum; the well-known SAQA test value. */
 const VALID_ID = "8001015009087";
@@ -484,7 +483,7 @@ describe("what belongs in the return", () => {
     expect(achievement!.credits).toBe(12);
     expect(achievement!.result).toBe("competent");
     expect(achievement!.verificationReference).toMatch(
-      new RegExp(`^${referencePrefix()}-`),
+      /^STAT-/, // the provider's own prefix, from its slug (W13)
     );
   });
 

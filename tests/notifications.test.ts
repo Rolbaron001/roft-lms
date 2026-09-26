@@ -42,7 +42,6 @@ import {
 import { mailIsConfigured, renderEmail } from "@/lib/mail";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
-import { referencePrefix } from "@/lib/platform";
 
 /** Tenants a single test makes for itself, cleared with the rest. */
 const extraOrganisations: string[] = [];
@@ -227,7 +226,7 @@ describe("being told about your own training", () => {
     const certificate = mine.find((row) => row.kind === "certificate.issued");
 
     expect(certificate).toBeDefined();
-    expect(certificate!.body).toContain(`${referencePrefix()}-`);
+    expect(certificate!.body).toContain("NOTIFY-");
   });
 });
 
