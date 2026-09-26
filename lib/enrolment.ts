@@ -4,9 +4,11 @@ import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   courseSections,
   courses,
+  curriculumModules,
   enrolments,
   lessons,
   progressRecords,
+  studyUnits,
   users,
 } from "@/db/schema";
 import { assertLessonStepOpen } from "./spine";
@@ -74,8 +76,16 @@ export async function enrolUser(
 
   return withTenant(session.organisationId, async (tx) => {
     const [course] = await tx
-      .select({ id: courses.id, status: courses.status, title: courses.title })
+      .select({
+        id: courses.id,
+        status: courses.status,
+        title: courses.title,
+        unitQualificationId: studyUnits.qualificationId,
+        moduleQualificationId: curriculumModules.qualificationId,
+      })
       .from(courses)
+      .leftJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+      .leftJoin(curriculumModules, eq(curriculumModules.id, courses.curriculumModuleId))
       .where(eq(courses.id, parsed.courseId));
 
     if (!course) {
@@ -112,7 +122,17 @@ export async function enrolUser(
         organisationId: session.organisationId,
         userId: parsed.userId,
         courseId: parsed.courseId,
-        qualificationId: parsed.qualificationId ?? null,
+        // A course that delivers a study unit, or teaches a module, already
+        // says which qualification it counts towards. Found on 26 September:
+        // a cohort enrols without naming one, so every learner enrolled
+        // through a cohort was missing from EISA readiness and could never be
+        // given a statement of results. Named explicitly, the caller's choice
+        // stands.
+        qualificationId:
+          parsed.qualificationId ??
+          course.unitQualificationId ??
+          course.moduleQualificationId ??
+          null,
         enrolledById: session.userId,
         enrolmentSource: "manual",
         dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,

@@ -388,3 +388,23 @@ alter table oral_assessment_records
 alter table oral_assessment_records
   add constraint oral_assessment_records_exchanges_check
   check (jsonb_array_length(exchanges) > 0);
+
+-- ---------------------------------------------------------------------------
+-- A data correction rather than a rule, kept here because this is the one
+-- piece of SQL every deploy runs. Safe to run any number of times.
+--
+-- Until 26 September an enrolment made through a cohort did not record the
+-- qualification its course counts towards, so the learner was missing from
+-- EISA readiness and could never be given a statement of results. New
+-- enrolments now take it from the course (lib/enrolment.ts). This fills it in
+-- on the ones already made, only where it is missing and only from the
+-- course's own study unit or module, so it never overrides a choice somebody
+-- made and never guesses.
+update enrolments e
+set qualification_id = coalesce(su.qualification_id, cm.qualification_id)
+from courses c
+left join study_units su on su.id = c.study_unit_id
+left join curriculum_modules cm on cm.id = c.curriculum_module_id
+where e.course_id = c.id
+  and e.qualification_id is null
+  and coalesce(su.qualification_id, cm.qualification_id) is not null;
