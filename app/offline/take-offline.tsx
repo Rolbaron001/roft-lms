@@ -99,7 +99,7 @@ export function TakeOffline({
 
       /*
        * And the code those pages need to run, read out of the pages
-       * themselves. Until 27 September only the pages were kept, so a held
+       * themselves. Until 26 September only the pages were kept, so a held
        * page opened with no signal but nothing on it worked. Kept in the
        * service worker's code cache (app/sw.js); if any of it cannot be
        * fetched, the pages are released again rather than half held.

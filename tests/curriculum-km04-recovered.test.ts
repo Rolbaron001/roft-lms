@@ -1,7 +1,7 @@
 /**
  * Six criteria of 121151's KM-04 that the reader used to drop.
  *
- * Found on 27 September while checking Roland's view (job sheet W2) that the
+ * Found on 26 September while checking Roland's view (job sheet W2) that the
  * qualification's documents cover the criteria of every study unit. Curiosa's
  * own alignment matrix counts 112 published knowledge criteria for 121151; the
  * platform held 106. Nothing had reported the difference, because a criterion

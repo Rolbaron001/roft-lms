@@ -183,7 +183,7 @@ describe("live is released only on purpose", () => {
 });
 
 /**
- * Which version Friday releases. Job sheet B2, 27 September 2026.
+ * Which version Friday releases. Job sheet B2, 26 September 2026.
  *
  * The first rule looked only at what development ran at 22:00, so a push late
  * on a Friday held back the whole week. These run the selector itself against

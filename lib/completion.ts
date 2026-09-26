@@ -8,7 +8,7 @@ import { issueStudyUnitStatementAutomatically } from "./statement-of-results";
 /**
  * What finishing something earns.
  *
- * Roland, 27 September (W3): successful completion of a study unit earns a
+ * Roland, 26 September (W3): successful completion of a study unit earns a
  * Statement of Results and the provider's badge, not a certificate. The
  * certificate of competence for a qualification comes from the QCTO after the
  * EISA; until then the walk of 26 September found the platform issuing its own

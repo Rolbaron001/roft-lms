@@ -1,5 +1,5 @@
 /**
- * Working without a signal, made reachable. Job sheet A9, 27 September.
+ * Working without a signal, made reachable. Job sheet A9, 26 September.
  *
  * The offline feature was built on 11 September and could not be reached:
  * nothing could switch it on, the install manifest was linked from nowhere and

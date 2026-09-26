@@ -343,7 +343,7 @@ async function issueWithin(
       .from(courses)
       .where(eq(courses.id, eligibility.enrolment.courseId!));
 
-    // Roland, 27 September (W3): a study unit earns a Statement of Results and
+    // Roland, 26 September (W3): a study unit earns a Statement of Results and
     // the provider's badge. The certificate of competence for a qualification
     // is the QCTO's, after the EISA, so the platform issues none of its own.
     if (course.studyUnitId) {

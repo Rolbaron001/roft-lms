@@ -5,12 +5,12 @@ import { deflateSync } from "node:zlib";
  *
  * A square of the provider's colour with a white open book on it. Written by
  * hand because the image library the platform carries for PDFs is a native
- * module, and on 27 September it could not be loaded from a route: a picture
+ * module, and on 26 September it could not be loaded from a route: a picture
  * this simple is cheaper to compute than to depend on.
  *
  * Chrome offers to install a web app only when its manifest names a 192 pixel
  * and a 512 pixel icon (web.dev, "What does it take to be installable?",
- * checked 27 September).
+ * checked 26 September).
  */
 
 const CRC_TABLE = (() => {

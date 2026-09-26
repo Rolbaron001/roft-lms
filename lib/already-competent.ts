@@ -9,7 +9,7 @@ import {
 /**
  * Whether a learner already stands competent on an assessment.
  *
- * Roland, 27 September: a learner found competent has no reason to sit the
+ * Roland, 26 September: a learner found competent has no reason to sit the
  * summative again, so the platform does not offer it. Found by the walk of
  * 26 September, where a learner judged competent and moderated was shown the
  * paper and a Submit button, and a second attempt went to the assessor as new

@@ -404,7 +404,7 @@ Without `--now` it releases **the newest version development ran for six
 hours**, read from `~/logs/development-deploy.log` by `scripts/soaked-version.sh`.
 A commit pushed at 21:50 on a Friday is therefore not on live at 22:00 untried,
 and it does not hold back the week's earlier work either: that goes out, and the
-late commit waits for the next Friday (job sheet B2, since 27 September). Live
+late commit waits for the next Friday (job sheet B2, since 26 September). Live
 is never taken backwards, and the version development runs now is refused if
 the development site is not healthy. When it refuses, the log says why and live
 is left as it was. `--now` releases whatever development runs now, however

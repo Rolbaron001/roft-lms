@@ -181,7 +181,7 @@ const CODED_LINE = /^([A-Z]{2,3}\d{2,4})[:.]?\s+(.*)$/;
  * "Discuss the basic principles of the burden of proof..." on the next. The
  * coded-line pattern wanted text after the code, so the bare code was taken as
  * the end of IAC0104's description and the criterion disappeared into it.
- * Found on 27 September by comparing the platform against Curiosa's own
+ * Found on 26 September by comparing the platform against Curiosa's own
  * alignment matrix, which counted 112 published knowledge criteria to the
  * platform's 106.
  *
@@ -307,7 +307,7 @@ const SECTION_END = new RegExp(
   "^(?:" +
     [
       "Provider Programme Approval Requirements",
-      // 121151's own wording for the same section. Unseen until 27 September,
+      // 121151's own wording for the same section. Unseen until 26 September,
       // because the topic it follows, KM0403, was being read as empty; once
       // its criteria were recovered the last of them ran on into this heading.
       "Provider Accreditation Requirements",
@@ -965,7 +965,7 @@ function collectTopics(
      * then dropped for not belonging to module 04, and took the elements and
      * criteria after it with it. KM0403 arrived empty: six elements and five
      * criteria gone, and no note, because an empty topic reads as a document
-     * that said nothing. Found on 27 September against Curiosa's alignment
+     * that said nothing. Found on 26 September against Curiosa's alignment
      * matrix.
      *
      * Only while a topic of this module is open. A document that numbers its

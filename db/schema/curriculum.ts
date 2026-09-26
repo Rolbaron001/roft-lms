@@ -474,7 +474,7 @@ export const assessmentCriteria = pgTable(
      * document, and says where from: "Alignment matrix: Constructed, see
      * DD-004".
      *
-     * Roland, 27 September: hold what the provider wants loaded, once they
+     * Roland, 26 September: hold what the provider wants loaded, once they
      * have confirmed it at upload. Curiosa's 121151 matrix adds nine criteria
      * the QCTO curriculum does not have, each citing the design decision
      * behind it. Held, so readiness counts them, and marked, so a verifier
@@ -947,7 +947,7 @@ export const topicElementAlignment = pgTable(
  *
  * The element table above answers "what teaches KT0101". This one answers the
  * question the coverage check asks: "what assesses IAC0101". Roland,
- * 27 September (job sheet W2): the platform reads alignment matrices of this
+ * 26 September (job sheet W2): the platform reads alignment matrices of this
  * shape, from any provider, to check coverage. Curiosa's 121151 matrix maps
  * every criterion to a theory guide chapter, a workbook activity and a
  * summative task, and a practical criterion to its simulation.

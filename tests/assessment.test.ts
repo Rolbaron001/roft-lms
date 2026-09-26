@@ -399,7 +399,7 @@ describe("taking a quiz", () => {
   });
 
   /*
-   * Roland, 27 September (W16): a learner found competent has no reason to sit
+   * Roland, 26 September (W16): a learner found competent has no reason to sit
    * the summative again, so it is not offered. Found by the walk of
    * 26 September, where a second attempt reached the assessor as new work.
    */

@@ -86,7 +86,7 @@ describe("the end of the work experience section", () => {
     const criteria = parsed.modules.flatMap((module) =>
       module.topics.flatMap((topic) => topic.criteria),
     );
-    // 160 since 27 September: six KM-04 criteria recovered.
+    // 160 since 26 September: six KM-04 criteria recovered.
     expect(criteria).toHaveLength(160);
   });
 });

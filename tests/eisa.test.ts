@@ -1293,7 +1293,7 @@ describe("the Statement of Results", () => {
   });
 
   /*
-   * Roland, 27 September (W3): successful completion of a study unit earns a
+   * Roland, 26 September (W3): successful completion of a study unit earns a
    * Statement of Results and the provider's badge, not a certificate. The walk
    * of 26 September found a "certificate" issued for SU1 on its own.
    */
@@ -1354,7 +1354,7 @@ describe("the Statement of Results", () => {
   });
 
   /*
-   * Roland, 27 September (W5): all learning covers a competency that is
+   * Roland, 26 September (W5): all learning covers a competency that is
    * achieved. A study unit's course was offered an unrelated list; it now
    * carries what the unit achieves.
    */
@@ -1390,7 +1390,7 @@ describe("the Statement of Results", () => {
   });
 
   /*
-   * Roland, 27 September (W2): a study unit's course is checked against every
+   * Roland, 26 September (W2): a study unit's course is checked against every
    * criterion in the unit's modules, covered by a lesson, a captured question
    * or what the provider's alignment matrix names as assessing it. The walk
    * of 26 September published SU1's course with none of its criteria covered.

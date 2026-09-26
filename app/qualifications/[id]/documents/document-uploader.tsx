@@ -203,7 +203,7 @@ const KIND_LABEL: Record<string, string> = {
 /**
  * The lines an alignment matrix names that the curriculum does not have.
  *
- * Roland, 27 September: hold what the provider wants loaded, after they
+ * Roland, 26 September: hold what the provider wants loaded, after they
  * confirm it during the upload. Every line is listed with the reason the
  * matrix gives, all ticked to begin with because the provider wrote the
  * matrix, and nothing is added until the button is pressed.

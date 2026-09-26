@@ -28,7 +28,7 @@ import { modulesOfCondition } from "./part-qualifications";
  * KM0201" and "what assesses IAC0101" without anyone opening the file, and to
  * notice when the matrix refers to a curriculum line that does not exist.
  *
- * Extended on 27 September (job sheet W2). Roland: the platform reads
+ * Extended on 26 September (job sheet W2). Roland: the platform reads
  * alignment matrices of this shape, from any provider, to check coverage; and
  * it holds what the provider wants loaded, after they confirm it at upload.
  * Curiosa's 121151 matrix has three sheets (knowledge, practical, workplace),
@@ -201,7 +201,7 @@ function isElementHeading(cell: string): boolean {
  *
  * Curiosa's reconciliation sheet has lines such as "Topic elements with no
  * criterion | 0 | 0 | Match": they begin like a heading, but what sits beside
- * them is figures, not other headings. Found on 27 September, when that sheet
+ * them is figures, not other headings. Found on 26 September, when that sheet
  * was read as a fourth part of the matrix.
  */
 function findHeaderRow(sheet: Sheet): number {
@@ -336,7 +336,7 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
 /**
  * Something the matrix names that the curriculum as held does not have.
  *
- * Proposed, never added on reading. Roland, 27 September: hold what the
+ * Proposed, never added on reading. Roland, 26 September: hold what the
  * provider wants loaded, after they confirm it during the upload. The key is
  * what the confirmation posts back.
  */

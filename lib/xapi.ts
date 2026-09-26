@@ -25,7 +25,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 /**
  * Learning records in and out, as xAPI statements.
  *
- * Roland, 27 September (job sheet A10): a provider's learning records must be
+ * Roland, 26 September (job sheet A10): a provider's learning records must be
  * able to move to and from another system. xAPI is the format a learning
  * record store speaks, and the one another learning system is most likely to
  * take in or hand over, so it is the format used both ways.
@@ -40,7 +40,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * or results here, because nothing about them was taught, assessed or
  * moderated on this platform.
  *
- * Identifiers checked against the published documents on 27 September, not
+ * Identifiers checked against the published documents on 26 September, not
  * recalled: the statement shape against the xAPI 1.0.3 data specification;
  * "registered" and "attempted" against ADL's published vocabulary; "completed",
  * "passed" and "failed", and the course activity type, against the cmi5

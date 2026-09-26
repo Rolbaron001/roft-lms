@@ -8,7 +8,7 @@
 # exits 1 when no version has run that long. NOW_EPOCH replaces the clock, for
 # the tests.
 #
-# Called by scripts/promote-to-production.sh. Job sheet B2, 27 September 2026:
+# Called by scripts/promote-to-production.sh. Job sheet B2, 26 September 2026:
 # the first Friday rule looked only at what development was running at 22:00,
 # so a push late on a Friday held back the whole week, including versions
 # development had already run for days.

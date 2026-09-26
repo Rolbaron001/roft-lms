@@ -61,7 +61,7 @@ function read(text: string) {
  * change that quietly loses content fails on the baseline rather than passing
  * every variation at a lower number.
  */
-// 160, not the 154 this said until 27 September. Curiosa's alignment matrix
+// 160, not the 154 this said until 26 September. Curiosa's alignment matrix
 // counts 112 published knowledge criteria and the reader found 106: KM0401's
 // IAC0105, printed with its code alone on a line, and all five of KM0403's,
 // whose elements carry percentages and were read as topics and dropped. With

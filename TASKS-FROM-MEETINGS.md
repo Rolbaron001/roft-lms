@@ -618,8 +618,8 @@ default already does. Nothing changes in the design; the case is now known to be
 hypothetical rather than imminent, so it should cost nothing extra to carry.
 - **The spike is on hold at Roland's request** (10 September) while he
   considers the offline question further. ~~**Nothing here has been started, and
-  no offline code exists.**~~ **Stale, corrected 27 September:** the foundation
-  was built on 11 September and made usable on 27 September. See job sheet A9.
+  no offline code exists.**~~ **Stale, corrected 26 September:** the foundation
+  was built on 11 September and made usable on 26 September. See job sheet A9.
 
 **Size:** large, and it should be scoped and priced on its own rather than
 absorbed. But it is additive, and none of it touches what is already working.

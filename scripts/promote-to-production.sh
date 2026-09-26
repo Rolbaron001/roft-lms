@@ -19,7 +19,7 @@
 # WHICH VERSION
 #
 # The newest one development ran for MIN_SOAK_HOURS, worked out by
-# scripts/soaked-version.sh. Until 27 September (job sheet B2) this took only
+# scripts/soaked-version.sh. Until 26 September (job sheet B2) this took only
 # what development was running at 22:00 and refused if that had run under six
 # hours, so a commit pushed at 17:00 on a Friday held back the whole week,
 # including versions development had already run for days. Now the week's

@@ -125,7 +125,7 @@ describe("reading the platform in a provider's own words", () => {
 });
 
 /*
- * Roland, 27 September: where the top is Qualification / Programme and the
+ * Roland, 26 September: where the top is Qualification / Programme and the
  * level below is study units, "Courses" does not appear; study units replace
  * them. The menu said "Courses" for Curiosa whatever they chose, because the
  * vocabulary never looked at the choice.

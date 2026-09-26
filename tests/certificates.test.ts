@@ -268,7 +268,7 @@ describe("verification references", () => {
   });
 
   /*
-   * Roland, 27 September (W13): certificates are per provider. An Acme
+   * Roland, 26 September (W13): certificates are per provider. An Acme
    * certificate on Curiosa's server used to read CURIOSA-..., because the
    * prefix was the operator's.
    */

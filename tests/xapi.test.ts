@@ -1,7 +1,7 @@
 /**
  * Learning records out of one provider and into another, as xAPI.
  *
- * Job sheet A10, Roland 27 September: a provider's learning records must be
+ * Job sheet A10, Roland 26 September: a provider's learning records must be
  * able to move to and from another system. Tested as the round trip a
  * provider would make: one provider's records exported, then imported into a
  * second, where the same learner is known by the same email.

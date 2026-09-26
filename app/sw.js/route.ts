@@ -138,7 +138,7 @@ self.addEventListener("fetch", (event) => {
    *
    * A fresh copy replaces a held one, so what the learner took with them stays
    * current while they have a signal. Nothing is held that was not asked for:
-   * until 27 September every page a learner opened was stored as well, which
+   * until 26 September every page a learner opened was stored as well, which
    * is the silent caching Roland ruled out on 10 September.
    */
   event.respondWith(

@@ -75,7 +75,7 @@ export type UploadState = {
   links?: { href: string; label: string }[];
   /**
    * Lines the matrix names that the curriculum does not have, for the
-   * provider to tick and confirm. Roland, 27 September: hold what the
+   * provider to tick and confirm. Roland, 26 September: hold what the
    * provider wants loaded, after they confirm it during the upload.
    */
   additions?: {

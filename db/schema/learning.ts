@@ -236,7 +236,7 @@ export const enrolmentDocuments = pgTable(
 /**
  * One xAPI statement brought in from another learning system.
  *
- * Roland, 27 September (job sheet A10): a provider's learning records must be
+ * Roland, 26 September (job sheet A10): a provider's learning records must be
  * able to move to and from another system. Going out, the platform writes its
  * own records as xAPI statements (lib/xapi.ts). Coming in, it keeps each
  * statement as it arrived, matched to a learner by email where one matches,

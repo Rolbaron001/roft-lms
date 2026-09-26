@@ -89,7 +89,7 @@ describe("what the document actually holds", () => {
       module.topics.flatMap((topic) => topic.criteria),
     );
 
-    // 188 since 27 September, 182 before: KM-07's second topic is headed
+    // 188 since 26 September, 182 before: KM-07's second topic is headed
     // "KM-02-KT02" in the document, a misprinted module number, and was
     // dropped with its six criteria.
     expect(criteria.length).toBe(188);

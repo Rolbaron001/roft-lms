@@ -1,7 +1,7 @@
 /**
  * Reading a provider's alignment matrix, against Curiosa's real one.
  *
- * Job sheet W2, Roland 27 September: the platform reads alignment matrices of
+ * Job sheet W2, Roland 26 September: the platform reads alignment matrices of
  * this shape, from any provider, to check coverage; and it holds what the
  * provider wants loaded, after they confirm it during the upload.
  *

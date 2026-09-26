@@ -43,7 +43,7 @@ export function platformName(): string {
 /**
  * The prefix on a provider's own certificates and statements.
  *
- * Roland, 27 September: certificates are per provider, so a tenant's must not
+ * Roland, 26 September: certificates are per provider, so a tenant's must not
  * carry the operator's name. Until then every reference on a deployment took
  * the operator's prefix, and an Acme certificate on Curiosa's server read
  * `CURIOSA-...`. Taken from the provider's own short name, the slug it signs

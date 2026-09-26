@@ -13,7 +13,7 @@ import {
 /**
  * The competency a study unit's course attests to.
  *
- * Roland, 27 September (W5): all learning covers a competency that is
+ * Roland, 26 September (W5): all learning covers a competency that is
  * achieved, accredited or not, or there is no purpose to it. The rule stays.
  * What the walk of 26 September found wrong was the list a study unit's course
  * was offered: on Acme it was plant safety and equipment diagnosis, which have

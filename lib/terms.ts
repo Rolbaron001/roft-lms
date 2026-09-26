@@ -175,7 +175,7 @@ export function vocabulary(
   /**
    * The structure the provider chose, where it is in hand.
    *
-   * Roland, 27 September: where a provider chose study units as what a
+   * Roland, 26 September: where a provider chose study units as what a
    * learner works through, "Courses" must not appear; study units replace
    * them. Choosing study units is choosing the word, so every place that asks
    * for this provider's word for a course is answered with its word for a

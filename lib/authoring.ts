@@ -1261,7 +1261,7 @@ function lessonsLabel(count: number): string[] {
 /**
  * Every criterion a study unit's course must cover, and what covers each.
  *
- * Roland, 27 September (job sheet W2): the platform reads the provider's
+ * Roland, 26 September (job sheet W2): the platform reads the provider's
  * alignment matrix to check coverage. A study unit's criteria are those of
  * every module the unit delivers, and a criterion is covered by any of three
  * things: a lesson on this course that teaches it, something the provider's

@@ -52,7 +52,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * What a learner can take with them: each course they are working through,
  * with every page and file they need to study it with no signal.
  *
- * Until 27 September "Take it with you" offered four general pages (the home
+ * Until 26 September "Take it with you" offered four general pages (the home
  * page, this page, the course list and the workplace page) and never the
  * learner's own course, its lessons' files or its documents. A ranger in the
  * field would have found nothing to study.

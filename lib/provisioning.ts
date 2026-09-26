@@ -677,7 +677,7 @@ export async function setTenantCapabilities(
      * Working without a signal. Its own column rather than a feature flag,
      * because it came first. Left unchanged when not given.
      *
-     * Until 27 September nothing in the platform could switch it on: the
+     * Until 26 September nothing in the platform could switch it on: the
      * service worker, the downloads and the capture were all built and all
      * behind a switch no screen wrote, so no provider could reach any of it.
      */

@@ -206,7 +206,7 @@ export async function issueStatementOfResults(
  * A study unit's statement, issued by the platform when the unit is completed
  * successfully.
  *
- * Roland, 27 September (W3): successful completion of a study unit earns a
+ * Roland, 26 September (W3): successful completion of a study unit earns a
  * Statement of Results and the provider's badge, not a certificate. Issued the
  * way certificates always were, because the rules were met rather than on
  * anybody's say-so, and through exactly the same checks a person pressing the
