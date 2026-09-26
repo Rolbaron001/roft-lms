@@ -252,8 +252,10 @@ describe("the curriculum as a whole", () => {
 
     expect(stored.modules).toBe(15);
     // 150 of the 154 the reader found were stored before the change; all 154
-    // are now. The four are PM01's second topic.
-    expect(stored.criteria).toBe(154);
+    // were after it. The four are PM01's second topic. 160 since 27 September,
+    // when six KM-04 criteria the reader had been dropping were recovered (see
+    // curriculum-parse-tolerance.test.ts).
+    expect(stored.criteria).toBe(160);
   });
 
   /**

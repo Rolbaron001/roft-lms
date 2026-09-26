@@ -61,7 +61,12 @@ function read(text: string) {
  * change that quietly loses content fails on the baseline rather than passing
  * every variation at a lower number.
  */
-const EXPECTED = { modules: 15, topics: 51, criteria: 154 };
+// 160, not the 154 this said until 27 September. Curiosa's alignment matrix
+// counts 112 published knowledge criteria and the reader found 106: KM0401's
+// IAC0105, printed with its code alone on a line, and all five of KM0403's,
+// whose elements carry percentages and were read as topics and dropped. With
+// the 48 practical criteria that makes 160.
+const EXPECTED = { modules: 15, topics: 51, criteria: 160 };
 
 describe("reading is not tied to one document's layout", () => {
   it("reads the document as published", () => {

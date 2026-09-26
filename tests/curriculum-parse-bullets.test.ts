@@ -89,7 +89,10 @@ describe("what the document actually holds", () => {
       module.topics.flatMap((topic) => topic.criteria),
     );
 
-    expect(criteria.length).toBe(182);
+    // 188 since 27 September, 182 before: KM-07's second topic is headed
+    // "KM-02-KT02" in the document, a misprinted module number, and was
+    // dropped with its six criteria.
+    expect(criteria.length).toBe(188);
   });
 
   it("reads what has to be taught", () => {
@@ -97,7 +100,18 @@ describe("what the document actually holds", () => {
       module.topics.flatMap((topic) => topic.elements),
     );
 
-    expect(elements.length).toBe(592);
+    // 595, not 592: the same topic's three elements.
+    expect(elements.length).toBe(595);
+  });
+
+  it("reads a topic whose heading misprints its module number as its own module's", () => {
+    const km07 = parsed.modules.find((module) => module.code === "KM07")!;
+    const second = km07.topics.find((topic) => topic.code === "KM-07-KT02")!;
+    expect(second.elements.map((e) => e.code)).toEqual(["KT0201", "KT0202", "KT0203"]);
+    expect(second.criteria).toHaveLength(6);
+    // And the heading is not stuck to the end of the topic before it.
+    const first = km07.topics.find((topic) => topic.code === "KM-07-KT01")!;
+    expect(first.criteria.map((c) => c.description).join(" ")).not.toMatch(/KM-02-KT02/);
   });
 
   it("gives every knowledge module criteria, not just most of them", () => {

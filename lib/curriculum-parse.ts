@@ -174,6 +174,22 @@ const CONTENTS_LINE = /\.{4,}\s*\d{1,4}\s*$/;
  */
 const CODED_LINE = /^([A-Z]{2,3}\d{2,4})[:.]?\s+(.*)$/;
 
+/**
+ * A four-digit code standing alone, its wording on the lines that follow.
+ *
+ * 121151 prints KM0401's fifth criterion as "IAC0105" on one line and
+ * "Discuss the basic principles of the burden of proof..." on the next. The
+ * coded-line pattern wanted text after the code, so the bare code was taken as
+ * the end of IAC0104's description and the criterion disappeared into it.
+ * Found on 27 September by comparing the platform against Curiosa's own
+ * alignment matrix, which counted 112 published knowledge criteria to the
+ * platform's 106.
+ *
+ * Four digits only: a two-digit code standing alone, such as a module's own
+ * "KM04", is a reference, not an entry.
+ */
+const BARE_CODE = /^([A-Z]{2,3}\d{4})[:.]?$/;
+
 /** The QCTO's own abbreviation for an internal assessment criterion. */
 const CRITERION_CODE = /^IAC/i;
 
@@ -291,6 +307,10 @@ const SECTION_END = new RegExp(
   "^(?:" +
     [
       "Provider Programme Approval Requirements",
+      // 121151's own wording for the same section. Unseen until 27 September,
+      // because the topic it follows, KM0403, was being read as empty; once
+      // its criteria were recovered the last of them ran on into this heading.
+      "Provider Accreditation Requirements",
       "Physical Requirements",
       "Human Resource Requirements",
       "Legal Requirements",
@@ -871,6 +891,22 @@ function codeFor(
 ): { code: string; title: string } {
   if (belongsHere(code, moduleNumber)) return { code, title };
 
+  /*
+   * A heading that names its module explicitly, and names the wrong one.
+   *
+   * SAQA 118709 heads KM-07's second topic "7.2.2 KM-02-KT02: Cleaning
+   * methodologies of floor types (50%)": numbered 7.2.2, inside KM-07's
+   * section, followed by KM-07's own elements and criteria. The module number
+   * is a copying slip. Read as written, the topic was dropped for belonging
+   * to KM-02, and its nine elements and criteria with it. The module slice
+   * this is read from is bounded by KM-07's own header, so the explicit form
+   * can only be this module's topic with its number misprinted.
+   */
+  const prefixed = /^([A-Z]{2})-?(\d{2})-([A-Z]{2}\d{2})$/.exec(code);
+  if (prefixed && prefixed[2] !== moduleNumber) {
+    return { code: `${prefixed[1]}-${moduleNumber}-${prefixed[3]}`, title };
+  }
+
   const next = /^([A-Z]{2}\d{4})[:.]?\s+(.*)$/.exec(title);
   if (next && belongsHere(next[1], moduleNumber)) {
     return { code: next[1], title: next[2] };
@@ -917,9 +953,32 @@ function collectTopics(
       }
     }
 
-    if (topic) {
-      const resolved = codeFor(topic[1], topic[2], moduleNumber);
+    const resolved = topic ? codeFor(topic[1], topic[2], moduleNumber) : null;
 
+    /*
+     * A line shaped like a topic heading, inside one of this module's topics,
+     * whose code belongs to another module, is content rather than a topic.
+     *
+     * 121151's KM0403 gives each topic element its own percentage: "KT0301
+     * Definitions and terminology. (20%)". That is the exact shape of a
+     * knowledge topic heading, so each element was read as a topic of its own,
+     * then dropped for not belonging to module 04, and took the elements and
+     * criteria after it with it. KM0403 arrived empty: six elements and five
+     * criteria gone, and no note, because an empty topic reads as a document
+     * that said nothing. Found on 27 September against Curiosa's alignment
+     * matrix.
+     *
+     * Only while a topic of this module is open. A document that numbers its
+     * topics in one sequence across modules, as 121150 does, never opens one
+     * that "belongs", so nothing changes for it.
+     */
+    const contentNotTopic =
+      resolved !== null &&
+      current !== null &&
+      belongsHere(current.code, moduleNumber) &&
+      !belongsHere(resolved.code, moduleNumber);
+
+    if (topic && resolved && !contentNotTopic) {
       current = {
         code: resolved.code,
         title: cleanTitle(stripRepeatedCode(resolved.title, resolved.code)),
@@ -955,7 +1014,9 @@ function collectTopics(
     // a page break carries on afterwards.
     if (FURNITURE.test(line)) continue;
 
-    const coded = CODED_LINE.exec(line);
+    const bareCode = CODED_LINE.test(line) ? null : BARE_CODE.exec(line);
+    const coded: RegExpExecArray | [string, string, string] | null =
+      CODED_LINE.exec(line) ?? (bareCode ? [bareCode[0], bareCode[1], ""] : null);
 
     /*
      * A topic that lists its content without announcing it.
