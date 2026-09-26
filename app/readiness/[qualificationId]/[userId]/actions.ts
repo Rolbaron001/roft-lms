@@ -22,9 +22,16 @@ export async function issueStatementAction(
   const session = await requireSession();
   const qualificationId = String(formData.get("qualificationId") ?? "");
   const userId = String(formData.get("userId") ?? "");
+  // Absent for the whole-qualification statement.
+  const studyUnitId = String(formData.get("studyUnitId") ?? "") || null;
 
   try {
-    const result = await issueStatementOfResults(session, qualificationId, userId);
+    const result = await issueStatementOfResults(
+      session,
+      qualificationId,
+      userId,
+      studyUnitId,
+    );
 
     if (!result.ok) {
       return { reasons: result.reasons };

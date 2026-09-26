@@ -2,7 +2,10 @@ import Link from "next/link";
 import { requireSession, requireTenant } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { qualificationReadiness, type Component } from "@/lib/eisa";
-import { listStatementsFor } from "@/lib/statement-of-results";
+import {
+  listStatementsFor,
+  studyUnitsForStatements,
+} from "@/lib/statement-of-results";
 import { AppShell, Card } from "@/components/app-shell";
 import { IssueStatement } from "./issue";
 
@@ -52,10 +55,19 @@ export default async function LearnerReadinessPage({
   const isSelf = readiness.learner.userId === session.userId;
 
   const statements = await listStatementsFor(session, userId);
-  const current = statements.find(
-    (statement) =>
-      statement.qualificationId === qualificationId && !statement.revokedAt,
-  );
+  // The live statement for one scope: the whole qualification when the study
+  // unit is null. Until 26 September this matched any statement for the
+  // qualification, so a unit's statement would have been shown as the whole
+  // qualification's and hidden the button for it.
+  const liveFor = (studyUnitId: string | null) =>
+    statements.find(
+      (statement) =>
+        statement.qualificationId === qualificationId &&
+        statement.studyUnitId === studyUnitId &&
+        !statement.revokedAt,
+    );
+  const current = liveFor(null);
+  const units = await studyUnitsForStatements(session, qualificationId);
   const canIssue = session.permissions.includes("certificate:issue");
 
   return (
@@ -144,6 +156,51 @@ export default async function LearnerReadinessPage({
           </div>
         </div>
       </section>
+
+      {units.length > 0 && (canIssue || units.some((unit) => liveFor(unit.id))) ? (
+        <div className="mb-6">
+          <Card
+            title="Statements for each study unit"
+            description="A statement for one study unit confirms every criterion in the modules that unit delivers. It can be issued as soon as that unit is finished, without waiting for the rest of the qualification."
+          >
+            <ul className="space-y-3">
+              {units.map((unit) => {
+                const held = liveFor(unit.id);
+                return (
+                  <li key={unit.id} className="text-sm">
+                    <span className="font-medium">
+                      {unit.code} {unit.title}
+                    </span>
+                    {canIssue ? (
+                      <IssueStatement
+                        qualificationId={qualificationId}
+                        userId={userId}
+                        studyUnit={{ id: unit.id, code: unit.code }}
+                        existing={
+                          held
+                            ? { id: held.id, reference: held.verificationReference }
+                            : null
+                        }
+                      />
+                    ) : held ? (
+                      <p className="mt-1">
+                        <Link
+                          href={`/statements/${held.id}`}
+                          className="underline underline-offset-2"
+                        >
+                          Statement of Results for {unit.code}
+                        </Link>
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[var(--muted)]">Not issued yet.</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
+      ) : null}
 
       {!readiness.curriculumComplete ? (
         <div

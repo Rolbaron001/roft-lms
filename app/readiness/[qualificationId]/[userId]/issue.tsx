@@ -21,11 +21,17 @@ export function IssueStatement({
   qualificationId,
   userId,
   existing,
+  studyUnit,
 }: {
   qualificationId: string;
   userId: string;
   existing: { id: string; reference: string } | null;
+  /** One study unit; absent for the whole-qualification statement. */
+  studyUnit?: { id: string; code: string };
 }) {
+  const label = studyUnit
+    ? `Issue Statement of Results for ${studyUnit.code}`
+    : "Issue Statement of Results";
   const [state, formAction] = useActionState<IssueState, FormData>(
     issueStatementAction,
     {},
@@ -38,7 +44,7 @@ export function IssueStatement({
           href={`/statements/${existing.id}`}
           className="underline underline-offset-2"
         >
-          Statement of Results
+          Statement of Results{studyUnit ? ` for ${studyUnit.code}` : ""}
         </a>{" "}
         <span className="font-mono text-xs text-[var(--muted)]">
           {existing.reference}
@@ -68,6 +74,9 @@ export function IssueStatement({
           pressing it actually has. */}
       <input type="hidden" name="qualificationId" value={qualificationId} />
       <input type="hidden" name="userId" value={userId} />
+      {studyUnit ? (
+        <input type="hidden" name="studyUnitId" value={studyUnit.id} />
+      ) : null}
 
       {state.reasons ? (
         <div
@@ -94,7 +103,7 @@ export function IssueStatement({
         </p>
       ) : null}
 
-      <Button label="Issue Statement of Results" />
+      <Button label={label} />
     </form>
   );
 }

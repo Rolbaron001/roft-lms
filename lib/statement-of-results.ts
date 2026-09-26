@@ -478,10 +478,32 @@ export async function listStatementsFor(
         issuedAt: statementsOfResults.issuedAt,
         revokedAt: statementsOfResults.revokedAt,
         qualificationId: statementsOfResults.qualificationId,
+        /** Null for the whole-qualification statement. */
+        studyUnitId: statementsOfResults.studyUnitId,
       })
       .from(statementsOfResults)
       .where(eq(statementsOfResults.userId, userId))
       .orderBy(desc(statementsOfResults.issuedAt)),
+  );
+}
+
+/**
+ * The study units a statement can be issued for, in teaching order.
+ *
+ * Curiosa issue a Statement of Results after each study unit, a practice their
+ * own procedure adopted after a monitoring visit. The engine could issue one
+ * from 15 September; until 26 September no screen offered it.
+ */
+export async function studyUnitsForStatements(
+  session: AuthenticatedSession,
+  qualificationId: string,
+) {
+  return withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: studyUnits.id, code: studyUnits.code, title: studyUnits.title })
+      .from(studyUnits)
+      .where(eq(studyUnits.qualificationId, qualificationId))
+      .orderBy(asc(studyUnits.sortOrder), asc(studyUnits.code)),
   );
 }
 
