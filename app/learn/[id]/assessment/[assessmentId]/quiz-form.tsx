@@ -28,12 +28,15 @@ export function QuizForm({
   assessmentId,
   items,
   savedAnswers,
+  declaration,
 }: {
   enrolmentId: string;
   assessmentId: string;
   items: Item[];
   /** Whatever was kept the last time this was saved. */
   savedAnswers?: Record<string, string[]>;
+  /** The wording to accept before handing in; set only for a summative. */
+  declaration?: string | null;
 }) {
   const [state, action, pending] = useActionState<QuizState, FormData>(
     submitQuizAction,
@@ -237,6 +240,19 @@ export function QuizForm({
           </fieldset>
         );
       })}
+
+      {declaration ? (
+        <label className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-sm">
+          <input
+            type="checkbox"
+            name="declaration"
+            value="accepted"
+            required
+            className="mt-1"
+          />
+          <span>{declaration}</span>
+        </label>
+      ) : null}
 
       {state.error ? (
         <p

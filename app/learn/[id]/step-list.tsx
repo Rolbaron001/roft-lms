@@ -85,7 +85,7 @@ export function StepList({
 
                   {!step.open && step.blockedBy.length > 0 ? (
                     <p className="mt-1.5 text-xs text-[var(--muted)]">
-                      Opens when {step.blockedBy.join("; and when ")}.
+                      {step.blockedBy.join(" ")}
                     </p>
                   ) : null}
 

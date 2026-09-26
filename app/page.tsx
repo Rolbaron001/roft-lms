@@ -7,6 +7,7 @@ import { myLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { feedbackOwedBy } from "@/lib/feedback";
 import { learnerBadges } from "@/lib/badges";
+import { listAssessorQueue, listModerationQueue } from "@/lib/assessment";
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: "Platform Owner",
@@ -65,6 +66,19 @@ export default async function HomePage() {
     paths.flatMap((path) => path.steps.map((step) => step.courseId)),
   );
 
+  // Work waiting for this person, where their role gives them any. The queues
+  // are in the menu and always were; the front page said nothing about them,
+  // so an assessor signing in saw only their own learning. Found by the walk
+  // of 26 September.
+  const [toAssess, toModerate] = await Promise.all([
+    session.permissions.includes("assessment:assess")
+      ? listAssessorQueue(session).then((rows) => rows.length)
+      : 0,
+    session.permissions.includes("assessment:moderate")
+      ? listModerationQueue(session).then((rows) => rows.length)
+      : 0,
+  ]);
+
   const standalone = enrolments.filter((row) => !inAPath.has(row.courseId));
   const outstanding = standalone.filter((row) => row.status !== "completed");
   const finished = standalone.filter((row) => row.status === "completed");
@@ -89,6 +103,31 @@ export default async function HomePage() {
       </div>
 
       <div className="space-y-6">
+        {toAssess + toModerate > 0 ? (
+          <Card title="Waiting for you">
+            <ul className="space-y-2 text-sm">
+              {toAssess > 0 ? (
+                <li>
+                  <Link href="/assess" className="font-medium hover:underline">
+                    {toAssess === 1
+                      ? "One submission to assess"
+                      : `${toAssess} submissions to assess`}
+                  </Link>
+                </li>
+              ) : null}
+              {toModerate > 0 ? (
+                <li>
+                  <Link href="/moderate" className="font-medium hover:underline">
+                    {toModerate === 1
+                      ? "One decision to moderate"
+                      : `${toModerate} decisions to moderate`}
+                  </Link>
+                </li>
+              ) : null}
+            </ul>
+          </Card>
+        ) : null}
+
         {owed.length > 0 ? (
           <Card
             title={owed.length === 1 ? "One thing to tell us" : "A few things to tell us"}

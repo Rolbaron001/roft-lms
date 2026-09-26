@@ -10,11 +10,12 @@ import {
   curriculumModules,
   lessons,
   programmeDocuments,
+  studyUnitModules,
   studyUnits,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import {
-  RESTRICTED_TO_ASSESSORS,
+  NOT_A_LEARNER_STEP,
   type DocumentKind,
 } from "./programme-documents";
 
@@ -132,6 +133,7 @@ export async function courseSpine(
         tx,
         courseId,
         unit?.qualificationId ?? null,
+        unit?.id ?? null,
         taken,
       ),
     };
@@ -250,6 +252,7 @@ async function offerableSteps(
   tx: Tx,
   courseId: string,
   qualificationId: string | null,
+  studyUnitId: string | null,
   taken: Set<string>,
 ): Promise<StepChoice[]> {
   const choices: StepChoice[] = [];
@@ -369,7 +372,7 @@ async function offerableSteps(
      * reason: a learner sits it as a captured paper, through the platform,
      * rather than downloading the Word file it came from.
      */
-    if (RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind)) continue;
+    if (NOT_A_LEARNER_STEP.has(document.kind as DocumentKind)) continue;
 
     choices.push({
       kind: "document",
@@ -385,6 +388,10 @@ async function offerableSteps(
   // Only the workplace ones. A knowledge module is taught and assessed; a work
   // experience module is proved by a logbook a coach signs, which is what a
   // workplace step is for.
+  //
+  // And only the study unit's own, where the course delivers one. Until
+  // 26 September SU1's editor offered all five of 121151's work experience
+  // modules, four of which the alignment document had placed in other units.
   if (qualificationId) {
     const workplace = await tx
       .select({
@@ -397,6 +404,15 @@ async function offerableSteps(
         and(
           eq(curriculumModules.qualificationId, qualificationId),
           eq(curriculumModules.component, "workplace"),
+          studyUnitId
+            ? inArray(
+                curriculumModules.id,
+                tx
+                  .select({ id: studyUnitModules.curriculumModuleId })
+                  .from(studyUnitModules)
+                  .where(eq(studyUnitModules.studyUnitId, studyUnitId)),
+              )
+            : undefined,
         ),
       )
       .orderBy(asc(curriculumModules.code));

@@ -22,6 +22,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import {
+  NOT_A_LEARNER_STEP,
   RESTRICTED_TO_ASSESSORS,
   type DocumentKind,
 } from "./programme-documents";
@@ -473,9 +474,12 @@ async function computeSteps(
           const name = required
             ? (titles.get(required.id) ?? "an earlier step")
             : "an earlier step";
-          return `${name} must be ${RULE_WORDING[prerequisite.rule as PrerequisiteRule]}`;
+          return `${name} has been ${RULE_WORDING[prerequisite.rule as PrerequisiteRule]}`;
         });
-        blockedBy.push(described.join(", or "));
+        // Each reason is a whole sentence, shown as it is. Until 26 September
+        // the screens put "Opens when" in front of "X must be opened", which
+        // a learner read as "Opens when X must be opened".
+        blockedBy.push(`Opens once ${described.join(", or ")}.`);
       }
     }
 
@@ -485,12 +489,12 @@ async function computeSteps(
 
     if (opensAt && opensAt > now) {
       blockedBy.push(
-        `it opens on ${opensAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
+        `Opens on ${opensAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.`,
       );
     }
     if (closesAt && closesAt < now) {
       blockedBy.push(
-        `it closed on ${closesAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}`,
+        `Closed on ${closesAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.`,
       );
     }
 
@@ -631,7 +635,7 @@ export async function assertStepOpen(
 
   if (!open.open) {
     throw new SpineError(
-      `"${open.title}" is not open yet: ${open.blockedBy.join("; ")}.`,
+      `"${open.title}" is not open yet. ${open.blockedBy.join(" ")}`,
       "locked",
     );
   }
@@ -777,6 +781,13 @@ export async function addStep(
       ) {
         throw new SpineError(
           "That document is kept from learners, so it cannot be a step on their path. A summative paper reaches them as a captured assessment instead.",
+          "invalid",
+        );
+      }
+
+      if (document && NOT_A_LEARNER_STEP.has(document.kind as DocumentKind)) {
+        throw new SpineError(
+          "That document is written for staff rather than for learners to work through, so it cannot be a step on their path.",
           "invalid",
         );
       }

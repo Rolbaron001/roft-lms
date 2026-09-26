@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { DEFAULT_DECLARATION } from "./declaration";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentItems,
@@ -360,9 +361,6 @@ export type Sitting = {
   totalMarks: number;
 };
 
-const DEFAULT_DECLARATION =
-  "This is my own work. I have not copied it from anyone else, I have not used " +
-  "generative AI to produce it, and I have credited every source I drew on.";
 
 /**
  * Picks the paper for an attempt.

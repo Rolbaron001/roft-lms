@@ -280,7 +280,7 @@ describe("the schedule", () => {
     expect(steps[0].open).toBe(true);
     expect(steps[1].open).toBe(true);
     expect(steps[2].open).toBe(false);
-    expect(steps[2].blockedBy[0]).toContain("it opens on");
+    expect(steps[2].blockedBy[0]).toMatch(/^Opens on .+\.$/);
     expect(steps[3].open).toBe(false);
 
     // And the learner is told when it is due, not merely that it is shut.

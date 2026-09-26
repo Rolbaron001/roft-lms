@@ -193,8 +193,9 @@ describe("walking a spine", () => {
     expect(steps[1].open).toBe(false);
     expect(steps[2].open).toBe(false);
     // The reason is in words a learner can act on, not a code.
-    expect(steps[1].blockedBy[0]).toContain("Lesson 1");
-    expect(steps[1].blockedBy[0]).toContain("handed in");
+    // A whole sentence, read as it stands. It used to be "Lesson 1 must be
+    // handed in", with "Opens when" put in front of it by the screen.
+    expect(steps[1].blockedBy[0]).toBe("Opens once Lesson 1 has been handed in.");
   });
 
   it("opens the next step once the one before is done", async () => {
@@ -752,7 +753,7 @@ describe("a study unit, end to end", () => {
           .where(eq(assessmentItems.assessmentId, workbookIds[index])),
       );
 
-      await submitQuiz(learner, {
+      await submitQuiz(learner, { declarationAccepted: true,
         assessmentId: workbookIds[index],
         enrolmentId: enrolment.id,
         responses: { [items[0].id]: [items[0].options![0].id] },

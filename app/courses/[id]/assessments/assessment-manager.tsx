@@ -233,8 +233,17 @@ export function AssessmentManager({
               <PublishForm courseId={courseId} assessmentId={assessment.id} />
             </>
           ) : (
+            // "Learners can take this now" until 26 September, which was
+            // not true of one that is on no step: nothing leads a learner to it.
             <p className="mt-3 text-sm text-[var(--muted)]">
-              Published. Learners can take this now.
+              Published. A learner meets it once it is a step in{" "}
+              <a
+                href={`/courses/${courseId}/steps`}
+                className="underline underline-offset-2"
+              >
+                what a learner works through
+              </a>
+              .
             </p>
           )}
         </section>

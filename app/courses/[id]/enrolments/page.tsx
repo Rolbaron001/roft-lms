@@ -80,7 +80,7 @@ export default async function CourseEnrolmentsPage({
                       Stuck at <strong>{row.stepTitle}</strong>
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--muted)]">
-                      Opens when {row.blockedBy.join("; and when ")}.
+                      {row.blockedBy.join(" ")}
                     </p>
                   </li>
                 ))}

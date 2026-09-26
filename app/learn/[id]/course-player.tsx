@@ -67,9 +67,13 @@ export function CoursePlayer({
       <aside className="space-y-4">
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-medium">Progress</span>
+            {/* Lessons, said as lessons. The step list above counts every
+                step, assessments included, and until 26 September this panel
+                was headed "Progress" as well, so one page gave a learner two
+                different answers to the same question. */}
+            <span className="text-sm font-medium">Lessons</span>
             <span className="text-sm text-[var(--muted)]">
-              {completedLessons} of {totalLessons}
+              {completedLessons} of {totalLessons} done
             </span>
           </div>
 
@@ -79,7 +83,7 @@ export function CoursePlayer({
             aria-valuenow={percentage}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Course progress"
+            aria-label="Lessons done"
           >
             <div
               className="h-full rounded-full transition-all"

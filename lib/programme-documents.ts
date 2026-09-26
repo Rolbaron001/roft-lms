@@ -140,6 +140,23 @@ export const RESTRICTED_TO_ASSESSORS = new Set<DocumentKind>([
   "summative_assessment",
 ]);
 
+/**
+ * Documents that are never a step on a learner's path.
+ *
+ * The three kept from learners, and three more written for staff: the
+ * alignment matrix, which plans how the curriculum is delivered; the
+ * facilitation plan, which is the facilitator's; and the workplace coach's
+ * guide, which is the coach's. A learner may be entitled to read some of
+ * these, but none is something a learner works through. Found on
+ * 26 September, when SU1's step editor offered the alignment document.
+ */
+export const NOT_A_LEARNER_STEP = new Set<DocumentKind>([
+  ...RESTRICTED_TO_ASSESSORS,
+  "alignment_matrix",
+  "facilitation_plan",
+  "workplace_coach_guide",
+]);
+
 export const documentInput = z.object({
   kind: z.enum(DOCUMENT_KINDS),
   title: z.string().trim().min(2).max(300),

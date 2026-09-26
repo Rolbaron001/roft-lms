@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { DEFAULT_DECLARATION } from "./declaration";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
@@ -342,6 +343,7 @@ export async function getAssessmentForLearner(
         passMark: assessments.passMark,
         maxAttempts: assessments.maxAttempts,
         status: assessments.status,
+        declarationText: assessments.declarationText,
       })
       .from(assessments)
       .where(eq(assessments.id, assessmentId));
@@ -572,6 +574,8 @@ export async function submitQuiz(
     assessmentId: string;
     enrolmentId?: string | null;
     responses: Record<string, string[]>;
+    /** Required for a summative: the learner ticked the declaration. */
+    declarationAccepted?: boolean;
     ipAddress?: string | null;
     userAgent?: string | null;
   },
@@ -636,7 +640,25 @@ export async function submitQuiz(
     // assessor. The automatic score informs it; it does not replace it.
     const awaitingAssessor = assessment.purpose === "summative";
 
+    // The declaration of authenticity, on a summative. A captured paper has
+    // always asked for it; a quiz built on the platform did not, so a summative
+    // was accepted with nothing on the record saying the work was the
+    // learner's own. Found by the walk of 26 September.
+    if (awaitingAssessor && !input.declarationAccepted) {
+      throw new AssessmentError(
+        "Confirm the declaration before handing in. It is what makes this your work on the record.",
+        "invalid_state",
+      );
+    }
+    const declaration = awaitingAssessor
+      ? {
+          declarationText: assessment.declarationText?.trim() || DEFAULT_DECLARATION,
+          declarationAcceptedAt: new Date(),
+        }
+      : {};
+
     const finished = {
+      ...declaration,
       status: (awaitingAssessor ? "submitted" : "finalised") as
         | "submitted"
         | "finalised",

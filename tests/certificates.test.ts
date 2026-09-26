@@ -304,7 +304,7 @@ describe("eligibility", () => {
       withSummativeQuiz: true,
     });
     const enrolmentId = await completeLessons(courseId);
-    await submitQuiz(learner, {
+    await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [] },
@@ -326,7 +326,7 @@ describe("eligibility", () => {
       withSummativeQuiz: true,
     });
     const enrolmentId = await completeLessons(courseId);
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [optionId!] },
@@ -346,7 +346,7 @@ describe("eligibility", () => {
       withSummativeQuiz: true,
     });
     const enrolmentId = await completeLessons(courseId);
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [optionId!] },
@@ -371,7 +371,7 @@ describe("eligibility", () => {
       withSummativeQuiz: true,
     });
     const enrolmentId = await completeLessons(courseId);
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [optionId!] },
@@ -396,7 +396,7 @@ describe("eligibility", () => {
       withSummativeQuiz: true,
     });
     const enrolmentId = await completeLessons(courseId);
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [optionId!] },
@@ -531,7 +531,7 @@ describe("issuing automatically", () => {
     );
     expect(rows).toHaveLength(0);
 
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessmentId!,
       enrolmentId,
       responses: { [assessmentId!]: [optionId!] },

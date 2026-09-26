@@ -288,7 +288,7 @@ async function achieve(
     await markLessonComplete(learner, enrolment.id, lesson.id);
   }
 
-  const submission = await submitQuiz(learner, {
+  const submission = await submitQuiz(learner, { declarationAccepted: true,
     assessmentId: assessment.id,
     enrolmentId: enrolment.id,
     responses: { [item.id]: [item.options![0].id] },

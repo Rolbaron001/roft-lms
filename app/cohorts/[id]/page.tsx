@@ -181,7 +181,7 @@ export default async function CohortPage({
                   Stuck at <strong>{row.stepTitle}</strong>
                 </span>
                 <span className="mt-0.5 block text-xs text-[var(--muted)]">
-                  Opens when {row.blockedBy.join("; and when ")}.
+                  {row.blockedBy.join(" ")}
                 </span>
               </li>
             ))}

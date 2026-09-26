@@ -115,12 +115,33 @@ describe("what it offers to add", () => {
    */
   it("never offers a memorandum or a summative paper as a step", () => {
     const spine = source("lib/spine.ts");
-    // Kept out of the list...
-    expect(reader).toMatch(/RESTRICTED_TO_ASSESSORS\.has\(document\.kind as DocumentKind\)/);
+    // Kept out of the list, by the wider rule that includes these three...
+    expect(reader).toMatch(/NOT_A_LEARNER_STEP\.has\(document\.kind as DocumentKind\)/);
+    expect(source("lib/programme-documents.ts")).toMatch(
+      /NOT_A_LEARNER_STEP = new Set<DocumentKind>\(\[\s*\.\.\.RESTRICTED_TO_ASSESSORS,/,
+    );
     // ...and refused on the way in, because a filter on a list that a posted
     // identifier walks past is not a restriction.
     expect(spine).toMatch(/RESTRICTED_TO_ASSESSORS\.has\(document\.kind as DocumentKind\)/);
     expect(spine).toMatch(/kept from learners, so it cannot be a step/);
+  });
+
+  /*
+   * Found by the walk of 26 September: SU1's editor offered the alignment
+   * document, which plans how the curriculum is delivered and is nothing a
+   * learner works through.
+   */
+  it("never offers a document written for staff as a step", () => {
+    const kinds = source("lib/programme-documents.ts");
+    for (const kind of ["alignment_matrix", "facilitation_plan", "workplace_coach_guide"]) {
+      expect(kinds.slice(kinds.indexOf("NOT_A_LEARNER_STEP ="))).toContain(`"${kind}"`);
+    }
+    expect(source("lib/spine.ts")).toMatch(/NOT_A_LEARNER_STEP\.has\(document\.kind as DocumentKind\)/);
+  });
+
+  it("offers a study unit only its own work experience modules", () => {
+    // SU1 was offered all five of 121151's, four of them placed elsewhere.
+    expect(reader).toMatch(/eq\(studyUnitModules\.studyUnitId, studyUnitId\)/);
   });
 
   it("takes the restricted list from the one place that defines it", () => {

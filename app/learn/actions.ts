@@ -74,6 +74,7 @@ export async function submitQuizAction(
       assessmentId: String(formData.get("assessmentId") ?? ""),
       enrolmentId: String(formData.get("enrolmentId") ?? "") || null,
       responses,
+      declarationAccepted: formData.get("declaration") === "accepted",
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });

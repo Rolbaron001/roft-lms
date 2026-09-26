@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession, requireTenant } from "@/lib/request";
 import { AssessmentError, getAssessmentForLearner } from "@/lib/assessment";
+import { DEFAULT_DECLARATION } from "@/lib/declaration";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { getFeedback, sectionComments } from "@/lib/marking";
 import { AppShell } from "@/components/app-shell";
@@ -182,6 +183,11 @@ export default async function TakeAssessmentPage({
             matchPrompts: item.matchPrompts,
           }))}
           savedAnswers={view.draft?.answers}
+          declaration={
+            view.assessment.purpose === "summative"
+              ? view.assessment.declarationText?.trim() || DEFAULT_DECLARATION
+              : null
+          }
         />
       ) : (
         // Evidence, practical observation and workplace logbook are all

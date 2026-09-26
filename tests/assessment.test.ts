@@ -328,7 +328,7 @@ describe("taking a quiz", () => {
   it("marks a correct paper and passes it", async () => {
     const { assessmentId, items } = await publishedQuiz();
 
-    const result = await submitQuiz(learner, {
+    const result = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: {
         [items[0].id]: [items[0].options![0].id],
@@ -345,7 +345,7 @@ describe("taking a quiz", () => {
   it("fails a paper below the pass mark", async () => {
     const { assessmentId, items } = await publishedQuiz();
 
-    const result = await submitQuiz(learner, {
+    const result = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![1].id] },
     });
@@ -358,7 +358,7 @@ describe("taking a quiz", () => {
       purpose: "summative",
     });
 
-    const result = await submitQuiz(learner, {
+    const result = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -374,10 +374,43 @@ describe("taking a quiz", () => {
     expect(row.status).toBe("submitted");
   });
 
+  /*
+   * Found by the walk of 26 September: a summative quiz built on the platform
+   * was accepted with no declaration of authenticity, while a captured paper
+   * has always asked for one.
+   */
+  it("will not take a summative without the declaration, and records it when given", async () => {
+    const { assessmentId, items } = await publishedQuiz({ purpose: "summative" });
+    const responses = { [items[0].id]: [items[0].options![0].id] };
+
+    await expect(submitQuiz(learner, { assessmentId, responses })).rejects.toThrow(
+      /Confirm the declaration/,
+    );
+
+    const result = await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses });
+    const [row] = await withTenant(organisationId, (tx) =>
+      tx
+        .select()
+        .from(assessmentSubmissions)
+        .where(eq(assessmentSubmissions.id, result.submissionId)),
+    );
+    expect(row.declarationText).toMatch(/This is my own work/);
+    expect(row.declarationAcceptedAt).not.toBeNull();
+  });
+
+  it("does not ask for a declaration on practice", async () => {
+    const { assessmentId, items } = await publishedQuiz();
+    const result = await submitQuiz(learner, {
+      assessmentId,
+      responses: { [items[0].id]: [items[0].options![0].id] },
+    });
+    expect(result.awaitingAssessor).toBe(false);
+  });
+
   it("numbers repeat attempts", async () => {
     const { assessmentId, items } = await publishedQuiz();
-    await submitQuiz(learner, { assessmentId, responses: {} });
-    await submitQuiz(learner, {
+    await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses: {} });
+    await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -401,10 +434,10 @@ describe("taking a quiz", () => {
     });
     await publishAssessment(admin, assessment.id);
 
-    await submitQuiz(learner, { assessmentId: assessment.id, responses: {} });
+    await submitQuiz(learner, { declarationAccepted: true, assessmentId: assessment.id, responses: {} });
 
     await expect(
-      submitQuiz(learner, { assessmentId: assessment.id, responses: {} }),
+      submitQuiz(learner, { declarationAccepted: true, assessmentId: assessment.id, responses: {} }),
     ).rejects.toMatchObject({ code: "no_attempts_left" });
   });
 
@@ -443,7 +476,7 @@ describe("taking a quiz", () => {
     });
 
     // Two saves, then the one submission the learner is entitled to.
-    const result = await submitQuiz(learner, {
+    const result = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessment.id,
       responses: {},
     });
@@ -451,7 +484,7 @@ describe("taking a quiz", () => {
 
     // And the attempt limit still bites afterwards.
     await expect(
-      submitQuiz(learner, { assessmentId: assessment.id, responses: {} }),
+      submitQuiz(learner, { declarationAccepted: true, assessmentId: assessment.id, responses: {} }),
     ).rejects.toMatchObject({ code: "no_attempts_left" });
   });
 
@@ -482,7 +515,7 @@ describe("taking a quiz", () => {
     expect(second.submissionId).toBe(first.submissionId);
 
     // And submitting finishes that same one rather than opening another.
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessment.id,
       responses: {},
     });
@@ -497,13 +530,13 @@ describe("taking a quiz", () => {
     });
 
     await expect(
-      submitQuiz(learner, { assessmentId: assessment.id, responses: {} }),
+      submitQuiz(learner, { declarationAccepted: true, assessmentId: assessment.id, responses: {} }),
     ).rejects.toMatchObject({ code: "not_found" });
   });
 
   it("records the submission in the audit log", async () => {
     const { assessmentId } = await publishedQuiz();
-    const result = await submitQuiz(learner, { assessmentId, responses: {} });
+    const result = await submitQuiz(learner, { declarationAccepted: true, assessmentId, responses: {} });
 
     const entries = await withTenant(organisationId, (tx) =>
       tx
@@ -678,7 +711,7 @@ describe("assessment on a course outside any qualification", () => {
     });
     await publishAssessment(admin, assessment.id);
 
-    const sitting = await submitQuiz(learner, {
+    const sitting = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessment.id,
       responses: { [item.id]: [item.options![0].id] },
     });
@@ -716,7 +749,7 @@ describe("assessment on a course outside any qualification", () => {
     });
     await publishAssessment(admin, assessment.id);
 
-    const sitting = await submitQuiz(learner, {
+    const sitting = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId: assessment.id,
       responses: { [item.id]: [item.options![0].id] },
     });
@@ -753,7 +786,7 @@ describe("assessor decisions", () => {
     const { assessmentId, items } = await publishedQuiz({
       purpose: "summative",
     });
-    const result = await submitQuiz(learner, {
+    const result = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -786,6 +819,7 @@ describe("assessor decisions", () => {
       assessorA.userId,
     );
     const result = await submitQuiz(selfAssessor, {
+      declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -849,7 +883,7 @@ describe("moderation", () => {
     const { assessmentId, items } = await publishedQuiz({
       purpose: "summative",
     });
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -990,7 +1024,7 @@ describe("the outcome that stands", () => {
     const { assessmentId, items } = await publishedQuiz({
       purpose: "summative",
     });
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: { [items[0].id]: [items[0].options![0].id] },
     });
@@ -1037,7 +1071,7 @@ describe("the outcome that stands", () => {
 
   it("reports nothing for a submission nobody has decided", async () => {
     const { assessmentId } = await publishedQuiz({ purpose: "summative" });
-    const submitted = await submitQuiz(learner, {
+    const submitted = await submitQuiz(learner, { declarationAccepted: true,
       assessmentId,
       responses: {},
     });
