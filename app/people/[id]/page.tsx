@@ -18,6 +18,7 @@ import { Missed } from "./missed";
 import { Conduct } from "./conduct";
 import { learnerCases } from "@/lib/conduct";
 import { externalRecordsFor } from "@/lib/xapi";
+import { awardsFor } from "@/lib/qualification-awards";
 import { learnerMissedAssessments, learnerSupport } from "@/lib/support";
 import { dateInZone } from "@/lib/timezone";
 import {
@@ -111,6 +112,12 @@ export default async function PersonPage({
   const elsewhere =
     isLearner && session.permissions.includes("enrolment:read_all")
       ? await externalRecordsFor(session, id)
+      : [];
+
+  // The qualification certificates the learner has received (job sheet D2).
+  const awards =
+    isLearner && session.permissions.includes("enrolment:read_all")
+      ? await awardsFor(session, id)
       : [];
 
   const [supportRecords, missed] = canActOnSupport
@@ -332,6 +339,30 @@ export default async function PersonPage({
             }))}
             canManage={canManageEnrolments}
           />
+        </section>
+      ) : null}
+
+      {awards.length > 0 ? (
+        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            Qualifications awarded
+          </h2>
+          <ul className="mt-3 space-y-1 text-sm">
+            {awards.map((award) => (
+              <li key={award.id}>
+                <Link
+                  href={`/readiness/${award.qualificationId}/${id}`}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  {award.qualificationTitle}
+                </Link>{" "}
+                <span className="text-[var(--muted)]">
+                  · certificate {award.certificateNumber}, {award.awardedBy},{" "}
+                  {award.awardedOn}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

@@ -8,6 +8,8 @@ import {
 } from "@/lib/statement-of-results";
 import { AppShell, Card } from "@/components/app-shell";
 import { IssueStatement } from "./issue";
+import { QualificationAward } from "./award";
+import { awardsFor } from "@/lib/qualification-awards";
 
 const COMPONENT_LABEL: Record<Component, string> = {
   knowledge: "Knowledge modules",
@@ -69,6 +71,8 @@ export default async function LearnerReadinessPage({
   const current = liveFor(null);
   const units = await studyUnitsForStatements(session, qualificationId);
   const canIssue = session.permissions.includes("certificate:issue");
+  const canManageAwards = session.permissions.includes("enrolment:manage");
+  const awards = await awardsFor(session, userId);
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -201,6 +205,22 @@ export default async function LearnerReadinessPage({
           </Card>
         </div>
       ) : null}
+
+      <div className="mb-6">
+        <Card
+          title="Qualification certificate"
+          description={`Issued by the awarding body after the EISA, not by ${tenant.displayName}. Recorded here when it arrives, so the learner's record says they are qualified.`}
+        >
+          <QualificationAward
+            qualificationId={qualificationId}
+            userId={userId}
+            canManage={canManageAwards}
+            award={
+              awards.find((award) => award.qualificationId === qualificationId) ?? null
+            }
+          />
+        </Card>
+      </div>
 
       {!readiness.curriculumComplete ? (
         <div

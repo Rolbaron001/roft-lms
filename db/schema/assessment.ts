@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -922,6 +923,60 @@ export const statementsOfResults = pgTable(
     uniqueIndex("statements_of_results_body_idx").on(t.verificationBody),
     index("statements_of_results_org_idx").on(t.organisationId),
     index("statements_of_results_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * A qualification certificate the learner has received from the body that
+ * awards it: for an accredited occupational qualification, the QCTO, after the
+ * EISA.
+ *
+ * Recorded, never issued. The provider issues statements of results and
+ * badges; the qualification certificate is not the provider's to issue, and
+ * the platform must not imply otherwise. Until 27 September (job sheet D2) the
+ * platform had nowhere to say a learner was qualified at all, and the cohort
+ * archive, whose rule is "archive once the cohort has its certificates", had
+ * nothing to count but certificates the platform had issued itself.
+ *
+ * The awarding body is text rather than fixed to the QCTO: another provider's
+ * qualification can be awarded by another body, and the platform records what
+ * the certificate says.
+ */
+export const qualificationAwards = pgTable(
+  "qualification_awards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+
+    /** As printed on the certificate. */
+    certificateNumber: text("certificate_number").notNull(),
+    /** The date on the certificate, not the date it was recorded here. */
+    awardedOn: date("awarded_on", { mode: "string" }).notNull(),
+    awardedBy: text("awarded_by").notNull().default("QCTO"),
+    note: text("note"),
+
+    recordedById: uuid("recorded_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("qualification_awards_learner_idx").on(
+      t.organisationId,
+      t.userId,
+      t.qualificationId,
+    ),
+    index("qualification_awards_org_idx").on(t.organisationId),
   ],
 );
 
