@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageT, requireSession, requireTenant } from "@/lib/request";
 import {
   getStatementOfResults,
   StatementError,
@@ -51,6 +51,10 @@ export default async function StatementPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  // The controls above the statement speak to whoever is reading. The
+  // statement itself is the QCTO's template, in its words (see the tests'
+  // EXEMPT list), and is not translated.
+  const t = await pageT();
 
   let record;
   try {
@@ -118,11 +122,11 @@ export default async function StatementPage({
             action={withdrawStatementAction}
             idName="statementId"
             idValue={id}
-            what="this Statement of Results"
-            consequence="An assessment centre may already hold a copy. The reference keeps working and will say it was withdrawn."
+            what={t("sor.withdrawWhat")}
+            consequence={t("sor.withdrawConsequence")}
           />
         ) : null}
-        <PrintButton label="Print or save this Statement of Results" />
+        <PrintButton label={t("sor.print")} />
       </div>
 
       {record.revokedAt ? (

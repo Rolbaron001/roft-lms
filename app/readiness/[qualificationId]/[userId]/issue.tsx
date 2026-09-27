@@ -3,8 +3,10 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { issueStatementAction, type IssueState } from "./actions";
+import { useT } from "@/components/i18n";
 
 function Button({ label }: { label: string }) {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
@@ -12,7 +14,7 @@ function Button({ label }: { label: string }) {
       disabled={pending}
       className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
     >
-      {pending ? "Issuing…" : label}
+      {pending ? t("issue.issuing") : label}
     </button>
   );
 }
@@ -29,9 +31,8 @@ export function IssueStatement({
   /** One study unit; absent for the whole-qualification statement. */
   studyUnit?: { id: string; code: string };
 }) {
-  const label = studyUnit
-    ? `Issue Statement of Results for ${studyUnit.code}`
-    : "Issue Statement of Results";
+  const t = useT();
+  const label = studyUnit ? t("issue.unit", { unit: studyUnit.code }) : t("issue.whole");
   const [state, formAction] = useActionState<IssueState, FormData>(
     issueStatementAction,
     {},
@@ -40,15 +41,10 @@ export function IssueStatement({
   if (existing && !state.statementId) {
     return (
       <p className="mt-3 text-sm">
-        <a
-          href={`/statements/${existing.id}`}
-          className="underline underline-offset-2"
-        >
-          Statement of Results{studyUnit ? ` for ${studyUnit.code}` : ""}
+        <a href={`/statements/${existing.id}`} className="underline underline-offset-2">
+          {studyUnit ? t("issue.statementFor", { unit: studyUnit.code }) : t("issue.statement")}
         </a>{" "}
-        <span className="font-mono text-xs text-[var(--muted)]">
-          {existing.reference}
-        </span>
+        <span className="font-mono text-xs text-[var(--muted)]">{existing.reference}</span>
       </p>
     );
   }
@@ -56,12 +52,9 @@ export function IssueStatement({
   if (state.statementId) {
     return (
       <p className="mt-3 text-sm" style={{ color: "var(--success)" }}>
-        Issued.{" "}
-        <a
-          href={`/statements/${state.statementId}`}
-          className="underline underline-offset-2"
-        >
-          Open the Statement of Results
+        {t("issue.issued")}{" "}
+        <a href={`/statements/${state.statementId}`} className="underline underline-offset-2">
+          {t("issue.open")}
         </a>
       </p>
     );
@@ -74,18 +67,14 @@ export function IssueStatement({
           pressing it actually has. */}
       <input type="hidden" name="qualificationId" value={qualificationId} />
       <input type="hidden" name="userId" value={userId} />
-      {studyUnit ? (
-        <input type="hidden" name="studyUnitId" value={studyUnit.id} />
-      ) : null}
+      {studyUnit ? <input type="hidden" name="studyUnitId" value={studyUnit.id} /> : null}
 
       {state.reasons ? (
         <div
           role="alert"
           className="mb-3 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2 text-sm"
         >
-          <p style={{ color: "var(--danger)" }}>
-            A Statement of Results cannot be issued yet.
-          </p>
+          <p style={{ color: "var(--danger)" }}>{t("issue.notYet")}</p>
           <ul className="mt-2 space-y-1 text-[var(--muted)]">
             {state.reasons.map((reason) => (
               <li key={reason}>{reason}</li>

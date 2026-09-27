@@ -26,6 +26,11 @@ const MOVED = [
   "app/reassessments",
   "app/appeals",
   "app/recognition",
+  "app/fisa",
+  "app/eisa",
+  "app/readiness",
+  "app/statements",
+  "app/papers",
 ];
 
 /**
@@ -35,6 +40,10 @@ const MOVED = [
 const EXEMPT: Record<string, string> = {
   "app/workplace/[id]/statement/page.tsx":
     "The Statement of Work Experience is Section 4D of the QCTO curriculum document, filed with the moderator in the curriculum's own words.",
+  "app/statements/[id]/page.tsx":
+    "The Statement of Results is the QCTO's template, carried to the assessment centre. Its controls (withdraw, print) are translated; the statement is not.",
+  "app/fisa/[id]/agreement/[role]/page.tsx":
+    "The FISA confidentiality agreement is the QCTO template's own wording, signed by hand.",
 };
 
 function tsxFiles(path: string): string[] {

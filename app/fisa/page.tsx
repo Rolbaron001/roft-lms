@@ -2,10 +2,11 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { qualifications } from "@/db/schema";
-import { requireTenant, requireSession } from "@/lib/request";
+import { pageT, requireTenant, requireSession } from "@/lib/request";
 import { canAny } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { listInstruments } from "@/lib/fisa";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { CreateForm } from "./fisa-forms";
@@ -31,6 +32,7 @@ export default async function FisaPage() {
   ) {
     redirect("/not-permitted");
   }
+  const t = await pageT();
 
   const instruments = await listInstruments(session);
   const mayAuthor = session.permissions.includes("assessment:author");
@@ -56,30 +58,20 @@ export default async function FisaPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">
-          Final integrated summative assessment
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The paper this provider sets for its own skills programme. Unlike an
-          external assessment, you write it and you moderate it — so the
-          moderation happens <em>before</em> anybody sits it, and a paper that
-          has not been signed off as fit for purpose cannot be used.
-        </p>
+        <h1 className="text-xl font-semibold">{t("fisa.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("fisa.intro")}</p>
       </div>
 
       {waiting.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${waiting.length} waiting for pre-moderation`}
-            description="Nobody can sit these until a moderator signs them off."
+            title={t("fisa.waiting", { count: waiting.length })}
+            description={t("fisa.waitingIntro")}
           >
             <ul className="space-y-1">
               {waiting.map((row) => (
                 <li key={row.id} className="text-sm">
-                  <Link
-                    href={`/fisa/${row.id}`}
-                    className="underline underline-offset-2"
-                  >
+                  <Link href={`/fisa/${row.id}`} className="underline underline-offset-2">
                     {row.title}
                   </Link>
                   <span className="text-[var(--muted)]"> · {row.programme}</span>
@@ -91,33 +83,25 @@ export default async function FisaPage() {
       ) : null}
 
       <div className="mb-6">
-        <Card
-          title="Papers"
-          description={`${usable.length} signed off and usable.`}
-        >
+        <Card title={t("fisa.papers")} description={t("fisa.usable", { count: usable.length })}>
           {instruments.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              None yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("fisa.noneYet")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="py-2 pr-4 font-medium">Paper</th>
-                    <th className="py-2 pr-4 font-medium">Programme</th>
-                    <th className="py-2 pr-4 font-medium">Version</th>
-                    <th className="py-2 font-medium">State</th>
+                    <th className="py-2 pr-4 font-medium">{t("fisa.paper")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("fisa.programme")}</th>
+                    <th className="py-2 pr-4 font-medium">{t("fisa.version")}</th>
+                    <th className="py-2 font-medium">{t("fisa.state")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {instruments.map((row) => (
                     <tr key={row.id} className="border-b border-[var(--border)]">
                       <td className="py-2 pr-4">
-                        <Link
-                          href={`/fisa/${row.id}`}
-                          className="underline underline-offset-2"
-                        >
+                        <Link href={`/fisa/${row.id}`} className="underline underline-offset-2">
                           {row.title}
                         </Link>
                       </td>
@@ -126,18 +110,11 @@ export default async function FisaPage() {
                         {row.saqaId ? ` · ${row.saqaId}` : ""}
                       </td>
                       <td className="py-2 pr-4 tabular-nums">{row.version}</td>
-                      <td className="py-2">
-                        {row.status === "approved" ? (
-                          <span style={{ color: "var(--success)" }}>
-                            Fit for purpose
-                          </span>
-                        ) : row.status === "in_moderation" ? (
-                          "With the moderator"
-                        ) : row.status === "retired" ? (
-                          <span className="text-[var(--muted)]">Withdrawn</span>
-                        ) : (
-                          "Being written"
-                        )}
+                      <td
+                        className={`py-2 ${row.status === "retired" ? "text-[var(--muted)]" : ""}`}
+                        style={row.status === "approved" ? { color: "var(--success)" } : undefined}
+                      >
+                        {maybe(t, `fisa.state.${row.status}`) ?? row.status}
                       </td>
                     </tr>
                   ))}
@@ -149,10 +126,7 @@ export default async function FisaPage() {
       </div>
 
       {mayAuthor ? (
-        <Card
-          title="Set a new one"
-          description="Against a skills programme. A full or part qualification is assessed externally."
-        >
+        <Card title={t("fisa.setNew")} description={t("fisa.setNewIntro")}>
           <CreateForm programmes={programmes} />
         </Card>
       ) : null}

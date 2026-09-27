@@ -3,10 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { users } from "@/db/schema";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import { canAny } from "@/lib/rbac";
 import { FisaError, getInstrument } from "@/lib/fisa";
 import type { ChecklistAnswer } from "@/lib/fisa-checklist";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import {
@@ -46,6 +47,7 @@ export default async function FisaDetailPage({
   ) {
     redirect("/not-permitted");
   }
+  const { t, dates } = await pageLocale();
 
   let view;
   try {
@@ -114,20 +116,20 @@ export default async function FisaDetailPage({
       <div className="mb-6">
         <p className="text-sm text-[var(--muted)]">
           <Link href="/fisa" className="underline underline-offset-2">
-            Final integrated summative assessment
+            {t("fisa.title")}
           </Link>
         </p>
         <h1 className="mt-1 text-xl font-semibold">
           {instrument.title}
           <span className="ml-2 text-base font-normal text-[var(--muted)]">
-            version {instrument.version}
+            {t("fisa.versionN", { version: instrument.version })}
           </span>
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {instrument.programme}
           {instrument.saqaId ? ` · ${instrument.saqaId}` : ""}
           {instrument.nqfLevel ? ` · NQF ${instrument.nqfLevel}` : ""}
-          {instrument.credits ? ` · ${instrument.credits} credits` : ""}
+          {instrument.credits ? ` · ${t("fisa.credits", { credits: instrument.credits })}` : ""}
         </p>
       </div>
 
@@ -143,61 +145,59 @@ export default async function FisaDetailPage({
           }}
         >
           <p className="text-sm font-semibold">
-            {instrument.status === "approved"
-              ? "Signed off as fit for purpose — candidates may sit this paper"
-              : instrument.status === "retired"
-                ? "Withdrawn"
-                : instrument.status === "in_moderation"
-                  ? "With the moderator — nobody may sit it yet"
-                  : "Being written — nobody may sit it yet"}
+            {maybe(t, `fisa.gate.${instrument.status}`) ?? instrument.status}
           </p>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {instrument.approvedAt
-              ? `Moderated and approved on ${instrument.approvedAt.toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}.`
-              : "A FISA is moderated before it is sat, not after. That is what makes it defensible at a monitoring visit."}
+              ? t("fisa.approvedOn", {
+                  date: instrument.approvedAt.toLocaleDateString(dates, {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  }),
+                })
+              : t("fisa.beforeNotAfter")}
           </p>
 
           <dl className="mt-4 grid gap-x-6 gap-y-1 sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-[var(--muted)]">Duration</dt>
+              <dt className="text-xs text-[var(--muted)]">{t("fisa.duration")}</dt>
               <dd className="text-sm">
                 {instrument.durationMinutes
-                  ? `${instrument.durationMinutes} minutes`
-                  : "Not set"}
+                  ? t("fisa.minutes", { minutes: instrument.durationMinutes })
+                  : t("fisa.notSet")}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-[var(--muted)]">Total marks</dt>
-              <dd className="text-sm">{instrument.totalMarks ?? "Not set"}</dd>
+              <dt className="text-xs text-[var(--muted)]">{t("fisa.totalMarks")}</dt>
+              <dd className="text-sm">{instrument.totalMarks ?? t("fisa.notSet")}</dd>
             </div>
             <div>
-              <dt className="text-xs text-[var(--muted)]">Pass mark</dt>
+              <dt className="text-xs text-[var(--muted)]">{t("fisa.passMark")}</dt>
               <dd className="text-sm">
                 {instrument.passMarkPercent
-                  ? `${instrument.passMarkPercent}%${
-                      instrument.totalMarks
-                        ? ` (${Math.ceil((instrument.passMarkPercent / 100) * instrument.totalMarks)} of ${instrument.totalMarks})`
-                        : ""
-                    }`
-                  : "Not set"}
+                  ? instrument.totalMarks
+                    ? t("fisa.passOf", {
+                        percent: instrument.passMarkPercent,
+                        needed: Math.ceil((instrument.passMarkPercent / 100) * instrument.totalMarks),
+                        total: instrument.totalMarks,
+                      })
+                    : `${instrument.passMarkPercent}%`
+                  : t("fisa.notSet")}
               </dd>
             </div>
           </dl>
 
           {instrument.hasPracticalComponent ? (
             <p className="mt-3 text-sm text-[var(--muted)]">
-              {instrument.practicalNote ||
-                "Also has a practical component, judged competent or not yet competent."}
+              {instrument.practicalNote || t("fisa.practical")}
             </p>
           ) : null}
 
           {instrument.qualityRating ? (
             <p className="mt-3 text-sm">
-              Moderator&rsquo;s overall judgement:{" "}
-              <span className="font-medium">{instrument.qualityRating}</span>
-              {instrument.qualityMotivation
-                ? ` — ${instrument.qualityMotivation}`
-                : ""}
+              {t("fisa.overall", { rating: instrument.qualityRating })}
+              {instrument.qualityMotivation ? `: ${instrument.qualityMotivation}` : ""}
             </p>
           ) : null}
         </div>
@@ -211,38 +211,28 @@ export default async function FisaDetailPage({
           return (
             <Card
               key={role}
-              title={role === "examiner" ? "Examiner / developer" : "Moderator"}
-              description={
-                role === "examiner"
-                  ? "Writes the paper."
-                  : "Checks it is fit for purpose, before anybody sits it."
-              }
+              title={role === "examiner" ? t("fisa.examiner") : t("fisa.moderator")}
+              description={role === "examiner" ? t("fisa.examinerIntro") : t("fisa.moderatorIntro")}
             >
               {appointment ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">{appointment.fullName}</p>
                   <p className="text-xs text-[var(--muted)]">
-                    {[
-                      appointment.idNumber,
-                      appointment.email,
-                      appointment.mobile,
-                    ]
+                    {[appointment.idNumber, appointment.email, appointment.mobile]
                       .filter(Boolean)
-                      .join(" · ") || "No contact details recorded"}
+                      .join(" · ") || t("fisa.noContact")}
                   </p>
 
                   {appointment.confidentialitySignedAt ? (
                     <p className="text-sm" style={{ color: "var(--success)" }}>
-                      Confidentiality agreement signed{" "}
-                      {appointment.confidentialitySignedAt.toLocaleDateString(
-                        "en-ZA",
-                      )}
+                      {t("fisa.signed", {
+                        date: appointment.confidentialitySignedAt.toLocaleDateString(dates),
+                      })}
                     </p>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm" style={{ color: "var(--danger)" }}>
-                        No confidentiality agreement yet. They may not see or
-                        judge the paper until it is signed.
+                        {t("fisa.unsigned")}
                       </p>
                       {appointment.userId === session.userId || mayAuthor ? (
                         <SignConfidentialityForm
@@ -258,20 +248,14 @@ export default async function FisaDetailPage({
                       href={`/fisa/${instrument.id}/agreement/${role}`}
                       className="text-sm underline underline-offset-2"
                     >
-                      The agreement
+                      {t("fisa.agreement")}
                     </Link>
                   </p>
                 </div>
               ) : mayAuthor && !settled ? (
-                <AppointForm
-                  instrumentId={instrument.id}
-                  role={role}
-                  staff={staffOptions}
-                />
+                <AppointForm instrumentId={instrument.id} role={role} staff={staffOptions} />
               ) : (
-                <p className="text-sm text-[var(--muted)]">
-                  Nobody appointed yet.
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t("fisa.nobody")}</p>
               )}
             </Card>
           );
@@ -280,15 +264,9 @@ export default async function FisaDetailPage({
 
       {/* Section 2, which is the part a monitor interrogates. */}
       <div className="mb-6">
-        <Card
-          title="Exit level outcomes, and where the paper assesses them"
-          description="Section 2 of both reports. The only place that shows the paper covers the qualification rather than merely looking like an exam."
-        >
+        <Card title={t("fisa.outcomes")} description={t("fisa.outcomesIntro")}>
           {outcomes.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              This programme has no exit level outcomes recorded, so there is
-              nothing to map the paper against. Import the curriculum first.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("fisa.noOutcomes")}</p>
           ) : (
             <div>
               {outcomes.map((outcome) => (
@@ -305,9 +283,7 @@ export default async function FisaDetailPage({
                           (canWrite("moderator") ? "moderator" : "examiner"),
                     ) ?? null
                   }
-                  readOnly={
-                    !canWrite("examiner") && !canWrite("moderator")
-                  }
+                  readOnly={!canWrite("examiner") && !canWrite("moderator")}
                 />
               ))}
             </div>
@@ -320,15 +296,11 @@ export default async function FisaDetailPage({
         {(["examiner", "moderator"] as const).map((role) => (
           <Card
             key={role}
-            title={
-              role === "examiner"
-                ? "Examiner / developer report"
-                : "Pre-moderator report"
-            }
+            title={role === "examiner" ? t("fisa.examinerReport") : t("fisa.moderatorReport")}
             description={
               view.outstanding[role].length === 0
-                ? "Complete."
-                : `${view.outstanding[role].length} still unanswered.`
+                ? t("fisa.complete")
+                : t("fisa.unanswered", { count: view.outstanding[role].length })
             }
           >
             <ChecklistForm
@@ -341,8 +313,7 @@ export default async function FisaDetailPage({
 
             {!canWrite(role) && !settled ? (
               <p className="mt-3 text-xs text-[var(--muted)]">
-                Only the appointed {role}, once their confidentiality agreement
-                is signed, can answer these.
+                {role === "examiner" ? t("fisa.onlyExaminer") : t("fisa.onlyModerator")}
               </p>
             ) : null}
           </Card>
@@ -352,21 +323,18 @@ export default async function FisaDetailPage({
       {/* What happens next. */}
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         {canWrite("examiner") && instrument.status === "draft" ? (
-          <Card
-            title="Hand it to the moderator"
-            description="Once your own report is complete."
-          >
+          <Card title={t("fisa.handOver")} description={t("fisa.handOverIntro")}>
             <SendToModerationForm instrumentId={instrument.id} />
           </Card>
         ) : null}
 
         {canWrite("moderator") && instrument.status === "in_moderation" ? (
           <Card
-            title="Final moderation"
+            title={t("fisa.final")}
             description={
               view.signOff.ready
-                ? "Everything is answered."
-                : (view.signOff.why ?? "Not ready yet.")
+                ? t("fisa.allAnswered")
+                : (view.signOff.why ?? t("fisa.notReady"))
             }
           >
             {view.signOff.ready ? (
@@ -378,10 +346,7 @@ export default async function FisaDetailPage({
         ) : null}
 
         {mayAuthor && instrument.status === "approved" ? (
-          <Card
-            title="A later version"
-            description="This one stays exactly as it is, because candidates may have sat it. A new version needs its own moderation."
-          >
+          <Card title={t("fisa.later")} description={t("fisa.laterIntro")}>
             <NewVersionForm instrumentId={instrument.id} />
           </Card>
         ) : null}

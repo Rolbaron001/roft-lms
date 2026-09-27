@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { RegistrationError, registrationList } from "@/lib/eisa-registration";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -25,6 +25,7 @@ export default async function EisaCohortPage({
   const { sitting } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
+  const t = await pageT();
 
   let list;
   try {
@@ -41,52 +42,39 @@ export default async function EisaCohortPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <Link href="/eisa" className="text-sm text-[var(--muted)] hover:underline">
-        ← Back to external assessment
+        {t("eisa.back")}
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold">{list.cohortName}</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {list.qualificationTitle ?? "No qualification on these enrolments"} ·{" "}
-        {ready.length} of {list.candidates.length} ready
+        {list.qualificationTitle ?? t("eisa.noQualification")} ·{" "}
+        {t("eisa.readyOf", { ready: ready.length, total: list.candidates.length })}
       </p>
 
       {missingId.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title={`${missingId.length} without an identity number`}
-            description="Every quality partner asks for one, and a registration returned for a missing number costs a cycle. Better found now than after the file is sent."
-          >
+          <Card title={t("eisa.noId", { count: missingId.length })} description={t("eisa.noIdIntro")}>
             <p className="text-sm">
-              {missingId
-                .map((row) => `${row.firstName} ${row.lastName}`)
-                .join(", ")}
+              {missingId.map((row) => `${row.firstName} ${row.lastName}`).join(", ")}
             </p>
           </Card>
         </div>
       ) : null}
 
       <div className="mt-6">
-        <Card
-          title="Ready to be entered"
-          description="Every criterion in every module met, whether taught or recognised through prior learning."
-        >
+        <Card title={t("eisa.ready")} description={t("eisa.readyIntro")}>
           {ready.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Nobody yet. The list below says how far each of them has to go.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("eisa.nobodyYet")}</p>
           ) : (
             <>
               <ul className="space-y-1 text-sm">
                 {ready.map((row) => (
                   <li key={row.userId}>
-                    <Link
-                      href={`/people/${row.userId}`}
-                      className="hover:underline"
-                    >
+                    <Link href={`/people/${row.userId}`} className="hover:underline">
                       {row.lastName}, {row.firstName}
                     </Link>
                     <span className="ml-2 text-[var(--muted)]">
-                      {row.nationalId ?? "no identity number"}
+                      {row.nationalId ?? t("eisa.noIdNumber")}
                     </span>
                   </li>
                 ))}
@@ -96,7 +84,7 @@ export default async function EisaCohortPage({
                 href={`/eisa/${cohortId}/export${sitting ? `?sitting=${sitting}` : ""}`}
                 className="mt-4 inline-block rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white"
               >
-                Download the registration file
+                {t("eisa.download")}
               </a>
             </>
           )}
@@ -105,23 +93,17 @@ export default async function EisaCohortPage({
 
       {notReady.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Not ready"
-            description="How far each has to go. Somebody one criterion short can still make the deadline if it is noticed this week."
-          >
+          <Card title={t("eisa.notReady")} description={t("eisa.notReadyIntro")}>
             <ul className="space-y-1 text-sm">
               {[...notReady]
                 .sort((a, b) => a.outstanding - b.outstanding)
                 .map((row) => (
                   <li key={row.userId}>
-                    <Link
-                      href={`/people/${row.userId}`}
-                      className="hover:underline"
-                    >
+                    <Link href={`/people/${row.userId}`} className="hover:underline">
                       {row.lastName}, {row.firstName}
                     </Link>
                     <span className="ml-2 tabular-nums text-[var(--muted)]">
-                      {row.percent}% · {row.outstanding} outstanding
+                      {t("eisa.outstanding", { percent: row.percent, count: row.outstanding })}
                     </span>
                   </li>
                 ))}

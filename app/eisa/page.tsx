@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireCapability, requirePermission } from "@/lib/request";
+import { currentLocale, pageT, requireCapability, requirePermission } from "@/lib/request";
 import {
   registrationDue,
   upcomingSittings,
@@ -24,8 +24,9 @@ import { SittingForm } from "./sitting-form";
  */
 export default async function EisaPage() {
   const tenant = await requireCapability("qualifications");
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
+  const t = await pageT();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, await currentLocale());
 
   const today = dateInZone(new Date(), tenant.timezone);
   const [sittings, due] = await Promise.all([
@@ -50,20 +51,15 @@ export default async function EisaPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">External assessment</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          When each sitting is, when registration for it closes, and which
-          cohorts still have to be entered. Registration typically closes about
-          three months ahead, which is why a cohort finishing later in the year
-          has to be entered long before it finishes.
-        </p>
+        <h1 className="text-xl font-semibold">{t("eisa.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("eisa.intro")}</p>
       </div>
 
       {urgent.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${urgent.length} to register now`}
-            description="Registration closes within ten working days and these cohorts have no registration date recorded."
+            title={t("eisa.registerNow", { count: urgent.length })}
+            description={t("eisa.registerNowIntro")}
           >
             <ul className="space-y-1 text-sm">
               {urgent.map((row) => (
@@ -75,10 +71,10 @@ export default async function EisaPage() {
                     {row.cohortName}
                   </Link>
                   <span className="ml-2 text-[var(--danger)]">
-                    closes {row.registrationCloses}
+                    {t("eisa.closes", { date: row.registrationCloses })}
                   </span>
                   <span className="ml-2 text-[var(--muted)]">
-                    for {row.sittingName}
+                    {t("eisa.for", { sitting: row.sittingName })}
                   </span>
                 </li>
               ))}
@@ -87,10 +83,7 @@ export default async function EisaPage() {
         </div>
       ) : null}
 
-      <Card
-        title="Sittings"
-        description="Only those still open for registration. A closed one is nothing anybody can act on, and leaving it here would push the next real deadline down the page."
-      >
+      <Card title={t("eisa.sittings")} description={t("eisa.sittingsIntro")}>
         {sittings.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">{notice.text}</p>
         ) : (
@@ -101,28 +94,20 @@ export default async function EisaPage() {
               that ends is the thing somebody is looking at anyway.
             */}
             {askForNextYear ? (
-              <p className="mb-3 text-sm text-[var(--muted)]">
-                Nothing is recorded beyond this year. The assessment quality
-                partner publishes next year&rsquo;s dates in December, so the
-                letter should be out — adding them now is what keeps the
-                countdown running into January.
-              </p>
+              <p className="mb-3 text-sm text-[var(--muted)]">{t("eisa.nextYear")}</p>
             ) : null}
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                  <th className="pb-2 pr-3">Sitting</th>
-                  <th className="pb-2 pr-3">Qualification</th>
-                  <th className="pb-2 pr-3">Registration closes</th>
-                  <th className="pb-2">Date</th>
+                  <th className="pb-2 pr-3">{t("eisa.sitting")}</th>
+                  <th className="pb-2 pr-3">{t("eisa.qualification")}</th>
+                  <th className="pb-2 pr-3">{t("eisa.registrationCloses")}</th>
+                  <th className="pb-2">{t("eisa.date")}</th>
                 </tr>
               </thead>
               <tbody>
                 {sittings.map((sitting) => (
-                  <tr
-                    key={sitting.id}
-                    className="border-t border-[var(--border)]"
-                  >
+                  <tr key={sitting.id} className="border-t border-[var(--border)]">
                     <td className="py-2 pr-3">
                       {sitting.name}
                       {sitting.assessmentQualityPartner ? (
@@ -132,11 +117,9 @@ export default async function EisaPage() {
                       ) : null}
                     </td>
                     <td className="py-2 pr-3 text-[var(--muted)]">
-                      {sitting.qualificationTitle ?? "All"}
+                      {sitting.qualificationTitle ?? t("eisa.all")}
                     </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {sitting.registrationCloses}
-                    </td>
+                    <td className="py-2 pr-3 tabular-nums">{sitting.registrationCloses}</td>
                     <td className="py-2 tabular-nums">{sitting.sittingDate}</td>
                   </tr>
                 ))}
@@ -155,8 +138,8 @@ export default async function EisaPage() {
       {due.length > 0 ? (
         <div className="mt-6">
           <Card
-            title={`${words.many("cohort")} still to be entered`}
-            description="Everything with an open deadline and no registration date recorded against it."
+            title={t("eisa.toEnter", { cohorts: words.many("cohort") })}
+            description={t("eisa.toEnterIntro")}
           >
             <ul className="space-y-1 text-sm">
               {due.map((row) => (
@@ -168,7 +151,7 @@ export default async function EisaPage() {
                     {row.cohortName}
                   </Link>
                   <span className="ml-2 text-[var(--muted)]">
-                    {row.sittingName} · closes {row.registrationCloses}
+                    {t("eisa.closesFor", { sitting: row.sittingName, date: row.registrationCloses })}
                   </span>
                 </li>
               ))}

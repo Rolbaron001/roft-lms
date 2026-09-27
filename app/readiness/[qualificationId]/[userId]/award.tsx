@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { recordAwardAction, removeAwardAction, type AwardState } from "./actions";
+import { useDates, useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -36,20 +37,23 @@ function Held({
   userId: string;
   canManage: boolean;
 }) {
+  const t = useT();
+  const dates = useDates();
   const [removing, setRemoving] = useState(false);
   const [state, action, pending] = useActionState<AwardState, FormData>(removeAwardAction, {});
 
   return (
     <div className="space-y-2 text-sm">
       <p>
-        <span className="font-medium">Certificate {award.certificateNumber}</span>, awarded by{" "}
-        {award.awardedBy} on{" "}
-        {new Date(`${award.awardedOn}T00:00:00`).toLocaleDateString("en-ZA", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
+        {t("award.held", {
+          number: award.certificateNumber,
+          by: award.awardedBy,
+          date: new Date(`${award.awardedOn}T00:00:00`).toLocaleDateString(dates, {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
         })}
-        .
       </p>
       {award.note ? <p className="text-[var(--muted)]">{award.note}</p> : null}
       {canManage && !removing ? (
@@ -58,7 +62,7 @@ function Held({
           onClick={() => setRemoving(true)}
           className="text-xs font-medium text-[var(--brand-accent)] hover:underline"
         >
-          Entered wrongly? Remove it
+          {t("award.wrong")}
         </button>
       ) : null}
       {removing ? (
@@ -70,8 +74,8 @@ function Held({
             name="reason"
             required
             minLength={3}
-            placeholder="Why it is being removed"
-            aria-label="Why it is being removed"
+            placeholder={t("award.why")}
+            aria-label={t("award.why")}
             className={inputClass}
           />
           <Problem state={state} />
@@ -81,14 +85,14 @@ function Held({
               disabled={pending}
               className="rounded-md border border-[var(--danger)]/40 px-3 py-1.5 text-sm text-[var(--danger)] disabled:opacity-60"
             >
-              {pending ? "Removing…" : "Remove"}
+              {pending ? t("award.removing") : t("award.remove")}
             </button>
             <button
               type="button"
               onClick={() => setRemoving(false)}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
             >
-              Keep it
+              {t("award.keep")}
             </button>
           </div>
         </form>
@@ -112,13 +116,14 @@ export function QualificationAward({
   award: Award | null;
   canManage: boolean;
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<AwardState, FormData>(recordAwardAction, {});
 
   if (award) {
     return <Held award={award} qualificationId={qualificationId} userId={userId} canManage={canManage} />;
   }
   if (!canManage) {
-    return <p className="text-sm text-[var(--muted)]">Not received yet.</p>;
+    return <p className="text-sm text-[var(--muted)]">{t("award.notYet")}</p>;
   }
 
   return (
@@ -126,20 +131,20 @@ export function QualificationAward({
       <input type="hidden" name="qualificationId" value={qualificationId} />
       <input type="hidden" name="userId" value={userId} />
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Certificate number</span>
+        <span className="block text-sm font-medium">{t("award.number")}</span>
         <input name="certificateNumber" required className={inputClass} />
       </label>
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Date on the certificate</span>
+        <span className="block text-sm font-medium">{t("award.date")}</span>
         <input name="awardedOn" type="date" required className={inputClass} />
       </label>
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Awarded by</span>
+        <span className="block text-sm font-medium">{t("award.by")}</span>
         <input name="awardedBy" defaultValue="QCTO" required className={inputClass} />
       </label>
       <label className="block space-y-1.5 sm:col-span-3">
         <span className="block text-sm font-medium">
-          Note <span className="font-normal text-[var(--muted)]">(optional)</span>
+          {t("award.note")} <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
         </span>
         <input name="note" className={inputClass} />
       </label>
@@ -151,7 +156,7 @@ export function QualificationAward({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Recording…" : "Record the certificate"}
+          {pending ? t("assessing.recording") : t("award.record")}
         </button>
       </div>
     </form>

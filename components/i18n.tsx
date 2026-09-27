@@ -11,15 +11,28 @@ import type { Translate } from "@/lib/i18n";
  * Outside a provider it speaks English, so nothing breaks for want of one.
  */
 const Messages = createContext<Record<string, string>>(en);
+const Dates = createContext<string>("en-ZA");
 
 export function I18nProvider({
   messages,
+  dates = "en-ZA",
   children,
 }: {
   messages: Record<string, string>;
+  /** The tag to write dates with (`dateLocale`), so a date reads as the words do. */
+  dates?: string;
   children: React.ReactNode;
 }) {
-  return <Messages.Provider value={messages}>{children}</Messages.Provider>;
+  return (
+    <Messages.Provider value={messages}>
+      <Dates.Provider value={dates}>{children}</Dates.Provider>
+    </Messages.Provider>
+  );
+}
+
+/** The reader's date format, for `toLocaleDateString` in the browser. */
+export function useDates(): string {
+  return useContext(Dates);
 }
 
 export function useT(): Translate {
