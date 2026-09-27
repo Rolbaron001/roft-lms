@@ -480,6 +480,74 @@ export const sessions = pgTable(
 );
 
 /**
+ * Signing in with an organisation's Google or Microsoft account, per provider.
+ * Job sheet D7, 27 September 2026.
+ *
+ * Each provider registers the platform with its own Google or Microsoft
+ * account and enters the result here, so the consent screen carries the
+ * provider's name and the platform holds nothing of anyone else's. The secret
+ * is sealed as the AI tokens are. Passwords keep working beside it.
+ */
+export const signInProviders = pgTable(
+  "sign_in_providers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** "google" or "microsoft". */
+    kind: text("kind").notNull(),
+    clientId: text("client_id").notNull(),
+    clientSecretSealed: text("client_secret_sealed").notNull(),
+    secretHint: text("secret_hint").notNull(),
+    /**
+     * Microsoft only, and required there: the organisation's directory
+     * (tenant) id. Microsoft does not say whether an address was verified, so
+     * an address is trusted only from the directory of the organisation that
+     * controls it.
+     */
+    directoryId: text("directory_id"),
+    /** Addresses allowed to sign in this way, by domain: "curiosa.academy". Empty allows any. */
+    allowedDomains: text("allowed_domains").array().notNull().default(sql`'{}'::text[]`),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sign_in_providers_kind_idx").on(t.organisationId, t.kind)],
+);
+
+/**
+ * A person's account with Google or Microsoft, pinned to their account here
+ * the first time they sign in with it.
+ *
+ * Matched by email that first time, and by the provider's own identifier ever
+ * after, so a person who changes the address on their Google account is still
+ * themselves, and somebody who later takes over an old address is not.
+ */
+export const externalIdentities = pgTable(
+  "external_identities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    /** The provider's `sub`, which never changes for the account. */
+    subject: text("subject").notNull(),
+    emailAtLink: text("email_at_link").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("external_identities_subject_idx").on(t.organisationId, t.provider, t.subject),
+    uniqueIndex("external_identities_user_idx").on(t.organisationId, t.userId, t.provider),
+  ],
+);
+
+/**
  * Failed sign-in attempts, used to slow down password guessing. Recorded per
  * tenant and per email address, including addresses that do not exist, so a
  * response time cannot be used to discover who holds an account.

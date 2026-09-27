@@ -226,7 +226,7 @@ else
   # Its own statement, and only where the tables exist: a copy taken from a
   # live that predates them must not fail the clearing above.
   dev exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q -c \
-    "do \$\$ begin if to_regclass('public.record_store_connections') is not null then delete from record_store_connections; delete from record_store_deliveries; end if; end \$\$;"
+    "do \$\$ begin if to_regclass('public.record_store_connections') is not null then delete from record_store_connections; delete from record_store_deliveries; end if; if to_regclass('public.sign_in_providers') is not null then delete from sign_in_providers; end if; end \$\$;"
   log "Cleared copied sign-ins, AI tokens, drive connections and record store connections."
 
   # Checked, not assumed: the same rows on both sides.

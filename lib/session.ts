@@ -145,67 +145,84 @@ export async function signIn(
       return { ok: false, reason: "invalid_credentials" };
     }
 
-    const token = generateToken();
-    const now = new Date();
-
-    const [created] = await tx
-      .insert(sessions)
-      .values({
-        organisationId,
-        userId: user.id,
-        tokenHash: hashToken(token),
-        absoluteExpiresAt: new Date(now.getTime() + ABSOLUTE_LIFETIME_MS),
-        idleExpiresAt: new Date(now.getTime() + IDLE_LIFETIME_MS),
-        createdIp: context.ipAddress ?? null,
-        userAgent: context.userAgent ?? null,
-      })
-      .returning({ id: sessions.id });
-
-    await tx.insert(loginAttempts).values({
-      organisationId,
-      email: normalisedEmail,
-      succeeded: true,
-      ipAddress: context.ipAddress ?? null,
-    });
-
-    await tx
-      .update(users)
-      .set({ lastLoginAt: now })
-      .where(eq(users.id, user.id));
-
-    const roles = await loadRoles(tx, user.id);
-
-    await recordAudit(tx, {
-      organisationId,
-      actorId: user.id,
-      actorRole: roles[0] ?? null,
-      action: "session.signed_in",
-      entityType: "session",
-      entityId: created.id,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
-    });
-
-    return {
-      ok: true,
-      token,
-      session: {
-        sessionId: created.id,
-        userId: user.id,
-        organisationId,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        roles,
-        permissions: permissionsFor({ roles }),
-        mustChangePassword: user.mustChangePassword,
-        // A new sitting always starts with the extension off. Stated rather
-        // than left to the column default, because it is a rule about how
-        // signing in behaves and not an incidental initial value.
-        aiOn: false,
-      },
-    };
+    return openSession(tx, organisationId, user, context, "password");
   });
+}
+
+/**
+ * Opens a session for a person already proved to be who they say, by password
+ * or by their organisation's Google or Microsoft account (job sheet D7). One
+ * path for both, so a session is the same thing however it began.
+ */
+export async function openSession(
+  tx: TenantDatabase,
+  organisationId: string,
+  user: { id: string; email: string; firstName: string; lastName: string; mustChangePassword: boolean },
+  context: RequestContext,
+  method: "password" | "google" | "microsoft",
+): Promise<Extract<SignInResult, { ok: true }>> {
+  const normalisedEmail = user.email.trim().toLowerCase();
+  const token = generateToken();
+  const now = new Date();
+
+  const [created] = await tx
+    .insert(sessions)
+    .values({
+      organisationId,
+      userId: user.id,
+      tokenHash: hashToken(token),
+      absoluteExpiresAt: new Date(now.getTime() + ABSOLUTE_LIFETIME_MS),
+      idleExpiresAt: new Date(now.getTime() + IDLE_LIFETIME_MS),
+      createdIp: context.ipAddress ?? null,
+      userAgent: context.userAgent ?? null,
+    })
+    .returning({ id: sessions.id });
+
+  await tx.insert(loginAttempts).values({
+    organisationId,
+    email: normalisedEmail,
+    succeeded: true,
+    ipAddress: context.ipAddress ?? null,
+  });
+
+  await tx
+    .update(users)
+    .set({ lastLoginAt: now })
+    .where(eq(users.id, user.id));
+
+  const roles = await loadRoles(tx, user.id);
+
+  await recordAudit(tx, {
+    organisationId,
+    actorId: user.id,
+    actorRole: roles[0] ?? null,
+    action: "session.signed_in",
+    entityType: "session",
+    entityId: created.id,
+    after: { method },
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent,
+  });
+
+  return {
+    ok: true,
+    token,
+    session: {
+      sessionId: created.id,
+      userId: user.id,
+      organisationId,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      roles,
+      permissions: permissionsFor({ roles }),
+      mustChangePassword: user.mustChangePassword,
+      // A new sitting always starts with the extension off. Stated rather
+      // than left to the column default, because it is a rule about how
+      // signing in behaves and not an incidental initial value.
+      aiOn: false,
+    },
+  };
 }
 
 /**

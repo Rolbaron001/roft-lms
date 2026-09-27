@@ -17,6 +17,9 @@ import { ClockForm } from "./clock-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
 import { MailTest } from "./mail-test";
+import { SsoForm } from "./sso-form";
+import { SSO_KINDS, SSO_LABEL, ssoSettingsFor } from "@/lib/single-sign-on";
+import { callbackAddress } from "@/app/api/sign-in/[kind]/route";
 import { SettingsNav } from "./settings-nav";
 import { DriveConnections } from "./drive-connections";
 import { availableDriveProviders, connectionsFor } from "@/lib/drive";
@@ -87,6 +90,8 @@ export default async function SettingsPage({
   const convention = canManageSettings
     ? await namingConventionFor(session)
     : null;
+  const sso = canManageSettings ? await ssoSettingsFor(session) : [];
+  const ssoCallbacks = await Promise.all(SSO_KINDS.map((kind) => callbackAddress(kind)));
   const moduleCodes = canManageSettings
     ? await proposeModuleCodeTable(session)
     : null;
@@ -198,6 +203,31 @@ export default async function SettingsPage({
             description="Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived."
           >
             <MailTest configured={mailIsConfigured()} />
+          </Card>
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="signing-in"
+          data-settings-section="Signing in"
+          className="mt-6 scroll-mt-24"
+        >
+          <Card
+            title="Signing in with Google or Microsoft"
+            description="Lets your people sign in with their organisation's Google or Microsoft account instead of a password here, which keeps working beside it. It only signs in people who already have an account on this platform, matched by email address the first time; it never creates one."
+          >
+            <div className="space-y-8">
+              {SSO_KINDS.map((kind, index) => (
+                <SsoForm
+                  key={kind}
+                  kind={kind}
+                  label={SSO_LABEL[kind]}
+                  callback={ssoCallbacks[index]}
+                  current={sso.find((row) => row.kind === kind) ?? null}
+                />
+              ))}
+            </div>
           </Card>
         </div>
       ) : null}

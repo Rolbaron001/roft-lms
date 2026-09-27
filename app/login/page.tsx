@@ -5,6 +5,16 @@ import { TenantLogo } from "@/components/tenant-logo";
 import { DeploymentBanner } from "@/components/deployment-banner";
 import { LoginForm } from "./login-form";
 import { platformName } from "@/lib/platform";
+import { signInOptions, SSO_LABEL } from "@/lib/single-sign-on";
+
+/** Why a Google or Microsoft sign-in came back without signing anybody in. */
+const SSO_MESSAGES: Record<string, string> = {
+  refused:
+    "That account cannot sign in here. It has to use the same email address as your account on this platform. Sign in with your password, or ask your administrator.",
+  cancelled: "Signing in was cancelled.",
+  expired: "That sign-in took too long, or was started somewhere else. Try again.",
+  off: "That way of signing in is not switched on here.",
+};
 
 /**
  * The sign-in page.
@@ -18,7 +28,11 @@ import { platformName } from "@/lib/platform";
  * The panel graphic comes from the tenant when they have set one and is absent
  * otherwise. Nothing here is specific to any one client.
  */
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sso?: string }>;
+}) {
   const tenant = await currentTenant();
 
   if (tenant) {
@@ -27,6 +41,10 @@ export default async function LoginPage() {
       redirect("/");
     }
   }
+
+  // Signing in with the provider's Google or Microsoft account (job sheet D7).
+  const ssoKinds = tenant ? await signInOptions(tenant.id) : [];
+  const ssoMessage = SSO_MESSAGES[(await searchParams).sso ?? ""] ?? null;
 
   return (
     <main
@@ -111,7 +129,28 @@ export default async function LoginPage() {
 
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
             {tenant ? (
-              <LoginForm />
+              <>
+                {ssoMessage ? (
+                  <p role="alert" className="mb-4 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2 text-sm text-[var(--danger)]">
+                    {ssoMessage}
+                  </p>
+                ) : null}
+                <LoginForm />
+                {ssoKinds.length > 0 ? (
+                  <div className="mt-5 space-y-2 border-t border-[var(--border)] pt-5">
+                    {ssoKinds.map((kind) => (
+                      // A plain link: the route redirects on to the provider.
+                      <a
+                        key={kind}
+                        href={`/api/sign-in/${kind}`}
+                        className="block w-full rounded-md border border-[var(--border)] px-4 py-2.5 text-center text-sm font-medium hover:bg-[var(--brand-primary)]/5"
+                      >
+                        Sign in with {SSO_LABEL[kind]}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className="text-sm text-[var(--muted)]">
                 This address is not configured for an organisation. Check the
