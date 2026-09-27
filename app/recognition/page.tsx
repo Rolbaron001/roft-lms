@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageT, requireSession, requireTenant } from "@/lib/request";
 import { rplModerationQueue } from "@/lib/recognition";
 import { listQualifications } from "@/lib/authoring";
 import { listPeople } from "@/lib/people";
@@ -33,6 +33,7 @@ export default async function RecognitionPage() {
   const canModerate = session.permissions.includes("assessment:moderate");
 
   if (!canManage && !canModerate) redirect("/not-permitted");
+  const t = await pageT();
 
   const [queue, qualifications, learners] = await Promise.all([
     canModerate ? rplModerationQueue(session) : Promise.resolve([]),
@@ -50,13 +51,8 @@ export default async function RecognitionPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Recognition of prior learning</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          For a learner who can already do part of the work. Nothing here is
-          granted on one person&rsquo;s say-so: a judgement is made against the
-          module&rsquo;s own criteria, written down in full, and moderated by
-          somebody other than whoever made it before it counts for anything.
-        </p>
+        <h1 className="text-xl font-semibold">{t("rpl.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("rpl.intro")}</p>
       </div>
 
       {canModerate ? (
@@ -64,15 +60,13 @@ export default async function RecognitionPage() {
           <Card
             title={
               queue.length === 0
-                ? "Nothing waiting for a moderator"
-                : `${queue.length} waiting for a moderator`
+                ? t("rpl.noneWaiting")
+                : t("rpl.waiting", { count: queue.length })
             }
-            description="A judgement grants nothing until this is done. Read the rationale against the module before agreeing — it is the first thing an external verifier reads."
+            description={t("rpl.waitingIntro")}
           >
             {queue.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">
-                Judgements appear here as they are made.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("rpl.appearHere")}</p>
             ) : (
               <ul className="space-y-4">
                 {queue.map((row) => (
@@ -87,8 +81,10 @@ export default async function RecognitionPage() {
                       </span>
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
-                      Judged {row.competent ? "competent" : "not yet competent"}{" "}
-                      on {row.judgedOn}
+                      {t("rpl.judged", {
+                        outcome: row.competent ? t("outcome.competent") : t("outcome.not_yet_competent"),
+                        date: row.judgedOn,
+                      })}
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm">
                       {row.rationale}
@@ -105,10 +101,7 @@ export default async function RecognitionPage() {
       {canManage ? (
         <>
           <div className="mb-6">
-            <Card
-              title="Open an application"
-              description="The first step, and the one that creates the record everything else attaches to."
-            >
+            <Card title={t("rpl.open")} description={t("rpl.openIntro")}>
               <OpenApplication
                 learners={people}
                 qualifications={qualifications.map((row) => ({
@@ -119,10 +112,7 @@ export default async function RecognitionPage() {
             </Card>
           </div>
 
-          <Card
-            title="Credit transfer"
-            description="Different from RPL: the learner already holds a qualification whose outcomes cover this module. No advisory, but the mapping has to be written down — a transfer without it is a claim nobody can check."
-          >
+          <Card title={t("rpl.transfer")} description={t("rpl.transferIntro")}>
             <RecordTransfer learners={people} />
           </Card>
         </>

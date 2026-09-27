@@ -1,4 +1,4 @@
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { listHeldAndAuthorised } from "@/lib/reassessment";
 import { AppShell, Card } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
@@ -15,6 +15,7 @@ import { ReviewForm, StartOral } from "./review-form";
 export default async function ReassessmentsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
+  const t = await pageT();
 
   const waiting = await listHeldAndAuthorised(session);
 
@@ -27,43 +28,30 @@ export default async function ReassessmentsPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Held for review</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          A learner found not yet competent twice is not failed. The assessment
-          is held, and a programme review is convened with their employer —
-          because by this point the question is rarely whether they know it, and
-          usually what has been going on around them.
-        </p>
+        <h1 className="text-xl font-semibold">{t("held.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("held.intro")}</p>
       </div>
 
       {waiting.length === 0 ? (
-        <EmptyState title="Nobody is held">
-          This fills when a learner is found not yet competent for a second time
-          on a summative assessment. Until then there is nothing to review.
-        </EmptyState>
+        <EmptyState title={t("held.emptyTitle")}>{t("held.empty")}</EmptyState>
       ) : null}
 
       {forReview.length > 0 ? (
         <div className="space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Waiting on a programme review ({forReview.length})
+            {t("held.forReview", { count: forReview.length })}
           </h2>
 
           {forReview.map((row) => (
             <Card
               key={`${row.assessmentId}-${row.userId}`}
               title={`${row.firstName} ${row.lastName}`}
-              description={`${row.assessmentTitle} · ${row.notYetCompetent} not-yet-competent results`}
+              description={t("held.results", { assessment: row.assessmentTitle, count: row.notYetCompetent })}
             >
               {canReview ? (
-                <ReviewForm
-                  assessmentId={row.assessmentId}
-                  userId={row.userId}
-                />
+                <ReviewForm assessmentId={row.assessmentId} userId={row.userId} />
               ) : (
-                <p className="text-sm text-[var(--muted)]">
-                  A facilitator or administrator convenes the review.
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t("held.whoConvenes")}</p>
               )}
             </Card>
           ))}
@@ -73,22 +61,19 @@ export default async function ReassessmentsPage() {
       {forOral.length > 0 ? (
         <div className="mt-8 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Authorised for an oral attempt ({forOral.length})
+            {t("held.forOral", { count: forOral.length })}
           </h2>
 
           {forOral.map((row) => (
             <Card
               key={`${row.assessmentId}-${row.userId}`}
               title={`${row.firstName} ${row.lastName}`}
-              description={`${row.assessmentTitle} · the review authorised a third attempt, conducted orally`}
+              description={t("held.oralAuthorised", { assessment: row.assessmentTitle })}
             >
               {canAssess && row.authorisationId ? (
                 <StartOral authorisationId={row.authorisationId} />
               ) : (
-                <p className="text-sm text-[var(--muted)]">
-                  An assessor conducts the oral attempt — and not the person who
-                  authorised it.
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t("held.whoConducts")}</p>
               )}
             </Card>
           ))}

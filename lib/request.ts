@@ -11,7 +11,8 @@ import {
 import { preferredHost, resolveTenant, type TenantIdentity } from "./tenant";
 import type { Permission } from "./rbac";
 import { can, type Capability } from "./features";
-import { localeFor } from "./i18n/locales";
+import { dateLocale, localeFor } from "./i18n/locales";
+import { translator, type Translate } from "./i18n";
 
 /**
  * Request-scoped helpers. Everything a page or action needs to know about who
@@ -59,6 +60,20 @@ export { localeFor };
 export async function currentLocale(): Promise<string> {
   const tenant = await currentTenant();
   return localeFor(tenant, tenant ? await currentSession() : null);
+}
+
+/**
+ * The reader's phrases, for a server page: `const t = await pageT();`. Stage
+ * 4 of D9 moves every staff screen over, and a line each is what that costs.
+ */
+export async function pageT(): Promise<Translate> {
+  return translator(await currentLocale());
+}
+
+/** The reader's language and date format together, for a page that writes dates. */
+export async function pageLocale(): Promise<{ t: Translate; locale: string; dates: string }> {
+  const locale = await currentLocale();
+  return { t: translator(locale), locale, dates: dateLocale(locale) };
 }
 
 /**

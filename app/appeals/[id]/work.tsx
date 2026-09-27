@@ -11,6 +11,9 @@ import {
   type AppealActionState,
 } from "@/app/appeals/actions";
 import { ZonedTime } from "@/components/zoned-time";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -56,6 +59,7 @@ export function Work({
     authorName: string;
   }[];
 }) {
+  const t = useT();
   const [ackState, ackAction, acking] = useActionState<
     AppealActionState,
     FormData
@@ -92,32 +96,26 @@ export function Work({
 
   return (
     <div className="space-y-6">
-      {error ? (
-        <p className="text-sm text-[var(--danger)]">{error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
       {/* 1. Acknowledge */}
       <section className="border-b border-[var(--border)] pb-4">
-        <h3 className="text-sm font-medium">Acknowledge receipt</h3>
+        <h3 className="text-sm font-medium">{t("appeals.acknowledge")}</h3>
         {appeal.acknowledgedAt ? (
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Acknowledged{" "}
-            <ZonedTime at={appeal.acknowledgedAt} zone={zone} withDate />.
+            <Rich
+              text={t("appeals.acknowledgedAt")}
+              parts={{ time: <ZonedTime at={appeal.acknowledgedAt} zone={zone} withDate /> }}
+            />
           </p>
         ) : closed ? (
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Closed without an acknowledgement being recorded.
-          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("appeals.closedUnacknowledged")}</p>
         ) : (
           <form action={ackAction} className="mt-2">
             <input type="hidden" name="appealId" value={appeal.id} />
-            <p className="mb-2 text-xs text-[var(--muted)]">
-              The first acknowledgement is the one the record keeps. It cannot
-              be re-stamped later, because a time that can be changed is not
-              evidence of anything.
-            </p>
+            <p className="mb-2 text-xs text-[var(--muted)]">{t("appeals.firstCounts")}</p>
             <button type="submit" disabled={acking} className={buttonClass}>
-              {acking ? "Recording…" : "Acknowledge"}
+              {acking ? t("assessing.recording") : t("appeals.acknowledgeButton")}
             </button>
           </form>
         )}
@@ -126,17 +124,17 @@ export function Work({
       {/* 2. Work it */}
       {!closed ? (
         <section className="border-b border-[var(--border)] pb-4">
-          <h3 className="text-sm font-medium">The meeting and the moderator</h3>
+          <h3 className="text-sm font-medium">{t("appeals.meeting")}</h3>
           <p className="mt-1 text-xs text-[var(--muted)]">
             {appeal.ground === "result"
-              ? "A result appeal goes to the internal moderator before it can be resolved. That is the step an external verifier asks about."
-              : "A conduct appeal is not something re-marking settles, so no moderator is required."}
+              ? t("appeals.resultNeedsModerator")
+              : t("appeals.conductNoModerator")}
           </p>
 
           <form action={progressAction} className="mt-3 flex flex-wrap gap-2">
             <input type="hidden" name="appealId" value={appeal.id} />
             <label className="text-sm">
-              <span className="mr-2 text-[var(--muted)]">Met the learner</span>
+              <span className="mr-2 text-[var(--muted)]">{t("appeals.met")}</span>
               <input
                 type="date"
                 name="metLearnerOn"
@@ -147,13 +145,13 @@ export function Work({
 
             {appeal.ground === "result" ? (
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Moderator</span>
+                <span className="mr-2 text-[var(--muted)]">{t("appeals.moderator")}</span>
                 <select
                   name="moderatorId"
                   defaultValue={appeal.moderatorId ?? ""}
                   className={inputClass}
                 >
-                  <option value="">Not yet consulted</option>
+                  <option value="">{t("appeals.notConsulted")}</option>
                   {moderators.map((person) => (
                     <option key={person.id} value={person.id}>
                       {person.name}
@@ -164,7 +162,7 @@ export function Work({
             ) : null}
 
             <button type="submit" disabled={progressing} className={buttonClass}>
-              {progressing ? "Saving…" : "Save"}
+              {progressing ? t("common.saving") : t("common.save")}
             </button>
           </form>
         </section>
@@ -172,12 +170,14 @@ export function Work({
 
       {/* 3. Resolve */}
       <section className="border-b border-[var(--border)] pb-4">
-        <h3 className="text-sm font-medium">Outcome</h3>
+        <h3 className="text-sm font-medium">{t("appeals.outcome")}</h3>
         {appeal.status === "resolved" ? (
           <div className="mt-1 space-y-2 text-sm">
             <p>
-              <span className="font-medium capitalize">
-                {appeal.outcome?.replace(/_/g, " ")}
+              <span className="font-medium">
+                {appeal.outcome
+                  ? maybe(t, `appeals.outcome.${appeal.outcome}`) ?? appeal.outcome.replace(/_/g, " ")
+                  : ""}
               </span>{" "}
               <span className="text-[var(--muted)]">
                 <ZonedTime at={appeal.resolvedAt} zone={zone} withDate />
@@ -187,48 +187,44 @@ export function Work({
 
             {appeal.learnerInformedAt ? (
               <p className="text-[var(--muted)]">
-                Learner told{" "}
-                <ZonedTime at={appeal.learnerInformedAt} zone={zone} withDate />.
+                <Rich
+                  text={t("appeals.told")}
+                  parts={{ time: <ZonedTime at={appeal.learnerInformedAt} zone={zone} withDate /> }}
+                />
               </p>
             ) : (
               <form action={informedAction}>
                 <input type="hidden" name="appealId" value={appeal.id} />
-                <p className="mb-2 text-xs text-[var(--muted)]">
-                  A decision the learner has not been given is not feedback.
-                </p>
-                <button
-                  type="submit"
-                  disabled={informing}
-                  className={buttonClass}
-                >
-                  {informing ? "Recording…" : "The learner has been told"}
+                <p className="mb-2 text-xs text-[var(--muted)]">{t("appeals.notFeedback")}</p>
+                <button type="submit" disabled={informing} className={buttonClass}>
+                  {informing ? t("assessing.recording") : t("appeals.hasBeenTold")}
                 </button>
               </form>
             )}
           </div>
         ) : appeal.status === "withdrawn" ? (
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Withdrawn: {appeal.withdrawnReason}
+            {t("appeals.withdrawnBecause", { reason: appeal.withdrawnReason ?? "" })}
           </p>
         ) : (
           <form action={resolveAction} className="mt-2 space-y-2">
             <input type="hidden" name="appealId" value={appeal.id} />
             <select name="outcome" className={inputClass} defaultValue="">
               <option value="" disabled>
-                Choose an outcome
+                {t("appeals.chooseOutcome")}
               </option>
-              <option value="upheld">Upheld</option>
-              <option value="partially_upheld">Partially upheld</option>
-              <option value="dismissed">Dismissed</option>
+              <option value="upheld">{t("appeals.outcome.upheld")}</option>
+              <option value="partially_upheld">{t("appeals.outcome.partially_upheld")}</option>
+              <option value="dismissed">{t("appeals.outcome.dismissed")}</option>
             </select>
             <textarea
               name="outcomeReason"
               rows={3}
-              placeholder="Why. This is the part the learner is entitled to."
+              placeholder={t("appeals.whyHint")}
               className={`${inputClass} block w-full`}
             />
             <button type="submit" disabled={resolving} className={buttonClass}>
-              {resolving ? "Resolving…" : "Resolve"}
+              {resolving ? t("appeals.resolving") : t("appeals.resolve")}
             </button>
           </form>
         )}
@@ -236,12 +232,8 @@ export function Work({
 
       {/* Notes */}
       <section>
-        <h3 className="text-sm font-medium">Notes</h3>
-        <p className="mt-1 text-xs text-[var(--muted)]">
-          The discussion between coordinator, assessor and moderator. Not shown
-          to the learner unless you say so — what they are entitled to is the
-          outcome and the reasoning above.
-        </p>
+        <h3 className="text-sm font-medium">{t("appeals.notes")}</h3>
+        <p className="mt-1 text-xs text-[var(--muted)]">{t("appeals.notesIntro")}</p>
 
         {notes.length > 0 ? (
           <ul className="mt-3 space-y-3 text-sm">
@@ -249,13 +241,8 @@ export function Work({
               <li key={note.id}>
                 <span className="text-xs text-[var(--muted)]">
                   {note.authorName} ·{" "}
-                  <ZonedTime
-                    at={note.createdAt}
-                    zone={zone}
-                    withDate
-                    showViewer={false}
-                  />
-                  {note.visibleToLearner ? " · visible to the learner" : ""}
+                  <ZonedTime at={note.createdAt} zone={zone} withDate showViewer={false} />
+                  {note.visibleToLearner ? t("appeals.visible") : ""}
                 </span>
                 <p className="whitespace-pre-wrap">{note.note}</p>
               </li>
@@ -268,15 +255,15 @@ export function Work({
           <textarea
             name="note"
             rows={2}
-            placeholder="What was discussed, and with whom"
+            placeholder={t("appeals.noteHint")}
             className={`${inputClass} block w-full`}
           />
           <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
             <input type="checkbox" name="visibleToLearner" />
-            The learner may read this
+            {t("appeals.learnerMayRead")}
           </label>
           <button type="submit" disabled={noting} className={buttonClass}>
-            {noting ? "Saving…" : "Add a note"}
+            {noting ? t("common.saving") : t("appeals.addNote")}
           </button>
         </form>
       </section>
@@ -287,17 +274,14 @@ export function Work({
             <input type="hidden" name="appealId" value={appeal.id} />
             <input
               name="reason"
-              placeholder="Why it is being withdrawn"
+              placeholder={t("appeals.withdrawWhy")}
               className={`${inputClass} flex-1 min-w-48`}
             />
             <button type="submit" disabled={withdrawing} className={buttonClass}>
-              {withdrawing ? "Withdrawing…" : "Withdraw"}
+              {withdrawing ? t("appeals.withdrawing") : t("appeals.withdraw")}
             </button>
           </form>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            A withdrawal needs a reason. One with none looks like pressure, and
-            that is exactly what an appeal about conduct would be about.
-          </p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{t("appeals.withdrawNeedsReason")}</p>
         </section>
       ) : null}
     </div>

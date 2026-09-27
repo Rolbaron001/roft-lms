@@ -9,6 +9,7 @@ import {
   type SectionState,
 } from "./actions";
 import type { MarkedItem, MarkedPaper, RubricView } from "@/lib/marking";
+import { useT } from "@/components/i18n";
 
 /**
  * Marking a paper question by question.
@@ -29,6 +30,7 @@ export function MarkForm({
   rubrics: Record<string, RubricView>;
   criteria: { id: string; code: string; description: string }[];
 }) {
+  const t = useT();
   const [state, mark, marking] = useActionState<MarkState, FormData>(
     markItemAction,
     {},
@@ -62,27 +64,26 @@ export function MarkForm({
     },
   ].filter((group) => group.items.length > 0);
 
+  const toMark = paper.items.filter((item) => item.awarded === null).length;
+
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-base font-semibold">{paper.assessmentTitle}</h2>
           <span className="text-sm tabular-nums">
-            {paper.marksAwarded} of {paper.marksAvailable} marks
+            {t("marking.total", { awarded: paper.marksAwarded, available: paper.marksAvailable })}
             <span className="ml-2 text-[var(--muted)]">
-              ({Math.round(paper.percentage)}%, pass {paper.passMark}%)
+              {t("marking.percent", { percent: Math.round(paper.percentage), pass: paper.passMark })}
             </span>
           </span>
         </div>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          {paper.purpose === "summative"
-            ? "This is assessed. Once every question is marked, record a decision — the criteria it evidences are proposed for you to confirm."
-            : "This is a workbook. It is developmental: mark it, then return feedback. Nothing here records competence or moves the learner towards eligibility."}
+          {paper.purpose === "summative" ? t("marking.summative") : t("marking.formative")}
         </p>
         {!paper.fullyMarked ? (
           <p className="mt-2 text-sm">
-            {paper.items.filter((item) => item.awarded === null).length}{" "}
-            questions still to mark.
+            {toMark === 1 ? t("marking.toMarkOne") : t("marking.toMarkMany", { count: toMark })}
           </p>
         ) : null}
       </section>
@@ -159,6 +160,7 @@ function Question({
   marking: boolean;
   justMarked: boolean;
 }) {
+  const t = useT();
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -170,16 +172,18 @@ function Question({
         </h3>
         <span className="text-xs text-[var(--muted)]">
           {item.awarded === null
-            ? `${item.points} marks · not marked`
-            : `${item.awarded} of ${item.points}`}
-          {justMarked ? " · saved" : ""}
+            ? item.points === 1
+              ? t("marking.notMarkedOne")
+              : t("marking.notMarked", { points: item.points })
+            : t("marking.awarded", { awarded: item.awarded, points: item.points })}
+          {justMarked ? t("marking.saved") : ""}
         </span>
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            The answer
+            {t("marking.answer")}
           </p>
           {item.options ? (
             <ul className="mt-2 space-y-1 text-sm">
@@ -201,7 +205,7 @@ function Question({
                   >
                     {chosen ? "● " : "○ "}
                     {option.text}
-                    {correct ? " — correct" : ""}
+                    {correct ? ` ${t("marking.isCorrect")}` : ""}
                   </li>
                 );
               })}
@@ -211,16 +215,14 @@ function Question({
               {item.answerText}
             </p>
           ) : (
-            <p className="mt-2 text-sm italic text-[var(--muted)]">
-              Left blank.
-            </p>
+            <p className="mt-2 text-sm italic text-[var(--muted)]">{t("marking.blank")}</p>
           )}
         </div>
 
         {item.markingGuide ? (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Marking guidance
+              {t("marking.guidance")}
             </p>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted)]">
               {item.markingGuide}
@@ -236,7 +238,7 @@ function Question({
         {rubric ? (
           <div className="mb-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Marking matrix — choosing a level for each gives the mark
+              {t("marking.matrix")}
             </p>
             {rubric.dimensions.map((dimension) => (
               <label key={dimension.id} className="block text-sm">
@@ -246,12 +248,12 @@ function Question({
                   defaultValue={item.chosenLevels?.[dimension.id] ?? ""}
                   className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 >
-                  <option value="">Not yet judged</option>
+                  <option value="">{t("marking.notJudged")}</option>
                   {rubric.levels.map((level) => (
                     <option key={level.id} value={level.id}>
                       {level.label} ({level.minPercent}–{level.maxPercent}%)
                       {rubric.descriptors[`${dimension.id}:${level.id}`]
-                        ? ` — ${rubric.descriptors[`${dimension.id}:${level.id}`].slice(0, 90)}`
+                        ? `: ${rubric.descriptors[`${dimension.id}:${level.id}`].slice(0, 90)}`
                         : ""}
                     </option>
                   ))}
@@ -264,7 +266,7 @@ function Question({
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block font-medium">
-              Marks {rubric ? "(overrides the matrix)" : ""}
+              {t("marking.marks")} {rubric ? t("marking.overrides") : ""}
             </span>
             <input
               type="number"
@@ -278,13 +280,11 @@ function Question({
           </label>
 
           <label className="min-w-64 flex-1 text-sm">
-            <span className="mb-1 block font-medium">
-              What the learner is told
-            </span>
+            <span className="mb-1 block font-medium">{t("marking.told")}</span>
             <input
               name="comment"
               defaultValue={item.comment ?? ""}
-              placeholder="Where it was strong, and what was missing."
+              placeholder={t("marking.toldHint")}
               className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
           </label>
@@ -294,7 +294,7 @@ function Question({
             disabled={marking}
             className="rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--brand-accent)]/10 disabled:opacity-60"
           >
-            {marking ? "Saving…" : "Save this mark"}
+            {marking ? t("common.saving") : t("marking.saveMark")}
           </button>
         </div>
       </form>
@@ -311,6 +311,7 @@ function FeedbackPanel({
   criteria: { id: string; code: string; description: string }[];
   fullyMarked: boolean;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<MarkState, FormData>(
     returnFeedbackAction,
     {},
@@ -318,11 +319,8 @@ function FeedbackPanel({
 
   return (
     <section className="rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 p-5">
-      <h2 className="text-base font-semibold">Return this workbook</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Feedback, not a decision. It tells the learner what to go back to before
-        the summative, and it records no competence against any criterion.
-      </p>
+      <h2 className="text-base font-semibold">{t("marking.return")}</h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">{t("marking.returnIntro")}</p>
 
       {state.error ? (
         <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
@@ -334,21 +332,19 @@ function FeedbackPanel({
         <input type="hidden" name="submissionId" value={submissionId} />
 
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">Comments</span>
+          <span className="mb-1 block font-medium">{t("common.comments")}</span>
           <textarea
             name="comments"
             rows={4}
             required
-            placeholder="What was solid, and what to re-read before the summative."
+            placeholder={t("marking.returnHint")}
             className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
         </label>
 
         {criteria.length > 0 ? (
           <fieldset className="text-sm">
-            <legend className="mb-1 font-medium">
-              Criteria the weak answers cluster around
-            </legend>
+            <legend className="mb-1 font-medium">{t("marking.concern")}</legend>
             <div className="space-y-1">
               {criteria.map((criterion) => (
                 <label key={criterion.id} className="flex items-start gap-2">
@@ -374,12 +370,10 @@ function FeedbackPanel({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Returning…" : "Return to the learner"}
+          {pending ? t("marking.returning") : t("marking.returnButton")}
         </button>
         {!fullyMarked ? (
-          <span className="ml-3 text-xs text-[var(--muted)]">
-            Mark every question first.
-          </span>
+          <span className="ml-3 text-xs text-[var(--muted)]">{t("marking.markEveryFirst")}</span>
         ) : null}
       </form>
     </section>
@@ -400,6 +394,7 @@ function SectionComment({
   submissionId: string;
   section: { id: string; title: string; comment: string | null };
 }) {
+  const t = useT();
   const [state, save, saving] = useActionState<SectionState, FormData>(
     commentOnSectionAction,
     {},
@@ -415,13 +410,13 @@ function SectionComment({
 
       <label className="block space-y-1.5">
         <span className="block text-sm font-medium">
-          Your comment on {section.title}
+          {t("marking.sectionComment", { section: section.title })}
         </span>
         <textarea
           name="comments"
           rows={3}
           defaultValue={section.comment ?? ""}
-          placeholder="What went well here, and what to do differently next time."
+          placeholder={t("marking.sectionHint")}
           className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30"
         />
       </label>
@@ -432,7 +427,11 @@ function SectionComment({
           disabled={saving}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium disabled:opacity-60"
         >
-          {saving ? "Saving…" : section.comment ? "Update comment" : "Save comment"}
+          {saving
+            ? t("common.saving")
+            : section.comment
+              ? t("marking.updateComment")
+              : t("marking.saveComment")}
         </button>
 
         {state.error ? (
@@ -441,12 +440,10 @@ function SectionComment({
           </span>
         ) : null}
         {state.saved === section.id ? (
-          <span className="text-sm text-[var(--success)]">Saved.</span>
+          <span className="text-sm text-[var(--success)]">{t("common.saved")}</span>
         ) : null}
         {!state.error && !state.saved && section.comment ? (
-          <span className="text-xs text-[var(--muted)]">
-            The learner sees this with their feedback.
-          </span>
+          <span className="text-xs text-[var(--muted)]">{t("marking.learnerSees")}</span>
         ) : null}
       </div>
     </form>

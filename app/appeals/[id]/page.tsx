@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n/maybe";
+import { Rich } from "@/components/rich-text";
 import { AppealError, appealDetail } from "@/lib/appeals";
 import { withTenant } from "@/db/client";
 import { userRoles, users } from "@/db/schema";
@@ -9,11 +11,6 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { ZonedTime } from "@/components/zoned-time";
 import { Work } from "./work";
-
-const GROUND_LABEL: Record<string, string> = {
-  result: "Against a result",
-  assessor_conduct: "Against an assessor's conduct",
-};
 
 export default async function AppealPage({
   params,
@@ -23,6 +20,7 @@ export default async function AppealPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("appeal:manage");
+  const t = await pageT();
 
   let detail;
   try {
@@ -61,43 +59,42 @@ export default async function AppealPage({
         href="/appeals"
         className="text-sm text-[var(--muted)] hover:underline"
       >
-        ← Back to appeals
+        {t("appeals.back")}
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold">{appeal.learnerName}</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {appeal.cohortName} · {GROUND_LABEL[appeal.ground]}
+        {appeal.cohortName} · {maybe(t, `appeals.ground.${appeal.ground}`) ?? appeal.ground}
         {appeal.assessmentTitle ? ` · ${appeal.assessmentTitle}` : ""}
       </p>
 
       <div className="mt-6">
         <Card
-          title="What the learner says"
-          description={`Triggered ${appeal.triggeredOn}, lodged ${appeal.lodgedOn}.`}
+          title={t("appeals.says")}
+          description={t("appeals.dates", { triggered: appeal.triggeredOn, lodged: appeal.lodgedOn })}
         >
           <p className="whitespace-pre-wrap text-sm">{appeal.statement}</p>
 
           {appeal.lateAcceptanceReason ? (
             <div className="mt-4 rounded-md border border-[var(--border)] p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                Accepted out of time
+                {t("appeals.acceptedLate")}
               </p>
               <p className="mt-1 text-sm">{appeal.lateAcceptanceReason}</p>
             </div>
           ) : null}
 
           <p className="mt-4 text-xs text-[var(--muted)]">
-            Lodged{" "}
-            <ZonedTime at={appeal.lodgedAt} zone={tenant.timezone} withDate />.
+            <Rich
+              text={t("appeals.lodgedAt")}
+              parts={{ time: <ZonedTime at={appeal.lodgedAt} zone={tenant.timezone} withDate /> }}
+            />
           </p>
         </Card>
       </div>
 
       <div className="mt-6">
-        <Card
-          title="The procedure"
-          description="Acknowledge, meet the learner, consult the moderator where the ground is a result, then resolve and tell them."
-        >
+        <Card title={t("appeals.procedure")} description={t("appeals.procedureIntro")}>
           <Work
             appeal={{
               id: appeal.id,

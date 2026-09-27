@@ -44,7 +44,10 @@ describe("putting a phrase into a language", () => {
     for (const phrase of [...Object.values(en), ...Object.values(af)]) {
       expect(phrase).not.toMatch(/—/);
     }
-    expect(Object.keys(catalogueFor("af")).length).toBe(Object.keys(en).length);
+    // Only a language's own phrases go to the browser; it has the English.
+    expect(catalogueFor("en")).toEqual({});
+    expect(catalogueFor("af")["shell.signOut"]).toBe("Teken uit");
+    expect(Object.keys(catalogueFor("af")).length).toBeLessThanOrEqual(Object.keys(en).length);
   });
 
   it("keeps every value marker of the English in the Afrikaans", () => {
@@ -89,8 +92,11 @@ describe("stage 2: the rest of what a learner sees", () => {
   ];
   const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
-  it("has an Afrikaans draft of every phrase moved into the catalogue so far", () => {
-    const missing = Object.keys(en).filter((key) => !(key in af));
+  it("has an Afrikaans draft of every phrase on a learner's screens", () => {
+    // Staff screens (stage 4) go through the numbered translation document,
+    // Afrikaans included, rather than a hand-written draft (Roland, 27 September).
+    const learner = /^(shell|nav|term|login|account|language|learn|role|status|home|assess|evidence|paper|notify|cert|work|scorm)\./;
+    const missing = Object.keys(en).filter((key) => learner.test(key) && !(key in af));
     expect(missing).toEqual([]);
   });
 

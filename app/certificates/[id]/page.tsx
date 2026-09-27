@@ -102,8 +102,8 @@ export default async function CertificatePage({
             action={withdrawCertificateAction}
             idName="certificateId"
             idValue={certificate.id}
-            what="this certificate"
-            consequence="The learner may have given the reference to an employer. It keeps resolving and will say it was withdrawn."
+            what={t("certAdmin.withdrawWhat")}
+            consequence={t("certAdmin.withdrawConsequence")}
           />
         ) : null}
         <PrintButton label={t("cert.print")} />

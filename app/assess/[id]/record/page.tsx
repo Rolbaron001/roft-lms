@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import { portfolioRecord } from "@/lib/moderation-pack";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
 
 /**
@@ -21,6 +22,8 @@ export default async function PortfolioRecordPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, dates } = await pageLocale();
+  const long = (date: Date) => date.toLocaleDateString(dates, { dateStyle: "long" });
 
   let record;
   try {
@@ -33,47 +36,45 @@ export default async function PortfolioRecordPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6 print:hidden">
         <Link href="/assess" className="text-sm text-[var(--muted)] hover:underline">
-          ← Back
+          {t("common.back")}
         </Link>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Print this page to keep it as a PDF for the portfolio of evidence.
-        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{t("record.print")}</p>
       </div>
 
       <article className="space-y-6 text-sm">
         <header className="border-b border-[var(--border)] pb-4">
           <h1 className="text-xl font-semibold">{record.assessmentTitle}</h1>
           <p className="mt-1 text-[var(--muted)]">
-            {record.learner} · attempt {record.attemptNumber} ·{" "}
-            {record.purpose === "summative" ? "assessed" : "developmental"}
+            {record.learner} · {t("common.attempt", { number: record.attemptNumber })} ·{" "}
+            {record.purpose === "summative" ? t("record.assessed") : t("record.developmental")}
             {record.submittedAt
-              ? ` · handed in ${record.submittedAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}`
+              ? ` · ${t("record.handedIn", { date: long(record.submittedAt) })}`
               : ""}
           </p>
           <p className="mt-2 font-medium tabular-nums">
-            {record.marksAwarded} of {record.marksAvailable} marks
+            {t("common.marksOf", { awarded: record.marksAwarded, available: record.marksAvailable })}
           </p>
         </header>
 
         {record.declarationText ? (
           <section>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Declaration
+              {t("common.declaration")}
             </h2>
             <p className="mt-1 leading-relaxed">{record.declarationText}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">
               {record.declarationAcceptedAt
-                ? `Accepted ${record.declarationAcceptedAt.toLocaleString("en-ZA")}.`
+                ? t("record.accepted", { date: record.declarationAcceptedAt.toLocaleString(dates) })
                 : record.closedOnTime
-                  ? "Not accepted: the time limit expired and the work was handed in as it stood."
-                  : "Not accepted."}
+                  ? t("record.timeExpired")
+                  : t("record.notAccepted")}
             </p>
           </section>
         ) : null}
 
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Questions and answers
+            {t("record.questions")}
           </h2>
           <ol className="mt-3 space-y-5">
             {record.items.map((item, index) => (
@@ -84,7 +85,7 @@ export default async function PortfolioRecordPage({
                   </span>
                   {item.stem}
                   <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                    {item.awarded ?? "—"} of {item.points}
+                    {t("record.itemMarks", { awarded: item.awarded ?? "—", points: item.points })}
                   </span>
                 </p>
                 <p className="mt-1 whitespace-pre-wrap pl-6 leading-relaxed">
@@ -92,7 +93,7 @@ export default async function PortfolioRecordPage({
                 </p>
                 {item.comment ? (
                   <p className="mt-1 pl-6 text-xs italic text-[var(--muted)]">
-                    Assessor: {item.comment}
+                    {t("record.assessor", { comment: item.comment })}
                   </p>
                 ) : null}
               </li>
@@ -103,12 +104,12 @@ export default async function PortfolioRecordPage({
         {record.decision ? (
           <section className="border-t border-[var(--border)] pt-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Decision
+              {t("record.decision")}
             </h2>
             <p className="mt-1 font-medium">
               {record.decision.outcome === "competent"
-                ? "Competent"
-                : "Not yet competent"}
+                ? t("common.competent")
+                : t("common.notYetCompetent")}
             </p>
             {record.decision.comments ? (
               <p className="mt-1">{record.decision.comments}</p>
@@ -118,7 +119,7 @@ export default async function PortfolioRecordPage({
               {record.decision.registrationNumber
                 ? ` (${record.decision.registrationNumber})`
                 : ""}{" "}
-              · {record.decision.signedAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}
+              · {long(record.decision.signedAt)}
             </p>
           </section>
         ) : null}
@@ -126,10 +127,13 @@ export default async function PortfolioRecordPage({
         {record.moderation ? (
           <section>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Moderation
+              {t("record.moderation")}
             </h2>
             <p className="mt-1">
-              {record.moderation.outcome} — {record.moderation.moderator}
+              {t("record.moderatedBy", {
+                outcome: maybe(t, `moderation.${record.moderation.outcome}`) ?? record.moderation.outcome,
+                moderator: record.moderation.moderator,
+              })}
             </p>
             {record.moderation.comments ? (
               <p className="mt-1 text-[var(--muted)]">
@@ -142,15 +146,11 @@ export default async function PortfolioRecordPage({
         {record.feedback ? (
           <section className="border-t border-[var(--border)] pt-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Feedback
+              {t("record.feedback")}
             </h2>
             <p className="mt-1 whitespace-pre-wrap">{record.feedback.comments}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">
-              Returned{" "}
-              {record.feedback.returnedAt.toLocaleDateString("en-ZA", {
-                dateStyle: "long",
-              })}
-              . This is developmental: it records no competence.
+              {t("record.returned", { date: long(record.feedback.returnedAt) })}
             </p>
           </section>
         ) : null}

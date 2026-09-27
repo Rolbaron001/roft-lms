@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { inArray } from "drizzle-orm";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { withTenant } from "@/db/client";
 import { assessmentCriteria } from "@/db/schema";
 import {
@@ -29,6 +29,7 @@ export default async function MarkPaperPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:assess");
+  const t = await pageT();
 
   let paper;
   try {
@@ -72,24 +73,18 @@ export default async function MarkPaperPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link href="/assess" className="text-sm text-[var(--muted)] hover:underline">
-          ← Waiting to be assessed
+          {t("assessing.back")}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Marking</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t("marking.title")}</h1>
       </div>
 
       <MarkForm paper={paper} rubrics={rubrics} criteria={criteria} />
 
       {paper.purpose === "summative" ? (
         <div className="mt-6">
-          <Card
-            title="What these marks imply"
-            description="Arithmetic, not a judgement. The marks average out at this; practical performance and workplace evidence do not reach the platform, and you weigh those before deciding. Change any of these on the decision screen and say why — the reason is stored beside the proposal so a moderator can see where the two parted."
-          >
+          <Card title={t("marking.implies")} description={t("marking.impliesIntro")}>
             {!paper.fullyMarked ? (
-              <p className="text-sm text-[var(--muted)]">
-                Every question has to be marked before the criteria can be
-                worked out.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("marking.markAllFirst")}</p>
             ) : (
               <>
                 <ul className="space-y-2">
@@ -107,15 +102,15 @@ export default async function MarkPaperPage({
                             : "text-[var(--danger)]"
                         }`}
                       >
-                        {proposal.outcome === "competent"
-                          ? "competent"
-                          : "not yet competent"}
+                        {t(`outcome.${proposal.outcome}`)}
                       </span>
                       <span className="mt-1 block text-xs text-[var(--muted)]">
-                        {Math.round(proposal.percentage)}% across{" "}
-                        {proposal.evidence
-                          .map((e) => `${e.awarded}/${e.points}`)
-                          .join(" and ")}
+                        {t("marking.across", {
+                          percent: Math.round(proposal.percentage),
+                          marks: proposal.evidence
+                            .map((e) => `${e.awarded}/${e.points}`)
+                            .join(t("marking.and")),
+                        })}
                       </span>
                     </li>
                   ))}
@@ -126,7 +121,7 @@ export default async function MarkPaperPage({
                   className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-semibold text-white"
                   style={{ background: "var(--brand-primary)" }}
                 >
-                  Record the decision
+                  {t("marking.record")}
                 </Link>
               </>
             )}

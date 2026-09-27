@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { moderateJudgementAction, type RecognitionState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -15,6 +16,7 @@ const inputClass =
  * apart.
  */
 export function ModerateJudgement({ judgementId }: { judgementId: string }) {
+  const t = useT();
   const [state, action, saving] = useActionState<RecognitionState, FormData>(
     moderateJudgementAction,
     {},
@@ -26,14 +28,12 @@ export function ModerateJudgement({ judgementId }: { judgementId: string }) {
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="agreed" defaultChecked />
-        I agree with this judgement
+        {t("rpl.agree")}
       </label>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="min-w-[16rem] flex-1 text-sm">
-          <span className="text-[var(--muted)]">
-            What you checked, and what you concluded
-          </span>
+          <span className="text-[var(--muted)]">{t("rpl.checked")}</span>
           <textarea
             name="comment"
             required
@@ -43,13 +43,8 @@ export function ModerateJudgement({ judgementId }: { judgementId: string }) {
         </label>
 
         <label className="text-sm">
-          <span className="text-[var(--muted)]">Granted on</span>
-          <input
-            type="date"
-            name="grantedOn"
-            required
-            className={`${inputClass} mt-1 block`}
-          />
+          <span className="text-[var(--muted)]">{t("rpl.grantedOn")}</span>
+          <input type="date" name="grantedOn" required className={`${inputClass} mt-1 block`} />
         </label>
 
         <button
@@ -57,16 +52,12 @@ export function ModerateJudgement({ judgementId }: { judgementId: string }) {
           disabled={saving}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Recording…" : "Record"}
+          {saving ? t("assessing.recording") : t("rpl.record")}
         </button>
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.notice ? (
-        <p className="text-sm text-[var(--muted)]">{state.notice}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.notice ? <p className="text-sm text-[var(--muted)]">{state.notice}</p> : null}
     </form>
   );
 }

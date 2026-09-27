@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { recordDecisionAction, type DecisionState } from "../actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -26,6 +27,7 @@ function CriterionJudgement({
     percentage: number | null;
   };
 }) {
+  const t = useT();
   const [outcome, setOutcome] = useState<Outcome>(criterion.proposed ?? "competent");
   const departs = criterion.proposed !== null && outcome !== criterion.proposed;
 
@@ -39,9 +41,10 @@ function CriterionJudgement({
         <>
           <input type="hidden" name={`proposed:${criterion.id}`} value={criterion.proposed} />
           <p className="text-xs text-[var(--muted)]">
-            The marks propose{" "}
-            {criterion.proposed === "competent" ? "competent" : "not yet competent"}
-            {criterion.percentage !== null ? ` (${Math.round(criterion.percentage)}%)` : ""}.
+            {t("assessing.proposes", {
+              outcome: t(`outcome.${criterion.proposed}`),
+              percent: criterion.percentage !== null ? ` (${Math.round(criterion.percentage)}%)` : "",
+            })}
           </p>
         </>
       ) : null}
@@ -50,18 +53,18 @@ function CriterionJudgement({
         value={outcome}
         onChange={(event) => setOutcome(event.target.value as Outcome)}
         className={inputClass}
-        aria-label={`Outcome for ${criterion.code}`}
+        aria-label={t("assessing.outcomeFor", { code: criterion.code })}
       >
-        <option value="competent">Competent</option>
-        <option value="not_yet_competent">Not yet competent</option>
+        <option value="competent">{t("common.competent")}</option>
+        <option value="not_yet_competent">{t("common.notYetCompetent")}</option>
       </select>
       {departs ? (
         <textarea
           name={`note:${criterion.id}`}
           required
           rows={2}
-          placeholder="Why, since it differs from what the marks propose"
-          aria-label={`Why ${criterion.code} differs from the proposal`}
+          placeholder={t("assessing.whyDiffers")}
+          aria-label={t("assessing.whyDiffersLabel", { code: criterion.code })}
           className={inputClass}
         />
       ) : null}
@@ -82,6 +85,7 @@ export function DecisionForm({
     percentage: number | null;
   }[];
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<DecisionState, FormData>(
     recordDecisionAction,
     {},
@@ -90,7 +94,7 @@ export function DecisionForm({
   return (
     <aside className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        Your judgement
+        {t("assessing.judgement")}
       </h2>
 
       <form action={action} className="mt-4 space-y-4">
@@ -98,9 +102,7 @@ export function DecisionForm({
 
         {criteria.length > 0 ? (
           <fieldset className="space-y-3">
-            <legend className="text-sm font-medium">
-              Against each criterion
-            </legend>
+            <legend className="text-sm font-medium">{t("assessing.perCriterion")}</legend>
             {criteria.map((criterion) => (
               <CriterionJudgement key={criterion.id} criterion={criterion} />
             ))}
@@ -108,19 +110,17 @@ export function DecisionForm({
         ) : null}
 
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Overall outcome</span>
+          <span className="block text-sm font-medium">{t("assessing.overall")}</span>
           <select name="outcome" defaultValue="competent" className={inputClass}>
-            <option value="competent">Competent</option>
-            <option value="not_yet_competent">Not yet competent</option>
+            <option value="competent">{t("common.competent")}</option>
+            <option value="not_yet_competent">{t("common.notYetCompetent")}</option>
           </select>
         </label>
 
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">
-            Comments{" "}
-            <span className="font-normal text-[var(--muted)]">
-              (kept with the record)
-            </span>
+            {t("assessing.comments")}{" "}
+            <span className="font-normal text-[var(--muted)]">{t("assessing.keptWithRecord")}</span>
           </span>
           <textarea name="comments" rows={4} className={inputClass} />
         </label>
@@ -140,13 +140,10 @@ export function DecisionForm({
           className="w-full rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Recording…" : "Sign and record decision"}
+          {pending ? t("assessing.recording") : t("assessing.sign")}
         </button>
 
-        <p className="text-xs text-[var(--muted)]">
-          Your name, the date and this comment are stored permanently and cannot
-          be edited afterwards. A correction is recorded as a new decision.
-        </p>
+        <p className="text-xs text-[var(--muted)]">{t("assessing.permanent")}</p>
       </form>
     </aside>
   );

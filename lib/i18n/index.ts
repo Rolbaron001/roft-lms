@@ -53,7 +53,14 @@ export function translator(locale: string | null | undefined): Translate {
   };
 }
 
-/** A catalogue for sending to the browser: the language's phrases, with English under them. */
+/**
+ * A catalogue for sending to the browser: only the language's own phrases.
+ * The browser already holds the English (`components/i18n.tsx`) and falls
+ * back to it phrase by phrase, so English is never sent with every page: at
+ * stage 4, with every staff screen in the catalogue, that would have been the
+ * whole catalogue again on each page a phone opens.
+ */
 export function catalogueFor(locale: string | null | undefined): Record<string, string> {
-  return { ...en, ...(CATALOGUES[isLocale(locale) ? locale : DEFAULT_LOCALE] ?? {}) };
+  if (!isLocale(locale) || locale === DEFAULT_LOCALE) return {};
+  return { ...(CATALOGUES[locale] ?? {}) } as Record<string, string>;
 }

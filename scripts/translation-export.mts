@@ -23,7 +23,11 @@ import { assignRefs, buildPhraseDocument, type Translation } from "../lib/i18n/p
 const REFS = join("lib", "i18n", "refs.json");
 const TRANSLATED = join("lib", "i18n", "translated.json");
 
-const target = process.argv[2];
+// --refs-only numbers new phrases and writes no document: for when phrases are
+// added while translating waits (Roland, 27 September: not until every screen
+// is done).
+const refsOnly = process.argv.includes("--refs-only");
+const target = process.argv.slice(2).find((arg) => !arg.startsWith("--"));
 if (target && (!isLocale(target) || target === "en")) {
   console.error(`"${target}" is not one of the platform's languages. Use one of: ${LOCALES.filter((l) => l.code !== "en").map((l) => l.code).join(", ")}.`);
   process.exit(1);
@@ -33,6 +37,10 @@ const before = JSON.parse(readFileSync(REFS, "utf8")) as Record<string, number>;
 const refs = assignRefs(before, Object.keys(en));
 const added = Object.keys(refs).length - Object.keys(before).length;
 if (added > 0) writeFileSync(REFS, `${JSON.stringify(refs, null, 2)}\n`);
+if (refsOnly) {
+  console.log(`${added} new reference number${added === 1 ? "" : "s"} given in ${REFS}. No document written.`);
+  process.exit(0);
+}
 
 const translated = JSON.parse(readFileSync(TRANSLATED, "utf8")) as Record<string, Record<string, Translation>>;
 const english = en as Record<string, string>;

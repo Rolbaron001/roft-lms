@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n/maybe";
+import { Rich } from "@/components/rich-text";
 import {
   AssessmentError,
   criteriaToJudge,
@@ -18,6 +20,7 @@ export default async function AssessSubmissionPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:assess");
+  const { t, dates } = await pageLocale();
 
   let detail;
   let criteria;
@@ -54,39 +57,40 @@ export default async function AssessSubmissionPage({
           href="/assess"
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← Waiting to be assessed
+          {t("assessing.back")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">
           {detail.learner.firstName} {detail.learner.lastName}
         </h1>
         {isPaper ? (
           <p className="mt-3 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">
-            This was answered on screen.{" "}
-            <Link
-              href={`/assess/${id}/mark`}
-              className="font-semibold underline underline-offset-2"
-            >
-              Mark it question by question
-            </Link>{" "}
-            — the answers, the marking guidance and the matrix are together
-            there, and the criteria are worked out for you once it is marked.
+            <Rich
+              text={t("assessing.onScreen")}
+              parts={{
+                link: (
+                  <Link
+                    href={`/assess/${id}/mark`}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    {t("assessing.markIt")}
+                  </Link>
+                ),
+              }}
+            />
           </p>
         ) : null}
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {detail.assessment.title} · attempt{" "}
-          {detail.submission.attemptNumber}
+          {detail.assessment.title} ·{" "}
+          {t("common.attempt", { number: detail.submission.attemptNumber })}
           {detail.submission.maxScore
-            ? ` · scored ${detail.submission.autoScore} of ${detail.submission.maxScore}`
+            ? ` · ${t("common.scoredOf", { score: detail.submission.autoScore ?? 0, max: detail.submission.maxScore })}`
             : ""}
         </p>
       </div>
 
       {isOwnWork ? (
         <section className="rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-5">
-          <p className="text-sm text-[var(--danger)]">
-            This is your own submission. You cannot assess it — someone else
-            must.
-          </p>
+          <p className="text-sm text-[var(--danger)]">{t("assessing.ownWork")}</p>
         </section>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
@@ -94,7 +98,7 @@ export default async function AssessSubmissionPage({
             {detail.items.length > 0 ? (
               <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  What the learner answered
+                  {t("assessing.answered")}
                 </h2>
                 <ol className="mt-4 space-y-4">
                   {detail.items.map((item, index) => {
@@ -130,7 +134,7 @@ export default async function AssessSubmissionPage({
                                 }`}
                               >
                                 {chosen ? "◉" : "○"} {option.text}
-                                {isCorrect ? " (correct)" : ""}
+                                {isCorrect ? ` ${t("assessing.correct")}` : ""}
                               </li>
                             );
                           })}
@@ -145,7 +149,7 @@ export default async function AssessSubmissionPage({
             {detail.artifacts.length > 0 ? (
               <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  Evidence submitted
+                  {t("assessing.evidence")}
                 </h2>
                 <ul className="mt-4 space-y-2">
                   {detail.artifacts.map((artifact) => (
@@ -161,12 +165,14 @@ export default async function AssessSubmissionPage({
                           rel="noopener noreferrer"
                           className="text-xs font-medium text-[var(--brand-accent)] hover:underline"
                         >
-                          Open
+                          {t("common.open")}
                         </a>
                       </div>
                       <p className="mt-0.5 text-xs text-[var(--muted)]">
-                        {Math.round(artifact.sizeBytes / 1024)} KB · uploaded{" "}
-                        {artifact.uploadedAt.toLocaleString("en-ZA")}
+                        {t("assessing.uploaded", {
+                          size: Math.round(artifact.sizeBytes / 1024),
+                          date: artifact.uploadedAt.toLocaleString(dates),
+                        })}
                       </p>
 
                       {/* An image or video is shown here rather than made a
@@ -201,8 +207,7 @@ export default async function AssessSubmissionPage({
                   ))}
                 </ul>
                 <p className="mt-3 text-xs text-[var(--muted)]">
-                  The hash is recorded at upload. If a stored file is ever
-                  altered, it no longer matches and the record is flagged.
+                  {t("assessing.hash")}
                 </p>
               </section>
             ) : null}
@@ -210,16 +215,16 @@ export default async function AssessSubmissionPage({
             {detail.decisions.length > 0 ? (
               <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  Decisions already recorded
+                  {t("assessing.decisions")}
                 </h2>
                 <ul className="mt-4 space-y-2">
                   {detail.decisions.map((decision) => (
                     <li key={decision.id} className="text-sm">
-                      <span className="font-medium capitalize">
-                        {decision.outcome.replace(/_/g, " ")}
-                      </span>{" "}
-                      by {decision.assessorFirstName} {decision.assessorLastName}{" "}
-                      on {decision.signedAt.toLocaleDateString("en-ZA")}
+                      {t("assessing.decisionBy", {
+                        outcome: maybe(t, `outcome.${decision.outcome}`) ?? decision.outcome.replace(/_/g, " "),
+                        name: `${decision.assessorFirstName} ${decision.assessorLastName}`,
+                        date: decision.signedAt.toLocaleDateString(dates),
+                      })}
                       {decision.comments ? (
                         <span className="block text-[var(--muted)]">
                           {decision.comments}

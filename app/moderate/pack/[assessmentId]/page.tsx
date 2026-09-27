@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { assembleModerationPack } from "@/lib/moderation-pack";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card } from "@/components/app-shell";
 
 /**
@@ -19,6 +20,8 @@ export default async function ModerationPackPage({
   const { assessmentId } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:moderate");
+  const { t, dates } = await pageLocale();
+  const outcome = (value: string) => maybe(t, `outcome.${value}`) ?? value.replace(/_/g, " ");
 
   let pack;
   try {
@@ -31,39 +34,44 @@ export default async function ModerationPackPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6 print:hidden">
         <Link href="/moderate" className="text-sm text-[var(--muted)] hover:underline">
-          ← To moderate
+          {t("pack.back")}
         </Link>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Print this page to keep it as a PDF.
-        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{t("pack.print")}</p>
       </div>
 
       <header className="mb-6 border-b border-[var(--border)] pb-4">
         <h1 className="text-xl font-semibold">{pack.assessment.title}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {pack.provider.name} · {pack.accreditation.label} · pass mark{" "}
-          {pack.assessment.passMark}% · moderation rate{" "}
-          {Math.round(pack.assessment.moderationSampleRate * 100)}%
+          {t("pack.settings", {
+            provider: pack.provider.name,
+            accreditation: pack.accreditation.label,
+            pass: pack.assessment.passMark,
+            rate: Math.round(pack.assessment.moderationSampleRate * 100),
+          })}
         </p>
         <p className="mt-1 text-sm tabular-nums">
-          {pack.counts.submissions} submissions · {pack.counts.decided} decided ·{" "}
-          {pack.counts.moderated} moderated · {pack.counts.sampled} sampled here
+          {t("pack.counts", {
+            submissions: pack.counts.submissions,
+            decided: pack.counts.decided,
+            moderated: pack.counts.moderated,
+            sampled: pack.counts.sampled,
+          })}
         </p>
       </header>
 
       <div className="space-y-6 text-sm">
-        <Card
-          title="The instrument"
-          description="The paper as it was set, and the guidance it was marked against."
-        >
+        <Card title={t("pack.instrument")} description={t("pack.instrumentIntro")}>
           {pack.papers.map((paper) => (
             <div key={paper.code} className="mb-3">
-              <p className="font-medium">Paper {paper.code}</p>
+              <p className="font-medium">{t("pack.paper", { code: paper.code })}</p>
               <ul className="mt-1 text-[var(--muted)]">
                 {paper.sections.map((section) => (
                   <li key={section.title}>
-                    {section.title} — {section.markTotal ?? "?"} marks,{" "}
-                    {section.questions} questions
+                    {t("pack.section", {
+                      title: section.title,
+                      marks: section.markTotal ?? "?",
+                      questions: section.questions,
+                    })}
                   </li>
                 ))}
               </ul>
@@ -79,12 +87,12 @@ export default async function ModerationPackPage({
                   </span>
                   {entry.stem}
                   <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                    {entry.points} marks
+                    {t("pack.marks", { marks: entry.points })}
                   </span>
                 </p>
                 {entry.correctOption ? (
                   <p className="pl-6 text-[var(--success)]">
-                    Correct: {entry.correctOption}
+                    {t("pack.correct", { option: entry.correctOption })}
                   </p>
                 ) : null}
                 {entry.markingGuide ? (
@@ -96,8 +104,8 @@ export default async function ModerationPackPage({
         </Card>
 
         <Card
-          title={`Sampled scripts (${pack.scripts.length})`}
-          description="Taken across the mark range — top, bottom and spread between — so the marking is seen at its best and its worst rather than in the middle."
+          title={t("pack.scripts", { count: pack.scripts.length })}
+          description={t("pack.scriptsIntro")}
         >
           <ul className="space-y-2">
             {pack.scripts.map((script) => (
@@ -108,17 +116,21 @@ export default async function ModerationPackPage({
                 <span>
                   {script.learner}
                   <span className="ml-2 text-xs text-[var(--muted)]">
-                    attempt {script.attemptNumber} ·{" "}
-                    {script.marksAwarded}/{script.marksAvailable} (
-                    {Math.round(script.percentage)}%)
-                    {script.outcome ? ` · ${script.outcome}` : " · not decided"}
+                    {t("pack.script", {
+                      attempt: script.attemptNumber,
+                      awarded: script.marksAwarded,
+                      available: script.marksAvailable,
+                      percent: Math.round(script.percentage),
+                    })}
+                    {" · "}
+                    {script.outcome ? outcome(script.outcome) : t("pack.notDecided")}
                   </span>
                 </span>
                 <Link
                   href={`/assess/${script.submissionId}/record`}
                   className="text-xs underline underline-offset-2 print:hidden"
                 >
-                  Open the script
+                  {t("pack.openScript")}
                 </Link>
               </li>
             ))}
@@ -126,11 +138,11 @@ export default async function ModerationPackPage({
         </Card>
 
         <Card
-          title={`Departures and overturns (${pack.overturned.length})`}
-          description="Where an assessor differed from what the marks proposed, or a moderator differed from the assessor. A pack that leaves these out is worse than no pack."
+          title={t("pack.departures", { count: pack.overturned.length })}
+          description={t("pack.departuresIntro")}
         >
           {pack.overturned.length === 0 ? (
-            <p className="text-[var(--muted)]">None.</p>
+            <p className="text-[var(--muted)]">{t("pack.none")}</p>
           ) : (
             <ul className="space-y-3">
               {pack.overturned.map((script) => (
@@ -138,18 +150,20 @@ export default async function ModerationPackPage({
                   <p className="font-medium">{script.learner}</p>
                   {script.departures.map((departure) => (
                     <p key={departure.criterionId} className="pl-4">
-                      Proposed {departure.proposed.replace(/_/g, " ")}, decided{" "}
-                      {departure.decided.replace(/_/g, " ")} —{" "}
-                      {departure.reason ?? "no reason recorded"}
+                      {t("pack.departure", {
+                        proposed: outcome(departure.proposed),
+                        decided: outcome(departure.decided),
+                        reason: departure.reason ?? t("pack.noReason"),
+                      })}
                     </p>
                   ))}
                   {script.moderation ? (
                     <p className="pl-4 text-[var(--muted)]">
-                      Moderator {script.moderation.moderator}:{" "}
-                      {script.moderation.outcome}
-                      {script.moderation.comments
-                        ? ` — ${script.moderation.comments}`
-                        : ""}
+                      {t("pack.moderator", {
+                        moderator: script.moderation.moderator,
+                        outcome: maybe(t, `moderation.${script.moderation.outcome}`) ?? script.moderation.outcome,
+                      })}
+                      {script.moderation.comments ? `: ${script.moderation.comments}` : ""}
                     </p>
                   ) : null}
                 </li>
@@ -159,21 +173,20 @@ export default async function ModerationPackPage({
         </Card>
 
         <Card
-          title={`Exceptions (${pack.overrides.length})`}
-          description="Learners let past a gate by a named person, with the reason they gave."
+          title={t("pack.exceptions", { count: pack.overrides.length })}
+          description={t("pack.exceptionsIntro")}
         >
           {pack.overrides.length === 0 ? (
-            <p className="text-[var(--muted)]">None.</p>
+            <p className="text-[var(--muted)]">{t("pack.none")}</p>
           ) : (
             <ul className="space-y-1">
               {pack.overrides.map((override, index) => (
                 <li key={index}>
-                  {override.learner} — {override.stepTitle ?? "a step"} —{" "}
+                  {override.learner} · {override.stepTitle ?? t("pack.aStep")} ·{" "}
                   {override.reason}
                   <span className="ml-2 text-xs text-[var(--muted)]">
-                    {override.grantedBy},{" "}
-                    {override.grantedAt.toLocaleDateString("en-ZA")}
-                    {override.revokedAt ? " (withdrawn)" : ""}
+                    {override.grantedBy}, {override.grantedAt.toLocaleDateString(dates)}
+                    {override.revokedAt ? ` ${t("pack.withdrawn")}` : ""}
                   </span>
                 </li>
               ))}
@@ -182,7 +195,7 @@ export default async function ModerationPackPage({
         </Card>
 
         <p className="text-xs text-[var(--muted)]">
-          Assembled {pack.assembledAt.toLocaleString("en-ZA")} from the record.
+          {t("pack.assembled", { date: pack.assembledAt.toLocaleString(dates) })}
         </p>
       </div>
     </AppShell>

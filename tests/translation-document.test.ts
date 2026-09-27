@@ -23,7 +23,8 @@ const all = Object.keys(english).map((key) => ({ ref: refTable[key], key, englis
 describe("the reference numbers", () => {
   it("give every phrase a number of its own", () => {
     const missing = Object.keys(english).filter((key) => refTable[key] === undefined);
-    // If this fails, a phrase was added: run npm run translations:export.
+    // If this fails, a phrase was added: run
+    // npm run translations:export -- --refs-only
     expect(missing).toEqual([]);
     expect(new Set(Object.values(refTable)).size).toBe(Object.values(refTable).length);
   });

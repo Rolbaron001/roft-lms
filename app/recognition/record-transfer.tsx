@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { recordTransferAction, type RecognitionState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -23,6 +24,7 @@ export function RecordTransfer({
 }: {
   learners: { id: string; label: string }[];
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<RecognitionState, FormData>(
     recordTransferAction,
     {},
@@ -30,25 +32,21 @@ export function RecordTransfer({
   const kept = state.values ?? {};
 
   if (learners.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        Add a learner before recording a transfer for one.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("rpl.needsLearner")}</p>;
   }
 
   return (
     <form key={state.attempt ?? 0} action={action} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Learner</span>
+          <span className="text-[var(--muted)]">{t("rpl.learner")}</span>
           <select
             name="learnerId"
             required
             defaultValue={kept.learnerId}
             className={`${inputClass} mt-1 block w-full`}
           >
-            <option value="">Choose</option>
+            <option value="">{t("rpl.choose")}</option>
             {learners.map((row) => (
               <option key={row.id} value={row.id}>
                 {row.label}
@@ -58,18 +56,18 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Module it covers</span>
+          <span className="text-[var(--muted)]">{t("rpl.module")}</span>
           <input
             name="curriculumModuleId"
             required
-            placeholder="Module identifier"
+            placeholder={t("rpl.moduleId")}
             defaultValue={kept.curriculumModuleId}
             className={`${inputClass} mt-1 block w-full font-mono`}
           />
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">What they already hold</span>
+          <span className="text-[var(--muted)]">{t("rpl.holds")}</span>
           <input
             name="sourceQualification"
             required
@@ -80,7 +78,7 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Who awarded it — optional</span>
+          <span className="text-[var(--muted)]">{t("rpl.awardedBy")}</span>
           <input
             name="sourceProvider"
             defaultValue={kept.sourceProvider}
@@ -89,7 +87,7 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">SAQA identifier — optional</span>
+          <span className="text-[var(--muted)]">{t("rpl.saqaId")}</span>
           <input
             name="sourceSaqaId"
             defaultValue={kept.sourceSaqaId}
@@ -98,7 +96,7 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Its credits — optional</span>
+          <span className="text-[var(--muted)]">{t("rpl.credits")}</span>
           <input
             name="sourceCredits"
             type="number"
@@ -109,7 +107,7 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Awarded on — optional</span>
+          <span className="text-[var(--muted)]">{t("rpl.awardedOn")}</span>
           <input
             type="date"
             name="awardedOn"
@@ -119,7 +117,7 @@ export function RecordTransfer({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Approved on</span>
+          <span className="text-[var(--muted)]">{t("rpl.approvedOn")}</span>
           <input
             type="date"
             name="approvedOn"
@@ -131,9 +129,7 @@ export function RecordTransfer({
       </div>
 
       <label className="block text-sm">
-        <span className="text-[var(--muted)]">
-          How the outcomes of what they hold cover this module&rsquo;s
-        </span>
+        <span className="text-[var(--muted)]">{t("rpl.mapping")}</span>
         <textarea
           name="mapping"
           required
@@ -144,19 +140,15 @@ export function RecordTransfer({
         />
       </label>
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.notice ? (
-        <p className="text-sm text-[var(--muted)]">{state.notice}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.notice ? <p className="text-sm text-[var(--muted)]">{state.notice}</p> : null}
 
       <button
         type="submit"
         disabled={saving}
         className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {saving ? "Recording…" : "Record the transfer"}
+        {saving ? t("assessing.recording") : t("rpl.recordTransfer")}
       </button>
     </form>
   );

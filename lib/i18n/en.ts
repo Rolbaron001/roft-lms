@@ -9,9 +9,14 @@
  * regulator's own things (EISA, FISA, QCTO) are the regulator's and are not
  * translated, the same rule that stops a provider renaming them.
  *
- * This module imports nothing, so a client component can use it.
+ * This module imports only the staff phrases, which import nothing, so a
+ * client component can use it.
  */
+import { staff } from "./en-staff";
+
 export const en = {
+  ...staff,
+
   // The frame round every page
   "shell.subtitle": "Learning Management System",
   "shell.notifications": "Notifications",

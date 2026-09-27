@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import {
   criteriaForAssessment,
   oralAssessmentFor,
@@ -29,6 +29,7 @@ export default async function OralAssessmentPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
+  const t = await pageT();
 
   let detail;
   try {
@@ -49,40 +50,31 @@ export default async function OralAssessmentPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <Link
-          href="/reassessments"
-          className="text-sm text-[var(--muted)] hover:underline"
-        >
-          ← Held for review
+        <Link href="/reassessments" className="text-sm text-[var(--muted)] hover:underline">
+          {t("oral.back")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">
-          Oral assessment — {detail.learner?.firstName}{" "}
-          {detail.learner?.lastName}
+          {t("oral.title", {
+            learner: `${detail.learner?.firstName ?? ""} ${detail.learner?.lastName ?? ""}`.trim(),
+          })}
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {detail.assessmentTitle} · attempt{" "}
-          {detail.submission.attemptNumber}
+          {detail.assessmentTitle} · {t("common.attempt", { number: detail.submission.attemptNumber })}
         </p>
       </div>
 
-      <Card
-        title="What the review decided"
-        description="The grounds on which this third attempt was authorised."
-      >
+      <Card title={t("oral.reviewDecided")} description={t("oral.reviewDecidedIntro")}>
         <p className="text-sm">{review.rationale}</p>
         <p className="mt-2 text-xs text-[var(--muted)]">
           {review.employerConsulted
-            ? `Employer consulted: ${review.employerRepresentative}`
-            : "The employer was not consulted."}
-          {review.employerComments ? ` — “${review.employerComments}”` : ""}
+            ? t("oral.employerConsulted", { name: review.employerRepresentative ?? "" })
+            : t("oral.employerNotConsulted")}
+          {review.employerComments ? `: “${review.employerComments}”` : ""}
         </p>
       </Card>
 
       <div className="mt-6">
-        <Card
-          title="The record"
-          description="An oral attempt leaves no evidence of its own. This is that evidence, and the outcome cannot be recorded without it."
-        >
+        <Card title={t("oral.record")} description={t("oral.recordIntro")}>
           {canAssess ? (
             <OralRecord
               submissionId={id}
@@ -98,33 +90,26 @@ export default async function OralAssessmentPage({
                   <p className="font-medium">{exchange.question}</p>
                   <p className="mt-0.5">{exchange.response}</p>
                   {exchange.note ? (
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">
-                      {exchange.note}
-                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">{exchange.note}</p>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-[var(--muted)]">
-              Nothing has been recorded yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("oral.nothingYet")}</p>
           )}
         </Card>
       </div>
 
       {canAssess && detail.record ? (
         <div className="mt-6">
-          <Card
-            title="Recording the outcome"
-            description="Judged the same way as a written attempt, against the same criteria, and moderated the same way afterwards."
-          >
+          <Card title={t("oral.outcome")} description={t("oral.outcomeIntro")}>
             <Link
               href={`/assess/${id}`}
               className="inline-block rounded-md px-4 py-2 text-sm font-semibold text-white"
               style={{ background: "var(--brand-primary)" }}
             >
-              Go to the marking screen
+              {t("oral.goMark")}
             </Link>
           </Card>
         </div>
