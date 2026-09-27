@@ -30,26 +30,31 @@ export async function recordDecisionAction(
   const session = await requireSession();
   const submissionId = String(formData.get("submissionId") ?? "");
 
-  // Per-criterion judgements arrive as criterion:<id> fields.
-  const criterionOutcomes: Record<string, "competent" | "not_yet_competent"> =
-    {};
+  // Per-criterion judgements arrive as criterion:<id> fields, what the marks
+  // proposed as proposed:<id>, and the assessor's reasons as note:<id>.
+  type Outcome = "competent" | "not_yet_competent";
+  const criterionOutcomes: Record<string, Outcome> = {};
+  const criterionProposed: Record<string, Outcome> = {};
+  const criterionNotes: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith("criterion:")) {
-      criterionOutcomes[key.slice("criterion:".length)] = String(value) as
-        | "competent"
-        | "not_yet_competent";
-    }
+    const at = key.indexOf(":");
+    if (at < 0) continue;
+    const [kind, id] = [key.slice(0, at), key.slice(at + 1)];
+    if (kind === "criterion") criterionOutcomes[id] = String(value) as Outcome;
+    if (kind === "proposed") criterionProposed[id] = String(value) as Outcome;
+    if (kind === "note" && String(value).trim()) criterionNotes[id] = String(value);
   }
+  const some = <T,>(record: Record<string, T>) =>
+    Object.keys(record).length > 0 ? record : undefined;
 
   try {
     await recordAssessorDecision(session, {
       submissionId,
       outcome: formData.get("outcome") as "competent",
       comments: String(formData.get("comments") ?? "") || undefined,
-      criterionOutcomes:
-        Object.keys(criterionOutcomes).length > 0
-          ? criterionOutcomes
-          : undefined,
+      criterionOutcomes: some(criterionOutcomes),
+      criterionProposed: some(criterionProposed),
+      criterionNotes: some(criterionNotes),
     });
   } catch (error) {
     return { error: describe(error) };

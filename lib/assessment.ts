@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { DEFAULT_DECLARATION } from "./declaration";
@@ -7,15 +7,19 @@ import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentDecisions,
+  assessmentItemCriteria,
   assessmentItems,
   assessmentSubmissions,
   assessments,
   cohortMembers,
   cohorts,
   courses,
+  curriculumModules,
+  curriculumTopics,
   evidenceArtifacts,
   moderationQueue,
   moderationRecords,
+  studyUnitModules,
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -30,6 +34,7 @@ import { DEFAULT_TIME_ZONE, dateInZone } from "./timezone";
 import { enrolments, organisations } from "@/db/schema";
 import { raise, usersWithRole } from "./notifications";
 import { assertOralRecorded } from "./reassessment";
+import { getMarkedPaper, proposeCriterionOutcomes } from "./marking";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -176,9 +181,231 @@ export const itemInput = z.object({
   correctIndexes: z.array(z.coerce.number().int().min(0)).default([]),
   points: z.coerce.number().int().min(1).max(100).default(1),
   criterionId: z.string().uuid().optional().nullable(),
+  /** The criteria this question assesses. Any number, from the course's own. */
+  criterionIds: z.array(z.string().uuid()).default([]),
   competencyId: z.string().uuid().optional().nullable(),
   markingGuide: z.string().trim().max(4000).optional(),
 });
+
+export type CourseCriterion = {
+  id: string;
+  code: string;
+  description: string;
+  moduleCode: string;
+  /**
+   * Where the criterion sits: its topic's code where it has a topic, else its
+   * module's. A code alone is ambiguous twice over. Each module of a study
+   * unit has its own IAC0104, and a practical module restarts at IAC0101
+   * under every topic, so PM01 holds more than one IAC0104 (found on 121151,
+   * 27 September).
+   */
+  place: string;
+};
+
+/**
+ * Every criterion a question on this course may be linked to.
+ *
+ * A study unit's course answers to the criteria of every module the unit
+ * delivers; a course made for one module, to that module's. Job sheet D1,
+ * 27 September 2026: until then a question built on the platform could name
+ * no criterion from any screen, so a provider who builds assessments here
+ * rather than capturing papers could never satisfy the coverage check on a
+ * study unit's course, and its assessor judged one overall outcome with
+ * nothing reaching the criterion ledger.
+ */
+async function criteriaForCourse(
+  tx: TenantDatabase,
+  courseId: string,
+): Promise<CourseCriterion[]> {
+  const [course] = await tx
+    .select({
+      curriculumModuleId: courses.curriculumModuleId,
+      studyUnitId: courses.studyUnitId,
+    })
+    .from(courses)
+    .where(eq(courses.id, courseId));
+  if (!course) return [];
+
+  const moduleIds = course.studyUnitId
+    ? (
+        await tx
+          .select({ id: studyUnitModules.curriculumModuleId })
+          .from(studyUnitModules)
+          .where(eq(studyUnitModules.studyUnitId, course.studyUnitId))
+      ).map((row) => row.id)
+    : course.curriculumModuleId
+      ? [course.curriculumModuleId]
+      : [];
+  if (moduleIds.length === 0) return [];
+  return placedCriteria(tx, inArray(assessmentCriteria.curriculumModuleId, moduleIds));
+}
+
+/** Criteria with the module and topic that say where each sits. */
+async function placedCriteria(
+  tx: TenantDatabase,
+  where: SQL | undefined,
+): Promise<CourseCriterion[]> {
+  const rows = await tx
+    .select({
+      id: assessmentCriteria.id,
+      code: assessmentCriteria.code,
+      description: assessmentCriteria.description,
+      moduleCode: curriculumModules.code,
+      topicCode: curriculumTopics.code,
+    })
+    .from(assessmentCriteria)
+    .innerJoin(curriculumModules, eq(curriculumModules.id, assessmentCriteria.curriculumModuleId))
+    .leftJoin(curriculumTopics, eq(curriculumTopics.id, assessmentCriteria.topicId))
+    .where(where)
+    .orderBy(
+      asc(curriculumModules.sortOrder),
+      asc(curriculumTopics.sortOrder),
+      asc(assessmentCriteria.sortOrder),
+    );
+  return rows.map(({ topicCode, ...row }) => ({ ...row, place: topicCode ?? row.moduleCode }));
+}
+
+export async function listCourseCriteria(
+  session: AuthenticatedSession,
+  courseId: string,
+): Promise<CourseCriterion[]> {
+  assertSessionCan(session, "assessment:author");
+  return withTenant(session.organisationId, (tx) => criteriaForCourse(tx, courseId));
+}
+
+/** Refuses a criterion that is not one of the assessment's course's own. */
+async function assertCourseCriteria(
+  tx: TenantDatabase,
+  assessmentId: string,
+  criterionIds: string[],
+) {
+  if (criterionIds.length === 0) return;
+  const [assessment] = await tx
+    .select({ courseId: assessments.courseId })
+    .from(assessments)
+    .where(eq(assessments.id, assessmentId));
+  if (!assessment) throw new AssessmentError("Assessment not found.", "not_found");
+
+  const allowed = new Set(
+    assessment.courseId
+      ? (await criteriaForCourse(tx, assessment.courseId)).map((c) => c.id)
+      : [],
+  );
+  if (criterionIds.some((id) => !allowed.has(id))) {
+    throw new AssessmentError(
+      "A question can only be linked to the criteria of the modules this course delivers.",
+      "invalid_state",
+    );
+  }
+}
+
+/**
+ * Changes which criteria a question assesses.
+ *
+ * Only while its assessment is a draft, the same rule as adding a question: a
+ * learner's attempt at a published assessment was judged against the links it
+ * had, and moving them afterwards would change what a signed decision appears
+ * to have been about.
+ */
+export async function setItemCriteria(
+  session: AuthenticatedSession,
+  itemId: string,
+  criterionIds: string[],
+) {
+  assertSessionCan(session, "assessment:author");
+  const ids = [...new Set(z.array(z.string().uuid()).parse(criterionIds))];
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [item] = await tx
+      .select({
+        assessmentId: assessmentItems.assessmentId,
+        status: assessments.status,
+      })
+      .from(assessmentItems)
+      .innerJoin(assessments, eq(assessments.id, assessmentItems.assessmentId))
+      .where(eq(assessmentItems.id, itemId));
+    if (!item) throw new AssessmentError("Question not found.", "not_found");
+    if (item.status !== "draft") {
+      throw new AssessmentError(
+        "This assessment is published, so its questions are fixed. Make a new version to change what they assess.",
+        "invalid_state",
+      );
+    }
+
+    await assertCourseCriteria(tx, item.assessmentId, ids);
+
+    await tx.delete(assessmentItemCriteria).where(eq(assessmentItemCriteria.itemId, itemId));
+    if (ids.length > 0) {
+      await tx.insert(assessmentItemCriteria).values(
+        ids.map((criterionId) => ({ organisationId: session.organisationId, itemId, criterionId })),
+      );
+    }
+    // The old single column would otherwise be read as a fallback and bring
+    // back a link the author has just removed.
+    await tx.update(assessmentItems).set({ criterionId: null }).where(eq(assessmentItems.id, itemId));
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "assessment_item.criteria_changed",
+      entityType: "assessment_item",
+      entityId: itemId,
+      after: { criterionIds: ids },
+    });
+  });
+}
+
+/** The criteria each question links to, reading the old single column as a fallback. */
+async function criteriaByItem(
+  tx: TenantDatabase,
+  items: { id: string; criterionId: string | null }[],
+): Promise<Map<string, string[]>> {
+  const links =
+    items.length === 0
+      ? []
+      : await tx
+          .select()
+          .from(assessmentItemCriteria)
+          .where(inArray(assessmentItemCriteria.itemId, items.map((item) => item.id)));
+  return new Map(
+    items.map((item) => {
+      const linked = links.filter((link) => link.itemId === item.id).map((link) => link.criterionId);
+      return [item.id, linked.length > 0 ? linked : item.criterionId ? [item.criterionId] : []];
+    }),
+  );
+}
+
+/** Each assessment's questions on a course, with the criteria each assesses. */
+export async function listCourseQuestions(
+  session: AuthenticatedSession,
+  courseId: string,
+) {
+  assertSessionCan(session, "assessment:author");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const items = await tx
+      .select({
+        id: assessmentItems.id,
+        assessmentId: assessmentItems.assessmentId,
+        stem: assessmentItems.stem,
+        points: assessmentItems.points,
+        criterionId: assessmentItems.criterionId,
+      })
+      .from(assessmentItems)
+      .innerJoin(assessments, eq(assessments.id, assessmentItems.assessmentId))
+      .where(eq(assessments.courseId, courseId))
+      .orderBy(asc(assessmentItems.sortOrder));
+
+    const byItem = await criteriaByItem(tx, items);
+    return items.map((item) => ({
+      id: item.id,
+      assessmentId: item.assessmentId,
+      stem: item.stem,
+      points: item.points,
+      criterionIds: byItem.get(item.id) ?? [],
+    }));
+  });
+}
 
 export async function addAssessmentItem(
   session: AuthenticatedSession,
@@ -218,7 +445,13 @@ export async function addAssessmentItem(
     (index) => options[index].id,
   );
 
+  const criterionIds = [
+    ...new Set([...parsed.criterionIds, ...(parsed.criterionId ? [parsed.criterionId] : [])]),
+  ];
+
   return withTenant(session.organisationId, async (tx) => {
+    await assertCourseCriteria(tx, parsed.assessmentId, criterionIds);
+
     const [{ existing }] = await tx
       .select({ existing: count() })
       .from(assessmentItems)
@@ -240,6 +473,16 @@ export async function addAssessmentItem(
         sortOrder: existing,
       })
       .returning();
+
+    if (criterionIds.length > 0) {
+      await tx.insert(assessmentItemCriteria).values(
+        criterionIds.map((criterionId) => ({
+          organisationId: session.organisationId,
+          itemId: created.id,
+          criterionId,
+        })),
+      );
+    }
 
     return created;
   });
@@ -992,6 +1235,144 @@ export async function getSubmissionForAssessment(
       artifacts,
       criteria,
       decisions,
+    };
+  });
+}
+
+export type CriterionToJudge = {
+  id: string;
+  /** Where the criterion sits, then its code: see `CourseCriterion.place`. */
+  code: string;
+  description: string;
+  /** What the marks imply, where the questions evidencing it are all marked. */
+  proposed: "competent" | "not_yet_competent" | null;
+  percentage: number | null;
+};
+
+/** A question the platform marks itself, as `markResponses` does. */
+function markedByPlatform(item: {
+  type: string | null;
+  correctOptionIds: string[] | null;
+  correctMatches: Record<string, string> | null;
+}): boolean {
+  if (item.type === "true_false_justified") return false;
+  if (item.type === "matching") return Object.keys(item.correctMatches ?? {}).length > 0;
+  return (item.correctOptionIds ?? []).length > 0;
+}
+
+/**
+ * The criteria an assessor judges on a summative attempt, each with what the
+ * marks propose.
+ *
+ * The criteria the questions assess, where they are linked; otherwise every
+ * criterion of the assessment's module, as before. Until 27 September (job
+ * sheet D1) the decision screen always offered the module's list: a study
+ * unit's assessment has no single module, so its assessor was offered no
+ * criteria at all, and a paper's assessor was offered the whole module rather
+ * than what the paper assessed, with nothing pre-filled from the marks.
+ *
+ * A proposal is arithmetic, not a judgement: the marks on the questions
+ * evidencing a criterion, against the pass mark. For a paper it is the one the
+ * marking screen shows. For a quiz built on the platform it is worked out here
+ * from the questions the platform marks itself; a criterion that also rests on
+ * a question a person marks is left for the assessor, since there is no mark
+ * to count.
+ */
+export async function criteriaToJudge(
+  session: AuthenticatedSession,
+  submissionId: string,
+): Promise<CriterionToJudge[]> {
+  assertSessionCan(session, "assessment:assess");
+
+  const context = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        paperId: assessmentSubmissions.paperId,
+        responses: assessmentSubmissions.responses,
+        assessmentId: assessments.id,
+        purpose: assessments.purpose,
+        passMark: assessments.passMark,
+        curriculumModuleId: assessments.curriculumModuleId,
+      })
+      .from(assessmentSubmissions)
+      .innerJoin(assessments, eq(assessments.id, assessmentSubmissions.assessmentId))
+      .where(eq(assessmentSubmissions.id, submissionId));
+    if (!row) throw new AssessmentError("Submission not found.", "not_found");
+    if (row.purpose !== "summative") return { row, items: [], byItem: new Map<string, string[]>() };
+
+    const items = await tx
+      .select()
+      .from(assessmentItems)
+      .where(eq(assessmentItems.assessmentId, row.assessmentId));
+    return { row, items, byItem: await criteriaByItem(tx, items) };
+  });
+
+  const { row, items, byItem } = context;
+  // Formative work records no competence against criteria; the decision
+  // refuses it, so none are offered.
+  if (row.purpose !== "summative") return [];
+
+  // A paper's attempt answers to the questions of the paper it drew, not to
+  // every paper of the assessment.
+  const paper = row.paperId ? await getMarkedPaper(session, submissionId) : null;
+  const linked = paper
+    ? [...new Set(paper.items.flatMap((item) => item.criterionIds))]
+    : [...new Set([...byItem.values()].flat())];
+
+  if (linked.length === 0) {
+    if (!row.curriculumModuleId) return [];
+    const moduleCriteria = await withTenant(session.organisationId, (tx) =>
+      tx
+        .select()
+        .from(assessmentCriteria)
+        .where(eq(assessmentCriteria.curriculumModuleId, row.curriculumModuleId!))
+        .orderBy(asc(assessmentCriteria.sortOrder)),
+    );
+    return moduleCriteria.map((c) => ({
+      id: c.id,
+      code: c.code,
+      description: c.description,
+      proposed: null,
+      percentage: null,
+    }));
+  }
+
+  const criteria = (
+    await withTenant(session.organisationId, (tx) =>
+      placedCriteria(tx, inArray(assessmentCriteria.id, linked)),
+    )
+  ).map((c) => ({ ...c, code: `${c.place} ${c.code}` }));
+
+  if (paper) {
+    // Nothing is proposed until every question is marked: an unmarked
+    // question would count as nought and propose "not yet competent".
+    const proposals = paper.fullyMarked ? await proposeCriterionOutcomes(session, submissionId) : [];
+    return criteria.map((c) => {
+      const proposal = proposals.find((p) => p.criterionId === c.id);
+      return {
+        id: c.id,
+        code: c.code,
+        description: c.description,
+        proposed: proposal?.outcome ?? null,
+        percentage: proposal ? proposal.percentage : null,
+      };
+    });
+  }
+
+  const responses = (row.responses ?? {}) as Record<string, string[]>;
+  return criteria.map((c) => {
+    const evidencing = items.filter((item) => (byItem.get(item.id) ?? []).includes(c.id));
+    if (!evidencing.every(markedByPlatform)) {
+      return { id: c.id, code: c.code, description: c.description, proposed: null, percentage: null };
+    }
+    const { score, maxScore } = markResponses(evidencing, responses);
+    const percentage = maxScore === 0 ? 0 : (score / maxScore) * 100;
+    return {
+      id: c.id,
+      code: c.code,
+      description: c.description,
+      proposed: percentage >= row.passMark ? "competent" : "not_yet_competent",
+      percentage,
     };
   });
 }

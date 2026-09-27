@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
-import { AssessmentError, getSubmissionForAssessment } from "@/lib/assessment";
+import {
+  AssessmentError,
+  criteriaToJudge,
+  getSubmissionForAssessment,
+} from "@/lib/assessment";
+import { MarkingError } from "@/lib/marking";
 import { AppShell } from "@/components/app-shell";
 import { DecisionForm } from "./decision-form";
 
@@ -15,10 +20,12 @@ export default async function AssessSubmissionPage({
   const session = await requirePermission("assessment:assess");
 
   let detail;
+  let criteria;
   try {
     detail = await getSubmissionForAssessment(session, id);
+    criteria = await criteriaToJudge(session, id);
   } catch (error) {
-    if (error instanceof AssessmentError) {
+    if (error instanceof AssessmentError || error instanceof MarkingError) {
       if (error.code === "not_permitted") redirect("/not-permitted");
       notFound();
     }
@@ -225,14 +232,7 @@ export default async function AssessSubmissionPage({
             ) : null}
           </div>
 
-          <DecisionForm
-            submissionId={id}
-            criteria={detail.criteria.map((criterion) => ({
-              id: criterion.id,
-              code: criterion.code,
-              description: criterion.description,
-            }))}
-          />
+          <DecisionForm submissionId={id} criteria={criteria} />
         </div>
       )}
     </AppShell>

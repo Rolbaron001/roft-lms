@@ -5,6 +5,7 @@ import {
   addQuestionAction,
   createAssessmentAction,
   publishAssessmentAction,
+  setQuestionCriteriaAction,
   type AssessmentState,
 } from "./actions";
 // From ui, not app-shell: app-shell reads the database for the notification
@@ -25,6 +26,176 @@ type Assessment = {
   moderationSampleRate: number;
   itemCount: number;
 };
+
+type Criterion = {
+  id: string;
+  code: string;
+  description: string;
+  moduleCode: string;
+  /** Its topic's code, or its module's where it has no topic. */
+  place: string;
+};
+
+type Question = {
+  id: string;
+  assessmentId: string;
+  stem: string;
+  points: number;
+  criterionIds: string[];
+};
+
+/**
+ * Ticks for the criteria a question assesses, from the course's own.
+ *
+ * A study unit's course can answer to forty criteria or more, so the list
+ * scrolls and can be narrowed by typing. Narrowing hides a row rather than
+ * removing it, so a criterion already ticked is still sent.
+ */
+function CriteriaPicker({
+  criteria,
+  selected = [],
+}: {
+  criteria: Criterion[];
+  selected?: string[];
+}) {
+  const [filter, setFilter] = useState("");
+  const [ticked, setTicked] = useState(() => new Set(selected));
+  const words = filter.trim().toLowerCase();
+
+  return (
+    <fieldset className="space-y-2 rounded-md border border-[var(--border)] p-3">
+      <legend className="px-1 text-xs font-medium">
+        What this question assesses{" "}
+        <span className="font-normal text-[var(--muted)]">
+          ({ticked.size} of {criteria.length} ticked)
+        </span>
+      </legend>
+      <input
+        type="search"
+        value={filter}
+        onChange={(event) => setFilter(event.target.value)}
+        placeholder="Narrow by code or wording"
+        aria-label="Narrow the criteria"
+        className={inputClass}
+      />
+      <div className="max-h-60 space-y-1 overflow-y-auto">
+        {criteria.map((criterion) => {
+          const shown =
+            words === "" ||
+            `${criterion.moduleCode} ${criterion.place} ${criterion.code} ${criterion.description}`
+              .toLowerCase()
+              .includes(words);
+          return (
+            <label
+              key={criterion.id}
+              className={`${shown ? "flex" : "hidden"} items-start gap-2 text-sm`}
+            >
+              <input
+                type="checkbox"
+                name="criterionId"
+                value={criterion.id}
+                checked={ticked.has(criterion.id)}
+                onChange={(event) =>
+                  setTicked((current) => {
+                    const next = new Set(current);
+                    if (event.target.checked) next.add(criterion.id);
+                    else next.delete(criterion.id);
+                    return next;
+                  })
+                }
+                className="mt-1"
+              />
+              <span>
+                {/* Where it sits as well: the code alone cannot tell apart
+                    the several IAC0104s a study unit can hold. */}
+                <span className="font-mono text-xs">
+                  {criterion.place} {criterion.code}
+                </span>{" "}
+                <span className="text-[var(--muted)]">
+                  {criterion.description}
+                </span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function QuestionRow({
+  courseId,
+  question,
+  number,
+  criteria,
+  editable,
+}: {
+  courseId: string;
+  question: Question;
+  number: number;
+  criteria: Criterion[];
+  editable: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [state, action, pending] = useActionState<AssessmentState, FormData>(
+    setQuestionCriteriaAction,
+    {},
+  );
+  const codes = criteria
+    .filter((criterion) => question.criterionIds.includes(criterion.id))
+    .map((criterion) => `${criterion.place} ${criterion.code}`);
+
+  return (
+    <li className="rounded-md border border-[var(--border)] px-4 py-3 text-sm">
+      <p>
+        {number}. {question.stem}{" "}
+        <span className="text-xs text-[var(--muted)]">
+          ({question.points} {question.points === 1 ? "mark" : "marks"})
+        </span>
+      </p>
+      <p className="mt-1 text-xs text-[var(--muted)]">
+        {codes.length > 0 ? `Assesses ${codes.join(", ")}` : "Linked to no criterion"}
+        {editable && !editing ? (
+          <>
+            {" · "}
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="font-medium text-[var(--brand-accent)] hover:underline"
+            >
+              Change
+            </button>
+          </>
+        ) : null}
+      </p>
+      {editing ? (
+        <form action={action} className="mt-3 space-y-2">
+          <input type="hidden" name="courseId" value={courseId} />
+          <input type="hidden" name="itemId" value={question.id} />
+          <CriteriaPicker criteria={criteria} selected={question.criterionIds} />
+          <Message state={state} />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: "var(--brand-primary)" }}
+            >
+              {pending ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+            >
+              Close
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </li>
+  );
+}
 
 function Message({ state }: { state: AssessmentState }) {
   if (state.error) {
@@ -50,10 +221,12 @@ function Message({ state }: { state: AssessmentState }) {
 function QuestionForm({
   courseId,
   assessmentId,
+  criteria,
   onDone,
 }: {
   courseId: string;
   assessmentId: string;
+  criteria: Criterion[];
   onDone: () => void;
 }) {
   const [state, action, pending] = useActionState<AssessmentState, FormData>(
@@ -61,6 +234,15 @@ function QuestionForm({
     {},
   );
   const [optionCount, setOptionCount] = useState(3);
+
+  // Counts the questions added, adjusted during render when a new result
+  // arrives (React's pattern for state that follows another's changes).
+  const [added, setAdded] = useState(0);
+  const [lastState, setLastState] = useState(state);
+  if (state !== lastState) {
+    setLastState(state);
+    if (state.notice) setAdded(added + 1);
+  }
 
   return (
     <form action={action} className="mt-4 space-y-3">
@@ -115,6 +297,11 @@ function QuestionForm({
           className={inputClass}
         />
       </label>
+
+      {criteria.length > 0 ? (
+        // A fresh picker for each question added, so the ticks clear.
+        <CriteriaPicker key={added} criteria={criteria} />
+      ) : null}
 
       <Message state={state} />
 
@@ -174,10 +361,15 @@ export function AssessmentManager({
   workplaceRecordWord,
   courseId,
   assessments,
+  criteria,
+  questions,
 }: {
   workplaceRecordWord: string;
   courseId: string;
   assessments: Assessment[];
+  /** The criteria this course answers to; empty for training outside a curriculum. */
+  criteria: Criterion[];
+  questions: Question[];
 }) {
   const [createState, createAction, createPending] = useActionState<
     AssessmentState,
@@ -212,12 +404,30 @@ export function AssessmentManager({
             <StatusBadge status={assessment.status} />
           </div>
 
+          {questions.some((question) => question.assessmentId === assessment.id) ? (
+            <ol className="mt-4 space-y-2">
+              {questions
+                .filter((question) => question.assessmentId === assessment.id)
+                .map((question, index) => (
+                  <QuestionRow
+                    key={question.id}
+                    courseId={courseId}
+                    question={question}
+                    number={index + 1}
+                    criteria={criteria}
+                    editable={assessment.status === "draft" && criteria.length > 0}
+                  />
+                ))}
+            </ol>
+          ) : null}
+
           {assessment.status === "draft" ? (
             <>
               {openQuestionFor === assessment.id ? (
                 <QuestionForm
                   courseId={courseId}
                   assessmentId={assessment.id}
+                  criteria={criteria}
                   onDone={() => setOpenQuestionFor(null)}
                 />
               ) : (

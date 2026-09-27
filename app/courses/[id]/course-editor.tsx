@@ -383,9 +383,10 @@ export function CourseEditor({
               </p>
               {report.studyUnit ? (
                 <p className="mt-2 text-xs text-[var(--muted)]">
-                  Covered by a lesson on this course, a captured question, or
-                  what your alignment matrix names as assessing it. Upload the
-                  matrix on the qualification to record the last.
+                  Covered by a lesson on this course, a question on one of its
+                  assessments that is linked to it, or what your alignment
+                  matrix names as assessing it. Upload the matrix on the
+                  qualification to record the last.
                 </p>
               ) : null}
 

@@ -1266,8 +1266,9 @@ function lessonsLabel(count: number): string[] {
  * every module the unit delivers, and a criterion is covered by any of three
  * things: a lesson on this course that teaches it, something the provider's
  * matrix names as assessing it (a workbook activity, a summative task, a
- * simulation), or a question captured into one of this course's assessments
- * that is linked to it. Until then the check skipped a study unit's course
+ * simulation), or a question on one of this course's assessments that is
+ * linked to it, captured from a paper or built on the platform (job sheet D1,
+ * 27 September). Until then the check skipped a study unit's course
  * entirely, which is the shape Curiosa uses.
  *
  * Work experience modules have no criteria: they are proved by a signed
@@ -1330,8 +1331,9 @@ async function studyUnitCriteriaCoverage(
     coveredBy: [
       ...lessonsLabel(row.coveredByLessons),
       ...matrix.filter((entry) => entry.criterionId === row.id).map((entry) => entry.reference),
+      // Captured from a paper or built on the platform alike (job sheet D1).
       ...(row.capturedQuestions > 0
-        ? [`${row.capturedQuestions} captured ${row.capturedQuestions === 1 ? "question" : "questions"}`]
+        ? [`${row.capturedQuestions} ${row.capturedQuestions === 1 ? "question" : "questions"}`]
         : []),
     ],
   }));
@@ -1394,7 +1396,7 @@ export async function publishCourse(
     reasons.push(
       `${report.uncovered.length} of ${report.studyUnit.code}'s assessment criteria ${
         one ? "has" : "have"
-      } nothing assessing ${one ? "it" : "them"}: ${listed.slice(0, 20).join(", ")}${listed.length > 20 ? "..." : ""}. Upload the alignment matrix on the qualification, or link the criteria to a lesson or a captured question.`,
+      } nothing assessing ${one ? "it" : "them"}: ${listed.slice(0, 20).join(", ")}${listed.length > 20 ? "..." : ""}. Upload the alignment matrix on the qualification, or link the criteria to a lesson or to a question on one of this course's assessments.`,
     );
   } else if (report.uncovered.length > 0) {
     const one = report.uncovered.length === 1;

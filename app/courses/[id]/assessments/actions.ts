@@ -7,6 +7,7 @@ import {
   AssessmentError,
   createAssessment,
   publishAssessment,
+  setItemCriteria,
 } from "@/lib/assessment";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -83,14 +84,37 @@ export async function addQuestionAction(
       options,
       correctIndexes,
       points: Number(formData.get("points") ?? 1),
-      criterionId: String(formData.get("criterionId") ?? "") || undefined,
+      criterionIds: formData.getAll("criterionId").map(String).filter(Boolean),
     });
   } catch (error) {
     return { error: describe(error) };
   }
 
   revalidatePath(`/courses/${courseId}/assessments`);
+  revalidatePath(`/courses/${courseId}`);
   return { notice: "Question added." };
+}
+
+export async function setQuestionCriteriaAction(
+  _previous: AssessmentState,
+  formData: FormData,
+): Promise<AssessmentState> {
+  const session = await requireSession();
+  const courseId = String(formData.get("courseId") ?? "");
+
+  try {
+    await setItemCriteria(
+      session,
+      String(formData.get("itemId") ?? ""),
+      formData.getAll("criterionId").map(String).filter(Boolean),
+    );
+  } catch (error) {
+    return { error: describe(error) };
+  }
+
+  revalidatePath(`/courses/${courseId}/assessments`);
+  revalidatePath(`/courses/${courseId}`);
+  return { notice: "Criteria saved." };
 }
 
 export async function publishAssessmentAction(

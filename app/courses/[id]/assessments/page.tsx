@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { AuthoringError, getCourse } from "@/lib/authoring";
-import { listCourseAssessments } from "@/lib/assessment";
+import {
+  listCourseAssessments,
+  listCourseCriteria,
+  listCourseQuestions,
+} from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
 import { AssessmentManager } from "./assessment-manager";
 
@@ -27,7 +31,11 @@ export default async function CourseAssessmentsPage({
     throw error;
   }
 
-  const assessments = await listCourseAssessments(session, id);
+  const [assessments, criteria, questions] = await Promise.all([
+    listCourseAssessments(session, id),
+    listCourseCriteria(session, id),
+    listCourseQuestions(session, id),
+  ]);
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -49,6 +57,8 @@ export default async function CourseAssessmentsPage({
       <AssessmentManager
         workplaceRecordWord={words.one("workplaceRecord")}
         courseId={id}
+        criteria={criteria}
+        questions={questions}
         assessments={assessments.map((row) => ({
           id: row.id,
           title: row.title,
