@@ -17,8 +17,10 @@ import {
  *
  * So this is encryption rather than hashing, and that is a real difference in
  * kind. Anything sealed here can be unsealed by anything holding the key. It is
- * used for one column and should stay that way; a second caller is a reason to
- * ask whether that thing needs storing at all.
+ * used for two columns: the AI token, and since 27 September the key of a
+ * provider's own learning record store (job sheet D6), which Roland decided the
+ * platform should hold so it can send records there itself. A third caller is a
+ * reason to ask whether that thing needs storing at all.
  *
  * AES-256-GCM, which authenticates as well as encrypts: a ciphertext altered in
  * the database fails to open rather than opening as something else.

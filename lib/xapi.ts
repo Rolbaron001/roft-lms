@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
-import { withTenant } from "@/db/client";
+import { withTenant, type TenantDatabase } from "@/db/client";
 import {
+  qualificationAwards,
   assessmentDecisions,
   assessmentSubmissions,
   assessments,
@@ -48,10 +49,10 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * lesson, an assessment or a qualification, so those carry none; the type is
  * optional in xAPI and a guessed one would be worse than none.
  *
- * Neither direction talks to another system directly. Pushing statements to a
- * provider's own record store would mean the platform holding that store's
- * credentials, and the AI extension is deliberately the only credential it
- * stores. That is Roland's decision to take if a provider asks.
+ * Sending statements live to a provider's own record store was left out on 26
+ * September, because it means holding that store's key. Roland put it on the
+ * sheet on 27 September (D6); it is lib/record-store.ts, and uses
+ * `statementsIn` below.
  */
 
 export class XapiError extends Error {
@@ -123,15 +124,45 @@ export async function exportStatements(
   base: string,
 ): Promise<Statement[]> {
   assertSessionCan(session, "records:manage");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const statements = await statementsIn(tx, session.organisationId, base);
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      actorRole: session.roles[0],
+      action: "xapi.exported",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      after: { statements: statements.length },
+    });
+
+    return statements;
+  });
+}
+
+/**
+ * The statements themselves, for the download above and for sending to a
+ * provider's own record store (lib/record-store.ts), which has no person
+ * signed in to ask.
+ */
+export async function statementsIn(
+  tx: TenantDatabase,
+  organisationId: string,
+  base: string,
+): Promise<Statement[]> {
   const origin = base.replace(/\/+$/, "");
   const activity = (kind: string, id: string) => `${origin}/xapi/activities/${kind}/${id}`;
   const extension = (name: string) => `${origin}/xapi/extensions/${name}`;
 
-  return withTenant(session.organisationId, async (tx) => {
+  // A block only because this was the body of the export's transaction until
+  // 27 September, and keeping its indentation keeps the history readable.
+  {
     const [provider] = await tx
       .select({ name: organisations.displayName })
       .from(organisations)
-      .where(eq(organisations.id, session.organisationId));
+      .where(eq(organisations.id, organisationId));
     const platform = provider?.name ?? "Learning platform";
 
     const people = new Map(
@@ -369,20 +400,40 @@ export async function exportStatements(
       );
     }
 
+    // Qualification certificates received from the awarding body (job sheet
+    // D2). Dated by the certificate, since that is when it was awarded.
+    const awarded = await tx
+      .select({
+        id: qualificationAwards.id,
+        userId: qualificationAwards.userId,
+        qualificationId: qualifications.id,
+        qualification: qualifications.title,
+        number: qualificationAwards.certificateNumber,
+        awardedOn: qualificationAwards.awardedOn,
+        awardedBy: qualificationAwards.awardedBy,
+      })
+      .from(qualificationAwards)
+      .innerJoin(qualifications, eq(qualifications.id, qualificationAwards.qualificationId));
+    for (const row of awarded) {
+      push(
+        `award:${row.id}:completed`,
+        row.userId,
+        "completed",
+        { objectType: "Activity", id: activity("qualification", row.qualificationId), definition: { name: { "en-US": row.qualification } } },
+        new Date(`${row.awardedOn}T00:00:00Z`),
+        {
+          result: { completion: true, success: true },
+          extensions: {
+            [extension("qualification-certificate")]: row.number,
+            [extension("awarded-by")]: row.awardedBy,
+          },
+        },
+      );
+    }
+
     statements.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-
-    await recordAudit(tx, {
-      organisationId: session.organisationId,
-      actorId: session.userId,
-      actorRole: session.roles[0],
-      action: "xapi.exported",
-      entityType: "organisation",
-      entityId: session.organisationId,
-      after: { statements: statements.length },
-    });
-
     return statements;
-  });
+  }
 }
 
 // ---------------------------------------------------------------------------

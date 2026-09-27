@@ -25,6 +25,7 @@ const {
   sweepAllTenants,
 } = await import("../lib/notifications");
 const { deliver, mailIsConfigured, verifyRelay } = await import("../lib/mail");
+const { sendToAllRecordStores } = await import("../lib/record-store");
 
 const mode = process.argv[2] ?? "both";
 
@@ -105,6 +106,23 @@ async function send() {
   log(`Sent ${sent}, failed ${failed}.`);
 }
 
+/**
+ * Learning records to each provider's own record store (job sheet D6), in the
+ * hourly run so a record reaches the store within the hour of happening.
+ * A store that fails is reported and tried again next hour; it never stops
+ * the mail above.
+ */
+async function sendRecords() {
+  const results = await sendToAllRecordStores();
+  for (const { organisationId, result } of results) {
+    if (!result) continue;
+    log(
+      `  Records for ${organisationId}: ${result.sent} sent, ${result.alreadyHeld} already held` +
+        (result.error ? `. Stopped: ${result.error}` : "."),
+    );
+  }
+}
+
 if (mode === "check") {
   // "Can we log in to the relay" and "did that message arrive" are different
   // questions. Being able to answer the first on its own turns a misconfigured
@@ -128,9 +146,11 @@ if (mode === "check") {
   await sweep();
 } else if (mode === "send") {
   await send();
+  await sendRecords();
 } else {
   await sweep();
   await send();
+  await sendRecords();
 }
 
 process.exit(0);

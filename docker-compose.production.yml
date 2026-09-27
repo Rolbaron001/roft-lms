@@ -67,8 +67,8 @@ services:
       AUTH_SECRET: "${AUTH_SECRET:?generate one with npx auth secret}"
       # Seals each person's AI extension token at rest.
       #
-      # Optional, and only on this service: nothing else reads or writes a
-      # token. Left unset, the key is derived from AUTH_SECRET instead, which
+      # Optional. Here and on `tools`, which opens a record store's key (D6).
+      # Left unset, the key is derived from AUTH_SECRET instead, which
       # works but ties the two together - rotate the session secret and every
       # stored token stops opening. Set it (openssl rand -base64 32) and they
       # rotate independently.
@@ -169,6 +169,11 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?}
       AUTH_URL: https://${LMS_DOMAIN:?}
       PLATFORM_HOST: ${LMS_DOMAIN:?}
+      # The same sealing key as the application's. The hourly job sends records
+      # to a provider's own learning record store (job sheet D6, 27 September)
+      # and has to open the store's key, which the application sealed. Without
+      # this it would derive a different key from AUTH_SECRET and open nothing.
+      AI_TOKEN_KEY: ${AI_TOKEN_KEY:-}
       # Who operates this deployment. Defaults keep ROFT's instance unchanged;
       # Curiosa's sets its own. See .env.example.
       PLATFORM_ORG_SLUG: ${PLATFORM_ORG_SLUG:-roft}

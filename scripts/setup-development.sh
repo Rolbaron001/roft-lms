@@ -217,10 +217,17 @@ else
   # A copy of the data, not of the people's live access. Sign-ins made on live
   # stay on live; each person's AI token and drive connection were sealed
   # under live's secret and could not be opened here anyway, and a test site
-  # is not where anybody's access to their own files should sit.
+  # is not where anybody's access to their own files should sit. A provider's
+  # learning record store (job sheet D6) is cleared for a stronger reason: a
+  # test site sending test records into a provider's real store would corrupt
+  # the one record that store exists to keep.
   dev exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q -c \
     "delete from sessions; update ai_user_settings set token_sealed = null, token_hint = null; delete from drive_connections;"
-  log "Cleared copied sign-ins, AI tokens and drive connections."
+  # Its own statement, and only where the tables exist: a copy taken from a
+  # live that predates them must not fail the clearing above.
+  dev exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q -c \
+    "do \$\$ begin if to_regclass('public.record_store_connections') is not null then delete from record_store_connections; delete from record_store_deliveries; end if; end \$\$;"
+  log "Cleared copied sign-ins, AI tokens, drive connections and record store connections."
 
   # Checked, not assumed: the same rows on both sides.
   for table in organisations users qualifications curriculum_modules library_documents assessments; do

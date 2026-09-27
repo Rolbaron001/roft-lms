@@ -297,3 +297,61 @@ export const externalLearningRecords = pgTable(
     index("external_learning_records_user_idx").on(t.userId),
   ],
 );
+
+/**
+ * A provider's own learning record store, which the platform sends every new
+ * statement to. Job sheet D6, 27 September 2026.
+ *
+ * The key is sealed as the AI extension's tokens are (lib/secret-box.ts), shown
+ * again only as its last four characters, and removed with the connection.
+ * One per provider.
+ */
+export const recordStoreConnections = pgTable(
+  "record_store_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** The store's xAPI address; statements go to `<endpoint>/statements`. */
+    endpoint: text("endpoint").notNull(),
+    /** The key's name, sent as the username of HTTP Basic authentication. */
+    username: text("username").notNull(),
+    secretSealed: text("secret_sealed").notNull(),
+    secretHint: text("secret_hint").notNull(),
+    /**
+     * The provider's own address when the connection was made, so statements
+     * sent later name the same activities as the ones in a downloaded file.
+     */
+    activityBase: text("activity_base").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    /** Why the last attempt failed, in words an administrator can act on. */
+    lastError: text("last_error"),
+
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("record_store_connections_org_idx").on(t.organisationId)],
+);
+
+/** Which statements the provider's record store has accepted, so each goes once. */
+export const recordStoreDeliveries = pgTable(
+  "record_store_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    statementId: uuid("statement_id").notNull(),
+    /** "stored", or "already held" where the store answered that it had it. */
+    outcome: text("outcome").notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("record_store_deliveries_statement_idx").on(t.organisationId, t.statementId),
+  ],
+);

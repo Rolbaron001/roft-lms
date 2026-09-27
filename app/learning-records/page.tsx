@@ -2,6 +2,9 @@ import { AppShell, Card } from "@/components/app-shell";
 import { requirePermission, requireTenant } from "@/lib/request";
 import { externalRecordCounts } from "@/lib/xapi";
 import { ImportForm } from "./import-form";
+import { StoreForm } from "./store-form";
+import { recordStoreFor } from "@/lib/record-store";
+import { DEFAULT_TIME_ZONE } from "@/lib/timezone";
 
 /**
  * Moving learning records to and from another system. Job sheet A10.
@@ -10,6 +13,9 @@ export default async function LearningRecordsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("records:manage");
   const counts = await externalRecordCounts(session);
+  const store = await recordStoreFor(session);
+  const when = (at: Date) =>
+    at.toLocaleString("en-ZA", { timeZone: DEFAULT_TIME_ZONE, dateStyle: "medium", timeStyle: "short" });
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -24,7 +30,7 @@ export default async function LearningRecordsPage() {
       <div className="space-y-6">
         <Card
           title="Take your records out"
-          description="Every enrolment, lesson completed, assessment attempted, competent or not yet competent decision, course completed, statement of results and certificate, one statement each. Each keeps the same identity every time you export, so loading two exports into another system does not double anybody's history."
+          description="Every enrolment, lesson completed, assessment attempted, competent or not yet competent decision, course completed, statement of results, certificate, and qualification certificate received, one statement each. Each keeps the same identity every time you export, so loading two exports into another system does not double anybody's history."
         >
           <a
             href="/api/xapi/export"
@@ -36,6 +42,26 @@ export default async function LearningRecordsPage() {
             The file names every learner and their email address. Keep it as you would any record of personal
             information.
           </p>
+        </Card>
+
+        <Card
+          title="Send records to your own learning record store"
+          description="If you keep a learning record store, connect it here and every record above goes to it within the hour of happening, the ones already made first. Each is sent once; a statement the store already holds is left as it is. The store's secret is sealed on this platform, never shown again, and forgotten when you disconnect."
+        >
+          {/* Keyed on the connection, so connecting or disconnecting starts
+              the form afresh rather than leaving the last message showing. */}
+          <StoreForm
+            key={store ? `${store.endpoint}:${store.username}` : "none"}
+            store={
+              store
+                ? {
+                    ...store,
+                    lastAttemptAt: store.lastAttemptAt ? when(store.lastAttemptAt) : null,
+                    lastSuccessAt: store.lastSuccessAt ? when(store.lastSuccessAt) : null,
+                  }
+                : null
+            }
+          />
         </Card>
 
         <Card

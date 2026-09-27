@@ -705,7 +705,10 @@ Worth recording, because each looked like a problem and was not:
 ## Carried over
 
 - **Outbound mail refuses the login** (`535`). Awaiting Linda.
-- **The `tools` container has no route off the machine.** Recorded until
+- ~~**The `tools` container has no route off the machine.**~~ **Stale, corrected
+  27 September:** it was given the `edge` network on 25 September (see
+  `docker-compose.production.yml`), because the hourly mail could not have
+  gone out without it. The entry below is kept as the record of why. Recorded until
   16 September as "cannot resolve DNS", which is a misdiagnosis and would send
   the next person hunting through `resolv.conf` for nothing. The compose file
   declares `internal: true` on the `internal` network, and `tools` joins that
