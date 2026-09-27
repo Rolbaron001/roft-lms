@@ -6,7 +6,7 @@ import { markLessonCompleteAction, type LearnState } from "../actions";
 import { LessonMediaView } from "@/components/lesson-media";
 import { ScormPlayer } from "@/components/scorm-player";
 import { useT } from "@/components/i18n";
-import { maybe } from "@/lib/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 type Lesson = {
   id: string;

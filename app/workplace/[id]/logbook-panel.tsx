@@ -11,7 +11,7 @@ import {
   type WorkplaceState,
 } from "../actions";
 import { useT } from "@/components/i18n";
-import { maybe } from "@/lib/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 export type Entry = {
   entryId: string;
