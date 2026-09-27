@@ -49,7 +49,12 @@ export function LessonUpload({
 
     request.addEventListener("load", () => {
       setProgress(null);
-      let payload: { error?: string; label?: string; filename?: string } = {};
+      let payload: {
+        error?: string;
+        label?: string;
+        filename?: string;
+        scorm?: { title: string | null; files: number; parts: number } | null;
+      } = {};
       try {
         payload = JSON.parse(request.responseText);
       } catch {
@@ -57,7 +62,13 @@ export function LessonUpload({
       }
 
       if (request.status >= 200 && request.status < 300) {
-        setNotice(`${payload.label ?? "File"} attached: ${payload.filename}`);
+        const scorm = payload.scorm;
+        setNotice(
+          scorm
+            ? `SCORM 1.2 package "${scorm.title ?? payload.filename}" unpacked, ${scorm.files} files. Learners play it in this lesson, and it completes the lesson when they finish.` +
+                (scorm.parts > 1 ? ` It has ${scorm.parts} parts; only the first is played for now.` : "")
+            : `${payload.label ?? "File"} attached: ${payload.filename}`,
+        );
         if (inputRef.current) inputRef.current.value = "";
         router.refresh();
       } else {
@@ -89,6 +100,10 @@ export function LessonUpload({
           Uploading another replaces it.
         </p>
       ) : null}
+      <p className="text-xs text-[var(--muted)]">
+        A SCORM 1.2 package (a .zip from an authoring tool) plays inside the lesson. Its own scripts run with the
+        learner&rsquo;s access to this platform, so use packages only from sources you trust.
+      </p>
 
       <input
         ref={inputRef}

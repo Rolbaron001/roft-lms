@@ -355,3 +355,75 @@ export const recordStoreDeliveries = pgTable(
     uniqueIndex("record_store_deliveries_statement_idx").on(t.organisationId, t.statementId),
   ],
 );
+
+/**
+ * A SCORM package a lesson plays, unpacked into storage. Job sheet D8,
+ * 27 September 2026.
+ *
+ * The zip stays the lesson's file; its contents are unpacked under
+ * `storagePrefix` so a browser can load them one by one, the way a package
+ * expects to be served.
+ */
+export const scormPackages = pgTable(
+  "scorm_packages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    /** "1.2" for now; SCORM 2004 and cmi5 are refused with a reason. */
+    version: text("version").notNull(),
+    /** The package's own title, from its manifest. */
+    title: text("title"),
+    /** The file the package starts from, relative to its root. */
+    launchPath: text("launch_path").notNull(),
+    /** Where the unpacked files live in storage, ending in "/". */
+    storagePrefix: text("storage_prefix").notNull(),
+    fileCount: integer("file_count").notNull(),
+    /** How many separately launched parts it has; only the first is played. */
+    scoCount: integer("sco_count").notNull().default(1),
+    /** Passed to the package as cmi.launch_data, from its manifest. */
+    launchData: text("launch_data"),
+    /** A mastery score from the manifest, which decides passed or failed. */
+    masteryScore: numeric("mastery_score", { precision: 6, scale: 2 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("scorm_packages_lesson_idx").on(t.lessonId)],
+);
+
+/** A learner's progress through a lesson's SCORM package, as it last reported. */
+export const scormAttempts = pgTable(
+  "scorm_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    enrolmentId: uuid("enrolment_id")
+      .notNull()
+      .references(() => enrolments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** What the package reported: "passed", "completed", "failed", "incomplete", "browsed". */
+    lessonStatus: text("lesson_status").notNull().default("not attempted"),
+    scoreRaw: numeric("score_raw", { precision: 8, scale: 2 }),
+    scoreMin: numeric("score_min", { precision: 8, scale: 2 }),
+    scoreMax: numeric("score_max", { precision: 8, scale: 2 }),
+    /** Where the learner was, for picking up again. */
+    lessonLocation: text("lesson_location"),
+    suspendData: text("suspend_data"),
+    /** How the learner last left: "suspend" means pick up where they stopped. */
+    exitMode: text("exit_mode"),
+    /** Time spent in total, in whole seconds, summed from each session. */
+    totalSeconds: integer("total_seconds").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("scorm_attempts_enrolment_lesson_idx").on(t.enrolmentId, t.lessonId)],
+);

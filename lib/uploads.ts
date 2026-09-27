@@ -23,6 +23,7 @@ import {
 } from "./media";
 import { buildStorageKey, getObject, putObject } from "./storage";
 import { archivedFileNotice } from "./cohort-archive";
+import { installScormPackage, ScormError } from "./scorm";
 
 /**
  * Uploading course material and reading it back.
@@ -156,6 +157,20 @@ export async function uploadLessonMedia(
   // upload destroying work.
   let extracted: string | null = null;
 
+  // A zip is a SCORM package if it carries a manifest (job sheet D8): it is
+  // unpacked and played. Any other zip stays an ordinary download. A package
+  // the platform cannot play is refused with the reason, rather than kept as
+  // a lesson nobody can open.
+  let scorm: Awaited<ReturnType<typeof installScormPackage>> = null;
+  if (stored.kind === "archive") {
+    try {
+      scorm = await installScormPackage(session.organisationId, lessonId, file.bytes);
+    } catch (error) {
+      if (error instanceof ScormError) throw new UploadError(error.message, "rejected");
+      throw error;
+    }
+  }
+
   if (stored.mimeType.includes("wordprocessingml")) {
     try {
       const text = readDocxText(file.bytes).trim();
@@ -188,7 +203,11 @@ export async function uploadLessonMedia(
         contentType:
           extracted && !keepsExistingBody
             ? ("text" as "video")
-            : (lessonContentTypeFor(stored.kind) as "video"),
+            : stored.kind === "archive"
+              ? scorm
+                ? "scorm"
+                : "document"
+              : (lessonContentTypeFor(stored.kind) as "video"),
         ...(extracted && !keepsExistingBody ? { body: extracted } : {}),
       })
       .where(eq(lessons.id, lessonId));
@@ -205,11 +224,16 @@ export async function uploadLessonMedia(
         sizeBytes: stored.sizeBytes,
         sha256: stored.sha256,
         textExtracted: extracted !== null,
+        scorm: scorm ? { version: scorm.version, launchPath: scorm.launchPath, files: scorm.fileCount } : null,
       },
     });
   });
 
-  return { ...stored, textExtracted: extracted !== null };
+  return {
+    ...stored,
+    textExtracted: extracted !== null,
+    scorm: scorm ? { title: scorm.title, files: scorm.fileCount, parts: scorm.scoCount } : null,
+  };
 }
 
 /**

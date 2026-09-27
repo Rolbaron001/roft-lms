@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { markLessonCompleteAction, type LearnState } from "../actions";
 import { LessonMediaView } from "@/components/lesson-media";
+import { ScormPlayer } from "@/components/scorm-player";
 
 type Lesson = {
   id: string;
@@ -34,6 +36,7 @@ export function CoursePlayer({
   percentage: number;
   canRecordProgress: boolean;
 }) {
+  const router = useRouter();
   const allLessons = sections.flatMap((section) => section.lessons);
 
   // Open on the first unfinished lesson, so returning to a course resumes
@@ -162,7 +165,16 @@ export function CoursePlayer({
             </div>
 
             <div className="mt-4 min-h-32 space-y-4 text-sm leading-relaxed">
-              {selected.mediaMimeType ? (
+              {selected.contentType === "scorm" ? (
+                // Keyed on the lesson, so moving to another lesson ends this
+                // package's session before the next one starts.
+                <ScormPlayer
+                  key={selected.id}
+                  lessonId={selected.id}
+                  enrolmentId={canRecordProgress ? enrolmentId : null}
+                  onCompleted={() => router.refresh()}
+                />
+              ) : selected.mediaMimeType ? (
                 <LessonMediaView
                   media={{
                     lessonId: selected.id,
@@ -175,7 +187,7 @@ export function CoursePlayer({
 
               {selected.body ? (
                 <div className="whitespace-pre-wrap">{selected.body}</div>
-              ) : selected.mediaMimeType ? null : selected.externalUrl ? (
+              ) : selected.mediaMimeType || selected.contentType === "scorm" ? null : selected.externalUrl ? (
                 <a
                   href={selected.externalUrl}
                   target="_blank"
@@ -204,6 +216,11 @@ export function CoursePlayer({
               {selected.state === "completed" ? (
                 <p className="text-sm font-medium text-[var(--success)]">
                   ✓ Completed
+                </p>
+              ) : selected.contentType === "scorm" ? (
+                // The package says when it is finished, not a button.
+                <p className="text-sm text-[var(--muted)]">
+                  This lesson completes when you finish it in the package above. Your place is kept if you stop part of the way through.
                 </p>
               ) : canRecordProgress ? (
                 <form action={formAction}>

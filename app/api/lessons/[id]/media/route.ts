@@ -41,6 +41,8 @@ export async function POST(
       label: stored.label,
       kind: stored.kind,
       sizeBytes: stored.sizeBytes,
+      // Set when the zip was a SCORM package and has been unpacked (D8).
+      scorm: stored.scorm,
     });
   } catch (error) {
     return errorResponse(error);
