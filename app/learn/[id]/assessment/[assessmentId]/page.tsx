@@ -6,6 +6,8 @@ import { DEFAULT_DECLARATION } from "@/lib/declaration";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { getFeedback, sectionComments } from "@/lib/marking";
 import { AppShell } from "@/components/app-shell";
+import { translator } from "@/lib/i18n";
+import { dateLocale, localeFor } from "@/lib/i18n/locales";
 import { QuizForm } from "./quiz-form";
 import { EvidenceForm } from "./evidence-form";
 
@@ -17,6 +19,8 @@ export default async function TakeAssessmentPage({
   const { id, assessmentId } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
 
   // The enrolment is loaded first so the same ownership rule that guards the
   // course also guards its assessments.
@@ -63,19 +67,20 @@ export default async function TakeAssessmentPage({
           href={`/learn/${id}`}
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← Back to the course
+          {t("assess.back")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">
           {view.assessment.title}
         </h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Pass mark {view.assessment.passMark}%
+          {t("assess.passMark", { mark: view.assessment.passMark })}
           {attemptsLeft !== null
-            ? ` · ${attemptsLeft} of ${view.assessment.maxAttempts} attempts left`
+            ? ` · ${t("assess.attemptsLeft", { left: attemptsLeft, max: view.assessment.maxAttempts ?? 0 })}`
             : ""}
+          {" · "}
           {view.assessment.purpose === "summative"
-            ? " · counts towards your qualification"
-            : " · practice"}
+            ? t("assess.counts")
+            : t("assess.practice")}
         </p>
         {view.assessment.instructions ? (
           <p className="mt-3 max-w-2xl text-sm">
@@ -87,31 +92,36 @@ export default async function TakeAssessmentPage({
       {latest ? (
         <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Your last attempt
+            {t("assess.lastAttempt")}
           </h2>
           <p className="mt-2 text-sm">
-            Scored {latest.autoScore} of {latest.maxScore}.{" "}
+            {t("assess.scored", { score: latest.autoScore ?? 0, max: latest.maxScore ?? 0 })}{" "}
             {latest.status === "submitted"
-              ? "Waiting for an assessor to review it."
+              ? t("assess.waiting")
               : latest.status === "moderated"
-                ? "Reviewed and moderated."
-                : "Recorded."}
+                ? t("assess.moderated")
+                : t("assess.recorded")}
           </p>
 
           {feedback ? (
             <div className="mt-4 border-t border-[var(--border)] pt-4">
               <h3 className="text-sm font-semibold">
-                Feedback from your facilitator
+                {t("assess.feedback")}
               </h3>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                {feedback.marksAwarded} of {feedback.marksAvailable} marks
+                {t("assess.marksOf", {
+                  awarded: feedback.marksAwarded ?? 0,
+                  available: feedback.marksAvailable ?? 0,
+                })}
                 {feedback.returnedAt ? (
                   <>
-                    {" · returned "}
-                    {feedback.returnedAt.toLocaleDateString("en-ZA", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
+                    {" · "}
+                    {t("assess.returned", {
+                      date: feedback.returnedAt.toLocaleDateString(dateLocale(locale), {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }),
                     })}
                   </>
                 ) : null}
@@ -142,7 +152,7 @@ export default async function TakeAssessmentPage({
               {feedback.criteriaOfConcern.length > 0 ? (
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                    Worth going back over
+                    {t("assess.goBackOver")}
                   </p>
                   <ul className="mt-1 space-y-1">
                     {feedback.criteriaOfConcern.map((criterion) => (
@@ -155,7 +165,7 @@ export default async function TakeAssessmentPage({
                     ))}
                   </ul>
                   <p className="mt-2 text-xs text-[var(--muted)]">
-                    This is developmental. Nothing here counts against you.
+                    {t("assess.developmental")}
                   </p>
                 </div>
               ) : null}
@@ -166,16 +176,11 @@ export default async function TakeAssessmentPage({
 
       {view.competent ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-          <p className="text-sm">
-            You have been found competent on this assessment, so there is
-            nothing to sit again.
-          </p>
+          <p className="text-sm">{t("assess.competent")}</p>
         </section>
       ) : attemptsLeft !== null && attemptsLeft <= 0 ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-          <p className="text-sm">
-            You have used all your attempts at this assessment.
-          </p>
+          <p className="text-sm">{t("assess.noAttempts")}</p>
         </section>
       ) : view.assessment.type === "quiz" ? (
         <QuizForm

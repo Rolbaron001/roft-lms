@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { af } from "@/lib/i18n/af";
 import { en } from "@/lib/i18n/en";
 import { catalogueFor, translator } from "@/lib/i18n";
-import { LOCALES, localeFor, localeOf } from "@/lib/i18n/locales";
+import { LOCALES, dateLocale, localeFor, localeOf } from "@/lib/i18n/locales";
 import { vocabulary } from "@/lib/terms";
 
 describe("the languages offered", () => {
@@ -70,6 +70,66 @@ describe("a provider's own words", () => {
     expect(vocabulary(null, { delivery: "study_units" }, "af").many("course")).toBe("Studie-eenhede");
     expect(vocabulary({ course: { one: "Module", many: "Modules" } }, null, "af").many("course")).toBe("Modules");
     expect(vocabulary(null).many("course")).toBe("Courses");
+  });
+});
+
+describe("stage 2: the rest of what a learner sees", () => {
+  const screens = [
+    "app/learn/[id]/assessment/[assessmentId]/page.tsx",
+    "app/learn/[id]/assessment/[assessmentId]/quiz-form.tsx",
+    "app/learn/[id]/assessment/[assessmentId]/evidence-form.tsx",
+    "app/learn/[id]/paper/[assessmentId]/page.tsx",
+    "app/learn/[id]/paper/[assessmentId]/paper-form.tsx",
+    "app/notifications/page.tsx",
+    "app/notifications/mark-all-read.tsx",
+    "app/certificates/[id]/page.tsx",
+    "app/workplace/page.tsx",
+    "app/workplace/[id]/page.tsx",
+    "app/workplace/[id]/logbook-panel.tsx",
+  ];
+  const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+
+  it("has an Afrikaans draft of every phrase moved into the catalogue so far", () => {
+    const missing = Object.keys(en).filter((key) => !(key in af));
+    expect(missing).toEqual([]);
+  });
+
+  it("takes its wording from the catalogue on every screen", () => {
+    // A phrase from each screen that used to be written into it.
+    const once = [
+      "Submit answers", "Evidence submitted", "Hand in", "Mark all as read",
+      "Certificate of Completion", "Waiting for the coach", "Sign this logbook", "Your last attempt",
+    ];
+    for (const path of screens) {
+      const text = source(path);
+      expect(text, path).toMatch(/useT\(\)|translator\(/);
+      for (const phrase of once) expect(text, `${path}: ${phrase}`).not.toContain(`>${phrase}<`);
+      expect(text, path).not.toMatch(/toLocale(?:Date|Time)?String\("en-ZA"/);
+    }
+  });
+
+  it("writes dates the way the reader's language does, and never in a form the runtime cannot", () => {
+    expect(dateLocale("af")).toMatch(/^af/);
+    expect(dateLocale("en")).toBe("en-ZA");
+    expect(dateLocale("nonsense")).toBe("en-ZA");
+    for (const locale of LOCALES) {
+      expect(() => new Date(2026, 9, 1).toLocaleDateString(dateLocale(locale.code))).not.toThrow();
+    }
+    expect(new Date(2026, 9, 1).toLocaleDateString(dateLocale("af"), { month: "long" })).toBe("Oktober");
+  });
+
+  it("puts a certificate in its holder's language, whoever prints it", () => {
+    const page = source("app/certificates/[id]/page.tsx");
+    expect(page).toMatch(/localeFor\(tenant, holder\)/);
+    expect(page).toMatch(/doc\("cert\.title"\)/);
+    expect(translator("af")("cert.title")).toBe("Sertifikaat van Voltooiing");
+  });
+
+  it("leaves the declaration a learner signs in the words the provider or the platform wrote", () => {
+    // A signed statement is not machine-translated: the draft could say
+    // something the learner never agreed to. It is translated when a
+    // translator has checked it (job sheet D9).
+    expect(Object.keys(en).some((key) => /declarationText|declaration\.default/.test(key))).toBe(false);
   });
 });
 

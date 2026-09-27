@@ -10,6 +10,8 @@ import {
 } from "@/lib/papers";
 import { AppShell, Card } from "@/components/app-shell";
 import { PaperForm } from "./paper-form";
+import { translator } from "@/lib/i18n";
+import { localeFor } from "@/lib/i18n/locales";
 
 /**
  * Sitting a paper.
@@ -27,6 +29,7 @@ export default async function PaperPage({
   const { id, assessmentId } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const t = translator(localeFor(tenant, session));
 
   let delivery;
   try {
@@ -76,16 +79,16 @@ export default async function PaperPage({
             </h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
               {sitting.purpose === "summative"
-                ? "This is assessed and counts towards your qualification."
-                : "This is preparation. It is marked and returned to you, and it does not decide anything."}{" "}
-              {sitting.totalMarks} marks
+                ? t("paper.summative")
+                : t("paper.formative")}{" "}
+              {t("paper.marks", { marks: sitting.totalMarks })}
               {sitting.attemptNumber > 1
-                ? ` · attempt ${sitting.attemptNumber}`
+                ? ` · ${t("paper.attempt", { number: sitting.attemptNumber })}`
                 : ""}
             </p>
           </>
         ) : (
-          <h1 className="mt-2 text-xl font-semibold">Not open</h1>
+          <h1 className="mt-2 text-xl font-semibold">{t("paper.notOpen")}</h1>
         )}
       </div>
 
@@ -93,7 +96,7 @@ export default async function PaperPage({
         <Card>
           <p className="text-sm">{refusal}</p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Go back to the course to see what is still outstanding.
+            {t("paper.goBack")}
           </p>
         </Card>
       ) : sitting ? (

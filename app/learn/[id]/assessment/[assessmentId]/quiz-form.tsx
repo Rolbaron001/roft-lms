@@ -6,6 +6,7 @@ import {
   submitQuizAction,
   type QuizState,
 } from "../../../actions";
+import { useT } from "@/components/i18n";
 
 type Item = {
   id: string;
@@ -38,6 +39,7 @@ export function QuizForm({
   /** The wording to accept before handing in; set only for a summative. */
   declaration?: string | null;
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<QuizState, FormData>(
     submitQuizAction,
     {},
@@ -85,27 +87,27 @@ export function QuizForm({
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="text-lg font-medium">
           {awaitingAssessor
-            ? "Submitted"
+            ? t("assess.submitted")
             : passed
-              ? "Passed"
-              : "Not passed this time"}
+              ? t("assess.passed")
+              : t("assess.notPassed")}
         </h2>
         <p className="mt-2 text-sm">
-          You scored {score} out of {maxScore}.
+          {t("assess.youScored", { score, max: maxScore })}
         </p>
         <p className="mt-3 text-sm text-[var(--muted)]">
           {awaitingAssessor
-            ? "This assessment counts towards your qualification, so an assessor will review it and record the competency decision. You will see the result once that is done."
+            ? t("assess.awaitingAssessor")
             : passed
-              ? "This was practice, so the result is recorded against your learning but does not decide a qualification."
-              : "This was practice. Review the material and try again."}
+              ? t("assess.practicePassed")
+              : t("assess.practiceFailed")}
         </p>
         <a
           href={`/learn/${enrolmentId}`}
           className="mt-6 inline-block rounded-md px-4 py-2 text-sm font-semibold text-white"
           style={{ background: "var(--brand-primary)" }}
         >
-          Back to the course
+          {t("assess.backToCourse")}
         </a>
       </section>
     );
@@ -140,18 +142,18 @@ export function QuizForm({
             key={item.id}
             className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
           >
-            <legend className="sr-only">Question {index + 1}</legend>
+            <legend className="sr-only">{t("assess.question", { number: index + 1 })}</legend>
             <p className="text-sm font-medium">
               {index + 1}. {item.stem}
             </p>
             {multiple ? (
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Select every answer that applies.
+                {t("assess.selectEvery")}
               </p>
             ) : null}
             {matching ? (
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Pair each item on the left with one on the right.
+                {t("assess.pair")}
               </p>
             ) : null}
 
@@ -175,7 +177,7 @@ export function QuizForm({
                         }
                         className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
                       >
-                        <option value="">Choose…</option>
+                        <option value="">{t("assess.choose")}</option>
                         {item.options.map((option) => (
                           <option
                             key={option.id}
@@ -195,7 +197,7 @@ export function QuizForm({
                 defaultValue={writtenAnswer(item.id)}
                 rows={item.type === "short_answer" ? 3 : 10}
                 className={`mt-3 ${inputClass}`}
-                placeholder="Your answer"
+                placeholder={t("assess.yourAnswer")}
               />
             ) : (
               <div className="mt-3 space-y-2">
@@ -223,10 +225,10 @@ export function QuizForm({
                   htmlFor={`justify-${item.id}`}
                   className="block text-sm font-medium"
                 >
-                  Why?
+                  {t("assess.why")}
                 </label>
                 <p className="mb-2 text-xs text-[var(--muted)]">
-                  The reason is what is marked here, not the box above.
+                  {t("assess.whyMarked")}
                 </p>
                 <textarea
                   id={`justify-${item.id}`}
@@ -270,14 +272,14 @@ export function QuizForm({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Submitting…" : "Submit answers"}
+          {pending ? t("assess.submitting") : t("assess.submit")}
         </button>
         <span className="text-xs text-[var(--muted)]">
           {saving
-            ? "Saving…"
+            ? t("assess.saving")
             : savedAt
-              ? `Your answers were kept at ${new Date(savedAt).toLocaleTimeString()}. Submitting is what sends them to be marked.`
-              : "Your answers are kept as you work. Submitting is what sends them to be marked."}
+              ? t("assess.keptAt", { time: new Date(savedAt).toLocaleTimeString() })
+              : t("assess.kept")}
         </span>
       </div>
     </form>

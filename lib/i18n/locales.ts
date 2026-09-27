@@ -60,6 +60,25 @@ export function localeOf(code: string | null | undefined): Locale {
 }
 
 /**
+ * The tag to format dates and numbers with. The South African form of each
+ * language where the runtime knows it ("af-ZA" names the months in Afrikaans:
+ * Oktober, Desember); South African English where it
+ * does not, rather than the runtime's own default, which may be American.
+ */
+export function dateLocale(code: string | null | undefined): string {
+  const language = isLocale(code) ? code : DEFAULT_LOCALE;
+  const southern = !["es", "fr", "it", "de", "pt"].includes(language);
+  for (const tag of southern ? [`${language}-ZA`, language] : [language]) {
+    try {
+      if (Intl.DateTimeFormat.supportedLocalesOf([tag]).length > 0) return tag;
+    } catch {
+      // An unusable tag: try the next.
+    }
+  }
+  return "en-ZA";
+}
+
+/**
  * The language to speak to somebody in: their own choice, else their
  * provider's, else English.
  */

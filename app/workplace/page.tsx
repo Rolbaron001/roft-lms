@@ -3,14 +3,8 @@ import { requireCapability, requireSession } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { myLogbooks } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "With the learner",
-  submitted_to_coach: "Waiting for the coach",
-  returned_by_coach: "Sent back to the learner",
-  coach_signed: "Signed — with the assessor",
-  accepted_by_assessor: "Received by the assessor",
-};
+import { maybe, translator } from "@/lib/i18n";
+import { localeFor } from "@/lib/i18n/locales";
 
 /**
  * Work experience logbooks.
@@ -24,10 +18,12 @@ export default async function WorkplacePage() {
   const tenant = await requireCapability("workplace_experience");
   const session = await requireSession();
   const logbooks = await myLogbooks(session);
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
   // The client calls this a workplace experience sign-off rather than a
   // logbook (27 August). Both words are in use in the sector, so it is the
   // tenant's to choose rather than the platform's to insist on.
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   const isCoach = session.permissions.includes("workplace:sign");
   const canManage = session.permissions.includes("workplace:manage");
@@ -38,11 +34,9 @@ export default async function WorkplacePage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Work experience</h1>
+        <h1 className="text-xl font-semibold">{t("work.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          {isCoach
-            ? "The learners you supervise. You confirm what they did in the workplace; nothing reaches an assessor without your signature."
-            : "Work experience is done at an employer and signed off by the workplace coach there. The order is fixed: you record it, your coach confirms it, then it goes to an assessor."}
+          {isCoach ? t("work.introCoach") : t("work.introLearner")}
         </p>
         {canManage ? (
           <p className="mt-3">
@@ -50,7 +44,7 @@ export default async function WorkplacePage() {
               href="/workplace/setup"
               className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              Set up work experience
+              {t("work.setUp")}
             </Link>
           </p>
         ) : null}
@@ -62,11 +56,9 @@ export default async function WorkplacePage() {
           style={{ borderColor: "var(--brand-accent)" }}
         >
           <p className="text-sm font-semibold">
-            {waiting}{" "}
             {waiting === 1
-              ? `${words.lowerOne("workplaceRecord")} is`
-              : `${words.lowerMany("workplaceRecord")} are`}{" "}
-            waiting for your signature.
+              ? t("work.waitingOne", { record: words.lowerOne("workplaceRecord") })
+              : t("work.waitingMany", { count: waiting, records: words.lowerMany("workplaceRecord") })}
           </p>
         </div>
       ) : null}
@@ -74,9 +66,9 @@ export default async function WorkplacePage() {
       {logbooks.length === 0 ? (
         <Card>
           <p className="text-sm text-[var(--muted)]">
-            {canManage
-              ? `No ${words.lowerMany("workplaceRecord")} yet. Set one up above: an agreement naming the learner, the employer and the coach, then one for each work experience module.`
-              : `No ${words.lowerMany("workplaceRecord")} yet. An administrator opens one once a workplace agreement is in place naming the learner, the employer and the coach.`}
+            {t(canManage ? "work.noneManage" : "work.none", {
+              records: words.lowerMany("workplaceRecord"),
+            })}
           </p>
         </Card>
       ) : (
@@ -84,10 +76,10 @@ export default async function WorkplacePage() {
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
               <tr>
-                <th className="px-4 py-3 font-medium">Module</th>
-                <th className="px-4 py-3 font-medium">Learner</th>
-                <th className="px-4 py-3 font-medium">Employer</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">{t("work.module")}</th>
+                <th className="px-4 py-3 font-medium">{words.one("learner")}</th>
+                <th className="px-4 py-3 font-medium">{t("work.employer")}</th>
+                <th className="px-4 py-3 font-medium">{t("work.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -127,7 +119,7 @@ export default async function WorkplacePage() {
                           : { color: "var(--muted)" }
                       }
                     >
-                      {STATUS_LABELS[row.status] ?? row.status}
+                      {maybe(t, `work.status.${row.status}`) ?? row.status}
                     </span>
                   </td>
                 </tr>

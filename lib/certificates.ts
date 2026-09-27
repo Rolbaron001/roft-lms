@@ -494,7 +494,7 @@ export async function getCertificate(
     }
 
     const [holder] = await tx
-      .select({ firstName: users.firstName, lastName: users.lastName })
+      .select({ firstName: users.firstName, lastName: users.lastName, locale: users.locale })
       .from(users)
       .where(eq(users.id, certificate.userId));
 

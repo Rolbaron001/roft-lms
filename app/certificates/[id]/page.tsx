@@ -16,6 +16,8 @@ import { TenantLogo } from "@/components/tenant-logo";
 import { PrintButton } from "@/components/print-button";
 import { WithdrawDocument } from "@/components/withdraw-document";
 import { withdrawCertificateAction } from "./actions";
+import { translator } from "@/lib/i18n";
+import { dateLocale, localeFor } from "@/lib/i18n/locales";
 
 export default async function CertificatePage({
   params,
@@ -44,6 +46,19 @@ export default async function CertificatePage({
   const { certificate, holder } = detail;
   const revoked = certificate.revokedAt !== null;
 
+  // The page around the certificate speaks to whoever is reading it. The
+  // certificate itself is its holder's document, and is in their language
+  // whoever prints it: a facilitator printing it for a learner hands over the
+  // learner's certificate, not one in the facilitator's language.
+  const readerLocale = localeFor(tenant, session);
+  const t = translator(readerLocale);
+  const documentLocale = localeFor(tenant, holder);
+  const doc = translator(documentLocale);
+  // Written out, "27 September 2026": a document handed to an employer should
+  // not leave anyone guessing which number is the month.
+  const docDate = (date: Date) =>
+    date.toLocaleDateString(dateLocale(documentLocale), { day: "numeric", month: "long", year: "numeric" });
+
   /**
    * The provider's own layout, where they have one.
    *
@@ -68,14 +83,15 @@ export default async function CertificatePage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link href="/" className="text-sm text-[var(--muted)] hover:underline">
-          ← My learning
+          {t("cert.back")}
         </Link>
       </div>
 
       {revoked ? (
         <p className="mb-4 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-4 py-3 text-sm text-[var(--danger)]">
-          This certificate was withdrawn on{" "}
-          {certificate.revokedAt!.toLocaleDateString("en-ZA")}.{" "}
+          {t("cert.withdrawn", {
+            date: certificate.revokedAt!.toLocaleDateString(dateLocale(readerLocale)),
+          })}{" "}
           {certificate.revokedReason}
         </p>
       ) : null}
@@ -90,7 +106,7 @@ export default async function CertificatePage({
             consequence="The learner may have given the reference to an employer. It keeps resolving and will say it was withdrawn."
           />
         ) : null}
-        <PrintButton label="Print or save this certificate" />
+        <PrintButton label={t("cert.print")} />
       </div>
 
       {/* The certificate itself. Kept plain so it prints sensibly. */}
@@ -133,25 +149,25 @@ export default async function CertificatePage({
           was actually assessed and it is the useful part.
         */}
         <h1 className="mt-6 text-sm uppercase tracking-widest text-[var(--muted)]">
-          Certificate of Completion
+          {doc("cert.title")}
         </h1>
 
         <p className="mt-6 text-sm text-[var(--muted)]">
-          This certifies that
+          {doc("cert.certifies")}
         </p>
         <p className="mt-2 text-2xl font-semibold">
           {holder.firstName} {holder.lastName}
         </p>
 
         <p className="mt-6 text-sm text-[var(--muted)]">
-          has completed
+          {doc("cert.completed")}
         </p>
         <p className="mt-2 text-lg font-medium">{certificate.title}</p>
 
         {certificate.competenciesAttested.length > 0 ? (
           <>
             <p className="mt-8 text-sm text-[var(--muted)]">
-              attesting to the following competencies
+              {doc("cert.attesting")}
             </p>
             <ul className="mx-auto mt-3 max-w-md space-y-1 text-left">
               {certificate.competenciesAttested.map((competency) => (
@@ -161,7 +177,7 @@ export default async function CertificatePage({
                   {competency.level ? (
                     <span className="text-[var(--muted)]">
                       {" "}
-                      — {competency.level}
+                      ({competency.level})
                     </span>
                   ) : null}
                 </li>
@@ -176,11 +192,11 @@ export default async function CertificatePage({
         />
 
         <p className="mt-6 text-sm text-[var(--muted)]">
-          Issued {certificate.issuedAt.toLocaleDateString("en-ZA")}
+          {doc("cert.issued", { date: docDate(certificate.issuedAt) })}
         </p>
 
         <p className="mt-6 text-xs text-[var(--muted)]">
-          Verify at <span className="font-medium">/verify</span> using reference
+          {doc("cert.verifyAt", { address: "/verify" })}
         </p>
         <p className="mt-1 font-mono text-sm font-medium">
           {certificate.verificationReference}
@@ -195,16 +211,11 @@ export default async function CertificatePage({
           employer.
         */}
         <p className="mx-auto mt-8 max-w-md text-xs text-[var(--muted)]">
-          This is {tenant.displayName}&rsquo;s own certificate for a course it
-          delivered. It is not a national qualification and does not carry a
-          SAQA credit or identifier. Where a learner is working towards an
-          occupational qualification, the certificate for it is issued by the
-          QCTO.
+          {doc("cert.notNational", { provider: tenant.displayName })}
         </p>
 
       <p className="mt-4 text-center text-xs text-[var(--muted)]">
-        Anyone can confirm this certificate with the reference above, without
-        needing an account.
+        {doc("cert.anyone")}
       </p>
     </AppShell>
   );

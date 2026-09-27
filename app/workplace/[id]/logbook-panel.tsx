@@ -10,12 +10,8 @@ import {
   uploadEvidenceAction,
   type WorkplaceState,
 } from "../actions";
-
-const KIND_LABELS: Record<string, string> = {
-  work_activity: "Work activities — what you do",
-  contextual_knowledge: "Workplace knowledge — what you must be able to speak to",
-  supporting_evidence: "Supporting evidence — what the workplace must produce",
-};
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n";
 
 export type Entry = {
   entryId: string;
@@ -56,6 +52,7 @@ export function LogbookPanel({
   canAccept: boolean;
   outstanding: string[];
 }) {
+  const t = useT();
   const [tickState, tickAction] = useActionState<WorkplaceState, FormData>(
     tickEntryAction,
     {},
@@ -113,7 +110,7 @@ export function LogbookPanel({
       {[...byKind.entries()].map(([kind, items]) => (
         <section key={kind}>
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-            {KIND_LABELS[kind] ?? kind}
+            {maybe(t, `work.kind.${kind}`) ?? kind}
           </h3>
           <ul className="space-y-2">
             {items.map((entry) => (
@@ -147,7 +144,7 @@ export function LogbookPanel({
                           : "var(--muted)",
                       }}
                     >
-                      {entry.completed ? "✓ Done" : "○ Not yet"}
+                      {entry.completed ? t("work.done") : t("work.open")}
                     </span>
 
                     {canEdit ? (
@@ -160,8 +157,8 @@ export function LogbookPanel({
                           value={entry.completed ? "no" : "yes"}
                         />
                         <Pending
-                          label={entry.completed ? "Undo" : "Mark done"}
-                          busy="Saving…"
+                          label={entry.completed ? t("work.undo") : t("work.markDone")}
+                          busy={t("work.saving")}
                         />
                       </form>
                     ) : null}
@@ -181,7 +178,7 @@ export function LogbookPanel({
                       required
                       className="text-xs"
                     />
-                    <Pending label="Attach" busy="Attaching…" />
+                    <Pending label={t("work.attach")} busy={t("work.attaching")} />
                   </form>
                 ) : null}
               </li>
@@ -194,13 +191,11 @@ export function LogbookPanel({
         <div className="rounded-lg border border-[var(--border)] p-4">
           {outstanding.length > 0 ? (
             <p className="mb-3 text-sm text-[var(--muted)]">
-              Still outstanding: {outstanding.join(", ")}. Your coach cannot
-              sign until every line is done and every piece of supporting
-              evidence has a file attached.
+              {t("work.outstanding", { items: outstanding.join(", ") })}
             </p>
           ) : (
             <p className="mb-3 text-sm" style={{ color: "var(--success)" }}>
-              Everything is recorded. Send it to your coach when you are ready.
+              {t("work.allRecorded")}
             </p>
           )}
 
@@ -208,7 +203,7 @@ export function LogbookPanel({
             <input type="hidden" name="logbookId" value={logbookId} />
             <div>
               <label htmlFor="hours" className="block text-xs font-medium">
-                Hours in the workplace
+                {t("work.hoursField")}
               </label>
               <input
                 id="hours"
@@ -218,7 +213,7 @@ export function LogbookPanel({
                 className="mt-1 w-32 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
               />
             </div>
-            <Pending label="Send to my coach" busy="Sending…" />
+            <Pending label={t("work.send")} busy={t("work.sending")} />
           </form>
         </div>
       ) : null}
@@ -228,10 +223,9 @@ export function LogbookPanel({
           className="rounded-lg border-2 p-4"
           style={{ borderColor: "var(--brand-accent)" }}
         >
-          <p className="text-sm font-semibold">Your signature</p>
+          <p className="text-sm font-semibold">{t("work.yourSignature")}</p>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Signing records that you checked this evidence and will attest to it
-            if the assessor contacts you. It cannot be changed afterwards.
+            {t("work.signingMeans")}
           </p>
 
           <form action={signAction} className="mt-3 space-y-3">
@@ -239,7 +233,7 @@ export function LogbookPanel({
             <textarea
               name="comments"
               rows={3}
-              placeholder="Anything the assessor should know"
+              placeholder={t("work.forAssessor")}
               className="w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
             />
             <div className="flex gap-2">
@@ -249,7 +243,7 @@ export function LogbookPanel({
                 value="signed"
                 className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
               >
-                Sign this logbook
+                {t("work.sign")}
               </button>
               <button
                 type="submit"
@@ -257,7 +251,7 @@ export function LogbookPanel({
                 value="returned"
                 className="rounded-md border border-[var(--border)] px-4 py-2 text-sm transition hover:bg-[var(--border)]/30"
               >
-                Send back to the learner
+                {t("work.sendBack")}
               </button>
             </div>
           </form>
@@ -268,10 +262,9 @@ export function LogbookPanel({
         <form action={acceptAction} className="rounded-lg border border-[var(--border)] p-4">
           <input type="hidden" name="logbookId" value={logbookId} />
           <p className="mb-3 text-sm text-[var(--muted)]">
-            Signed by the workplace coach and ready to be taken into the
-            Portfolio of Evidence.
+            {t("work.readyForPoe")}
           </p>
-          <Pending label="Receive this logbook" busy="Receiving…" />
+          <Pending label={t("work.receive")} busy={t("work.receiving")} />
         </form>
       ) : null}
     </div>

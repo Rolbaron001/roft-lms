@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Sitting } from "@/lib/papers";
+import { useT } from "@/components/i18n";
 
 /**
  * Answering a paper on screen.
@@ -21,6 +22,7 @@ export function PaperForm({
   sitting: Sitting;
   enrolmentId: string;
 }) {
+  const t = useT();
   const [saving, setSaving] = useState<Record<string, "saving" | "saved" | "failed">>(
     {},
   );
@@ -65,16 +67,14 @@ export function PaperForm({
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         setSaving((current) => ({ ...current, [itemId]: "failed" }));
-        setError(result.error ?? "That answer did not save.");
+        setError(result.error ?? t("paper.notSaved"));
         return;
       }
       setSaving((current) => ({ ...current, [itemId]: "saved" }));
       setError(null);
     } catch {
       setSaving((current) => ({ ...current, [itemId]: "failed" }));
-      setError(
-        "That answer did not save. Your connection may have dropped — it will be retried when you next change something.",
-      );
+      setError(t("paper.connection"));
     }
   }
 
@@ -99,12 +99,12 @@ export function PaperForm({
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
-        setError(result.error ?? result.reasons?.[0] ?? "That could not be handed in.");
+        setError(result.error ?? result.reasons?.[0] ?? t("paper.handInFailed"));
         return;
       }
       router.push(`/learn/${enrolmentId}`);
     } catch {
-      setError("That could not be handed in. Check your connection and try again.");
+      setError(t("paper.handInConnection"));
     } finally {
       setSubmitting(false);
     }
@@ -134,7 +134,7 @@ export function PaperForm({
             <h2 className="text-base font-semibold">{section.title}</h2>
             {section.markTotal !== null ? (
               <span className="text-xs text-[var(--muted)]">
-                {section.markTotal} marks
+                {t("paper.marks", { marks: section.markTotal })}
               </span>
             ) : null}
           </div>
@@ -162,7 +162,7 @@ export function PaperForm({
                     {item.stem}
                   </p>
                   <span className="text-xs text-[var(--muted)]">
-                    {item.points} {item.points === 1 ? "mark" : "marks"}
+                    {item.points === 1 ? t("paper.oneMark") : t("paper.manyMarks", { marks: item.points })}
                     <SaveState state={saving[item.id]} />
                   </span>
                 </div>
@@ -213,8 +213,8 @@ export function PaperForm({
                       }
                       placeholder={
                         item.type === "long_answer"
-                          ? "Answer in detail, referring to the principles you have studied."
-                          : "Your answer"
+                          ? t("paper.detail")
+                          : t("assess.yourAnswer")
                       }
                       className="w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm leading-relaxed"
                     />
@@ -228,11 +228,11 @@ export function PaperForm({
 
       {readOnly ? (
         <p className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
-          You handed this in. It cannot be changed.
+          {t("paper.handedIn")}
         </p>
       ) : (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-          <h2 className="text-base font-semibold">Declaration</h2>
+          <h2 className="text-base font-semibold">{t("paper.declaration")}</h2>
           <label className="mt-3 flex items-start gap-3 text-sm leading-relaxed">
             <input
               type="checkbox"
@@ -251,12 +251,12 @@ export function PaperForm({
               className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               style={{ background: "var(--brand-primary)" }}
             >
-              {submitting ? "Handing in…" : "Hand in"}
+              {submitting ? t("paper.handingIn") : t("paper.handIn")}
             </button>
             <span className="text-xs text-[var(--muted)]">
               {declared
-                ? "Once handed in, this cannot be changed."
-                : "Confirm the declaration to hand in."}
+                ? t("paper.final")
+                : t("paper.confirm")}
             </span>
           </div>
         </section>
@@ -266,9 +266,9 @@ export function PaperForm({
 }
 
 function SaveState({ state }: { state?: "saving" | "saved" | "failed" }) {
+  const t = useT();
   if (!state) return null;
-  const label =
-    state === "saving" ? "saving…" : state === "saved" ? "saved" : "not saved";
+  const label = t(`paper.state.${state}`);
   return (
     <span
       className={`ml-2 ${state === "failed" ? "text-[var(--danger)]" : ""}`}
@@ -280,6 +280,7 @@ function SaveState({ state }: { state?: "saving" | "saved" | "failed" }) {
 }
 
 function Clock({ remaining }: { remaining: number }) {
+  const t = useT();
   const minutes = Math.floor(remaining / 60_000);
   const seconds = Math.floor((remaining % 60_000) / 1000);
   const low = remaining < 5 * 60_000;
@@ -294,8 +295,8 @@ function Clock({ remaining }: { remaining: number }) {
       role="timer"
       aria-live={low ? "polite" : "off"}
     >
-      {minutes}:{String(seconds).padStart(2, "0")} remaining
-      {low ? " — your work is saved as you go" : null}
+      {t("paper.remaining", { time: `${minutes}:${String(seconds).padStart(2, "0")}` })}
+      {low ? `; ${t("paper.savedAsYouGo")}` : null}
     </div>
   );
 }

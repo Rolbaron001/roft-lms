@@ -3,10 +3,12 @@ import { requireSession, requireTenant } from "@/lib/request";
 import { getLogbook } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
 import { LogbookPanel } from "./logbook-panel";
+import { translator } from "@/lib/i18n";
+import { dateLocale, localeFor } from "@/lib/i18n/locales";
 
-function formatDate(value: Date | null): string {
+function formatDate(value: Date | null, locale: string): string {
   if (!value) return "—";
-  return value.toLocaleDateString("en-ZA", {
+  return value.toLocaleDateString(dateLocale(locale), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -21,6 +23,8 @@ export default async function LogbookPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
 
   // Who may see this is decided in the data layer, so a coach cannot reach
   // another employer's learner by typing an address.
@@ -39,12 +43,12 @@ export default async function LogbookPage({
           href="/workplace"
           className="text-sm text-[var(--muted)] underline-offset-2 hover:underline"
         >
-          ← All work experience
+          {t("work.all")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{module?.title}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           <span className="font-mono">{module?.code}</span>
-          {module?.credits ? ` · ${module.credits} credits` : ""} ·{" "}
+          {module?.credits ? ` · ${t("work.credits", { credits: module.credits })}` : ""} ·{" "}
           {learner?.firstName} {learner?.lastName}
         </p>
       </div>
@@ -53,7 +57,7 @@ export default async function LogbookPage({
         <div className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-              Employer
+              {t("work.employer")}
             </p>
             <p>{agreement?.employerName}</p>
             {agreement?.employerAddress ? (
@@ -62,7 +66,7 @@ export default async function LogbookPage({
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-              Workplace coach
+              {t("work.coach")}
             </p>
             <p>{agreement?.coachName}</p>
             <p className="text-[var(--muted)]">
@@ -74,32 +78,32 @@ export default async function LogbookPage({
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-              Hours claimed
+              {t("work.hours")}
             </p>
             <p>{logbook.hoursClaimed ?? "—"}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
-              Signed
+              {t("work.signed")}
             </p>
             <p>
               {logbook.coachSignedAt
-                ? formatDate(logbook.coachSignedAt)
-                : "Not yet"}
+                ? formatDate(logbook.coachSignedAt, locale)
+                : t("work.notYet")}
             </p>
           </div>
         </div>
 
         {logbook.coachComments ? (
           <p className="mt-4 border-t border-[var(--border)] pt-3 text-sm">
-            <span className="text-[var(--muted)]">Coach&rsquo;s note: </span>
+            <span className="text-[var(--muted)]">{t("work.coachNote")} </span>
             {logbook.coachComments}
           </p>
         ) : null}
 
         {logbook.coachSignatureHash ? (
           <p className="mt-3 break-all font-mono text-[11px] text-[var(--muted)]">
-            Signature {logbook.coachSignatureHash}
+            {t("work.signature", { hash: logbook.coachSignatureHash })}
           </p>
         ) : null}
       </Card>
@@ -111,7 +115,7 @@ export default async function LogbookPage({
             href={`/workplace/${id}/statement`}
             className="text-sm underline underline-offset-2"
           >
-            Statement of Work Experience →
+            {t("work.statement")}
           </Link>
         </p>
       ) : null}

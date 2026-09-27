@@ -3,21 +3,25 @@ import { requireSession, requireTenant } from "@/lib/request";
 import { myNotifications } from "@/lib/notifications";
 import { AppShell, Card } from "@/components/app-shell";
 import { MarkAllRead } from "./mark-all-read";
+import { translator, type Translate } from "@/lib/i18n";
+import { dateLocale, localeFor } from "@/lib/i18n/locales";
 
-function relative(date: Date): string {
+function relative(date: Date, t: Translate, locale: string): string {
   const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return t("notify.justNow");
+  if (minutes < 60) return t("notify.minutesAgo", { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (hours < 24) return hours === 1 ? t("notify.hourAgo") : t("notify.hoursAgo", { count: hours });
   const days = Math.round(hours / 24);
-  if (days < 7) return `${days} ${days === 1 ? "day" : "days"} ago`;
-  return date.toLocaleDateString("en-ZA");
+  if (days < 7) return days === 1 ? t("notify.dayAgo") : t("notify.daysAgo", { count: days });
+  return date.toLocaleDateString(dateLocale(locale));
 }
 
 export default async function NotificationsPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
   const items = await myNotifications(session);
 
   const unread = items.filter((item) => !item.readAt);
@@ -26,11 +30,11 @@ export default async function NotificationsPage() {
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Notifications</h1>
+          <h1 className="text-xl font-semibold">{t("shell.notifications")}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {unread.length > 0
-              ? `${unread.length} unread`
-              : "Nothing unread."}
+              ? t("notify.unread", { count: unread.length })
+              : t("notify.nothingUnread")}
           </p>
         </div>
         {unread.length > 0 ? <MarkAllRead /> : null}
@@ -39,9 +43,7 @@ export default async function NotificationsPage() {
       {items.length === 0 ? (
         <Card>
           <p className="text-sm text-[var(--muted)]">
-            Nothing yet. You will be told here when training is assigned or due,
-            when work is waiting for you, and when an assessment result or
-            certificate arrives.
+            {t("notify.nothingYet")}
           </p>
         </Card>
       ) : (
@@ -55,7 +57,7 @@ export default async function NotificationsPage() {
                   >
                     {!item.readAt ? (
                       <span
-                        aria-label="Unread"
+                        aria-label={t("notify.unreadMark")}
                         className="mr-2 inline-block h-2 w-2 rounded-full align-middle"
                         style={{ background: "var(--brand-accent)" }}
                       />
@@ -63,7 +65,7 @@ export default async function NotificationsPage() {
                     {item.subject}
                   </p>
                   <span className="shrink-0 text-xs text-[var(--muted)]">
-                    {relative(item.createdAt)}
+                    {relative(item.createdAt, t, locale)}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted)]">{item.body}</p>

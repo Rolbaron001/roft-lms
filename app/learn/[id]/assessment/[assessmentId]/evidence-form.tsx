@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useT } from "@/components/i18n";
 
 type Submitted = { sha256: string; sizeBytes: number };
 
@@ -21,6 +22,7 @@ export function EvidenceForm({
   assessmentId: string;
   enrolmentId: string;
 }) {
+  const t = useT();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -60,13 +62,13 @@ export function EvidenceForm({
         formRef.current?.reset();
         router.refresh();
       } else {
-        setError(payload.error ?? "That could not be submitted.");
+        setError(payload.error ?? t("evidence.failed"));
       }
     });
 
     request.addEventListener("error", () => {
       setProgress(null);
-      setError("The upload failed. Check your connection and try again.");
+      setError(t("evidence.uploadFailed"));
     });
 
     request.send(body);
@@ -76,17 +78,16 @@ export function EvidenceForm({
     return (
       <section className="rounded-lg border-2 border-[var(--success)]/40 bg-[var(--surface)] p-6">
         <h2 className="font-medium" style={{ color: "var(--success)" }}>
-          Evidence submitted
+          {t("evidence.done")}
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          An assessor will review it and record a competency decision. You will
-          see the result once that is done.
+          {t("evidence.doneIntro")}
         </p>
 
         {submitted.length > 0 ? (
           <>
             <p className="mt-4 text-sm font-medium">
-              Each file has been fingerprinted:
+              {t("evidence.fingerprinted")}
             </p>
             <ul className="mt-2 space-y-1">
               {submitted.map((file) => (
@@ -99,9 +100,7 @@ export function EvidenceForm({
               ))}
             </ul>
             <p className="mt-2 text-xs text-[var(--muted)]">
-              If any stored file were ever altered, its fingerprint would stop
-              matching. That protects your work as much as it protects the
-              assessment.
+              {t("evidence.fingerprintNote")}
             </p>
           </>
         ) : null}
@@ -117,7 +116,7 @@ export function EvidenceForm({
     >
       <div>
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Your evidence</span>
+          <span className="block text-sm font-medium">{t("evidence.yours")}</span>
           <input
             type="file"
             name="files"
@@ -127,15 +126,14 @@ export function EvidenceForm({
           />
         </label>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Photographs, a recording of the task, a scanned logbook, or a document.
-          You can attach several at once.
+          {t("evidence.kinds")}
         </p>
       </div>
 
       <label className="block space-y-1.5">
         <span className="block text-sm font-medium">
-          Anything the assessor should know{" "}
-          <span className="font-normal text-[var(--muted)]">(optional)</span>
+          {t("evidence.note")}{" "}
+          <span className="font-normal text-[var(--muted)]">{t("evidence.optional")}</span>
         </span>
         <textarea
           name="note"
@@ -152,7 +150,7 @@ export function EvidenceForm({
               style={{ width: `${progress}%`, background: "var(--brand-accent)" }}
             />
           </div>
-          <p className="text-xs text-[var(--muted)]">Uploading… {progress}%</p>
+          <p className="text-xs text-[var(--muted)]">{t("evidence.uploading", { percent: progress })}</p>
         </div>
       ) : null}
 
@@ -171,7 +169,7 @@ export function EvidenceForm({
         className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--brand-primary)" }}
       >
-        {progress !== null ? "Submitting…" : "Submit evidence"}
+        {progress !== null ? t("assess.submitting") : t("evidence.submit")}
       </button>
     </form>
   );
