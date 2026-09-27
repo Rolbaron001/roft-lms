@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -282,16 +283,22 @@ export const qualificationModules = pgTable(
       .notNull()
       .references(() => qualifications.id, { onDelete: "cascade" }),
 
-    /** A module of the parent's curriculum. */
-    curriculumModuleId: uuid("curriculum_module_id")
-      .notNull()
-      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+    /** A module of the parent's curriculum. Its key is named below. */
+    curriculumModuleId: uuid("curriculum_module_id").notNull(),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => [
+    // Named, because the generated name runs past PostgreSQL's 63 characters
+    // and the schema push then drops and re-adds it on every deploy (job
+    // sheet D5). The same for every foreignKey() in the schema.
+    foreignKey({
+      name: "qualification_modules_curriculum_module_fk",
+      columns: [t.curriculumModuleId],
+      foreignColumns: [curriculumModules.id],
+    }).onDelete("cascade"),
     index("qualification_modules_qualification_idx").on(t.qualificationId),
     // A module is selected once. Twice would double its credits in every
     // total the platform computes.
@@ -453,9 +460,7 @@ export const assessmentCriteria = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    curriculumModuleId: uuid("curriculum_module_id")
-      .notNull()
-      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id").notNull(),
 
     /**
      * Nullable because a tenant outside the occupational qualification system, or one that captured
@@ -486,6 +491,11 @@ export const assessmentCriteria = pgTable(
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [
+    foreignKey({
+      name: "assessment_criteria_curriculum_module_fk",
+      columns: [t.curriculumModuleId],
+      foreignColumns: [curriculumModules.id],
+    }).onDelete("cascade"),
     /*
      * A criterion is unique within its topic, not within its whole module.
      *
@@ -753,11 +763,14 @@ export const lessonTopicElements = pgTable(
     lessonId: uuid("lesson_id")
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
-    topicElementId: uuid("topic_element_id")
-      .notNull()
-      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id").notNull(),
   },
   (t) => [
+    foreignKey({
+      name: "lesson_topic_elements_topic_element_fk",
+      columns: [t.topicElementId],
+      foreignColumns: [curriculumTopicElements.id],
+    }).onDelete("cascade"),
     uniqueIndex("lesson_topic_elements_unique_idx").on(
       t.lessonId,
       t.topicElementId,
@@ -813,13 +826,18 @@ export const exitLevelOutcomeCriteria = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    exitLevelOutcomeId: uuid("exit_level_outcome_id")
-      .notNull()
-      .references(() => exitLevelOutcomes.id, { onDelete: "cascade" }),
+    exitLevelOutcomeId: uuid("exit_level_outcome_id").notNull(),
     description: text("description").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
   },
-  (t) => [index("exit_level_outcome_criteria_org_idx").on(t.organisationId)],
+  (t) => [
+    foreignKey({
+      name: "exit_level_outcome_criteria_outcome_fk",
+      columns: [t.exitLevelOutcomeId],
+      foreignColumns: [exitLevelOutcomes.id],
+    }).onDelete("cascade"),
+    index("exit_level_outcome_criteria_org_idx").on(t.organisationId),
+  ],
 );
 
 /**
@@ -876,11 +894,14 @@ export const studyUnitModules = pgTable(
     studyUnitId: uuid("study_unit_id")
       .notNull()
       .references(() => studyUnits.id, { onDelete: "cascade" }),
-    curriculumModuleId: uuid("curriculum_module_id")
-      .notNull()
-      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+    curriculumModuleId: uuid("curriculum_module_id").notNull(),
   },
   (t) => [
+    foreignKey({
+      name: "study_unit_modules_curriculum_module_fk",
+      columns: [t.curriculumModuleId],
+      foreignColumns: [curriculumModules.id],
+    }).onDelete("cascade"),
     uniqueIndex("study_unit_modules_unique_idx").on(
       t.studyUnitId,
       t.curriculumModuleId,
@@ -924,14 +945,17 @@ export const topicElementAlignment = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    topicElementId: uuid("topic_element_id")
-      .notNull()
-      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id").notNull(),
     kind: alignmentResourceKind("kind").notNull(),
     /** "SA2", "Chapter 2", "BCEA s.29" — as the matrix writes it. */
     reference: text("reference").notNull(),
   },
   (t) => [
+    foreignKey({
+      name: "topic_element_alignment_topic_element_fk",
+      columns: [t.topicElementId],
+      foreignColumns: [curriculumTopicElements.id],
+    }).onDelete("cascade"),
     uniqueIndex("topic_element_alignment_unique_idx").on(
       t.topicElementId,
       t.kind,
@@ -1040,10 +1064,7 @@ export const programmeDocuments = pgTable(
     studyUnitId: uuid("study_unit_id").references(() => studyUnits.id, {
       onDelete: "cascade",
     }),
-    curriculumModuleId: uuid("curriculum_module_id").references(
-      () => curriculumModules.id,
-      { onDelete: "cascade" },
-    ),
+    curriculumModuleId: uuid("curriculum_module_id"),
 
     /**
      * A course, or a programme made of courses.
@@ -1091,6 +1112,11 @@ export const programmeDocuments = pgTable(
       .defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "programme_documents_curriculum_module_fk",
+      columns: [t.curriculumModuleId],
+      foreignColumns: [curriculumModules.id],
+    }).onDelete("cascade"),
     index("programme_documents_org_idx").on(t.organisationId),
     index("programme_documents_qualification_idx").on(t.qualificationId),
     index("programme_documents_study_unit_idx").on(t.studyUnitId),

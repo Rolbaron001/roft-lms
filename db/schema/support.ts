@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -535,9 +536,7 @@ export const feedbackRequests = pgTable(
     assessmentId: uuid("assessment_id").references(() => assessments.id, {
       onDelete: "set null",
     }),
-    questionnaireId: uuid("questionnaire_id")
-      .notNull()
-      .references(() => feedbackQuestionnaires.id, { onDelete: "restrict" }),
+    questionnaireId: uuid("questionnaire_id").notNull(),
 
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
     sentById: uuid("sent_by_id")
@@ -553,6 +552,13 @@ export const feedbackRequests = pgTable(
       .defaultNow(),
   },
   (t) => [
+    // Named: the generated name runs past PostgreSQL's 63 characters and the
+    // schema push then re-creates it on every deploy (job sheet D5).
+    foreignKey({
+      name: "feedback_requests_questionnaire_fk",
+      columns: [t.questionnaireId],
+      foreignColumns: [feedbackQuestionnaires.id],
+    }).onDelete("restrict"),
     index("feedback_requests_cohort_idx").on(t.organisationId, t.cohortId),
     uniqueIndex("feedback_requests_once_idx").on(
       t.organisationId,

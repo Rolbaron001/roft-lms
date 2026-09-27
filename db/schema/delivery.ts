@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -1204,17 +1205,26 @@ export const statutoryNotificationLearners = pgTable(
   "statutory_notification_learners",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    organisationId: uuid("organisation_id")
-      .notNull()
-      .references(() => organisations.id, { onDelete: "cascade" }),
-    notificationId: uuid("notification_id")
-      .notNull()
-      .references(() => statutoryNotifications.id, { onDelete: "cascade" }),
+    // Both keys named below (job sheet D5).
+    organisationId: uuid("organisation_id").notNull(),
+    notificationId: uuid("notification_id").notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
   },
   (t) => [
+    // Named: the generated names run past PostgreSQL's 63 characters and the
+    // schema push then re-creates them on every deploy.
+    foreignKey({
+      name: "statutory_notification_learners_organisation_fk",
+      columns: [t.organisationId],
+      foreignColumns: [organisations.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "statutory_notification_learners_notification_fk",
+      columns: [t.notificationId],
+      foreignColumns: [statutoryNotifications.id],
+    }).onDelete("cascade"),
     index("statutory_notification_learners_org_idx").on(t.organisationId),
     uniqueIndex("statutory_notification_learners_unique_idx").on(
       t.notificationId,

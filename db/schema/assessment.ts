@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -718,10 +719,8 @@ export const workplaceLogbooks = pgTable(
     learnerId: uuid("learner_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** The Work Experience Module this logbook covers. */
-    curriculumModuleId: uuid("curriculum_module_id")
-      .notNull()
-      .references(() => curriculumModules.id, { onDelete: "cascade" }),
+    /** The Work Experience Module this logbook covers. Key named below (D5). */
+    curriculumModuleId: uuid("curriculum_module_id").notNull(),
 
     status: logbookStatus("status").notNull().default("draft"),
     /** The curriculum states a range; the learner records what it took. */
@@ -752,6 +751,13 @@ export const workplaceLogbooks = pgTable(
       .defaultNow(),
   },
   (t) => [
+    // Named: the generated name runs past PostgreSQL's 63 characters and the
+    // schema push then re-creates it on every deploy (job sheet D5).
+    foreignKey({
+      name: "workplace_logbooks_curriculum_module_fk",
+      columns: [t.curriculumModuleId],
+      foreignColumns: [curriculumModules.id],
+    }).onDelete("cascade"),
     uniqueIndex("workplace_logbooks_learner_module_idx").on(
       t.learnerId,
       t.curriculumModuleId,
@@ -780,15 +786,18 @@ export const workplaceLogbookEntries = pgTable(
     logbookId: uuid("logbook_id")
       .notNull()
       .references(() => workplaceLogbooks.id, { onDelete: "cascade" }),
-    topicElementId: uuid("topic_element_id")
-      .notNull()
-      .references(() => curriculumTopicElements.id, { onDelete: "cascade" }),
+    topicElementId: uuid("topic_element_id").notNull(),
 
     completed: boolean("completed").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     note: text("note"),
   },
   (t) => [
+    foreignKey({
+      name: "workplace_logbook_entries_topic_element_fk",
+      columns: [t.topicElementId],
+      foreignColumns: [curriculumTopicElements.id],
+    }).onDelete("cascade"),
     uniqueIndex("workplace_logbook_entries_unique_idx").on(
       t.logbookId,
       t.topicElementId,
@@ -1338,16 +1347,18 @@ export const reassessmentAuthorisations = pgTable(
      * attempt and no more. A third attempt granted twice is not a third
      * attempt.
      */
-    submissionId: uuid("submission_id").references(
-      () => assessmentSubmissions.id,
-      { onDelete: "set null" },
-    ),
+    submissionId: uuid("submission_id"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "reassessment_authorisations_submission_fk",
+      columns: [t.submissionId],
+      foreignColumns: [assessmentSubmissions.id],
+    }).onDelete("set null"),
     index("reassessment_authorisations_subject_idx").on(
       t.assessmentId,
       t.userId,
@@ -1377,12 +1388,8 @@ export const oralAssessmentRecords = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    authorisationId: uuid("authorisation_id")
-      .notNull()
-      .references(() => reassessmentAuthorisations.id, { onDelete: "cascade" }),
-    submissionId: uuid("submission_id")
-      .notNull()
-      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    authorisationId: uuid("authorisation_id").notNull(),
+    submissionId: uuid("submission_id").notNull(),
     assessorId: uuid("assessor_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -1420,6 +1427,16 @@ export const oralAssessmentRecords = pgTable(
       .defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "oral_assessment_records_authorisation_fk",
+      columns: [t.authorisationId],
+      foreignColumns: [reassessmentAuthorisations.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "oral_assessment_records_submission_fk",
+      columns: [t.submissionId],
+      foreignColumns: [assessmentSubmissions.id],
+    }).onDelete("cascade"),
     uniqueIndex("oral_assessment_records_submission_idx").on(t.submissionId),
     index("oral_assessment_records_org_idx").on(t.organisationId),
   ],
@@ -1680,9 +1697,7 @@ export const fisaOutcomeCoverage = pgTable(
       .references(() => fisaInstruments.id, { onDelete: "cascade" }),
     role: fisaRole("role").notNull(),
 
-    exitLevelOutcomeId: uuid("exit_level_outcome_id")
-      .notNull()
-      .references(() => exitLevelOutcomes.id, { onDelete: "cascade" }),
+    exitLevelOutcomeId: uuid("exit_level_outcome_id").notNull(),
 
     /** "Learners should be able to maintain and repair drainage pipes." */
     requiredStandard: text("required_standard"),
@@ -1698,6 +1713,11 @@ export const fisaOutcomeCoverage = pgTable(
       .defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "fisa_outcome_coverage_outcome_fk",
+      columns: [t.exitLevelOutcomeId],
+      foreignColumns: [exitLevelOutcomes.id],
+    }).onDelete("cascade"),
     index("fisa_coverage_org_idx").on(t.organisationId),
     uniqueIndex("fisa_coverage_outcome_idx").on(
       t.instrumentId,
