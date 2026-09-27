@@ -36,6 +36,11 @@ export type ParsedItem = {
    * than leaving it open, so anything uncertain lands on the assessor.
    */
   markedBy: "app" | "assessor";
+  /**
+   * Opened by "Task 1:" or "Task A:". A guide's "Task 1 (25 Marks)" is for
+   * this, never for question 1 of another part that shares the number.
+   */
+  task?: true;
 };
 
 export type ParsedSection = {
@@ -43,6 +48,8 @@ export type ParsedSection = {
   instruction: string | null;
   /** As the paper prints it, which is checked against the items. */
   markTotal: number | null;
+  /** "Each question carries 1 mark", where the instruction says so. */
+  markEach?: number | null;
   items: ParsedItem[];
 };
 
@@ -64,18 +71,127 @@ export type ParsedPaper = {
   notes: string[];
 };
 
+// "PART A1" as well as "PART 1": Curiosa's Version 2 papers divide Section A
+// into Part A1 and Part A2. "SECTION 1" and "Part A" as well: the workbooks
+// from Study Unit 2 onwards head their sections that way, and until 27
+// September read as having no sections at all (job sheet D10).
 const SECTION_HEADING =
-  /^(?:(Activity\s+[\d.]+)|(SECTION\s+[A-Z])|(PART\s+\d+))\s*[::]\s*(.+)$/i;
+  /^(?:(Activity\s+[\d.]+)|(SECTION\s+(?:[A-Z]|\d+))|(PART\s+(?:[A-Z]\d*|\d+)))\s*[::]\s*(.+)$/i;
 const NUMBERED = /^(\d+)\.\s+(.+)$/;
-const OPTION = /^([A-H])\.\s+(.+)$/;
+/** "Q1. 1. In performance management…", numbered twice. */
+const Q_NUMBERED = /^Q(\d+)[.)]\s*(?:\d+[.)]\s+)?(.+)$/i;
+/** "A. …", "A) …", or with a tick box in front: "[  ]  A) …". */
+const OPTION = /^(?:\[\s*[xX✓]?\s*\]\s*)?([A-H])[.)]\s+(.+)$/;
+/** A tick box on its own: the learner's True or False column. */
+const TICK_BOX = /^\[\s*[xX✓]?\s*\]$/;
+/**
+ * A section that is the assessor's marking grid, not questions: "SECTION 3:
+ * ASSESSOR MARKING RUBRIC & EVALUATION SUMMARY". Its rows name the parts
+ * again and would otherwise be read as more of them.
+ */
+const NOT_QUESTIONS_SECTION = /\b(RUBRIC|GRADING GRID|EVALUATION SUMMARY|ASSESSOR)\b/i;
 const TRUE_FALSE = /\[\s*True\s*\/\s*False\s*\]\s*$/i;
-const MARKS_IN_HEADING = /\((\d+)\s*Marks?\b/i;
+/**
+ * "(15 Marks)" or "[5 Marks]". Curiosa writes a question's marks in square
+ * brackets and a section's in round ones; until 27 September only round ones
+ * were read, so every "Question 1: … [5 Marks]" came back worth nothing.
+ */
+const MARKS_IN_HEADING = /[([](\d+(?:[.,]\d+)?)\s*Marks?\b[^)\]]*[)\]]?/i;
+
+/**
+ * "Instructions: Select the SINGLE best answer… Each question carries 1 mark."
+ *
+ * Read as the section's instruction, and its mark per question kept. Until
+ * 27 September a line beginning "Instructions:" was taken for a question, so
+ * Section A of SU5's assessment had sixteen questions for fifteen marks and
+ * none of them could be given one.
+ */
+const INSTRUCTION_LINE =
+  // "Instructions: …", or "■ INSTRUCTIONS - PART ASelect the most…", where
+  // Word runs the heading into its first word.
+  /^(?:■\s*)?Instructions?\b\s*(?:[-–]\s*PART\s+[A-Z0-9]{1,2}?(?=[A-Z][a-z]|[\s::]|$))?\s*[::]?\s*(.*)$/i;
+const MARK_EACH = /\beach\s+(?:question|statement|item)\s+(?:carries|is worth)\s+(\d+(?:[.,]\d+)?)\s*marks?\b/i;
+
+/** "2,5" or "2.5" as printed: South African papers use either. */
+function markValue(printed: string): number {
+  return Number(printed.replace(",", "."));
+}
+
+/** Marks are kept to two decimals, so sums are compared at two decimals. */
+function roundMarks(marks: number): number {
+  return Math.round(marks * 100) / 100;
+}
+
+function isHundredths(marks: number): boolean {
+  return Math.abs(marks * 100 - Math.round(marks * 100)) < 1e-9;
+}
+
+/**
+ * A line the learner writes on: "Justification: ________", "Indicate
+ * True/False: ____", or nothing but a rule. Not a question, and not a copy of
+ * one; read as questions they doubled Section B and were reported as copies
+ * "never edited" (job sheet D10).
+ */
+const WRITING_SPACE = /_{4,}/;
+
+/**
+ * Nothing on the line but labels and lines to write on: "Justification:
+ * ______", "Answer (True/False): ______Justification:". A line with a rule
+ * in it and anything more is a question with a gap in it, and is kept.
+ */
+function isWritingSpace(line: string): boolean {
+  if (!WRITING_SPACE.test(line)) return false;
+  return (
+    line
+      .replace(/_{2,}/g, " ")
+      .replace(/[A-Za-z][A-Za-z ()/&-]{0,40}[::]/g, " ")
+      .trim() === ""
+  );
+}
+
+/**
+ * Where a case study begins. Everything from here to the next heading is
+ * reading for the questions that follow, not questions: read line by line it
+ * put a whole scenario into Section B as eleven "questions" (job sheet D10).
+ */
+const STIMULUS_START =
+  /^(?:CASE STUDY(?: SCENARIO)?\b|ORGANI[SZ]ATIONAL CONTEXT\b|(?:Integrated\s+)?Case Study\s*[::]|SCENARIO\s*[::])/;
+
+/**
+ * "SUB-SECTION D1: OPERATIONAL DIAGNOSTIC… [13 Marks]": one part of a long
+ * question, with marks of its own and bullet points under it saying what it
+ * must cover.
+ */
+const SUBSECTION_ITEM = /^SUB-?SECTION\s+([A-Z]?\d+(?:\.\d+)*)\s*[::]\s*(.+)$/i;
+
+/**
+ * A line that begins the assessor's half of a document. Curiosa's SU2
+ * summative carried its full memorandum after Section D in the learner's own
+ * file (27 September 2026): read on, the answers became thirty more questions.
+ */
+const GUIDE_STARTS = /^(?:MEMORANDUM\b|MARKING (?:GUIDE|MEMORANDUM)\b|ASSESSOR(?:'S)? GUIDE\b)/i;
+
+/**
+ * A module's particulars under a section heading: "Module Title: …",
+ * "Practical Skill: PM0501 - …". They describe the module; nobody answers
+ * them. SU5 Workbook 1 read each one as a question (27 September 2026).
+ */
+const FRONT_MATTER =
+  /^(?:Module(?:\s+Title)?|Focus|Practical\s+Skill|(?:Aligned\s+)?Applied\s+Knowledge|Case\s+Study\s+Scenario|NQF\s+Level|Credits)\s*[::]/i;
+/** "■ TASK 1 INSTRUCTIONS" on a line of its own: a label inside the task. */
+const TASK_INSTRUCTIONS_LABEL = /^(?:■\s*)?TASK\s+\w+\s+INSTRUCTIONS?\s*$/i;
+
+/** Headings that say the document is a marking guide, not the learner's copy. */
+const GUIDE_HEADING = /\b(ASSESSOR(?:'S)? GUIDE|MARKING MEMORANDUM|MARKING GUIDE)\b/i;
+const LEARNER_HEADING = /\bINSTRUCTIONS TO (?:THE )?LEARNERS?\b/i;
 const CRITERIA_TRAILING = /\(((?:IAC|AC)\d{3,6}(?:\s*,\s*(?:IAC|AC)\d{3,6})*)\)\s*$/i;
 const CRITERIA_ANY = /\b(?:IAC|AC)\d{3,6}\b/gi;
 const SCOPE_LINE = /^Internal Assessment Criteria\s*[::]\s*(.+)$/i;
 
+// "Question 1: …", or "Question 1 (IAC0301): …" with its criteria before
+// the colon, as the workbooks from Study Unit 2 onwards write it.
 const ITEM_HEADING =
-  /^Question\s+([A-Z]?[0-9]+(?:[.][0-9]+)*)\s*[::]\s*(.+)$/i;
+  /^Question\s+([A-Z]?[0-9]+(?:[.][0-9]+)*)\s*(\([^)]*\))?\s*[::]\s*(.+)$/i;
 
 /**
  * The other template.
@@ -97,7 +213,7 @@ const TASK_SECTION =
  * description on the same line after a dash, the other on the lines beneath.
  */
 const TASK_ITEM =
-  /^Task\s+(\d+)\s*[::]\s*(.+)$/i;
+  /^(?:Practical\s+)?Task\s+(\d+|[A-Z])\s*[::]\s*(.+)$/i;
 
 /** The case study or dataset a set of tasks all draw on. */
 const STIMULUS_HEADING =
@@ -179,9 +295,27 @@ export function parseWorkbook(text: string): ParsedPaper {
     }
   }
 
+  // A marking guide uploaded as the learner's paper. Real: Curiosa's SU5
+  // Version 2 files carry each other's names (27 September), and read as a
+  // paper the guide produced one "question" made of a writing line.
+  const opening = lines.slice(0, 40).join(" ");
+  const guideHeading = GUIDE_HEADING.exec(opening);
+  if (guideHeading && !LEARNER_HEADING.test(opening)) {
+    problems.push(
+      `This reads like a marking guide, not the learner's paper: its heading says "${guideHeading[1]}". Check the paper and its guide have not been given each other's names.`,
+    );
+  }
+
   const sections: ParsedSection[] = [];
   let current: ParsedSection | null = null;
   let pending: ParsedItem | null = null;
+  // Inside a case study: its lines are reading, not questions.
+  let inStimulus = false;
+  // Inside the assessor's marking grid, which repeats the part headings.
+  let inGrid = false;
+  // Inside a "Task 1:" of a practical workbook: its instructions and its
+  // numbered prompts ("1. Workload Root Cause:") are part of the task.
+  let inTask = false;
 
   const closeItem = () => {
     if (current && pending) current.items.push(pending);
@@ -192,12 +326,61 @@ export function parseWorkbook(text: string): ParsedPaper {
     const line = lines[index];
     if (!line) continue;
 
+    // The paper's own answers, after its questions: nothing past here is for
+    // the learner, and a learner given this file has them.
+    if (!guideHeading && sections.length > 0 && GUIDE_STARTS.test(line)) {
+      closeItem();
+      problems.push(
+        `The learner's paper carries its own marking guide, from "${line.slice(0, 80)}" on. A learner given this document has the answers. Take that part out of the learner's copy; the App has read only the questions before it.`,
+      );
+      break;
+    }
+
+    // The learner's writing space, or a tick box, is never a question.
+    if (isWritingSpace(line) || TICK_BOX.test(line)) {
+      closeItem();
+      continue;
+    }
+
+    if (TASK_INSTRUCTIONS_LABEL.test(line)) continue;
+    if (!pending && FRONT_MATTER.test(line)) {
+      if (/^Case\s+Study/i.test(line)) inStimulus = true;
+      continue;
+    }
+
+    if (STIMULUS_START.test(line) && !TASK_SECTION.test(line)) {
+      closeItem();
+      inStimulus = true;
+      continue;
+    }
+
+    // A section's instruction, wherever it falls in the section: its mark
+    // per question is kept, and it is never read as a question.
+    const instruction = INSTRUCTION_LINE.exec(line);
+    // Within a task, "Instruction: Detail specific targets…" is more of the
+    // task: SU5 Workbook 4.1 has one per report heading.
+    if (instruction && current && inTask) {
+      if (pending) pending.stem = `${pending.stem} ${line}`.trim();
+      continue;
+    }
+    if (instruction && current) {
+      closeItem();
+      // "■ INSTRUCTIONS - PART A" on a line of its own: the instruction itself
+      // is the next line, and is taken there.
+      if (instruction[1].trim() && !current.instruction) current.instruction = instruction[1].trim();
+      const each = MARK_EACH.exec(instruction[1]);
+      if (each) current.markEach = markValue(each[1]);
+      continue;
+    }
+
     // A set of tasks under a case study. The stimulus is the lines between the
     // scenario heading above and this one: the tasks are meaningless without
     // it, and it is stated once rather than repeated on each.
     const taskSection = TASK_SECTION.exec(line);
     if (taskSection) {
       closeItem();
+      inStimulus = false;
+      inTask = false;
 
       let stimulus: string | null = null;
       for (let back = index - 1; back >= 0 && index - back < 40; back -= 1) {
@@ -225,14 +408,27 @@ export function parseWorkbook(text: string): ParsedPaper {
     const heading = SECTION_HEADING.exec(line);
     if (heading) {
       closeItem();
+      inStimulus = false;
+      inTask = false;
       const label = (heading[1] ?? heading[2] ?? heading[3]).trim();
       const rest = heading[4].trim();
       const marks = MARKS_IN_HEADING.exec(rest);
 
+      // The assessor's grid at the end: nothing in it is a question, and the
+      // "Part A: Multiple Choice" rows in it are not new parts. It lasts
+      // until another numbered or lettered SECTION begins.
+      if (NOT_QUESTIONS_SECTION.test(rest)) {
+        current = null;
+        inGrid = true;
+        continue;
+      }
+      if (inGrid && !heading[2]) continue;
+      inGrid = false;
+
       current = {
-        title: `${label}: ${rest.replace(/\s*\([^)]*\)\s*$/, "").trim()}`,
+        title: `${label}: ${rest.replace(/\s*[([][^)\]]*[)\]]\s*$/, "").trim()}`,
         instruction: null,
-        markTotal: marks ? Number(marks[1]) : null,
+        markTotal: marks ? markValue(marks[1]) : null,
         items: [],
       };
       sections.push(current);
@@ -241,6 +437,26 @@ export function parseWorkbook(text: string): ParsedPaper {
 
     if (!current) continue;
 
+    // "SUB-SECTION D1: … [13 Marks]", one part of a long question.
+    const subsection = SUBSECTION_ITEM.exec(line);
+    if (subsection) {
+      closeItem();
+      inStimulus = false;
+      const marks = MARKS_IN_HEADING.exec(subsection[2]);
+      pending = {
+        number: subsection[1],
+        type: "long_answer",
+        stem: stripCriteria(subsection[2].replace(MARKS_IN_HEADING, "")).trim(),
+        options: [],
+        correctIndex: null,
+        points: marks ? markValue(marks[1]) : null,
+        criterionCodes: criteriaOf(subsection[2]),
+        markingGuide: null,
+        markedBy: "assessor",
+      };
+      continue;
+    }
+
     // An option belongs to the question above it.
     const option = OPTION.exec(line);
     if (option && pending) {
@@ -248,19 +464,28 @@ export function parseWorkbook(text: string): ParsedPaper {
       continue;
     }
 
-    const numbered = NUMBERED.exec(line);
-    if (numbered) {
+    const numbered = Q_NUMBERED.exec(line) ?? NUMBERED.exec(line);
+    // "1. Workload & Systems Alignment Root Cause:" under a task is a heading
+    // the learner writes beneath, part of that task.
+    if (numbered && inTask && /[::]\s*$/.test(line)) {
+      if (pending) pending.stem = `${pending.stem} ${line}`.trim();
+      continue;
+    }
+    // A numbered line inside a case study is one of its findings, not a question.
+    if (numbered && !inStimulus) {
       closeItem();
+      // "1. 1. Calibration sessions…": the number printed twice.
+      const body = numbered[2].replace(new RegExp(`^${numbered[1]}[.)]\\s+`), "");
       pending = {
         number: numbered[1],
         // Assumed multiple choice until the following lines say otherwise;
         // corrected below if no options arrive.
         type: "multiple_choice",
-        stem: stripCriteria(numbered[2]),
+        stem: stripCriteria(body),
         options: [],
         correctIndex: null,
         points: null,
-        criterionCodes: criteriaOf(numbered[2]),
+        criterionCodes: criteriaOf(body),
         markingGuide: null,
         markedBy: "app",
       };
@@ -268,9 +493,13 @@ export function parseWorkbook(text: string): ParsedPaper {
     }
 
     // "Task 2: Job Analysis (IAC0201, IAC0202) — Formulate a procedure…"
+    // "Task 1:" or "Task A:". A task ends the case study above it: SU1
+    // Workbook 2 sets its scenario, then asks Task A and Task B.
     const task = TASK_ITEM.exec(line);
     if (task && current) {
       closeItem();
+      inStimulus = false;
+      inTask = true;
       const rest = task[2];
       const marks = MARKS_IN_HEADING.exec(rest);
 
@@ -296,11 +525,12 @@ export function parseWorkbook(text: string): ParsedPaper {
           .trim(),
         options: [],
         correctIndex: null,
-        points: marks ? Number(marks[1]) : null,
+        points: marks ? markValue(marks[1]) : null,
         criterionCodes:
           taskCriteria.length > 0 ? taskCriteria : criteriaOf(rest),
         markingGuide: null,
         markedBy: "assessor",
+        task: true,
       };
       continue;
     }
@@ -311,22 +541,24 @@ export function parseWorkbook(text: string): ParsedPaper {
     const itemHeading = ITEM_HEADING.exec(line);
     if (itemHeading) {
       closeItem();
-      const rest = itemHeading[2];
+      inStimulus = false;
+      inTask = false;
+      const rest = itemHeading[3];
       const marks = MARKS_IN_HEADING.exec(rest);
       const bracket = BRACKET_CRITERIA.exec(rest);
+      // "Question 1 (IAC0301): …": criteria named before the colon.
+      const before = itemHeading[2] ? codesIn(itemHeading[2]) : [];
 
       pending = {
         number: itemHeading[1],
         type: "long_answer",
-        stem: rest
-          .replace(MARKS_IN_HEADING, "")
-          .replace(BRACKET_CRITERIA, "")
-          .replace(/[()]\s*$/, "")
-          .trim(),
+        // The marks bracket is removed whole, closing bracket included, so a
+        // bracket that ends the title itself, "(5 Whys Technique)", is kept.
+        stem: rest.replace(MARKS_IN_HEADING, "").replace(BRACKET_CRITERIA, "").trim(),
         options: [],
         correctIndex: null,
-        points: marks ? Number(marks[1]) : null,
-        criterionCodes: bracket ? codesIn(bracket[1]) : criteriaOf(rest),
+        points: marks ? markValue(marks[1]) : null,
+        criterionCodes: before.length > 0 ? before : bracket ? codesIn(bracket[1]) : criteriaOf(rest),
         markingGuide: null,
         markedBy: "assessor",
       };
@@ -342,6 +574,7 @@ export function parseWorkbook(text: string): ParsedPaper {
     const statement = STATEMENT.exec(line);
     if (statement) {
       closeItem();
+      inStimulus = false;
       // "Statement 1: 1. …" is numbered twice in some papers.
       const stem = statement[2].replace(/^[0-9]+[.]\s*/, "").trim();
       // A statement standing on its own, with a space to write in underneath,
@@ -385,14 +618,20 @@ export function parseWorkbook(text: string): ParsedPaper {
     if (!current.instruction && current.items.length === 0 && !pending) {
       if (NOT_A_QUESTION.some((pattern) => pattern.test(line))) {
         current.instruction = line;
+        const each = MARK_EACH.exec(line);
+        if (each) current.markEach = markValue(each[1]);
         continue;
       }
     }
 
+    // Case study reading: neither a question nor part of one.
+    if (inStimulus) continue;
+
     // A bare sentence inside a structured activity is a question in its own
     // right. Recognised by carrying criteria, or by being long enough that it
     // cannot be a stray label.
-    if (!pending && (CRITERIA_TRAILING.test(line) || line.length > 60)) {
+    // Not inside a task, whose tables and prompts are all the one task.
+    if (!pending && !inTask && (CRITERIA_TRAILING.test(line) || line.length > 60)) {
       current.items.push({
         number: String(current.items.length + 1),
         type: "long_answer",
@@ -432,7 +671,16 @@ export function parseWorkbook(text: string): ParsedPaper {
 
   // A question that never collected options is not multiple choice.
   for (const section of sections) {
+    // "Part B: True / False Questions": numbered statements with a True and
+    // a False box to tick, and no justification asked for. A plain verdict
+    // the App can mark from the guide.
+    const plainTrueFalse = /true\s*\/\s*false/i.test(section.title) && !/justif/i.test(section.title);
     for (const item of section.items) {
+      if (plainTrueFalse && item.type === "multiple_choice" && item.options.length === 0) {
+        item.type = "true_false";
+        item.options = ["True", "False"];
+        continue;
+      }
       if (item.type === "multiple_choice" && item.options.length === 0) {
         // A numbered line that never collected options is a written task, not
         // a choice — and nothing can mark it but a person.
@@ -515,18 +763,81 @@ export type ParsedMemo = {
   sectionMarks: Record<string, number>;
   /** Marks per question, from headings like "Question 1.3.1: … (10 Marks)". */
   questionMarks: Record<string, number>;
+  /** Marks per task, from "Task 1: … (25 Marks)", kept apart from questions. */
+  taskMarks?: Record<string, number>;
+  /** "(3 Marks | 1 Mark Each)": the mark per question, keyed like sectionMarks. */
+  sectionEach?: Record<string, number>;
+  /**
+   * The part of the paper each of `questionMarks` was found under, as
+   * "section c". SU2's guide gives "Question 1 (5 Marks)" under Section C, and
+   * until 27 September it was given to statement 1 of Section B as well.
+   */
+  questionSections?: Record<string, string>;
   answers: MemoAnswer[];
   total: number | null;
   problems: string[];
 };
 
 const MEMO_ACTIVITY =
-  /^(Activity\s+[\d.]+|SECTION\s+[A-Z])\s*[::]\s*(.+?)\s*\((\d+)\s*Marks?/i;
+  /^(Activity\s+[\d.]+|SECTION\s+(?:[A-Z]|\d+)|PART\s+[A-Z]\d*)\s*[::]\s*(.+?)\s*\((\d+(?:[.,]\d+)?)\s*Marks?/i;
 const MEMO_QUESTION =
-  /^Question\s+([\d.]+)\s*[::]\s*(.+?)\s*\((\d+)\s*Marks?\)/i;
+  /^Question\s+([\d.]+)\s*[::]\s*(.+?)\s*\((\d+(?:[.,]\d+)?)\s*Marks?\)/i;
+/**
+ * "Task A: Productivity Improvement Plan (25 Marks)". Curiosa's workbooks
+ * print no marks on their tasks and give them only here (27 September 2026).
+ */
+const MEMO_TASK =
+  /^(?:Practical\s+)?Task\s+(\d+|[A-Z])(?:\s+Model\s+Answer)?\s*[::]\s*(.+?)\s*[([](\d+(?:[.,]\d+)?)\s*Marks?/i;
+/**
+ * A section's marks from the guide when the guide words its title differently:
+ * "Activity 2.3" is the same activity whatever each document calls it. Only a
+ * single match counts, so two guide headings with one label decide nothing.
+ */
+/**
+ * "section c" from "SECTION 4: SECTION C - SHORT QUESTIONS" or "SECTION C:
+ * …"; "part d", "activity 2.3". A lettered label is preferred, since a guide
+ * numbers its own sections around the paper's lettered ones.
+ */
+function paperPartLabel(text: string): string | null {
+  const found =
+    /\b(SECTION\s+[A-Z]|PART\s+[A-Z]\d*)\b/i.exec(text) ??
+    /\b(Activity\s+\d+(?:\.\d+)*|SECTION\s+\d+|PART\s+\d+)\b/i.exec(text);
+  return found ? found[1].replace(/\s+/g, " ").toLowerCase() : null;
+}
+
+/**
+ * Whether a guide's question marks may apply to this part of the paper. Only
+ * a disagreement rules it out: a guide or paper with no part labels decides
+ * nothing.
+ */
+function sameGuidePart(memo: ParsedMemo, key: string, sectionTitle: string): boolean {
+  const theirs = memo.questionSections?.[key];
+  const ours = paperPartLabel(sectionTitle);
+  return !theirs || !ours || theirs === ours;
+}
+
+function guideMarksByLabel(memo: ParsedMemo, title: string): number | null {
+  return byTitleOrLabel(memo.sectionMarks, title);
+}
+
+function byTitleOrLabel(table: Record<string, number> | undefined, title: string): number | null {
+  if (!table) return null;
+  if (table[title] !== undefined) return table[title];
+  const label = (text: string) => text.split(/[::]/)[0].trim().replace(/\s+/g, " ").toLowerCase();
+  const own = label(title);
+  const matches = Object.entries(table).filter(([key]) => label(key) === own);
+  return matches.length === 1 ? matches[0][1] : null;
+}
+
 const LETTER_ONLY = /^([A-H])$/;
 const TRUE_FALSE_ONLY = /^(TRUE|FALSE)$/i;
-const NUMBER_ONLY = /^(\d+)$/;
+/**
+ * "7" or "Q7". Curiosa's answer tables number questions "Q1", "Q2"; until 27
+ * September only a bare number was read, so a complete fifteen-answer key for
+ * SU5 came back as two answers, the two the author happened to write without
+ * the Q (job sheet D10).
+ */
+const NUMBER_ONLY = /^Q?(\d+)$/i;
 
 /**
  * Reads the answer guide.
@@ -543,23 +854,45 @@ export function parseMemorandum(text: string): ParsedMemo {
 
   const sectionMarks: Record<string, number> = {};
   const questionMarks: Record<string, number> = {};
+  const taskMarks: Record<string, number> = {};
+  const sectionEach: Record<string, number> = {};
+  const questionSections: Record<string, string> = {};
+  let part: string | null = null;
   const answers: MemoAnswer[] = [];
   const problems: string[] = [];
   let total: number | null = null;
 
+  // The learner's paper uploaded as its guide: the other half of a swap.
+  const opening = lines.slice(0, 40).join(" ");
+  if (LEARNER_HEADING.test(opening) && !GUIDE_HEADING.test(opening)) {
+    problems.push(
+      `The guide reads like the learner's paper, not a marking guide: it carries "Instructions to Learners" and no assessor's heading. Check the paper and its guide have not been given each other's names.`,
+    );
+  }
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    if (/^(?:SECTION|PART|Activity)\b/i.test(line)) part = paperPartLabel(line) ?? part;
     const activity = MEMO_ACTIVITY.exec(line);
     if (activity) {
       const label = activity[1].trim();
       const rest = activity[2].replace(/\s*\([^)]*\)\s*$/, "").trim();
-      sectionMarks[`${label}: ${rest}`] = Number(activity[3]);
+      sectionMarks[`${label}: ${rest}`] = markValue(activity[3]);
+      const each = /(\d+(?:[.,]\d+)?)\s*Marks?\s+Each\b/i.exec(line);
+      if (each) sectionEach[`${label}: ${rest}`] = markValue(each[1]);
       continue;
     }
 
     const question = MEMO_QUESTION.exec(line);
     if (question) {
-      questionMarks[question[1]] = Number(question[3]);
+      questionMarks[question[1]] = markValue(question[3]);
+      if (part) questionSections[question[1]] = part;
+      continue;
+    }
+
+    const task = MEMO_TASK.exec(line);
+    if (task) {
+      taskMarks[task[1].toUpperCase()] = markValue(task[3]);
       continue;
     }
 
@@ -597,14 +930,16 @@ export function parseMemorandum(text: string): ParsedMemo {
     index += 3;
   }
 
-  // The true/false table: statement, TRUE or FALSE, rationale, criteria.
+  // The true/false table: statement, TRUE or FALSE, rationale, criteria. Or
+  // the statement's number in place of its text: "1 | TRUE | 1 Mark…", as the
+  // workbooks from Study Unit 2 onwards set it out (job sheet D10).
   for (let index = 0; index < lines.length; index += 1) {
     const verdict = TRUE_FALSE_ONLY.exec(lines[index]);
     if (!verdict) continue;
 
     const statement = lines[index - 1] ?? "";
-    // The header row is "Answer"; a statement is a sentence.
-    if (statement.length < 20) continue;
+    // The header row is "Answer"; a statement is a sentence, or its number.
+    if (statement.length < 20 && !NUMBER_ONLY.test(statement)) continue;
 
     answers.push({
       number: "",
@@ -625,7 +960,7 @@ export function parseMemorandum(text: string): ParsedMemo {
     );
   }
 
-  return { sectionMarks, questionMarks, answers, total, problems };
+  return { sectionMarks, questionMarks, taskMarks, sectionEach, questionSections, answers, total, problems };
 }
 
 // ---------------------------------------------------------------------------
@@ -675,12 +1010,16 @@ export function mergeMemorandum(
   const byNumber = new Map(
     memo.answers.filter((a) => a.number).map((a) => [a.number, a]),
   );
+  // Questions already reported as having no answer in the guide, so the
+  // closing check does not report each of them a second time (job sheet D10:
+  // SU5's screen listed fifteen questions twice over).
+  const reportedMissing = new Set<ParsedItem>();
   const trueFalseAnswers = memo.answers.filter((a) => a.trueFalse);
   let trueFalseIndex = 0;
 
   const sections = paper.sections.map((section) => {
     const printedMarks =
-      section.markTotal ?? memo.sectionMarks[section.title] ?? null;
+      section.markTotal ?? memo.sectionMarks[section.title] ?? guideMarksByLabel(memo, section.title);
 
     const items = section.items.map((item) => {
       const merged: ParsedItem = { ...item };
@@ -688,10 +1027,20 @@ export function mergeMemorandum(
       // Nothing in the guide can key a question a person marks, and saying so
       // as a problem would bury the real ones.
       if (item.markedBy === "assessor") {
+        // Only where the paper printed none, and a task only from a task:
+        // "Question 1" of Part C and "Task 1" of Part E share a number, not
+        // their marks.
+        if (item.task) {
+          const marks = memo.taskMarks?.[item.number.toUpperCase()];
+          if (marks !== undefined && merged.points === null) merged.points = marks;
+          return merged;
+        }
         const key = Object.keys(memo.questionMarks).find(
-          (number) => number === item.number || number.endsWith(`.${item.number}`),
+          (number) =>
+            (number === item.number || number.endsWith(`.${item.number}`)) &&
+            sameGuidePart(memo, number, section.title),
         );
-        if (key) merged.points = memo.questionMarks[key];
+        if (key && merged.points === null) merged.points = memo.questionMarks[key];
         return merged;
       }
 
@@ -701,6 +1050,7 @@ export function mergeMemorandum(
           problems.push(
             `Question ${item.number} of "${section.title}" has no correct answer in the guide.`,
           );
+          reportedMissing.add(merged);
         } else {
           const position = answer.correctLetter.charCodeAt(0) - 65;
           if (position < 0 || position >= item.options.length) {
@@ -724,6 +1074,7 @@ export function mergeMemorandum(
           problems.push(
             `"${short(item.stem)}" has no TRUE or FALSE in the guide.`,
           );
+          reportedMissing.add(merged);
         } else {
           merged.correctIndex = answer.trueFalse === "TRUE" ? 0 : 1;
           merged.markingGuide = answer.modelAnswer;
@@ -745,25 +1096,36 @@ export function mergeMemorandum(
       return merged;
     });
 
-    // Selected-response questions carry one mark each unless the guide says
-    // otherwise; that is what "1 Mark Each" in every heading means.
+    // "Each question carries 1 mark", where the paper says so, decides it.
+    // The paper's, or else the guide's "(3 Marks | 1 Mark Each)".
+    const markEach = section.markEach ?? byTitleOrLabel(memo.sectionEach, section.title) ?? undefined;
     const unmarked = items.filter((item) => item.points === null);
-    if (printedMarks !== null && unmarked.length > 0) {
+    if (markEach && unmarked.length > 0) {
+      for (const item of unmarked) item.points = markEach;
+    }
+
+    // Otherwise the printed total is shared out evenly among the questions
+    // with no marks of their own, where the share is one a paper could print.
+    if (printedMarks !== null && unmarked.length > 0 && !markEach) {
       const accounted = items.reduce((sum, item) => sum + (item.points ?? 0), 0);
       const each = (printedMarks - accounted) / unmarked.length;
-      if (Number.isInteger(each) && each > 0) {
+      // A share a paper could print: whole, or to two decimals (2.5 each).
+      if (each > 0 && isHundredths(each)) {
         for (const item of unmarked) item.points = each;
       }
     }
 
-    const computed = items.reduce((sum, item) => sum + (item.points ?? 0), 0);
+    const computed = roundMarks(items.reduce((sum, item) => sum + (item.points ?? 0), 0));
     if (printedMarks !== null && computed !== printedMarks) {
       problems.push(
         `"${section.title}" is printed as ${printedMarks} marks, but its questions add up to ${computed}.`,
       );
     }
 
-    return { ...section, markTotal: printedMarks, items };
+    // No total printed anywhere, but every task has its marks from the guide:
+    // then the section's total is known, and is theirs added up.
+    const everyItemMarked = items.length > 0 && items.every((item) => item.points !== null);
+    return { ...section, markTotal: printedMarks ?? (everyItemMarked ? computed : null), items };
   });
 
   // Every criterion the workbook claims to cover should be tested by something.
@@ -826,6 +1188,7 @@ export function mergeMemorandum(
     for (const item of section.items) {
       if (item.markedBy !== "app") continue;
       if (item.correctIndex !== null) continue;
+      if (reportedMissing.has(item)) continue;
       problems.push(
         `"${short(item.stem)}" in "${section.title}" is set to be marked by the App, but no correct answer was found for it. Give it one, or mark it as assessor-marked.`,
       );
@@ -914,10 +1277,10 @@ export function mergeMemorandum(
     }
   }
 
-  const grandTotal = sections.reduce(
+  const grandTotal = roundMarks(sections.reduce(
     (sum, section) => sum + (section.markTotal ?? 0),
     0,
-  );
+  ));
   const printsNoMarks = sections.every((section) => section.markTotal === null);
 
   if (memo.total !== null && printsNoMarks) {
@@ -931,6 +1294,18 @@ export function mergeMemorandum(
     problems.push(
       `The guide gives a total of ${memo.total} marks; the sections add up to ${grandTotal}.`,
     );
+  }
+
+  // Files given each other's names. Every other complaint follows from that
+  // one, so it is the only one shown: thirty lines about missing answers bury
+  // the single thing to fix, which is to swap the files (job sheet D10).
+  const swapped = problems.filter(
+    (problem) =>
+      problem.startsWith("This reads like a marking guide") ||
+      problem.startsWith("The guide reads like the learner's paper"),
+  );
+  if (swapped.length > 0) {
+    return { ...paper, sections, problems: swapped, notes };
   }
 
   return { ...paper, sections, problems, notes };

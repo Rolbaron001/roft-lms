@@ -248,7 +248,11 @@ export const assessmentItems = pgTable(
     rubricId: uuid("rubric_id").references(() => rubrics.id, {
       onDelete: "set null",
     }),
-    points: integer("points").notNull().default(1),
+    /**
+     * A question's marks. Two decimals, because papers do print 2.5 marks a
+     * statement (Curiosa's workbooks, 27 September 2026).
+     */
+    points: numeric("points", { precision: 6, scale: 2, mode: "number" }).notNull().default(1),
     feedbackCorrect: text("feedback_correct"),
     feedbackIncorrect: text("feedback_incorrect"),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -1072,7 +1076,7 @@ export const assessmentSections = pgTable(
      * printed total does not match its questions is caught rather than
      * silently corrected.
      */
-    markTotal: integer("mark_total"),
+    markTotal: numeric("mark_total", { precision: 6, scale: 2, mode: "number" }),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [

@@ -426,8 +426,11 @@ describe("what it refuses to guess", () => {
       problems: [],
     });
 
+    // Said once per question since 27 September (job sheet D10): "has no
+    // correct answer in the guide" where the guide was read, otherwise
+    // "marked by the App, but no correct answer".
     const unanswerable = merged.problems.filter((problem) =>
-      /marked by the App, but no correct answer/.test(problem),
+      /no correct answer/.test(problem),
     );
     expect(unanswerable.length).toBeGreaterThan(0);
   });

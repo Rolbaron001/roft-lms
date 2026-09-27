@@ -201,7 +201,7 @@ export function ReviewForm({
                         <input
                           type="number"
                           min={0}
-                          step={0.5}
+                          step={0.01}
                           value={item.points ?? ""}
                           onChange={(event) =>
                             updateItem(sectionIndex, itemIndex, {
@@ -378,6 +378,29 @@ function Findings({
       !/no correct answer|add up to/.test(problem) &&
       !outstanding.includes(problem),
   );
+
+  // A paper and its guide given each other's names. Every missing answer and
+  // every mark that does not add up follows from that one mistake, so it is
+  // the only thing shown (job sheet D10: SU5 Version 2, 27 September).
+  const swapped = original.filter((problem) => /given each other's names/.test(problem));
+  if (swapped.length > 0) {
+    return (
+      <section className="rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/5 p-5">
+        <h2 className="text-base font-semibold text-[var(--danger)]">
+          The paper and the guide look swapped
+        </h2>
+        <ul className="mt-3 space-y-1.5 text-sm">
+          {swapped.map((problem, index) => (
+            <li key={index}>· {problem}</li>
+          ))}
+        </ul>
+        <p className="mt-3 text-sm">
+          Nothing else is listed, because everything else follows from this. Start again with the learner&rsquo;s
+          paper as the paper and the assessor guide as the guide.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <>

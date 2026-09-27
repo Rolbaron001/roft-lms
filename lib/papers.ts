@@ -271,7 +271,8 @@ export async function paperProblems(
         continue;
       }
 
-      const marks = own.reduce((sum, item) => sum + item.points, 0);
+      // Rounded, since half marks summed in floating point drift.
+      const marks = Math.round(own.reduce((sum, item) => sum + item.points, 0) * 100) / 100;
       if (section.markTotal !== null && section.markTotal !== marks) {
         problems.push(
           `"${section.title}" says it is worth ${section.markTotal} marks, but its questions add up to ${marks}.`,

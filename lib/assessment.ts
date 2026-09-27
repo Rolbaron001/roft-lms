@@ -179,7 +179,13 @@ export const itemInput = z.object({
   options: z.array(z.string().trim().min(1).max(1000)).default([]),
   /** Indexes into `options` that are correct. */
   correctIndexes: z.array(z.coerce.number().int().min(0)).default([]),
-  points: z.coerce.number().int().min(1).max(100).default(1),
+  // Half marks exist on real papers; two decimals is what the column keeps.
+  points: z.coerce
+    .number()
+    .min(0.01)
+    .max(100)
+    .refine((n) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-9, "Marks can have at most two decimals.")
+    .default(1),
   criterionId: z.string().uuid().optional().nullable(),
   /** The criteria this question assesses. Any number, from the course's own. */
   criterionIds: z.array(z.string().uuid()).default([]),

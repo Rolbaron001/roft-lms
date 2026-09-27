@@ -98,6 +98,34 @@ function artefactKey(
 }
 
 /**
+ * The version a filename carries: "V2" in "CA 121151 SU5 SA5 V2 AG.docx", or
+ * "Version 2". Null where it carries none.
+ */
+export function versionOf(filename: string): string | null {
+  const match = /(?:^|[\s_-])(?:V|Version\s*)(\d+)(?=$|[\s_.-])/i.exec(filename.replace(/\.[a-z0-9]+$/i, ""));
+  return match ? match[1] : null;
+}
+
+/**
+ * Which of the guides filed for the same study unit, type and number belongs
+ * to this paper: the one of the same version; failing that, one that names no
+ * version and so serves them all; never a guide for another version.
+ *
+ * Until 27 September the version was not looked at, so SU5's Version 1 and
+ * Version 2 papers each took whichever guide was filed first, and Version 1
+ * was read against Version 2's guide (job sheet D10).
+ */
+export function chooseGuide<T extends { filename: string }>(paperFilename: string, candidates: T[]): T | null {
+  const version = versionOf(paperFilename);
+  const same = candidates.find((one) => versionOf(one.filename) === version);
+  if (same) return same;
+  const general = candidates.find((one) => versionOf(one.filename) === null);
+  if (general) return general;
+  // A paper that names no version, with only one guide to choose from.
+  return version === null && candidates.length === 1 ? candidates[0] : null;
+}
+
+/**
  * Every paper filed against this qualification, and whether it is captured.
  *
  * Read from the documents rather than from a list somebody maintains, so a
@@ -153,11 +181,14 @@ export async function capturableDocuments(
         const wanted = MEMORANDUM_FOR[paper.kind];
         const key = artefactKey(paper.filename, convention);
 
-        const guide = memoranda.find(
-          (one) =>
-            one.kind === wanted &&
-            one.studyUnitId === paper.studyUnitId &&
-            artefactKey(one.filename, convention) === key,
+        const guide = chooseGuide(
+          paper.filename,
+          memoranda.filter(
+            (one) =>
+              one.kind === wanted &&
+              one.studyUnitId === paper.studyUnitId &&
+              artefactKey(one.filename, convention) === key,
+          ),
         );
 
         return {

@@ -292,7 +292,8 @@ function QuestionForm({
         <input
           name="points"
           type="number"
-          min={1}
+          min={0.01}
+          step={0.01}
           defaultValue={1}
           className={inputClass}
         />

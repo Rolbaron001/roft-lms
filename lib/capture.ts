@@ -414,7 +414,7 @@ function recheck(confirmed: ParsedPaper): string[] {
       }
     }
 
-    const marks = section.items.reduce((sum, item) => sum + (item.points ?? 0), 0);
+    const marks = Math.round(section.items.reduce((sum, item) => sum + (item.points ?? 0), 0) * 100) / 100;
     if (section.markTotal !== null && section.markTotal !== marks) {
       outstanding.push(
         `"${section.title}" is printed as ${section.markTotal} marks but its questions add up to ${marks}.`,
