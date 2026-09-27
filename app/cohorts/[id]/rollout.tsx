@@ -232,6 +232,11 @@ export function Rollout({
             >
               {pending ? "Adding…" : "Add to the schedule"}
             </button>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              The cohort and the facilitator are told about each session a week
+              before it, with its time and link, and told again if it is moved,
+              cancelled or postponed.
+            </p>
           </div>
         </form>
       ) : null}

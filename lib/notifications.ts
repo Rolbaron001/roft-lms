@@ -1,10 +1,12 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lte } from "drizzle-orm";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
 import { dayFrom } from "./schedule";
+import { DEFAULT_TIME_ZONE, dateInZone } from "./timezone";
 import {
   stepReleases,
   courseSteps,
   cohortMembers,
+  cohortSessions,
   cohorts,
   assessmentSubmissions,
   courses,
@@ -60,7 +62,10 @@ export type NotificationKind =
   | "appeal.lodged"
   | "grievance.lodged"
   | "statutory.due_soon"
-  | "statutory.overdue";
+  | "statutory.overdue"
+  /** A scheduled session a week ahead, and one called off after being announced. */
+  | "session.announced"
+  | "session.cancelled";
 
 export type RaiseInput = {
   organisationId: string;
@@ -246,7 +251,46 @@ export type SweepResult = {
   /** Learners whose QCTO enrolment notification is close, or past. */
   statutoryDueSoon: number;
   statutoryOverdue: number;
+  /** Sessions announced to the people expected at them. */
+  sessionsAnnounced: number;
 };
+
+/** "Tuesday, 6 October 2026", for a date held as YYYY-MM-DD. */
+function spokenDate(day: string): string {
+  return new Date(`${day}T12:00:00Z`).toLocaleDateString("en-ZA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** What a session announcement says: when, and how to be there. */
+export function sessionAnnouncement(row: {
+  title: string | null;
+  kind: string;
+  cohortName: string;
+  scheduledDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  deliveryMode: string;
+  meetingUrl: string | null;
+  venue: string | null;
+}): { subject: string; body: string } {
+  const name = row.title ?? `${row.kind.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}`;
+  const when = `${spokenDate(row.scheduledDate)}${
+    row.startTime ? `, ${row.startTime}${row.endTime ? ` to ${row.endTime}` : ""}` : ""
+  }`;
+  const where = [
+    row.deliveryMode !== "in_person" && row.meetingUrl ? `Join online: ${row.meetingUrl}` : null,
+    row.deliveryMode !== "virtual" && row.venue ? `Venue: ${row.venue}` : null,
+  ].filter(Boolean);
+  return {
+    subject: `${name}, ${row.cohortName}: ${when}`,
+    body: [`${name} for ${row.cohortName} is on ${when}.`, ...where].join("\n"),
+  };
+}
 
 /**
  * Looks for things somebody should be told about and queues the messages.
@@ -267,6 +311,7 @@ export async function sweepTenant(
     stepsDue: 0,
     statutoryDueSoon: 0,
     statutoryOverdue: 0,
+    sessionsAnnounced: 0,
   };
 
   await withTenant(organisationId, async (tx) => {
@@ -476,6 +521,70 @@ export async function sweepTenant(
           });
           result.stepsDue += 1;
         }
+      }
+    }
+
+    // --- sessions in the coming week -------------------------------------
+    //
+    // Job sheet D4, 27 September 2026. A session carried its date and meeting
+    // link and nothing told anybody it existed. Announced a week ahead rather
+    // than when entered: a roll-out schedule is thirty-odd lectures entered in
+    // one sitting, and thirty messages at once is how people learn to ignore
+    // them. The dedupe key carries the date and time, so a session moved to
+    // another day is announced again, and one left alone is announced once.
+    const firstDay = dateInZone(now, DEFAULT_TIME_ZONE);
+    const lastDay = dateInZone(soon, DEFAULT_TIME_ZONE);
+    const upcoming = await tx
+      .select({
+        id: cohortSessions.id,
+        cohortId: cohortSessions.cohortId,
+        cohortName: cohorts.name,
+        kind: cohortSessions.kind,
+        title: cohortSessions.title,
+        scheduledDate: cohortSessions.scheduledDate,
+        startTime: cohortSessions.startTime,
+        endTime: cohortSessions.endTime,
+        deliveryMode: cohortSessions.deliveryMode,
+        meetingUrl: cohortSessions.meetingUrl,
+        venue: cohortSessions.venue,
+        facilitatorId: cohortSessions.facilitatorId,
+      })
+      .from(cohortSessions)
+      .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
+      .where(
+        and(
+          eq(cohortSessions.status, "scheduled"),
+          inArray(cohorts.status, ["planned", "running"]),
+          gte(cohortSessions.scheduledDate, firstDay),
+          lte(cohortSessions.scheduledDate, lastDay),
+        ),
+      );
+
+    for (const row of upcoming) {
+      const members = await tx
+        .select({ userId: cohortMembers.userId })
+        .from(cohortMembers)
+        .where(and(eq(cohortMembers.cohortId, row.cohortId), isNull(cohortMembers.leftAt)));
+      const { subject, body } = sessionAnnouncement(row);
+      const people = [
+        ...members.map((m) => ({ userId: m.userId, link: "/" })),
+        ...(row.facilitatorId ? [{ userId: row.facilitatorId, link: `/cohorts/${row.cohortId}` }] : []),
+      ];
+
+      for (const person of people) {
+        await raise(tx, {
+          organisationId,
+          userId: person.userId,
+          kind: "session.announced",
+          subject,
+          body,
+          linkPath: person.link,
+          entityType: "cohort_session",
+          entityId: row.id,
+          dedupeKey: `session:${row.id}:${row.scheduledDate}:${row.startTime ?? ""}:${person.userId}`,
+          channels: ["in_app", "email"],
+        });
+        result.sessionsAnnounced += 1;
       }
     }
   });

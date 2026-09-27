@@ -319,6 +319,8 @@ describe("the scheduled sweep", () => {
       // deadline the platform tracks and previously alerted nobody at all.
       statutoryDueSoon: 0,
       statutoryOverdue: 0,
+      // Added 27 September (job sheet D4): no sessions, nothing to announce.
+      sessionsAnnounced: 0,
     });
 
     await withPlatformScope("quiet teardown", (tx) =>

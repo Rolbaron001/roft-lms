@@ -41,7 +41,8 @@ async function sweep() {
       result.dueSoon +
       result.overdue +
       result.awaitingAssessor +
-      result.awaitingModerator;
+      result.awaitingModerator +
+      result.sessionsAnnounced;
 
     if (total === 0) {
       log(`  ${tenant}: nothing to raise.`);
@@ -51,7 +52,8 @@ async function sweep() {
     log(
       `  ${tenant}: ${result.overdue} overdue, ${result.dueSoon} due soon, ` +
         `${result.awaitingAssessor} assessor reminders, ` +
-        `${result.awaitingModerator} moderator reminders.`,
+        `${result.awaitingModerator} moderator reminders, ` +
+        `${result.sessionsAnnounced} session announcements considered.`,
     );
   }
 }

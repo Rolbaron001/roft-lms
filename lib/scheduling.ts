@@ -8,11 +8,13 @@ import {
   cohortSessions,
   cohorts,
   curriculumModules,
+  notifications,
   sessionWorkbooks,
   studyUnits,
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -203,6 +205,39 @@ export async function setSessionStatus(
       before: { status: existing.status },
       after: { status, note: note ?? null },
     });
+
+    // Anybody already told it was coming is told it is off (job sheet D4). A
+    // learner who was never told has nothing to unlearn, so nobody else is.
+    if (
+      (status === "cancelled" || status === "postponed") &&
+      existing.status === "scheduled"
+    ) {
+      const told = await tx
+        .selectDistinct({ userId: notifications.userId, subject: notifications.subject })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.entityId, sessionId),
+            eq(notifications.kind, "session.announced"),
+            eq(notifications.channel, "in_app"),
+          ),
+        );
+      const word = status === "cancelled" ? "cancelled" : "postponed";
+      for (const person of told) {
+        await raise(tx, {
+          organisationId: session.organisationId,
+          userId: person.userId,
+          kind: "session.cancelled",
+          subject: `${word[0].toUpperCase()}${word.slice(1)}: ${person.subject}`,
+          body: `This session has been ${word}. ${note!.trim()}`,
+          linkPath: "/",
+          entityType: "cohort_session",
+          entityId: sessionId,
+          dedupeKey: `session_off:${sessionId}:${status}:${person.userId}`,
+          channels: ["in_app", "email"],
+        });
+      }
+    }
   });
 }
 
