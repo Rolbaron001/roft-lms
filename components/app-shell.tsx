@@ -14,6 +14,9 @@ import { unreadCount } from "@/lib/notifications";
 import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
 import { DeploymentBanner } from "./deployment-banner";
+import { I18nProvider } from "./i18n";
+import { catalogueFor, maybe, translator } from "@/lib/i18n";
+import { localeFor } from "@/lib/request";
 
 /**
  * The shared frame. Navigation is filtered by permission rather than by role,
@@ -44,10 +47,14 @@ export async function AppShell({
   // dropped by the menu rather than shown empty.
   // With the structure, so a provider who chose study units reads "Study
   // units" where the menu would otherwise say "Courses".
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  // In the person's own language (job sheet D9). A heading or item the
+  // provider named themselves has no catalogue entry and keeps their words.
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const sections = arrangeNavigation(tenant.navigation ?? null, words)
     .map((section) => ({
-      label: section.label,
+      label: section.label === null ? null : (maybe(t, `nav.heading.${section.label}`) ?? section.label),
       items: section.items
         // A capability the tenant has not switched on has no link, whoever is
         // looking. Checked before the permission, because "this does not exist
@@ -66,7 +73,12 @@ export async function AppShell({
                 session.permissions.includes(permission),
               ),
         )
-        .map((item) => ({ href: item.href, label: item.label })),
+        .map((item) => ({
+          href: item.href,
+          // An item named after a provider term already reads in the
+          // provider's word, translated where they kept the default.
+          label: item.term ? item.label : (maybe(t, `nav.${item.href}`) ?? item.label),
+        })),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -109,7 +121,7 @@ export async function AppShell({
             ) : null}
             <div>
               <p className="text-base font-semibold">{tenant.displayName}</p>
-              <p className="text-xs opacity-75">Learning Management System</p>
+              <p className="text-xs opacity-75">{t("shell.subtitle")}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -118,11 +130,11 @@ export async function AppShell({
               className="relative rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
               aria-label={
                 unread > 0
-                  ? `Notifications, ${unread} unread`
-                  : "Notifications"
+                  ? t("shell.notificationsUnread", { count: unread })
+                  : t("shell.notifications")
               }
             >
-              Notifications
+              {t("shell.notifications")}
               {unread > 0 ? (
                 <span
                   className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold"
@@ -143,7 +155,7 @@ export async function AppShell({
             <Link
               href="/account/password"
               className="text-xs opacity-75 underline-offset-2 transition hover:underline hover:opacity-100"
-              title="Change your password"
+              title={t("shell.account")}
             >
               {session.firstName} {session.lastName}
             </Link>
@@ -152,7 +164,7 @@ export async function AppShell({
                 type="submit"
                 className="rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
               >
-                Sign out
+                {t("shell.signOut")}
               </button>
             </form>
           </div>
@@ -176,7 +188,9 @@ export async function AppShell({
       <TenantIllustrationProvider
         url={tenant.illustrationUrl ?? platformIllustration()}
       >
-        <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        <I18nProvider messages={catalogueFor(locale)}>
+          <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        </I18nProvider>
       </TenantIllustrationProvider>
     </div>
   );

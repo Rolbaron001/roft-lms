@@ -32,7 +32,14 @@ export function Card({
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({
+  status,
+  label,
+}: {
+  status: string;
+  /** The status in the reader's language (job sheet D9); the raw word where absent. */
+  label?: string;
+}) {
   const tone =
     status === "published" || status === "completed" || status === "active"
       ? "bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/30"
@@ -44,9 +51,11 @@ export function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${tone}`}
+      // A translated label arrives cased as its language writes it; only the
+      // raw status word is capitalised here.
+      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${label ? "" : "capitalize"} ${tone}`}
     >
-      {status.replace(/_/g, " ")}
+      {label ?? status.replace(/_/g, " ")}
     </span>
   );
 }

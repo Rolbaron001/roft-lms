@@ -6,14 +6,16 @@ import { DeploymentBanner } from "@/components/deployment-banner";
 import { LoginForm } from "./login-form";
 import { platformName } from "@/lib/platform";
 import { signInOptions, SSO_LABEL } from "@/lib/single-sign-on";
+import { catalogueFor, translator, type MessageKey } from "@/lib/i18n";
+import { I18nProvider } from "@/components/i18n";
+import { localeFor } from "@/lib/request";
 
 /** Why a Google or Microsoft sign-in came back without signing anybody in. */
-const SSO_MESSAGES: Record<string, string> = {
-  refused:
-    "That account cannot sign in here. It has to use the same email address as your account on this platform. Sign in with your password, or ask your administrator.",
-  cancelled: "Signing in was cancelled.",
-  expired: "That sign-in took too long, or was started somewhere else. Try again.",
-  off: "That way of signing in is not switched on here.",
+const SSO_MESSAGES: Record<string, MessageKey> = {
+  refused: "login.sso.refused",
+  cancelled: "login.sso.cancelled",
+  expired: "login.sso.expired",
+  off: "login.sso.off",
 };
 
 /**
@@ -44,7 +46,11 @@ export default async function LoginPage({
 
   // Signing in with the provider's Google or Microsoft account (job sheet D7).
   const ssoKinds = tenant ? await signInOptions(tenant.id) : [];
-  const ssoMessage = SSO_MESSAGES[(await searchParams).sso ?? ""] ?? null;
+  // Nobody is signed in yet, so the provider's language (job sheet D9).
+  const locale = localeFor(tenant, null);
+  const t = translator(locale);
+  const ssoKey = SSO_MESSAGES[(await searchParams).sso ?? ""];
+  const ssoMessage = ssoKey ? t(ssoKey) : null;
 
   return (
     <main
@@ -121,9 +127,7 @@ export default async function LoginPage({
                 : `${platformName()} Learning Management System`}
             </h1>
             <p className="mt-1.5 text-sm text-[var(--muted)]">
-              {tenant
-                ? "Sign in to continue your learning."
-                : "Platform administration"}
+              {tenant ? t("login.intro") : "Platform administration"}
             </p>
           </div>
 
@@ -135,7 +139,9 @@ export default async function LoginPage({
                     {ssoMessage}
                   </p>
                 ) : null}
-                <LoginForm />
+                <I18nProvider messages={catalogueFor(locale)}>
+                  <LoginForm />
+                </I18nProvider>
                 {ssoKinds.length > 0 ? (
                   <div className="mt-5 space-y-2 border-t border-[var(--border)] pt-5">
                     {ssoKinds.map((kind) => (
@@ -145,7 +151,7 @@ export default async function LoginPage({
                         href={`/api/sign-in/${kind}`}
                         className="block w-full rounded-md border border-[var(--border)] px-4 py-2.5 text-center text-sm font-medium hover:bg-[var(--brand-primary)]/5"
                       >
-                        Sign in with {SSO_LABEL[kind]}
+                        {t("login.with", { provider: SSO_LABEL[kind] })}
                       </a>
                     ))}
                   </div>
@@ -161,8 +167,7 @@ export default async function LoginPage({
 
           {tenant ? (
             <p className="mt-6 text-xs text-[var(--muted)]">
-              Trouble signing in? Speak to your facilitator — they can reset a
-              password for you.
+              {t("login.trouble")}
             </p>
           ) : null}
         </section>

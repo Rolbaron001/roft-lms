@@ -22,8 +22,11 @@
  * that nothing in this registry collides with an authority term, so the rule
  * survives somebody adding a word here in a hurry.
  *
- * This module imports nothing, so a form can use it.
+ * This module imports only the language catalogues, which import nothing, so
+ * a form can use it.
  */
+
+import { translator, type MessageKey } from "./i18n";
 
 export type TermKey =
   | "course"
@@ -184,14 +187,21 @@ export function vocabulary(
    * never looked at the choice.
    */
   structure?: { delivery?: string | null } | null,
+  /**
+   * The reader's language (job sheet D9). A word the provider has not renamed
+   * comes from that language's catalogue; one they renamed is theirs and is
+   * kept exactly as they wrote it, whatever the language.
+   */
+  locale?: string | null,
 ): Vocabulary {
   const chosen = overrides ?? {};
   const studyUnitsReplaceCourses = structure?.delivery === "study_units";
+  const t = translator(locale);
 
   const resolve = (key: TermKey, form: "one" | "many"): string => {
     const asked = studyUnitsReplaceCourses && key === "course" ? "studyUnit" : key;
     const override = chosen[asked]?.[form]?.trim();
-    return override || TERMS[asked][form];
+    return override || t(`term.${asked}.${form}` as MessageKey) || TERMS[asked][form];
   };
 
   return {

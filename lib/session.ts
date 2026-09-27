@@ -42,6 +42,12 @@ export type AuthenticatedSession = {
    * credential in use that nobody remembered choosing.
    */
   aiOn: boolean;
+  /**
+   * The language this person chose, or null to follow their provider's
+   * (job sheet D9). Optional because a session made anywhere but
+   * `resolveSession`, as tests make them, has no reason to know it.
+   */
+  locale?: string | null;
 };
 
 export type RequestContext = {
@@ -254,6 +260,7 @@ export async function resolveSession(
         lastName: users.lastName,
         userStatus: users.status,
         mustChangePassword: users.mustChangePassword,
+        locale: users.locale,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
@@ -291,6 +298,7 @@ export async function resolveSession(
       permissions: permissionsFor({ roles }),
       mustChangePassword: row.mustChangePassword,
       aiOn: row.aiOnSince !== null,
+      locale: row.locale,
     };
   });
 }

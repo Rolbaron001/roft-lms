@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireSessionForPasswordChange } from "@/lib/request";
+import { revalidatePath } from "next/cache";
+import { currentLocale, requireSessionForPasswordChange } from "@/lib/request";
+import { translator } from "@/lib/i18n";
+import { LanguageError, setOwnLocale } from "@/lib/language";
 import { changeOwnPassword, PeopleError } from "@/lib/people";
 import { WeakPasswordError } from "@/lib/password";
 
@@ -21,7 +24,7 @@ export async function changePasswordAction(
   // form, not a rule about passwords, and nothing calling changeOwnPassword
   // from elsewhere should have to send the same value twice.
   if (newPassword !== confirmPassword) {
-    return { error: "The two new passwords do not match." };
+    return { error: translator(session.locale ?? (await currentLocale()))("account.mismatch") };
   }
 
   try {
@@ -34,4 +37,24 @@ export async function changePasswordAction(
   }
 
   redirect("/");
+}
+
+export type LanguageState = { error?: string; notice?: string };
+
+/** A person choosing their own language (job sheet D9). Blank follows the provider's. */
+export async function chooseLanguageAction(
+  _previous: LanguageState,
+  formData: FormData,
+): Promise<LanguageState> {
+  const session = await requireSessionForPasswordChange();
+  const code = String(formData.get("locale") ?? "") || null;
+  try {
+    await setOwnLocale(session, code);
+  } catch (error) {
+    if (error instanceof LanguageError) return { error: error.message };
+    throw error;
+  }
+  // The whole page, frame and all, now reads in the new language.
+  revalidatePath("/", "layout");
+  return { notice: translator(code ?? (await currentLocale()))("account.languageSaved") };
 }

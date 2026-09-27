@@ -246,6 +246,12 @@ export const organisations = pgTable(
     timezone: text("timezone").notNull().default("Africa/Johannesburg"),
 
     /**
+     * The language this provider's people read the platform in unless they
+     * choose their own (job sheet D9). A code from lib/i18n/locales.ts.
+     */
+    defaultLocale: text("default_locale").notNull().default("en"),
+
+    /**
      * Whose public holidays the provider's working-day deadlines observe.
      *
      * A statutory clock counted in working days has to skip public holidays,
@@ -326,6 +332,9 @@ export const users = pgTable(
      * Null for anyone who has no need of one.
      */
     mailboxAddress: text("mailbox_address"),
+
+    /** The language this person chose (job sheet D9); null follows the provider's. */
+    locale: text("locale"),
 
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),

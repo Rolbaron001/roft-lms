@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { markLessonCompleteAction, type LearnState } from "../actions";
 import { LessonMediaView } from "@/components/lesson-media";
 import { ScormPlayer } from "@/components/scorm-player";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n";
 
 type Lesson = {
   id: string;
@@ -37,6 +39,7 @@ export function CoursePlayer({
   canRecordProgress: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const allLessons = sections.flatMap((section) => section.lessons);
 
   // Open on the first unfinished lesson, so returning to a course resumes
@@ -58,9 +61,7 @@ export function CoursePlayer({
   if (allLessons.length === 0) {
     return (
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-        <p className="text-sm text-[var(--muted)]">
-          This course has no lessons yet.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("learn.noLessons")}</p>
       </section>
     );
   }
@@ -74,9 +75,9 @@ export function CoursePlayer({
                 step, assessments included, and until 26 September this panel
                 was headed "Progress" as well, so one page gave a learner two
                 different answers to the same question. */}
-            <span className="text-sm font-medium">Lessons</span>
+            <span className="text-sm font-medium">{t("learn.lessons")}</span>
             <span className="text-sm text-[var(--muted)]">
-              {completedLessons} of {totalLessons} done
+              {t("learn.lessonsDone", { done: completedLessons, total: totalLessons })}
             </span>
           </div>
 
@@ -86,7 +87,7 @@ export function CoursePlayer({
             aria-valuenow={percentage}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Lessons done"
+            aria-label={t("learn.lessons")}
           >
             <div
               className="h-full rounded-full transition-all"
@@ -98,9 +99,7 @@ export function CoursePlayer({
           </div>
 
           {percentage === 100 ? (
-            <p className="mt-3 text-sm font-medium text-[var(--success)]">
-              Course complete.
-            </p>
+            <p className="mt-3 text-sm font-medium text-[var(--success)]">{t("learn.complete")}</p>
           ) : null}
         </section>
 
@@ -138,7 +137,7 @@ export function CoursePlayer({
                         <span>
                           {lesson.title}
                           <span className="sr-only">
-                            {done ? " (completed)" : " (not completed)"}
+                            {` ${done ? t("learn.lessonDone") : t("learn.lessonNotDone")}`}
                           </span>
                         </span>
                       </button>
@@ -157,9 +156,9 @@ export function CoursePlayer({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h2 className="text-lg font-medium">{selected.title}</h2>
               <span className="text-xs capitalize text-[var(--muted)]">
-                {selected.contentType.replace(/_/g, " ")}
+                {maybe(t, `learn.content.${selected.contentType}`) ?? selected.contentType.replace(/_/g, " ")}
                 {selected.durationMinutes
-                  ? ` · ${selected.durationMinutes} min`
+                  ? ` · ${t("learn.minutes", { minutes: selected.durationMinutes })}`
                   : ""}
               </span>
             </div>
@@ -194,12 +193,10 @@ export function CoursePlayer({
                   rel="noopener noreferrer"
                   className="font-medium text-[var(--brand-accent)] hover:underline"
                 >
-                  Open the material for this lesson
+                  {t("learn.openMaterial")}
                 </a>
               ) : (
-                <p className="text-[var(--muted)]">
-                  No written content for this lesson.
-                </p>
+                <p className="text-[var(--muted)]">{t("learn.noContent")}</p>
               )}
             </div>
 
@@ -214,14 +211,10 @@ export function CoursePlayer({
 
             <div className="mt-6 border-t border-[var(--border)] pt-4">
               {selected.state === "completed" ? (
-                <p className="text-sm font-medium text-[var(--success)]">
-                  ✓ Completed
-                </p>
+                <p className="text-sm font-medium text-[var(--success)]">{t("learn.completed")}</p>
               ) : selected.contentType === "scorm" ? (
                 // The package says when it is finished, not a button.
-                <p className="text-sm text-[var(--muted)]">
-                  This lesson completes when you finish it in the package above. Your place is kept if you stop part of the way through.
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t("learn.scormNote")}</p>
               ) : canRecordProgress ? (
                 <form action={formAction}>
                   <input
@@ -236,11 +229,11 @@ export function CoursePlayer({
                     className="rounded-md px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                     style={{ background: "var(--brand-primary)" }}
                   >
-                    {pending ? "Saving…" : "Mark as complete"}
+                    {pending ? t("account.saving") : t("learn.markComplete")}
                   </button>
                 </form>
               ) : (
-                <p className="text-sm text-[var(--muted)]">Not yet completed.</p>
+                <p className="text-sm text-[var(--muted)]">{t("learn.notCompleted")}</p>
               )}
             </div>
           </>

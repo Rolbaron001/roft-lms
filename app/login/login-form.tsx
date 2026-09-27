@@ -3,22 +3,25 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction, type LoginState } from "./actions";
+import { useT } from "@/components/i18n";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useT();
   return (
     <button
       type="submit"
       disabled={pending}
       className="w-full rounded-md bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
     >
-      {pending ? "Signing in…" : "Sign in"}
+      {pending ? t("login.submitting") : t("login.submit")}
     </button>
   );
 }
 
 export function LoginForm() {
   const [visible, setVisible] = useState(false);
+  const t = useT();
 
   const [state, formAction] = useActionState<LoginState, FormData>(
     loginAction,
@@ -38,7 +41,7 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="email" className="block text-sm font-medium">
-          Email address
+          {t("login.email")}
         </label>
         <input
           id="email"
@@ -52,7 +55,7 @@ export function LoginForm() {
 
       <div className="space-y-1.5">
         <label htmlFor="password" className="block text-sm font-medium">
-          Password
+          {t("login.password")}
         </label>
         <input
           id="password"
@@ -93,7 +96,7 @@ export function LoginForm() {
             onChange={(event) => setVisible(event.target.checked)}
             className="h-4 w-4"
           />
-          Show password
+          {t("login.showPassword")}
         </label>
       </div>
 

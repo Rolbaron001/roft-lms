@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "./i18n";
 
 /**
  * Plays a lesson's SCORM 1.2 package (job sheet D8).
@@ -221,6 +222,7 @@ export function ScormPlayer({
 }) {
   const [launch, setLaunch] = useState<Launch | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const t = useT();
   const onCompletedRef = useRef(onCompleted);
   useEffect(() => {
     onCompletedRef.current = onCompleted;
@@ -242,7 +244,7 @@ export function ScormPlayer({
         remove = installScormApi(body as Launch, lessonId, enrolmentId, () => onCompletedRef.current?.());
         setLaunch(body as Launch);
       })
-      .catch(() => live && setProblem("The package could not be opened. Check your connection and try again."));
+      .catch(() => live && setProblem("failed"));
     return () => {
       live = false;
       remove?.();
@@ -250,10 +252,10 @@ export function ScormPlayer({
   }, [lessonId, enrolmentId]);
 
   if (problem) {
-    return <p className="text-sm text-[var(--danger)]">{problem}</p>;
+    return <p className="text-sm text-[var(--danger)]">{problem === "failed" ? t("scorm.failed") : problem}</p>;
   }
   if (!launch) {
-    return <p className="text-sm text-[var(--muted)]">Opening the package…</p>;
+    return <p className="text-sm text-[var(--muted)]">{t("scorm.opening")}</p>;
   }
   return (
     <div className="space-y-2">
@@ -264,9 +266,7 @@ export function ScormPlayer({
         allow="fullscreen; autoplay"
       />
       {!launch.records ? (
-        <p className="text-xs text-[var(--muted)]">
-          A preview: what the package reports is not kept, because this is not your own enrolment.
-        </p>
+        <p className="text-xs text-[var(--muted)]">{t("scorm.preview")}</p>
       ) : null}
     </div>
   );

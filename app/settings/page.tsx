@@ -14,6 +14,7 @@ import { NamingForm } from "./naming-form";
 import { ModuleCodesForm } from "./module-codes-form";
 import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
+import { ProviderLanguageForm } from "./language-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
 import { MailTest } from "./mail-test";
@@ -189,6 +190,16 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <ClockForm current={tenant.timezone} />
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="language"
+          data-settings-section="Language"
+          className="mt-6 scroll-mt-24"
+        >
+          <ProviderLanguageForm current={tenant.defaultLocale} />
         </div>
       ) : null}
 

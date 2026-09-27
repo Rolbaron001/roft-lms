@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { translator } from "@/lib/i18n";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { listCourseAssessments } from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
@@ -49,6 +50,8 @@ export default async function LearnPage({
           (assessment) => assessment.status === "published",
         );
 
+  const t = translator(localeFor(tenant, session));
+
   const percentage =
     delivery.totalLessons === 0
       ? 0
@@ -58,7 +61,7 @@ export default async function LearnPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link href="/" className="text-sm text-[var(--muted)] hover:underline">
-          ← My learning
+          {t("learn.back")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{delivery.course.title}</h1>
         {delivery.course.description ? (
@@ -69,8 +72,7 @@ export default async function LearnPage({
 
         {!delivery.isOwn ? (
           <p className="mt-3 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">
-            You are viewing someone else&rsquo;s enrolment. You can see their
-            progress but cannot record it for them.
+            {t("learn.notYours")}
           </p>
         ) : null}
       </div>
@@ -86,7 +88,7 @@ export default async function LearnPage({
       {assessments.length > 0 ? (
         <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Assessments
+            {t("learn.assessments")}
           </h2>
           <ul className="mt-3 space-y-2">
             {assessments.map((assessment) => (
@@ -97,10 +99,8 @@ export default async function LearnPage({
                 <span className="text-sm">
                   <span className="font-medium">{assessment.title}</span>
                   <span className="block text-xs text-[var(--muted)]">
-                    {assessment.purpose === "summative"
-                      ? "Counts towards your qualification"
-                      : "Practice"}{" "}
-                    · pass mark {assessment.passMark}%
+                    {assessment.purpose === "summative" ? t("learn.counts") : t("learn.practice")}{" "}
+                    · {t("learn.passMark", { mark: assessment.passMark })}
                   </span>
                 </span>
                 {delivery.isOwn ? (
@@ -109,7 +109,7 @@ export default async function LearnPage({
                     className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
                     style={{ background: "var(--brand-primary)" }}
                   >
-                    Start
+                    {t("learn.start")}
                   </Link>
                 ) : null}
               </li>

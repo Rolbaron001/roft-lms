@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { maybe, translator, type Translate } from "@/lib/i18n";
+import { vocabulary } from "@/lib/terms";
 import { myEnrolments } from "@/lib/enrolment";
 import { listMyCertificates } from "@/lib/certificates";
 import { listStatementsFor } from "@/lib/statement-of-results";
@@ -9,19 +11,7 @@ import { feedbackOwedBy } from "@/lib/feedback";
 import { learnerBadges } from "@/lib/badges";
 import { listAssessorQueue, listModerationQueue } from "@/lib/assessment";
 
-const ROLE_LABELS: Record<string, string> = {
-  platform_owner: "Platform Owner",
-  tenant_admin: "Administrator",
-  instructor: "Instructor",
-  assessor: "Assessor",
-  moderator: "Moderator",
-  line_manager: "Line Manager",
-  learner: "Learner",
-  skills_development_facilitator: "Skills Development Facilitator",
-  external_verifier: "External Verifier",
-};
-
-function dueLabel(dueDate: Date | null, status: string): string | null {
+function dueLabel(t: Translate, dueDate: Date | null, status: string): string | null {
   if (!dueDate || status === "completed") return null;
 
   const days = Math.ceil(
@@ -29,16 +19,21 @@ function dueLabel(dueDate: Date | null, status: string): string | null {
   );
 
   if (days < 0) {
-    return `Overdue by ${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"}`;
+    return Math.abs(days) === 1 ? t("home.overdueOne") : t("home.overdueMany", { days: Math.abs(days) });
   }
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `Due in ${days} days`;
+  if (days === 0) return t("home.dueToday");
+  if (days === 1) return t("home.dueTomorrow");
+  return t("home.dueIn", { days });
 }
 
 export default async function HomePage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  // In the person's language (job sheet D9).
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
+  const date = (at: Date) => at.toLocaleDateString(locale === "en" ? "en-ZA" : locale);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   // Feedback forms this person still owes. On the front page rather than behind
   // a notification, because a form nobody sees is a response rate nobody has.
@@ -96,7 +91,7 @@ export default async function HomePage() {
               className="rounded-full px-3 py-1 text-xs font-medium text-white"
               style={{ background: "var(--brand-primary)" }}
             >
-              {ROLE_LABELS[role] ?? role}
+              {maybe(t, `role.${role}`) ?? role}
             </span>
           ))}
         </div>
@@ -104,23 +99,19 @@ export default async function HomePage() {
 
       <div className="space-y-6">
         {toAssess + toModerate > 0 ? (
-          <Card title="Waiting for you">
+          <Card title={t("home.waiting")}>
             <ul className="space-y-2 text-sm">
               {toAssess > 0 ? (
                 <li>
                   <Link href="/assess" className="font-medium hover:underline">
-                    {toAssess === 1
-                      ? "One submission to assess"
-                      : `${toAssess} submissions to assess`}
+                    {toAssess === 1 ? t("home.assessOne") : t("home.assessMany", { count: toAssess })}
                   </Link>
                 </li>
               ) : null}
               {toModerate > 0 ? (
                 <li>
                   <Link href="/moderate" className="font-medium hover:underline">
-                    {toModerate === 1
-                      ? "One decision to moderate"
-                      : `${toModerate} decisions to moderate`}
+                    {toModerate === 1 ? t("home.moderateOne") : t("home.moderateMany", { count: toModerate })}
                   </Link>
                 </li>
               ) : null}
@@ -130,8 +121,8 @@ export default async function HomePage() {
 
         {owed.length > 0 ? (
           <Card
-            title={owed.length === 1 ? "One thing to tell us" : "A few things to tell us"}
-            description="Answers are reported together with everybody else's, not one by one. Two minutes each, and it is the only thing that changes how the next cohort is run."
+            title={owed.length === 1 ? t("home.feedbackOne") : t("home.feedbackMany")}
+            description={t("home.feedbackIntro")}
           >
             <ul className="space-y-2 text-sm">
               {owed.map((request) => (
@@ -140,7 +131,7 @@ export default async function HomePage() {
                     href={`/feedback/${request.id}`}
                     className="font-medium hover:underline"
                   >
-                    {request.assessmentTitle ?? "The programme"}
+                    {request.assessmentTitle ?? t("home.feedbackProgramme")}
                   </Link>
                   <span className="ml-2 text-[var(--muted)]">
                     {request.cohortName}
@@ -153,8 +144,8 @@ export default async function HomePage() {
 
         {earned.length > 0 ? (
           <Card
-            title="What you have earned"
-            description="Recorded on the day you finished, rather than when the certificate eventually arrives. Each carries a reference anybody can check."
+            title={t("home.earned")}
+            description={t("home.earnedIntro")}
           >
             <ul className="flex flex-wrap gap-3">
               {earned.map((badge) => (
@@ -187,11 +178,11 @@ export default async function HomePage() {
 
             <p className="mb-4 text-sm">
               <span className="font-medium">
-                {path.completedSteps} of {path.totalSteps}
+                {t("home.pathFinished", { done: path.completedSteps, total: path.totalSteps })}
               </span>{" "}
               <span className="text-[var(--muted)]">
-                courses finished
-                {path.status === "completed" ? " — programme complete" : ""}
+                {words.lowerMany("course")} {t("home.pathCourses")}
+                {path.status === "completed" ? `: ${t("home.pathComplete")}` : ""}
               </span>
             </p>
 
@@ -229,14 +220,14 @@ export default async function HomePage() {
 
                     <span className="text-xs text-[var(--muted)]">
                       {done
-                        ? "Finished"
+                        ? t("home.step.finished")
                         : locked
                           ? index === 0
-                            ? "Not started"
-                            : "Opens when you finish the step before"
+                            ? t("home.step.notStarted")
+                            : t("home.step.afterPrevious")
                           : step.state === "in_progress"
-                            ? "In progress"
-                            : "Ready to start"}
+                            ? t("home.step.inProgress")
+                            : t("home.step.ready")}
                     </span>
                   </div>
                 );
@@ -262,12 +253,10 @@ export default async function HomePage() {
           </Card>
         ))}
 
-        <Card title="My learning">
+        <Card title={t("home.myLearning")}>
           {standalone.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
-              {paths.length > 0
-                ? "Nothing outside your programmes."
-                : "You have not been assigned any courses yet."}
+              {paths.length > 0 ? t("home.nothingOutside") : t("home.nothingYet")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -279,7 +268,7 @@ export default async function HomePage() {
                         (enrolment.completedLessons / enrolment.totalLessons) *
                           100,
                       );
-                const due = dueLabel(enrolment.dueDate, enrolment.status);
+                const due = dueLabel(t, enrolment.dueDate, enrolment.status);
                 const overdue = enrolment.status === "overdue";
 
                 return (
@@ -303,7 +292,10 @@ export default async function HomePage() {
                           </p>
                         ) : null}
                       </div>
-                      <StatusBadge status={enrolment.status} />
+                      <StatusBadge
+                        status={enrolment.status}
+                        label={maybe(t, `status.${enrolment.status}`) ?? undefined}
+                      />
                     </div>
 
                     <div className="mt-3 flex items-center gap-3">
@@ -313,7 +305,7 @@ export default async function HomePage() {
                         aria-valuenow={percentage}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-label={`${enrolment.courseTitle} progress`}
+                        aria-label={t("home.progress", { title: enrolment.courseTitle })}
                       >
                         <div
                           className="h-full rounded-full"
@@ -327,7 +319,7 @@ export default async function HomePage() {
                         />
                       </div>
                       <span className="shrink-0 text-xs text-[var(--muted)]">
-                        {enrolment.completedLessons} of {enrolment.totalLessons}
+                        {t("home.lessonsOf", { done: enrolment.completedLessons, total: enrolment.totalLessons })}
                       </span>
                     </div>
                   </Link>
@@ -339,8 +331,8 @@ export default async function HomePage() {
 
         {statements.length > 0 ? (
           <Card
-            title="My Statement of Results"
-            description="Take this to the external assessment with your identity document. The centre checks it before you may sit."
+            title={t("home.statements")}
+            description={t("home.statementsIntro")}
           >
             <ul className="space-y-2">
               {statements.map((statement) => (
@@ -350,18 +342,16 @@ export default async function HomePage() {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] px-4 py-3 transition hover:border-[var(--brand-accent)]"
                   >
                     <span className="text-sm">
-                      <span className="font-medium">Statement of Results</span>
+                      <span className="font-medium">{t("home.statement")}</span>
                       <span className="block font-mono text-xs text-[var(--muted)]">
                         {statement.verificationReference}
                       </span>
                     </span>
                     <span className="text-xs text-[var(--muted)]">
                       {statement.revokedAt ? (
-                        <span className="font-medium text-[var(--danger)]">
-                          Withdrawn
-                        </span>
+                        <span className="font-medium text-[var(--danger)]">{t("home.withdrawn")}</span>
                       ) : (
-                        `Issued ${statement.issuedAt.toLocaleDateString("en-ZA")}`
+                        t("home.issued", { date: date(statement.issuedAt) })
                       )}
                     </span>
                   </Link>
@@ -372,7 +362,7 @@ export default async function HomePage() {
         ) : null}
 
         {certificates.length > 0 ? (
-          <Card title="My certificates">
+          <Card title={t("home.certificates")}>
             <ul className="space-y-2">
               {certificates.map((certificate) => (
                 <li key={certificate.id}>
@@ -388,11 +378,9 @@ export default async function HomePage() {
                     </span>
                     <span className="text-xs text-[var(--muted)]">
                       {certificate.revokedAt ? (
-                        <span className="font-medium text-[var(--danger)]">
-                          Withdrawn
-                        </span>
+                        <span className="font-medium text-[var(--danger)]">{t("home.withdrawn")}</span>
                       ) : (
-                        `Issued ${certificate.issuedAt.toLocaleDateString("en-ZA")}`
+                        t("home.issued", { date: date(certificate.issuedAt) })
                       )}
                     </span>
                   </Link>

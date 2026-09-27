@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -10,6 +11,7 @@ import {
 import { preferredHost, resolveTenant, type TenantIdentity } from "./tenant";
 import type { Permission } from "./rbac";
 import { can, type Capability } from "./features";
+import { localeFor } from "./i18n/locales";
 
 /**
  * Request-scoped helpers. Everything a page or action needs to know about who
@@ -50,15 +52,30 @@ export async function requireTenant(): Promise<TenantIdentity> {
   return tenant;
 }
 
-/** The signed-in session, or null. */
-export async function currentSession(): Promise<AuthenticatedSession | null> {
+/** The person's language, for a page that already holds tenant and session (D9). */
+export { localeFor };
+
+/** The same, for a page that holds neither, such as the root layout. */
+export async function currentLocale(): Promise<string> {
+  const tenant = await currentTenant();
+  return localeFor(tenant, tenant ? await currentSession() : null);
+}
+
+/**
+ * The signed-in session, or null.
+ *
+ * Once per request while a page renders (React's `cache`), since the root
+ * layout asks for the person's language and the page asks for the session
+ * (job sheet D9). Outside a render, in an action or a route, it runs each time.
+ */
+export const currentSession = cache(async (): Promise<AuthenticatedSession | null> => {
   const tenant = await currentTenant();
   if (!tenant) return null;
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   return resolveSession(tenant.id, token);
-}
+});
 
 /** The signed-in session, or a redirect to the tenant's login page. */
 export async function requireSession(): Promise<AuthenticatedSession> {

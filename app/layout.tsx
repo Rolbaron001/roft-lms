@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { currentTenant } from "@/lib/request";
+import { currentLocale, currentTenant } from "@/lib/request";
 import "./globals.css";
 import { platformName } from "@/lib/platform";
 
@@ -41,10 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      // The person's language, so a screen reader pronounces the page in it
+      // and the browser does not offer to translate it (job sheet D9).
+      lang={await currentLocale()}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

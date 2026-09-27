@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { requireSessionForPasswordChange, requireTenant } from "@/lib/request";
+import { localeFor, requireSessionForPasswordChange, requireTenant } from "@/lib/request";
 import { TenantLogo } from "@/components/tenant-logo";
+import { I18nProvider } from "@/components/i18n";
+import { catalogueFor, translator } from "@/lib/i18n";
+import { localeOf } from "@/lib/i18n/locales";
 import { PasswordForm } from "./password-form";
+import { LanguageForm } from "./language-form";
 
 /**
  * Changing your own password.
@@ -18,8 +22,11 @@ export default async function ChangePasswordPage() {
   const tenant = await requireTenant();
   const session = await requireSessionForPasswordChange();
   const forced = session.mustChangePassword;
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
 
   return (
+    <I18nProvider messages={catalogueFor(locale)}>
     <main
       className="flex min-h-screen items-center justify-center px-4 py-12"
       style={
@@ -46,32 +53,42 @@ export default async function ChangePasswordPage() {
             />
           )}
           <h1 className="text-xl font-semibold tracking-tight">
-            {forced ? "Choose your own password" : "Change your password"}
+            {forced ? t("account.titleForced") : t("account.title")}
           </h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            {forced
-              ? "Somebody else set the password you signed in with. Replace it before carrying on."
-              : `Signed in as ${session.email}`}
+            {forced ? t("account.forcedIntro") : t("account.signedInAs", { email: session.email })}
           </p>
         </div>
 
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+          {!forced ? (
+            <h2 className="mb-4 text-sm font-semibold">{t("account.passwordHeading")}</h2>
+          ) : null}
           <PasswordForm forced={forced} />
         </div>
 
+        {/* Not while a password must be replaced: that comes first. */}
+        {!forced ? (
+          <div className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold">{t("account.languageHeading")}</h2>
+            <LanguageForm
+              current={session.locale ?? null}
+              providerLanguage={localeOf(tenant.defaultLocale).native}
+            />
+          </div>
+        ) : null}
+
         {forced ? (
-          <p className="mt-6 text-center text-xs text-[var(--muted)]">
-            Changing it signs out anyone else using the old password, including
-            whoever passed it to you.
-          </p>
+          <p className="mt-6 text-center text-xs text-[var(--muted)]">{t("account.forcedNote")}</p>
         ) : (
           <p className="mt-6 text-center text-xs text-[var(--muted)]">
             <Link href="/" className="underline hover:no-underline">
-              Back
+              {t("account.back")}
             </Link>
           </p>
         )}
       </div>
     </main>
+    </I18nProvider>
   );
 }

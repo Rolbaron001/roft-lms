@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { openStepAction, type LearnState } from "../actions";
 import type { StepView } from "@/lib/spine";
+import { useT } from "@/components/i18n";
 
 /**
  * The ordered walk through a study unit.
@@ -26,6 +27,7 @@ export function StepList({
     openStepAction,
     {},
   );
+  const t = useT();
 
   const done = steps.filter((step) => step.state === "done").length;
   const next = steps.find((step) => step.open && step.state !== "done");
@@ -34,10 +36,10 @@ export function StepList({
     <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Your way through
+          {t("learn.wayThrough")}
         </h2>
         <span className="text-xs text-[var(--muted)]">
-          {done} of {steps.length} finished
+          {t("learn.stepsFinished", { done, total: steps.length })}
         </span>
       </div>
 
@@ -72,7 +74,7 @@ export function StepList({
                     {step.title}
                     {step.optional ? (
                       <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                        optional
+                        {t("learn.optional")}
                       </span>
                     ) : null}
                   </p>
@@ -91,8 +93,7 @@ export function StepList({
 
                   {step.overrideReason ? (
                     <p className="mt-1.5 text-xs text-[var(--brand-accent)]">
-                      Opened for you by your facilitator:{" "}
-                      {step.overrideReason}
+                      {t("learn.openedByFacilitator", { reason: step.overrideReason })}
                     </p>
                   ) : null}
                 </div>
@@ -111,7 +112,7 @@ export function StepList({
                         className="rounded-md px-3 py-1.5 text-sm font-semibold text-white"
                         style={{ background: "var(--brand-primary)" }}
                       >
-                        {step.progress.submitted ? "Review" : "Start"}
+                        {step.progress.submitted ? t("learn.review") : t("learn.start")}
                       </Link>
                     ) : (
                       <form action={open}>
@@ -126,7 +127,7 @@ export function StepList({
                           disabled={pending}
                           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition hover:bg-[var(--brand-accent)]/10 disabled:opacity-60"
                         >
-                          {step.progress.opened ? "Opened" : "Open"}
+                          {step.progress.opened ? t("learn.opened") : t("learn.open")}
                         </button>
                       </form>
                     )
@@ -142,13 +143,14 @@ export function StepList({
 }
 
 function StepState({ step }: { step: StepView }) {
+  const t = useT();
   const [label, tone] = !step.open
-    ? ["Locked", "text-[var(--muted)] border-[var(--muted)]/30"]
+    ? [t("learn.state.locked"), "text-[var(--muted)] border-[var(--muted)]/30"]
     : step.state === "done"
-      ? ["Done", "text-[var(--success)] border-[var(--success)]/40"]
+      ? [t("learn.state.done"), "text-[var(--success)] border-[var(--success)]/40"]
       : step.state === "in_progress"
-        ? ["In progress", "text-[var(--brand-accent)] border-[var(--brand-accent)]/40"]
-        : ["Ready", "text-[var(--brand-accent)] border-[var(--brand-accent)]/40"];
+        ? [t("learn.state.inProgress"), "text-[var(--brand-accent)] border-[var(--brand-accent)]/40"]
+        : [t("learn.state.ready"), "text-[var(--brand-accent)] border-[var(--brand-accent)]/40"];
 
   return (
     <span

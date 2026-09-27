@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requestContext, currentTenant } from "@/lib/request";
+import { requestContext, currentTenant, localeFor } from "@/lib/request";
+import { translator } from "@/lib/i18n";
 import { signIn, signOut, SESSION_COOKIE } from "@/lib/session";
 
 const credentialsSchema = z.object({
@@ -34,8 +35,11 @@ export async function loginAction(
     password: formData.get("password"),
   });
 
+  // The provider's language, as the page is in (job sheet D9).
+  const t = translator(localeFor(tenant, null));
+
   if (!parsed.success) {
-    return { error: "Enter your email address and password." };
+    return { error: t("login.missing") };
   }
 
   const context = await requestContext();
@@ -48,10 +52,7 @@ export async function loginAction(
 
   if (!result.ok) {
     return {
-      error:
-        result.reason === "locked"
-          ? "Too many attempts. Wait fifteen minutes and try again."
-          : "Those details are not correct.",
+      error: result.reason === "locked" ? t("login.locked") : t("login.wrong"),
     };
   }
 
