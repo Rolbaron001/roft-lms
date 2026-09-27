@@ -263,6 +263,17 @@ export async function getObjectS3(
   return new Uint8Array(await response.arrayBuffer());
 }
 
+/**
+ * Removes an object. S3 answers 204 whether or not it was there, so removing
+ * twice is not an error, which is what lets an interrupted removal be re-run.
+ */
+export async function deleteObjectS3(
+  config: S3Config,
+  key: string,
+): Promise<void> {
+  await send(config, { method: "DELETE", key });
+}
+
 /** Whether the object is there, without pulling it down. */
 export async function objectExistsS3(
   config: S3Config,

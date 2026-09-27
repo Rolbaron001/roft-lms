@@ -46,15 +46,27 @@ const LOCAL_ROOT = resolve(process.env.STORAGE_LOCAL_ROOT ?? "storage");
  * Listed rather than discovered. A column added later and not added here would
  * be missed silently, and a list somebody has to update is at least a list
  * somebody can read - which a clever query over the catalogue is not.
+ *
+ * Corrected on 25 September. Until then the list named three tables that do
+ * not exist (assessment_evidence, which is a value of an enum, and
+ * assessment_papers and qualification_documents, which hold no key) and missed
+ * evidence_artifacts, certificates and lessons. A run would have moved the
+ * library and left every learner's evidence behind, reporting the three as
+ * "not present in this build". tests/storage-sources.test.ts now checks the
+ * list against the schema, so it cannot drift that way again.
+ *
+ * `archived` marks the tables whose files can leave in a cohort archive
+ * (lib/cohort-archive.ts). A file that has left is not on this disk and is not
+ * missing: its row says where it went.
  */
-const SOURCES: { table: string; column: string }[] = [
-  { table: "assessment_evidence", column: "storage_key" },
-  { table: "assessment_papers", column: "storage_key" },
+const SOURCES: { table: string; column: string; archived?: boolean }[] = [
+  { table: "evidence_artifacts", column: "storage_key", archived: true },
+  { table: "certificates", column: "storage_key", archived: true },
+  { table: "enrolment_documents", column: "storage_key", archived: true },
+  { table: "lessons", column: "storage_key" },
   { table: "programme_documents", column: "storage_key" },
-  { table: "qualification_documents", column: "storage_key" },
   { table: "capture_jobs", column: "paper_storage_key" },
   { table: "capture_jobs", column: "guide_storage_key" },
-  { table: "enrolment_documents", column: "storage_key" },
   { table: "library_documents", column: "storage_key" },
   { table: "organisations", column: "logo_storage_key" },
   { table: "mail_attachments", column: "storage_key" },
@@ -79,7 +91,7 @@ async function main() {
       let rows: { key: string | null }[];
       try {
         rows = await sql.unsafe(
-          `select "${source.column}" as key from "${source.table}" where "${source.column}" is not null`,
+          `select "${source.column}" as key from "${source.table}" where "${source.column}" is not null${source.archived ? " and archived_at is null" : ""}`,
         );
       } catch {
         // A table this build does not have. Recorded rather than ignored: the

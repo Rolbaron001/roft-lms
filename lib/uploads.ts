@@ -22,6 +22,7 @@ import {
   type DetectedMedia,
 } from "./media";
 import { buildStorageKey, getObject, putObject } from "./storage";
+import { archivedFileNotice } from "./cohort-archive";
 
 /**
  * Uploading course material and reading it back.
@@ -43,7 +44,9 @@ export class UploadError extends Error {
       | "rejected"
       | "too_large"
       | "not_found"
-      | "not_permitted",
+      | "not_permitted"
+      /** The file has left in a cohort archive; the message says where. */
+      | "archived",
   ) {
     super(message);
     this.name = "UploadError";
@@ -461,6 +464,8 @@ export async function readEvidence(
         sha256: evidenceArtifacts.sha256,
         uploadedById: evidenceArtifacts.uploadedById,
         submissionUserId: assessmentSubmissions.userId,
+        archivedAt: evidenceArtifacts.archivedAt,
+        archiveId: evidenceArtifacts.archiveId,
       })
       .from(evidenceArtifacts)
       .innerJoin(
@@ -468,7 +473,13 @@ export async function readEvidence(
         eq(assessmentSubmissions.id, evidenceArtifacts.submissionId),
       )
       .where(eq(evidenceArtifacts.id, artifactId));
-    return row;
+    if (row?.archivedAt && row.archiveId) {
+      return {
+        ...row,
+        notice: await archivedFileNotice(tx, row.archiveId, row.archivedAt),
+      };
+    }
+    return row ? { ...row, notice: null } : row;
   });
 
   if (!artifact) {
@@ -484,6 +495,10 @@ export async function readEvidence(
       "not_permitted",
     );
   }
+
+  // Archived is not lost. Said after the permission check, so where a file
+  // went is told only to somebody entitled to the file.
+  if (artifact.notice) throw new UploadError(artifact.notice, "archived");
 
   const bytes = await getObject(artifact.storageKey);
   const detected = detectMedia(bytes, artifact.filename);

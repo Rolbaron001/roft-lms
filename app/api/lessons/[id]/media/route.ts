@@ -119,7 +119,9 @@ export function errorResponse(error: unknown): Response {
           ? 403
           : error.code === "too_large"
             ? 413
-            : 400;
+            : error.code === "archived"
+              ? 410
+              : 400;
     return Response.json({ error: error.message }, { status });
   }
 

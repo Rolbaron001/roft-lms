@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import {
+  deleteObjectS3,
   getObjectS3,
   putObjectS3,
   s3ConfigFromEnv,
@@ -105,6 +106,19 @@ export async function getObject(storageKey: string): Promise<Uint8Array> {
 
   const path = join(STORAGE_ROOT, storageKey);
   return new Uint8Array(await readFile(path));
+}
+
+/**
+ * Removes a stored object.
+ *
+ * Used by one thing only: a cohort archive, after the provider's saved copy has
+ * been matched against the archive's fingerprint. Removing an object that is
+ * already gone is not an error, so a removal cut short can simply be run again.
+ */
+export async function deleteObject(storageKey: string): Promise<void> {
+  if (usingS3()) return deleteObjectS3(s3(), storageKey);
+
+  await rm(join(STORAGE_ROOT, storageKey), { force: true });
 }
 
 /**
