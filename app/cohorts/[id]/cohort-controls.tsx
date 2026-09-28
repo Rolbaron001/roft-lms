@@ -8,6 +8,7 @@ import {
   setScheduleAction,
   type CohortActionState,
 } from "../actions";
+import { useT } from "@/components/i18n";
 
 const field =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -48,6 +49,7 @@ export function Reschedule({
   cohortId: string;
   startDate: string;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     rescheduleCohortAction,
     {},
@@ -58,22 +60,11 @@ export function Reschedule({
       <form action={act} className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="cohortId" value={cohortId} />
         <label className="space-y-1.5">
-          <span className="block text-sm font-medium">Start date</span>
-          <input
-            name="startDate"
-            type="date"
-            defaultValue={startDate}
-            required
-            className={field}
-          />
+          <span className="block text-sm font-medium">{t("cohortCtl.start")}</span>
+          <input name="startDate" type="date" defaultValue={startDate} required className={field} />
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className={primary}
-          style={{ background: "var(--brand-primary)" }}
-        >
-          {pending ? "Moving…" : "Move the start"}
+        <button type="submit" disabled={pending} className={primary} style={{ background: "var(--brand-primary)" }}>
+          {pending ? t("cohortCtl.moving") : t("cohortCtl.move")}
         </button>
       </form>
       <Result state={state} />
@@ -94,7 +85,7 @@ export type EditableStep = {
  * The rollout, as days from the start.
  *
  * One form and one save for the whole thing, because the library replaces a
- * cohort's schedule rather than merging into it — a per-row save would delete
+ * cohort's schedule rather than merging into it: a per-row save would delete
  * every other row. Every step is posted, including the blank ones.
  *
  * Days rather than dates on purpose: a rollout is designed once as "week two,
@@ -110,6 +101,7 @@ export function ScheduleEditor({
   startDate: string;
   steps: EditableStep[];
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     setScheduleAction,
     {},
@@ -150,12 +142,7 @@ export function ScheduleEditor({
   }
 
   if (steps.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        This cohort&rsquo;s course has no steps yet, so there is nothing to
-        schedule.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("cohortCtl.noSteps")}</p>;
   }
 
   return (
@@ -166,71 +153,71 @@ export function ScheduleEditor({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-              <th className="pb-2">Step</th>
-              <th className="pb-2">Opens on day</th>
-              <th className="pb-2">Due on day</th>
-              <th className="pb-2">Closes days after due</th>
+              <th className="pb-2">{t("cohortCtl.step")}</th>
+              <th className="pb-2">{t("cohortCtl.opensDay")}</th>
+              <th className="pb-2">{t("cohortCtl.dueDay")}</th>
+              <th className="pb-2">{t("cohortCtl.closesAfter")}</th>
             </tr>
           </thead>
           <tbody>
-            {steps.map((step) => (
-              <tr key={step.id} className="border-t border-[var(--border)]">
-                <td className="py-2 pr-3">
-                  {step.title ?? step.kind}
-                  <input type="hidden" name="stepId" value={step.id} />
-                </td>
-                <td className="py-2 pr-3">
-                  <input
-                    name={`opens-${step.id}`}
-                    type="number"
-                    min={0}
-                    {...on(`opens-${step.id}`)}
-                    placeholder="—"
-                    aria-label={`${step.title ?? step.kind}: opens on day`}
-                    className={`${field} w-24`}
-                  />
-                  <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
-                    {dateFor(step.id, "opens")}
-                  </span>
-                </td>
-                <td className="py-2 pr-3">
-                  <input
-                    name={`due-${step.id}`}
-                    type="number"
-                    min={0}
-                    {...on(`due-${step.id}`)}
-                    placeholder="—"
-                    aria-label={`${step.title ?? step.kind}: due on day`}
-                    className={`${field} w-24`}
-                  />
-                  <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
-                    {dateFor(step.id, "due")}
-                  </span>
-                </td>
-                <td className="py-2">
-                  <input
-                    name={`closes-${step.id}`}
-                    type="number"
-                    min={0}
-                    {...on(`closes-${step.id}`)}
-                    placeholder="—"
-                    aria-label={`${step.title ?? step.kind}: closes days after due`}
-                    className={`${field} w-24`}
-                  />
-                  <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
-                    {dateFor(step.id, "closes")}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {steps.map((step) => {
+              const name = step.title ?? step.kind;
+              return (
+                <tr key={step.id} className="border-t border-[var(--border)]">
+                  <td className="py-2 pr-3">
+                    {name}
+                    <input type="hidden" name="stepId" value={step.id} />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <input
+                      name={`opens-${step.id}`}
+                      type="number"
+                      min={0}
+                      {...on(`opens-${step.id}`)}
+                      placeholder="—"
+                      aria-label={t("cohortCtl.opensLabel", { step: name })}
+                      className={`${field} w-24`}
+                    />
+                    <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
+                      {dateFor(step.id, "opens")}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <input
+                      name={`due-${step.id}`}
+                      type="number"
+                      min={0}
+                      {...on(`due-${step.id}`)}
+                      placeholder="—"
+                      aria-label={t("cohortCtl.dueLabel", { step: name })}
+                      className={`${field} w-24`}
+                    />
+                    <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
+                      {dateFor(step.id, "due")}
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <input
+                      name={`closes-${step.id}`}
+                      type="number"
+                      min={0}
+                      {...on(`closes-${step.id}`)}
+                      placeholder="—"
+                      aria-label={t("cohortCtl.closesLabel", { step: name })}
+                      className={`${field} w-24`}
+                    />
+                    <span className="ml-2 text-xs text-[var(--muted)] tabular-nums">
+                      {dateFor(step.id, "closes")}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <p className="mt-3 text-xs text-[var(--muted)]">
-        Day 0 is the start date. Leave a row empty and that step carries no
-        dates at all — it opens as soon as whatever comes before it is done.
-      </p>
+      <p className="mt-3 text-xs text-[var(--muted)]">{t("cohortCtl.dayZero")}</p>
 
       <button
         type="submit"
@@ -238,7 +225,7 @@ export function ScheduleEditor({
         className={`mt-3 ${primary}`}
         style={{ background: "var(--brand-primary)" }}
       >
-        {pending ? "Saving…" : "Save the schedule"}
+        {pending ? t("common.saving") : t("cohortCtl.save")}
       </button>
 
       <Result state={state} />
@@ -277,18 +264,14 @@ export function AddMember({
   cohortId: string;
   candidates: Candidate[];
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     addMemberAction,
     {},
   );
 
   if (candidates.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        Everybody with a learner account is already on this cohort. Invite more
-        people from the People screen first.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("cohortCtl.everybody")}</p>;
   }
 
   return (
@@ -296,22 +279,17 @@ export function AddMember({
       <form action={act} className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="cohortId" value={cohortId} />
         <label className="flex-1 space-y-1.5">
-          <span className="block text-sm font-medium">Add a learner</span>
+          <span className="block text-sm font-medium">{t("cohortCtl.addLearner")}</span>
           <select name="userId" required className={`${field} w-full`}>
             {candidates.map((person) => (
               <option key={person.id} value={person.id}>
-                {person.lastName}, {person.firstName} — {person.email}
+                {person.lastName}, {person.firstName} · {person.email}
               </option>
             ))}
           </select>
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className={primary}
-          style={{ background: "var(--brand-primary)" }}
-        >
-          {pending ? "Adding…" : "Add"}
+        <button type="submit" disabled={pending} className={primary} style={{ background: "var(--brand-primary)" }}>
+          {pending ? t("cohortCtl.adding") : t("cohortCtl.add")}
         </button>
       </form>
       <Result state={state} />
@@ -334,6 +312,7 @@ export function RemoveMember({
   userId: string;
   name: string;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     removeMemberAction,
     {},
@@ -345,7 +324,7 @@ export function RemoveMember({
         action={act}
         className="inline"
         onSubmit={(event) => {
-          if (!window.confirm(`Take ${name} off this cohort?`)) {
+          if (!window.confirm(t("cohortCtl.confirmRemove", { name }))) {
             event.preventDefault();
           }
         }}
@@ -357,7 +336,7 @@ export function RemoveMember({
           disabled={pending}
           className="text-xs text-[var(--danger)] hover:underline disabled:opacity-60"
         >
-          {pending ? "…" : "Remove"}
+          {pending ? "…" : t("cohortCtl.remove")}
         </button>
       </form>
       {state.error ? (

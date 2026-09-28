@@ -6,18 +6,13 @@ import {
   recordMissedAssessmentAction,
   type SupportActionState,
 } from "@/app/people/support-actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
 const buttonClass =
   "rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60";
-
-const OUTCOME_LABEL: Record<string, string> = {
-  additional_date_set: "Additional date set",
-  sat: "Sat on the additional date",
-  oral_authorised: "Oral assessment authorised",
-  forfeited: "Forfeited",
-};
 
 export type MissedRow = {
   id: string;
@@ -50,6 +45,7 @@ export function Missed({
   canManage: boolean;
   today: string;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<SupportActionState, FormData>(
     recordMissedAssessmentAction,
     {},
@@ -69,27 +65,20 @@ export function Missed({
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
       {records.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          No missed summative dates.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("missed.none")}</p>
       ) : (
         <ul className="space-y-3">
           {records.map((row) => (
-            <li
-              key={row.id}
-              className="rounded-md border border-[var(--border)] p-3 text-sm"
-            >
+            <li key={row.id} className="rounded-md border border-[var(--border)] p-3 text-sm">
               <p className="font-medium">{row.assessmentTitle}</p>
               <p className="mt-1 text-[var(--muted)]">
-                Missed {row.missedOn}
+                {t("missed.on", { date: row.missedOn })}
                 {row.missedReason ? `: ${row.missedReason}` : ""}
-                {row.additionalDate
-                  ? ` · additional date ${row.additionalDate}`
-                  : ""}
+                {row.additionalDate ? t("missed.additional", { date: row.additionalDate }) : ""}
               </p>
               <p className="mt-1">
-                {OUTCOME_LABEL[row.outcome] ?? row.outcome}
-                {row.secondMissMedical ? " (medical)" : ""}
+                {maybe(t, `missed.outcome.${row.outcome}`) ?? row.outcome}
+                {row.secondMissMedical ? t("missed.medical") : ""}
                 {row.secondMissNote ? `: ${row.secondMissNote}` : ""}
               </p>
 
@@ -97,58 +86,40 @@ export function Missed({
                 outcomeFor === row.id ? (
                   <form action={outcomeAction} className="mt-3 space-y-2">
                     <input type="hidden" name="learnerId" value={learnerId} />
-                    <input
-                      type="hidden"
-                      name="missedAssessmentId"
-                      value={row.id}
-                    />
+                    <input type="hidden" name="missedAssessmentId" value={row.id} />
                     <select
                       name="outcome"
                       value={chosen}
                       onChange={(event) => setChosen(event.target.value)}
                       className={inputClass}
                     >
-                      <option value="sat">They sat it</option>
-                      <option value="forfeited">Missed it again</option>
-                      <option value="oral_authorised">
-                        Missed it again — authorise an oral assessment
-                      </option>
+                      <option value="sat">{t("missed.sat")}</option>
+                      <option value="forfeited">{t("missed.again")}</option>
+                      <option value="oral_authorised">{t("missed.againOral")}</option>
                     </select>
 
                     {chosen === "oral_authorised" ? (
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 text-sm">
                           <input type="checkbox" name="medical" />
-                          The second miss was on medical grounds
+                          {t("missed.wasMedical")}
                         </label>
                         <textarea
                           name="note"
                           rows={2}
-                          placeholder="What the medical ground was"
+                          placeholder={t("missed.medicalHint")}
                           className={`${inputClass} block w-full`}
                         />
-                        <p className="text-xs text-[var(--muted)]">
-                          The oral route opens on a medical ground and nothing
-                          else. Without one the outcome is a forfeit, which the
-                          learner can still appeal.
-                        </p>
+                        <p className="text-xs text-[var(--muted)]">{t("missed.medicalOnly")}</p>
                       </div>
                     ) : null}
 
                     <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={recording}
-                        className={buttonClass}
-                      >
-                        {recording ? "Saving…" : "Record"}
+                      <button type="submit" disabled={recording} className={buttonClass}>
+                        {recording ? t("common.saving") : t("missed.record")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setOutcomeFor(null)}
-                        className={buttonClass}
-                      >
-                        Cancel
+                      <button type="button" onClick={() => setOutcomeFor(null)} className={buttonClass}>
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </form>
@@ -158,7 +129,7 @@ export function Missed({
                     onClick={() => setOutcomeFor(row.id)}
                     className={`${buttonClass} mt-2`}
                   >
-                    Record what happened
+                    {t("missed.whatHappened")}
                   </button>
                 )
               ) : null}
@@ -169,19 +140,15 @@ export function Missed({
 
       {canManage && assessments.length > 0 ? (
         !open ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className={buttonClass}
-          >
-            Record a missed date
+          <button type="button" onClick={() => setOpen(true)} className={buttonClass}>
+            {t("missed.recordMissed")}
           </button>
         ) : (
           <form action={action} className="space-y-2">
             <input type="hidden" name="learnerId" value={learnerId} />
             <div className="flex flex-wrap gap-2">
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Assessment</span>
+                <span className="mr-2 text-[var(--muted)]">{t("missed.assessment")}</span>
                 <select name="assessmentId" className={inputClass} required>
                   {assessments.map((assessment) => (
                     <option key={assessment.id} value={assessment.id}>
@@ -191,51 +158,30 @@ export function Missed({
                 </select>
               </label>
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Missed</span>
-                <input
-                  type="date"
-                  name="missedOn"
-                  defaultValue={today}
-                  required
-                  className={inputClass}
-                />
+                <span className="mr-2 text-[var(--muted)]">{t("missed.missed")}</span>
+                <input type="date" name="missedOn" defaultValue={today} required className={inputClass} />
               </label>
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">
-                  Additional date
-                </span>
-                <input
-                  type="date"
-                  name="additionalDate"
-                  required
-                  className={inputClass}
-                />
+                <span className="mr-2 text-[var(--muted)]">{t("missed.additionalDate")}</span>
+                <input type="date" name="additionalDate" required className={inputClass} />
               </label>
             </div>
             <input
               name="missedReason"
-              placeholder="Why it was missed, if known"
+              placeholder={t("missed.whyHint")}
               className={`${inputClass} block w-full`}
             />
-            <p className="text-xs text-[var(--muted)]">
-              One additional date, and one only. Recording it here is what stops
-              a third being arranged later by somebody who did not know about
-              this one.
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t("missed.onlyOne")}</p>
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={saving}
                 className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               >
-                {saving ? "Saving…" : "Set the additional date"}
+                {saving ? t("common.saving") : t("missed.set")}
               </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className={buttonClass}
-              >
-                Cancel
+              <button type="button" onClick={() => setOpen(false)} className={buttonClass}>
+                {t("common.cancel")}
               </button>
             </div>
           </form>

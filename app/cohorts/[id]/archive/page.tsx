@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell, Card } from "@/components/app-shell";
 import { ArchiveError, cohortArchiveState } from "@/lib/cohort-archive";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n/maybe";
 import {
   Abandon,
   CheckCopy,
@@ -20,16 +21,6 @@ import {
  * one archive's next step at a time rather than every button at once, so the
  * order cannot be got wrong by clicking.
  */
-
-const STATUS: Record<string, string> = {
-  building: "Being written",
-  failed: "Did not finish",
-  built: "Ready to download",
-  verified: "Your copy checked",
-  removed: "Files removed from the platform",
-  restored: "Restored",
-  abandoned: "Set aside",
-};
 
 function day(value: Date | null): string {
   return value ? value.toISOString().slice(0, 10) : "";
@@ -49,6 +40,7 @@ export default async function CohortArchivePage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("records:manage");
+  const t = await pageT();
 
   let state;
   try {
@@ -66,22 +58,20 @@ export default async function CohortArchivePage({
         <Link href={`/cohorts/${id}`} className="text-sm text-[var(--muted)] hover:underline">
           ← {state.cohort.name}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Archive evidence</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Once a learner holds their statement of results and their qualification certificate from the awarding body has been recorded on their EISA readiness page, their Portfolio of Evidence can leave the platform in one archive that you keep. The archive opens in any browser without the platform. Nothing is removed until your stored copy has been checked against it, and every record stays here, saying which archive holds the files.
-        </p>
+        <h1 className="mt-2 text-xl font-semibold">{t("archive.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("archive.intro")}</p>
       </div>
 
       <Card
-        title={`Ready to archive (${state.ready.length})`}
+        title={t("archive.ready", { count: state.ready.length })}
         description={
           state.qualification
-            ? `Holding a statement of results and the qualification certificate for ${state.qualification.title}.`
-            : "This cohort's course counts towards no qualification."
+            ? t("archive.readyFor", { qualification: state.qualification.title })
+            : t("archive.noQualification")
         }
       >
         {state.ready.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Nobody yet.</p>
+          <p className="text-sm text-[var(--muted)]">{t("archive.nobody")}</p>
         ) : (
           <>
             <ul className="mb-4 space-y-1 text-sm">
@@ -90,9 +80,7 @@ export default async function CohortArchivePage({
               ))}
             </ul>
             {building ? (
-              <p className="text-sm text-[var(--muted)]">
-                Another archive is being written. Start the next one when it has finished.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("archive.anotherBuilding")}</p>
             ) : (
               <StartArchive cohortId={id} ready={state.ready.length} />
             )}
@@ -102,10 +90,7 @@ export default async function CohortArchivePage({
 
       {state.waiting.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title={`Not yet (${state.waiting.length})`}
-            description="They stay on the platform and follow in a later archive once their own qualification certificate has been recorded."
-          >
+          <Card title={t("archive.notYet", { count: state.waiting.length })} description={t("archive.notYetIntro")}>
             <ul className="space-y-1 text-sm">
               {state.waiting.map((learner) => (
                 <li key={learner.userId}>
@@ -122,35 +107,42 @@ export default async function CohortArchivePage({
         <div key={archive.id} className="mt-6">
           <Card
             title={archive.filename}
-            description={`${STATUS[archive.status] ?? archive.status} · ${archive.learners} ${archive.learners === 1 ? "learner" : "learners"}, ${archive.files} ${archive.files === 1 ? "file" : "files"}${archive.sizeBytes !== null ? ` · ${size(archive.sizeBytes)}` : ""}`}
+            description={`${t("archive.summary", {
+              status: maybe(t, `archive.status.${archive.status}`) ?? archive.status,
+              learners:
+                archive.learners === 1
+                  ? t("archive.oneLearner")
+                  : t("archive.learners", { count: archive.learners }),
+              files: archive.files === 1 ? t("archive.oneFile") : t("archive.files", { count: archive.files }),
+            })}${archive.sizeBytes !== null ? ` · ${size(archive.sizeBytes)}` : ""}`}
           >
             <dl className="mb-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[max-content_1fr]">
-              <dt className="text-[var(--muted)]">Started</dt>
+              <dt className="text-[var(--muted)]">{t("archive.started")}</dt>
               <dd>
                 {day(archive.startedAt)}
-                {archive.builtBy ? ` by ${archive.builtBy}` : ""}
+                {archive.builtBy ? t("archive.by", { name: archive.builtBy }) : ""}
               </dd>
               {archive.verifiedAt ? (
                 <>
-                  <dt className="text-[var(--muted)]">Copy checked</dt>
+                  <dt className="text-[var(--muted)]">{t("archive.checked")}</dt>
                   <dd>{day(archive.verifiedAt)}</dd>
                 </>
               ) : null}
               {archive.removedAt ? (
                 <>
-                  <dt className="text-[var(--muted)]">Files removed</dt>
+                  <dt className="text-[var(--muted)]">{t("archive.removed")}</dt>
                   <dd>{day(archive.removedAt)}</dd>
                 </>
               ) : null}
               {archive.restoredAt ? (
                 <>
-                  <dt className="text-[var(--muted)]">Restored</dt>
+                  <dt className="text-[var(--muted)]">{t("archive.restored")}</dt>
                   <dd>{day(archive.restoredAt)}</dd>
                 </>
               ) : null}
               {archive.fingerprint ? (
                 <>
-                  <dt className="text-[var(--muted)]">Fingerprint</dt>
+                  <dt className="text-[var(--muted)]">{t("archive.fingerprint")}</dt>
                   <dd className="break-all font-mono text-xs">{archive.fingerprint}</dd>
                 </>
               ) : null}
@@ -165,24 +157,18 @@ export default async function CohortArchivePage({
             {archive.status === "built" ? (
               <div className="space-y-5">
                 <div>
-                  <p className="text-sm font-medium">1. Download it and store it</p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">
-                    Keep it where your records policy says learner records are kept, for the full retention period. Once the files are removed, this is the only complete copy.
-                  </p>
+                  <p className="text-sm font-medium">{t("archive.step1")}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{t("archive.step1Note")}</p>
                   <a
                     href={`/api/archives/${archive.id}`}
                     className="mt-2 inline-block rounded-md border border-[var(--border)] px-3 py-2 text-sm"
                   >
-                    Download the archive
+                    {t("archive.download")}
                   </a>
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium">2. Check the copy you stored</p>
-                  <CheckCopy
-                    cohortId={id}
-                    archiveId={archive.id}
-                    expectedBytes={archive.sizeBytes ?? 0}
-                  />
+                  <p className="mb-2 text-sm font-medium">{t("archive.step2")}</p>
+                  <CheckCopy cohortId={id} archiveId={archive.id} expectedBytes={archive.sizeBytes ?? 0} />
                 </div>
                 <Abandon cohortId={id} archiveId={archive.id} />
               </div>
@@ -191,7 +177,7 @@ export default async function CohortArchivePage({
             {archive.status === "verified" ? (
               <div className="space-y-5">
                 <div>
-                  <p className="mb-2 text-sm font-medium">3. Remove the files from the platform</p>
+                  <p className="mb-2 text-sm font-medium">{t("archive.step3")}</p>
                   <RemoveFiles
                     cohortId={id}
                     archiveId={archive.id}

@@ -1,24 +1,12 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { listPeople, possibleLineManagers } from "@/lib/people";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { InviteForm } from "./invite-form";
 import { RosterForm } from "./roster-form";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 import { Card as UiCard } from "@/components/ui";
-
-const ROLE_LABELS: Record<string, string> = {
-  platform_owner: "Platform Owner",
-  tenant_admin: "Administrator",
-  instructor: "Instructor",
-  assessor: "Assessor",
-  moderator: "Moderator",
-  line_manager: "Line Manager",
-  learner: "Learner",
-  skills_development_facilitator: "SDF",
-  external_verifier: "External Verifier",
-  workplace_coach: "Workplace Coach",
-};
 
 export default async function PeoplePage({
   searchParams,
@@ -28,6 +16,7 @@ export default async function PeoplePage({
   const { search } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("user:read");
+  const t = await pageT();
 
   // Read only so the roster form can say what an extension would add. Creating
   // people from a spreadsheet needs no extension and is offered either way.
@@ -51,35 +40,31 @@ export default async function PeoplePage({
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">People</h1>
+        <h1 className="text-xl font-semibold">{t("people.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Everyone in {tenant.displayName}, their roles, and whether their
-          record carries what a statutory return needs.
+          {t("people.intro", { provider: tenant.displayName })}
         </p>
       </div>
 
       {awaiting.length > 0 ? (
         <p className="mb-4 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3 text-sm">
           <span className="font-medium">
-            {awaiting.length}{" "}
-            {awaiting.length === 1 ? "learner is" : "learners are"} not enrolled
-            on anything.
+            {awaiting.length === 1
+              ? t("people.notEnrolledOne")
+              : t("people.notEnrolledMany", { count: awaiting.length })}
           </span>{" "}
-          Being a learner grants no access on its own, so they sign in to an
-          empty screen. Enrol them on a course, add them to a cohort, or assign
-          a programme.
+          {t("people.notEnrolledWhy")}
         </p>
       ) : null}
 
       {incomplete.length > 0 ? (
         <p className="mb-6 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3 text-sm">
           <span className="font-medium">
-            {incomplete.length}{" "}
-            {incomplete.length === 1 ? "person is" : "people are"} missing
-            details a SETA or SAQA return needs.
+            {incomplete.length === 1
+              ? t("people.missingOne")
+              : t("people.missingMany", { count: incomplete.length })}
           </span>{" "}
-          They are marked below. Filling them in now is far easier than the
-          night before a submission.
+          {t("people.missingWhy")}
         </p>
       ) : null}
 
@@ -87,21 +72,18 @@ export default async function PeoplePage({
         <input
           name="search"
           defaultValue={search ?? ""}
-          placeholder="Search by name or email"
+          placeholder={t("people.search")}
           className="w-full max-w-sm rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
         />
         <button
           type="submit"
           className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium"
         >
-          Search
+          {t("people.searchButton")}
         </button>
         {search ? (
-          <Link
-            href="/people"
-            className="px-2 py-2 text-sm text-[var(--muted)] hover:underline"
-          >
-            Clear
+          <Link href="/people" className="px-2 py-2 text-sm text-[var(--muted)] hover:underline">
+            {t("people.clear")}
           </Link>
         ) : null}
       </form>
@@ -111,32 +93,24 @@ export default async function PeoplePage({
           <table className="w-full min-w-lg text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                <th className="pb-2 pr-4 font-medium">Name</th>
-                <th className="pb-2 pr-4 font-medium">Roles</th>
-                <th className="pb-2 pr-4 font-medium">Team</th>
-                <th className="pb-2 pr-4 font-medium">Record</th>
-                <th className="pb-2 font-medium">Status</th>
+                <th className="pb-2 pr-4 font-medium">{t("people.name")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("people.roles")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("people.team")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("people.record")}</th>
+                <th className="pb-2 font-medium">{t("people.status")}</th>
               </tr>
             </thead>
             <tbody>
               {people.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b border-[var(--border)] last:border-0"
-                >
+                <tr key={person.id} className="border-b border-[var(--border)] last:border-0">
                   <td className="py-2.5 pr-4">
-                    <Link
-                      href={`/people/${person.id}`}
-                      className="font-medium hover:underline"
-                    >
+                    <Link href={`/people/${person.id}`} className="font-medium hover:underline">
                       {person.firstName} {person.lastName}
                     </Link>
-                    <span className="block text-xs text-[var(--muted)]">
-                      {person.email}
-                    </span>
+                    <span className="block text-xs text-[var(--muted)]">{person.email}</span>
                     {person.awaitingEnrolment ? (
                       <span className="mt-0.5 block text-xs text-[var(--brand-accent)]">
-                        Not enrolled on anything
+                        {t("people.notEnrolled")}
                       </span>
                     ) : null}
                   </td>
@@ -144,9 +118,7 @@ export default async function PeoplePage({
                     <span className="text-xs">
                       {person.roles.length === 0
                         ? "—"
-                        : person.roles
-                            .map((role) => ROLE_LABELS[role] ?? role)
-                            .join(", ")}
+                        : person.roles.map((role) => maybe(t, `role.${role}`) ?? role).join(", ")}
                     </span>
                   </td>
                   <td className="py-2.5 pr-4 text-xs text-[var(--muted)]">
@@ -157,15 +129,18 @@ export default async function PeoplePage({
                     {person.status !== "active" ? (
                       <span className="text-[var(--muted)]">—</span>
                     ) : person.missingForStatutory.length === 0 ? (
-                      <span className="text-[var(--success)]">Complete</span>
+                      <span className="text-[var(--success)]">{t("people.complete")}</span>
                     ) : (
                       <span className="text-[var(--brand-accent)]">
-                        Missing {person.missingForStatutory.join(", ")}
+                        {t("people.missing", { fields: person.missingForStatutory.join(", ") })}
                       </span>
                     )}
                   </td>
                   <td className="py-2.5">
-                    <StatusBadge status={person.status} />
+                    <StatusBadge
+                      status={person.status}
+                      label={maybe(t, `userStatus.${person.status}`) ?? undefined}
+                    />
                   </td>
                 </tr>
               ))}
@@ -176,10 +151,7 @@ export default async function PeoplePage({
 
       {canInvite ? (
         <div className="mt-6">
-          <UiCard
-            title="Add a cohort from a spreadsheet"
-            description="Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created."
-          >
+          <UiCard title={t("people.roster")} description={t("people.rosterIntro")}>
             <RosterForm
               extension={
                 mayUseExtension

@@ -7,6 +7,8 @@ import {
   type FeedbackActionState,
 } from "@/app/feedback/actions";
 import { ZonedTime } from "@/components/zoned-time";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -37,6 +39,7 @@ export function Feedback({
   }[];
   canAsk: boolean;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<FeedbackActionState, FormData>(
     requestFeedbackAction,
     {},
@@ -45,55 +48,41 @@ export function Feedback({
   return (
     <div className="space-y-4">
       {requests.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          Nobody has been asked yet.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("askFeedback.none")}</p>
       ) : (
         <ul className="space-y-2 text-sm">
           {requests.map((request) => (
-            <li
-              key={request.id}
-              className="flex flex-wrap items-baseline gap-x-3"
-            >
-              <Link
-                href={`/feedback/${request.id}`}
-                className="font-medium hover:underline"
-              >
-                {request.assessmentTitle ?? "The programme"}
+            <li key={request.id} className="flex flex-wrap items-baseline gap-x-3">
+              <Link href={`/feedback/${request.id}`} className="font-medium hover:underline">
+                {request.assessmentTitle ?? t("askFeedback.programme")}
               </Link>
               <span className="text-[var(--muted)]">
-                asked{" "}
-                <ZonedTime
-                  at={request.sentAt}
-                  zone={zone}
-                  withDate
-                  showViewer={false}
+                <Rich
+                  text={t("askFeedback.asked")}
+                  parts={{ when: <ZonedTime at={request.sentAt} zone={zone} withDate showViewer={false} /> }}
                 />
               </span>
               <span className="tabular-nums">
-                {request.answered}{" "}
-                {request.answered === 1 ? "answer" : "answers"}
+                {request.answered === 1
+                  ? t("askFeedback.oneAnswer")
+                  : t("askFeedback.answers", { count: request.answered })}
               </span>
             </li>
           ))}
         </ul>
       )}
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.notice ? (
-        <p className="text-sm text-[var(--muted)]">{state.notice}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.notice ? <p className="text-sm text-[var(--muted)]">{state.notice}</p> : null}
 
       {canAsk ? (
         <form action={action} className="flex flex-wrap gap-2">
           <input type="hidden" name="cohortId" value={cohortId} />
           <select name="assessmentId" className={inputClass} defaultValue="">
-            <option value="">The programme overall</option>
+            <option value="">{t("askFeedback.overall")}</option>
             {assessments.map((assessment) => (
               <option key={assessment.id} value={assessment.id}>
-                After {assessment.title}
+                {t("askFeedback.after", { assessment: assessment.title })}
               </option>
             ))}
           </select>
@@ -102,7 +91,7 @@ export function Feedback({
             disabled={saving}
             className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60"
           >
-            {saving ? "Asking…" : "Ask for feedback"}
+            {saving ? t("askFeedback.asking") : t("askFeedback.ask")}
           </button>
         </form>
       ) : null}

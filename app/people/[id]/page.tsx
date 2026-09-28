@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n/maybe";
+import { HOURS_TO_ACKNOWLEDGE } from "@/lib/appeals";
 import {
   getPerson,
   PeopleError,
@@ -16,7 +18,7 @@ import { Appeals } from "./appeals";
 import { Support } from "./support";
 import { Missed } from "./missed";
 import { Conduct } from "./conduct";
-import { learnerCases } from "@/lib/conduct";
+import { HEARING_NOTICE_HOURS, learnerCases } from "@/lib/conduct";
 import { externalRecordsFor } from "@/lib/xapi";
 import { awardsFor } from "@/lib/qualification-awards";
 import { learnerMissedAssessments, learnerSupport } from "@/lib/support";
@@ -43,6 +45,7 @@ export default async function PersonPage({
   const { route } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("user:read");
+  const { t, dates } = await pageLocale();
 
   let detail;
   try {
@@ -152,7 +155,7 @@ export default async function PersonPage({
           href="/people"
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← All people
+          {t("personPage.all")}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -162,35 +165,41 @@ export default async function PersonPage({
             <p className="mt-0.5 text-sm text-[var(--muted)]">
               {person.email}
               {person.lastLoginAt
-                ? ` · last signed in ${person.lastLoginAt.toLocaleDateString("en-ZA")}`
-                : " · has not signed in yet"}
+                ? t("personPage.lastSignedIn", { date: person.lastLoginAt.toLocaleDateString(dates) })
+                : t("personPage.neverSignedIn")}
             </p>
           </div>
-          <StatusBadge status={person.status} />
+          <StatusBadge
+            status={person.status}
+            label={maybe(t, `userStatus.${person.status}`) ?? undefined}
+          />
         </div>
 
         <p className="mt-3 text-sm text-[var(--muted)]">
-          {detail.enrolmentCount}{" "}
-          {detail.enrolmentCount === 1 ? "course" : "courses"} ·{" "}
-          {detail.certificateCount}{" "}
-          {detail.certificateCount === 1 ? "certificate" : "certificates"}
+          {detail.enrolmentCount === 1
+            ? t("personPage.oneCourse")
+            : t("personPage.courses", { count: detail.enrolmentCount })}{" "}
+          ·{" "}
+          {detail.certificateCount === 1
+            ? t("personPage.oneCertificate")
+            : t("personPage.certificates", { count: detail.certificateCount })}
         </p>
       </div>
 
       {person.status === "anonymised" ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-          <h2 className="font-medium">This record was anonymised</h2>
+          <h2 className="font-medium">{t("personPage.anonymised")}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            The personal details were erased on{" "}
-            {person.anonymisedAt?.toLocaleDateString("en-ZA")} at the person&rsquo;s
-            request. Their {detail.certificateCount}{" "}
-            {detail.certificateCount === 1 ? "certificate remains" : "certificates remain"}{" "}
-            valid and verifiable, because a qualification once earned has to
-            stay on the national record.
+            {detail.certificateCount === 1
+              ? t("personPage.anonymisedOne", {
+                  date: person.anonymisedAt?.toLocaleDateString(dates) ?? "",
+                })
+              : t("personPage.anonymisedMany", {
+                  date: person.anonymisedAt?.toLocaleDateString(dates) ?? "",
+                  count: detail.certificateCount,
+                })}
           </p>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Nothing here can be edited.
-          </p>
+          <p className="mt-2 text-sm text-[var(--muted)]">{t("personPage.noEdit")}</p>
         </section>
       ) : (
         <PersonEditor
@@ -231,18 +240,15 @@ export default async function PersonPage({
       {canManageConduct ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Conduct
+            {t("personPage.conduct")}
           </h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            What was alleged, which warnings were live at the time, whether
-            notice of a hearing was adequate, and what was decided. In the order
-            it happened, which is the order it gets read back in.
-          </p>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("personPage.conductIntro")}</p>
           <Conduct
             learnerId={id}
             zone={tenant.timezone}
             cases={conductCases}
             today={today}
+            noticeHours={HEARING_NOTICE_HOURS}
           />
         </section>
       ) : null}
@@ -250,14 +256,9 @@ export default async function PersonPage({
       {canActOnSupport ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Support
+            {t("personPage.support")}
           </h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            What is being done for this learner, and by whom. The reason behind
-            an accommodation is health or financial information and is held
-            apart from it, because doing the accommodating does not require
-            knowing why.
-          </p>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("personPage.supportIntro")}</p>
           <Support
             learnerId={id}
             records={supportRecords}
@@ -271,13 +272,9 @@ export default async function PersonPage({
       {canActOnSupport ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Missed summative dates
+            {t("personPage.missed")}
           </h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            One additional date, and one only. Where that is also missed on
-            medical grounds the learner goes to an oral assessment with an
-            observer from the employer.
-          </p>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("personPage.missedIntro")}</p>
           <Missed
             learnerId={id}
             records={missed}
@@ -291,12 +288,10 @@ export default async function PersonPage({
       {canManageAppeals ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Appeals
+            {t("personPage.appeals")}
           </h2>
           <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            Against a result, or against an assessor&rsquo;s conduct. Receipt is
-            acknowledged within two hours, and the clock starts when it is
-            lodged here.
+            {t("personPage.appealsIntro", { hours: HOURS_TO_ACKNOWLEDGE })}
           </p>
           <Appeals
             learnerId={id}
@@ -319,13 +314,9 @@ export default async function PersonPage({
       {readiness ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Enrolment documents
+            {t("personPage.documents")}
           </h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            Checked as they are collected rather than when a return is being
-            assembled. A missing certified copy found months later is far
-            harder to get, and the deadline is usually days away by then.
-          </p>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("personPage.documentsIntro")}</p>
           <EnrolmentDocuments
             userId={id}
             readiness={readiness}
@@ -345,7 +336,7 @@ export default async function PersonPage({
       {awards.length > 0 ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Qualifications awarded
+            {t("personPage.awarded")}
           </h2>
           <ul className="mt-3 space-y-1 text-sm">
             {awards.map((award) => (
@@ -357,8 +348,11 @@ export default async function PersonPage({
                   {award.qualificationTitle}
                 </Link>{" "}
                 <span className="text-[var(--muted)]">
-                  · certificate {award.certificateNumber}, {award.awardedBy},{" "}
-                  {award.awardedOn}
+                  {t("personPage.award", {
+                    number: award.certificateNumber,
+                    by: award.awardedBy,
+                    date: award.awardedOn,
+                  })}
                 </span>
               </li>
             ))}
@@ -369,20 +363,22 @@ export default async function PersonPage({
       {elsewhere.length > 0 ? (
         <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Learning recorded elsewhere
+            {t("personPage.elsewhere")}
           </h2>
-          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-            Imported from another system. Shown as it was recorded there; none
-            of it was taught, assessed or moderated on this platform.
-          </p>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("personPage.elsewhereIntro")}</p>
           <ul className="space-y-1 text-sm">
             {elsewhere.map((row) => (
               <li key={row.id}>
                 <span className="font-medium">{row.verb}</span>{" "}
                 {row.objectName ?? row.objectId}
-                {row.success === true ? " · passed" : row.success === false ? " · not passed" : ""}
+                {row.success === true
+                  ? t("personPage.passed")
+                  : row.success === false
+                    ? t("personPage.notPassed")
+                    : ""}
                 <span className="ml-2 text-xs text-[var(--muted)]">
-                  {row.occurredAt ? row.occurredAt.toISOString().slice(0, 10) : "no date"} · {row.source}
+                  {row.occurredAt ? row.occurredAt.toISOString().slice(0, 10) : t("personPage.noDate")} ·{" "}
+                  {row.source}
                 </span>
               </li>
             ))}

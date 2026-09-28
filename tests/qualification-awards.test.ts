@@ -18,6 +18,7 @@ import {
   removeQualificationAward,
 } from "@/lib/qualification-awards";
 import { permissionsFor, type Role } from "@/lib/rbac";
+import { en } from "@/lib/i18n/en";
 import type { AuthenticatedSession } from "@/lib/session";
 
 let organisationId: string;
@@ -150,6 +151,8 @@ describe("recording the qualification certificate", () => {
     const page = readFileSync(join(process.cwd(), "app/readiness/[qualificationId]/[userId]/page.tsx"), "utf8");
     expect(page).toMatch(/<QualificationAward/);
     const person = readFileSync(join(process.cwd(), "app/people/[id]/page.tsx"), "utf8");
-    expect(person).toMatch(/Qualifications awarded/);
+    // The heading comes from the language catalogue (job sheet D9).
+    expect(person).toMatch(/t\("personPage\.awarded"\)/);
+    expect(en["personPage.awarded"]).toBe("Qualifications awarded");
   });
 });

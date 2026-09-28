@@ -31,6 +31,8 @@ const MOVED = [
   "app/readiness",
   "app/statements",
   "app/papers",
+  "app/people",
+  "app/cohorts",
 ];
 
 /**
@@ -78,11 +80,16 @@ export function englishIn(source: string): string[] {
     if (/^[A-Z][A-Za-z'’,.:;?!()\- ]*[a-z][A-Za-z'’,.:;?!()\- ]*$/.test(trimmed) && trimmed.includes(" ")) {
       found.push(trimmed);
     }
-    // A wording attribute given as a literal.
+    // A wording attribute given as a literal: words with a space between them,
+    // or one capitalised word. An example value (an invoice number, a web
+    // address, "18:30") is not wording and is left alone.
     for (const match of line.matchAll(
       /\b(placeholder|title|description|label|aria-label|alt|what|consequence)="([^"]*[A-Za-z]{2,}[^"]*)"/g,
     )) {
-      found.push(`${match[1]}="${match[2]}"`);
+      const value = match[2];
+      if (/[A-Za-z]{2,}\s+[A-Za-z]/.test(value) || /^[A-Z][a-z]{2,}$/.test(value)) {
+        found.push(`${match[1]}="${value}"`);
+      }
     }
   }
   return found;
@@ -108,5 +115,8 @@ describe("the check itself", () => {
     expect(englishIn('<p className="text-sm font-medium">{t("marking.title")}</p>')).toEqual([]);
     expect(englishIn("  const grouped = items.filter(Boolean);")).toEqual([]);
     expect(englishIn("{/* A comment in the markup. */}")).toEqual([]);
+    expect(englishIn('<input placeholder="INV-2026-0041" />')).toEqual([]);
+    expect(englishIn('<input placeholder="https://…" />')).toEqual([]);
+    expect(englishIn('<input placeholder="Recommendation" />')).toHaveLength(1);
   });
 });

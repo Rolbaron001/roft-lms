@@ -14,6 +14,8 @@ import {
   type DocumentKind,
   type EnrolmentReadiness,
 } from "@/lib/enrolment-document-shape";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm";
@@ -45,6 +47,9 @@ export function EnrolmentDocuments({
   held: HeldDocument[];
   canManage: boolean;
 }) {
+  const t = useT();
+  const kindLabel = (kind: string) =>
+    maybe(t, `docs.kind.${kind}`) ?? DOCUMENT_LABEL[kind as DocumentKind] ?? kind;
   const [route, setRoute] = useState(readiness.route);
   const [uploadState, uploadAction, uploading] = useActionState<
     PeopleActionState,
@@ -60,7 +65,7 @@ export function EnrolmentDocuments({
   return (
     <div className="space-y-5">
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Enrolment route</span>
+        <span className="block text-sm font-medium">{t("docs.route")}</span>
         <select
           value={route}
           onChange={(event) => {
@@ -76,39 +81,35 @@ export function EnrolmentDocuments({
         >
           {Object.entries(ROUTE_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
-              {label}
+              {maybe(t, `docs.route.${value}`) ?? label}
             </option>
           ))}
         </select>
-        <span className="block text-xs text-[var(--muted)]">
-          The route decides what is required. Recognition of prior learning
-          asks for a portfolio rather than a qualification certificate, because
-          the claim is that the learning happened outside a formal programme.
-        </span>
+        <span className="block text-xs text-[var(--muted)]">{t("docs.routeNote")}</span>
       </label>
 
       <div>
         <p className="text-sm font-medium">
           {readiness.ready
-            ? "Everything required has been supplied and checked."
-            : `${readiness.outstanding.length} outstanding`}
+            ? t("docs.allSupplied")
+            : t("docs.outstanding", { count: readiness.outstanding.length })}
         </p>
         <ul className="mt-2 space-y-1 text-sm">
           {readiness.documents.map((document) => (
             <li key={document.kind} className="flex flex-wrap gap-2">
-              <span className={document.satisfied ? "" : "font-medium"}>
-                {document.label}
-              </span>
+              <span className={document.satisfied ? "" : "font-medium"}>{kindLabel(document.kind)}</span>
               <span className="text-[var(--muted)]">
                 {document.satisfied
-                  ? "accepted"
+                  ? t("docs.accepted")
                   : document.verification === "missing"
-                    ? "not supplied"
+                    ? t("docs.notSupplied")
                     : document.expired
-                      ? `certified ${document.certifiedOn}, expired`
+                      ? t("docs.expired", { date: document.certifiedOn ?? "" })
                       : document.verification === "refused"
-                        ? `refused${document.refusedReason ? `: ${document.refusedReason}` : ""}`
-                        : "not yet checked"}
+                        ? document.refusedReason
+                          ? t("docs.refusedBecause", { reason: document.refusedReason })
+                          : t("docs.refused")
+                        : t("docs.notChecked")}
               </span>
             </li>
           ))}
@@ -120,19 +121,16 @@ export function EnrolmentDocuments({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                <th className="pb-2">Document</th>
-                <th className="pb-2">File</th>
-                <th className="pb-2">Certified</th>
-                <th className="pb-2">Checked</th>
+                <th className="pb-2">{t("docs.document")}</th>
+                <th className="pb-2">{t("docs.file")}</th>
+                <th className="pb-2">{t("docs.certified")}</th>
+                <th className="pb-2">{t("docs.checked")}</th>
               </tr>
             </thead>
             <tbody>
               {held.map((document) => (
                 <tr key={document.id} className="border-t border-[var(--border)]">
-                  <td className="py-2 pr-3">
-                    {DOCUMENT_LABEL[document.kind as DocumentKind] ??
-                      document.kind}
-                  </td>
+                  <td className="py-2 pr-3">{kindLabel(document.kind)}</td>
                   <td className="py-2 pr-3">
                     {/*
                       Opens in a new tab, so the check can be made against the
@@ -147,18 +145,12 @@ export function EnrolmentDocuments({
                       {document.filename}
                     </a>
                   </td>
-                  <td className="py-2 pr-3 tabular-nums">
-                    {document.certifiedOn ?? "—"}
-                  </td>
+                  <td className="py-2 pr-3 tabular-nums">{document.certifiedOn ?? "—"}</td>
                   <td className="py-2">
                     {canManage && document.verification === "pending" ? (
                       <form action={verifyAction} className="flex flex-wrap gap-2">
                         <input type="hidden" name="userId" value={userId} />
-                        <input
-                          type="hidden"
-                          name="documentId"
-                          value={document.id}
-                        />
+                        <input type="hidden" name="documentId" value={document.id} />
                         {/*
                           The grounds Curiosa's enrolment procedure names as
                           flat rules - more than one certification date on an
@@ -170,13 +162,11 @@ export function EnrolmentDocuments({
                         <input
                           name="reason"
                           list={`refusal-${document.id}`}
-                          placeholder="Reason, if refusing"
+                          placeholder={t("docs.reasonIfRefusing")}
                           className="min-w-[16rem] flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
                         />
                         <datalist id={`refusal-${document.id}`}>
-                          {refusalReasonsFor(
-                            document.kind as DocumentKind,
-                          ).map((reason) => (
+                          {refusalReasonsFor(document.kind as DocumentKind).map((reason) => (
                             <option key={reason} value={reason} />
                           ))}
                         </datalist>
@@ -186,7 +176,7 @@ export function EnrolmentDocuments({
                           value="accepted"
                           className="rounded-md border border-[var(--border)] px-2 py-1 text-xs"
                         >
-                          Accept
+                          {t("docs.accept")}
                         </button>
                         <button
                           type="submit"
@@ -194,15 +184,13 @@ export function EnrolmentDocuments({
                           value="refused"
                           className="rounded-md border border-[var(--border)] px-2 py-1 text-xs"
                         >
-                          Refuse
+                          {t("docs.refuse")}
                         </button>
                       </form>
                     ) : (
                       <span className="text-[var(--muted)]">
-                        {document.verification}
-                        {document.refusedReason
-                          ? `: ${document.refusedReason}`
-                          : ""}
+                        {maybe(t, `docs.verification.${document.verification}`) ?? document.verification}
+                        {document.refusedReason ? `: ${document.refusedReason}` : ""}
                       </span>
                     )}
                   </td>
@@ -214,9 +202,7 @@ export function EnrolmentDocuments({
       ) : null}
 
       {verifyState.error ? (
-        <p className="text-sm text-[var(--danger,#b00020)]">
-          {verifyState.error}
-        </p>
+        <p className="text-sm text-[var(--danger,#b00020)]">{verifyState.error}</p>
       ) : null}
 
       {canManage ? (
@@ -227,16 +213,16 @@ export function EnrolmentDocuments({
           <input type="hidden" name="userId" value={userId} />
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Document</span>
+            <span className="block text-sm font-medium">{t("docs.document")}</span>
             <select
               name="kind"
               value={kind}
               onChange={(event) => setKind(event.target.value as DocumentKind)}
               className={inputClass}
             >
-              {Object.entries(DOCUMENT_LABEL).map(([value, label]) => (
+              {Object.keys(DOCUMENT_LABEL).map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {kindLabel(value)}
                 </option>
               ))}
             </select>
@@ -244,11 +230,9 @@ export function EnrolmentDocuments({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              Certified on{" "}
+              {t("docs.certifiedOn")}{" "}
               {CERTIFIED_KINDS.includes(kind) ? null : (
-                <span className="font-normal text-[var(--muted)]">
-                  (not needed)
-                </span>
+                <span className="font-normal text-[var(--muted)]">{t("docs.notNeeded")}</span>
               )}
             </span>
             <input
@@ -260,27 +244,23 @@ export function EnrolmentDocuments({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">File</span>
+            <span className="block text-sm font-medium">{t("docs.file")}</span>
             <input name="file" type="file" required className={inputClass} />
           </label>
 
           <div className="sm:col-span-3">
             {uploadState.error ? (
-              <p className="mb-2 text-sm text-[var(--danger,#b00020)]">
-                {uploadState.error}
-              </p>
+              <p className="mb-2 text-sm text-[var(--danger,#b00020)]">{uploadState.error}</p>
             ) : null}
             {uploadState.done ? (
-              <p className="mb-2 text-sm text-[var(--muted)]">
-                {uploadState.done}
-              </p>
+              <p className="mb-2 text-sm text-[var(--muted)]">{uploadState.done}</p>
             ) : null}
             <button
               type="submit"
               disabled={uploading}
               className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {uploading ? "Filing…" : "File the document"}
+              {uploading ? t("docs.filing") : t("docs.fileIt")}
             </button>
           </div>
         </form>

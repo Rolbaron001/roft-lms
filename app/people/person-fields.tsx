@@ -1,5 +1,8 @@
 "use client";
 
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
+
 /**
  * The fields describing a person, shared by the add and edit forms so the two
  * cannot drift apart.
@@ -40,15 +43,8 @@ function Field({
   return (
     <label className="block space-y-1.5">
       <span className="block text-sm font-medium">{label}</span>
-      <input
-        name={name}
-        defaultValue={defaultValue ?? ""}
-        className={inputClass}
-        {...props}
-      />
-      {hint ? (
-        <span className="block text-xs text-[var(--muted)]">{hint}</span>
-      ) : null}
+      <input name={name} defaultValue={defaultValue ?? ""} className={inputClass} {...props} />
+      {hint ? <span className="block text-xs text-[var(--muted)]">{hint}</span> : null}
     </label>
   );
 }
@@ -60,152 +56,88 @@ export function PersonFields({
   defaults?: PersonDefaults;
   managers: { id: string; label: string }[];
 }) {
+  const t = useT();
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field
-          label="First name"
-          name="firstName"
-          defaultValue={defaults.firstName}
-          required
-        />
-        <Field
-          label="Last name"
-          name="lastName"
-          defaultValue={defaults.lastName}
-          required
-        />
-        <Field
-          label="Email address"
-          name="email"
-          type="email"
-          defaultValue={defaults.email}
-          required
-        />
-        <Field
-          label="Job title"
-          name="jobTitle"
-          defaultValue={defaults.jobTitle}
-        />
-        <Field label="Team" name="team" defaultValue={defaults.team} />
-        <Field label="Site" name="site" defaultValue={defaults.site} />
+        <Field label={t("person.firstName")} name="firstName" defaultValue={defaults.firstName} required />
+        <Field label={t("person.lastName")} name="lastName" defaultValue={defaults.lastName} required />
+        <Field label={t("person.email")} name="email" type="email" defaultValue={defaults.email} required />
+        <Field label={t("person.jobTitle")} name="jobTitle" defaultValue={defaults.jobTitle} />
+        <Field label={t("person.team")} name="team" defaultValue={defaults.team} />
+        <Field label={t("person.site")} name="site" defaultValue={defaults.site} />
 
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Line manager</span>
-          <select
-            name="lineManagerId"
-            defaultValue={defaults.lineManagerId ?? ""}
-            className={inputClass}
-          >
-            <option value="">Nobody</option>
+          <span className="block text-sm font-medium">{t("person.lineManager")}</span>
+          <select name="lineManagerId" defaultValue={defaults.lineManagerId ?? ""} className={inputClass}>
+            <option value="">{t("person.nobody")}</option>
             {managers.map((manager) => (
               <option key={manager.id} value={manager.id}>
                 {manager.label}
               </option>
             ))}
           </select>
-          <span className="block text-xs text-[var(--muted)]">
-            Decides whose training this person can see in reports.
-          </span>
+          <span className="block text-xs text-[var(--muted)]">{t("person.lineManagerNote")}</span>
         </label>
 
-        <Field
-          label="OFO code"
-          name="ofoCode"
-          defaultValue={defaults.ofoCode}
-          hint="Occupation code used to group a SETA return."
-        />
+        <Field label={t("person.ofo")} name="ofoCode" defaultValue={defaults.ofoCode} hint={t("person.ofoNote")} />
       </div>
 
       <fieldset className="mt-6 space-y-3 rounded-md border border-[var(--border)] p-4">
-        <legend className="px-1 text-sm font-medium">
-          Statutory details
-        </legend>
-        <p className="text-xs text-[var(--muted)]">
-          Needed for a SAQA or SETA return. The identity number is checked
-          against its check digit as you save, so a typing error is caught here
-          rather than by the regulator.
-        </p>
+        <legend className="px-1 text-sm font-medium">{t("person.statutory")}</legend>
+        <p className="text-xs text-[var(--muted)]">{t("person.statutoryNote")}</p>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field
-            label="Identity number"
-            name="nationalId"
-            defaultValue={defaults.nationalId}
-            inputMode="numeric"
-          />
+          <Field label={t("person.idNumber")} name="nationalId" defaultValue={defaults.nationalId} inputMode="numeric" />
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Gender</span>
-            <select
-              name="gender"
-              defaultValue={defaults.gender ?? ""}
-              className={inputClass}
-            >
-              <option value="">Not recorded</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-              <option value="other">Other</option>
+            <span className="block text-sm font-medium">{t("person.gender")}</span>
+            <select name="gender" defaultValue={defaults.gender ?? ""} className={inputClass}>
+              <option value="">{t("person.notRecorded")}</option>
+              <option value="female">{t("person.female")}</option>
+              <option value="male">{t("person.male")}</option>
+              <option value="other">{t("person.other")}</option>
             </select>
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Equity code</span>
-            <select
-              name="equityCode"
-              defaultValue={defaults.equityCode ?? ""}
-              className={inputClass}
-            >
-              <option value="">Not recorded</option>
-              <option value="AF">African</option>
-              <option value="CO">Coloured</option>
-              <option value="IN">Indian</option>
-              <option value="WH">White</option>
-              <option value="OT">Other</option>
+            <span className="block text-sm font-medium">{t("person.equity")}</span>
+            <select name="equityCode" defaultValue={defaults.equityCode ?? ""} className={inputClass}>
+              <option value="">{t("person.notRecorded")}</option>
+              {(["AF", "CO", "IN", "WH", "OT"] as const).map((code) => (
+                <option key={code} value={code}>
+                  {t(`person.equity.${code}`)}
+                </option>
+              ))}
             </select>
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Disability</span>
-            <select
-              name="disabilityCode"
-              defaultValue={defaults.disabilityCode ?? ""}
-              className={inputClass}
-            >
-              <option value="">Not recorded</option>
-              <option value="N">None</option>
-              <option value="Y">Disability recorded</option>
+            <span className="block text-sm font-medium">{t("person.disability")}</span>
+            <select name="disabilityCode" defaultValue={defaults.disabilityCode ?? ""} className={inputClass}>
+              <option value="">{t("person.notRecorded")}</option>
+              <option value="N">{t("person.none")}</option>
+              <option value="Y">{t("person.disabilityRecorded")}</option>
             </select>
           </label>
 
-          <Field
-            label="Nationality"
-            name="nationality"
-            defaultValue={defaults.nationality}
-          />
+          <Field label={t("person.nationality")} name="nationality" defaultValue={defaults.nationality} />
         </div>
       </fieldset>
     </>
   );
 }
 
-const ROLES: { value: string; label: string; note?: string }[] = [
-  { value: "tenant_admin", label: "Administrator" },
-  { value: "instructor", label: "Instructor" },
-  { value: "assessor", label: "Assessor", note: "Needs a registration number" },
-  { value: "moderator", label: "Moderator", note: "Cannot moderate own decisions" },
-  { value: "line_manager", label: "Line Manager" },
-  { value: "learner", label: "Learner" },
-  {
-    value: "skills_development_facilitator",
-    label: "Skills Development Facilitator",
-  },
-  { value: "external_verifier", label: "External Verifier", note: "Read-only" },
-  {
-    value: "workplace_coach",
-    label: "Workplace Coach",
-    note: "The employer's supervisor — sees only their own learners",
-  },
-];
+const ROLES = [
+  "tenant_admin",
+  "instructor",
+  "assessor",
+  "moderator",
+  "line_manager",
+  "learner",
+  "skills_development_facilitator",
+  "external_verifier",
+  "workplace_coach",
+] as const;
 
 export function RoleChecklist({
   selected = [],
@@ -214,40 +146,41 @@ export function RoleChecklist({
   selected?: string[];
   registrationNumbers?: Record<string, string | null>;
 }) {
+  const t = useT();
   return (
     <fieldset className="space-y-2 rounded-md border border-[var(--border)] p-4">
-      <legend className="px-1 text-sm font-medium">Roles</legend>
+      <legend className="px-1 text-sm font-medium">{t("person.roles")}</legend>
 
-      {ROLES.map((role) => (
-        <div key={role.value}>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="roles"
-              value={role.value}
-              defaultChecked={selected.includes(role.value)}
-              className="mt-1"
-            />
-            <span>
-              {role.label}
-              {role.note ? (
-                <span className="block text-xs text-[var(--muted)]">
-                  {role.note}
-                </span>
-              ) : null}
-            </span>
-          </label>
+      {ROLES.map((role) => {
+        const label = t(`role.${role}`);
+        const note = maybe(t, `person.roleNote.${role}`);
+        return (
+          <div key={role}>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="roles"
+                value={role}
+                defaultChecked={selected.includes(role)}
+                className="mt-1"
+              />
+              <span>
+                {label}
+                {note ? <span className="block text-xs text-[var(--muted)]">{note}</span> : null}
+              </span>
+            </label>
 
-          {role.value === "assessor" || role.value === "moderator" ? (
-            <input
-              name={`registration:${role.value}`}
-              defaultValue={registrationNumbers[role.value] ?? ""}
-              placeholder={`${role.label} registration number`}
-              className={`${inputClass} mt-1.5 ml-6 w-[calc(100%-1.5rem)] text-xs`}
-            />
-          ) : null}
-        </div>
-      ))}
+            {role === "assessor" || role === "moderator" ? (
+              <input
+                name={`registration:${role}`}
+                defaultValue={registrationNumbers[role] ?? ""}
+                placeholder={t("person.registration", { role: label })}
+                className={`${inputClass} mt-1.5 ml-6 w-[calc(100%-1.5rem)] text-xs`}
+              />
+            ) : null}
+          </div>
+        );
+      })}
     </fieldset>
   );
 }

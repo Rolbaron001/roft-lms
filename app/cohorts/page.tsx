@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { listCohorts } from "@/lib/cohorts";
 import { listCourses } from "@/lib/authoring";
+import { maybe } from "@/lib/i18n/maybe";
 import { EmptyState } from "@/components/empty-state";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { NewCohort } from "./new-cohort";
@@ -18,8 +19,9 @@ import { vocabulary } from "@/lib/terms";
  */
 export default async function CohortsPage() {
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   // A cohort usually arrives as a spreadsheet of names, so the same import that
   // sits under People is offered here too - this is where somebody is when
@@ -37,16 +39,18 @@ export default async function CohortsPage() {
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{words.many("cohort")}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          A group working through a programme together, on one schedule. Every
-          deadline is held as a number of days from the start date, so moving an
-          intake moves every date for everyone in it at once.
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("cohorts.intro")}</p>
       </div>
 
       {canManage ? (
         <div className="mb-6">
           <NewCohort
+            words={{
+              cohort: words.lowerOne("cohort"),
+              course: words.lowerOne("course"),
+              courses: words.lowerMany("course"),
+              Course: words.one("course"),
+            }}
             courses={courses.map((course) => ({
               id: course.id,
               title: course.title,
@@ -58,10 +62,8 @@ export default async function CohortsPage() {
       ) : null}
 
       {cohorts.length === 0 ? (
-        <EmptyState title="No cohorts yet">
-          A cohort is a group working through a published course together, on
-          one schedule. Create one against a course and every deadline is
-          measured from its start date.
+        <EmptyState title={t("cohorts.noneTitle", { cohorts: words.lowerMany("cohort") })}>
+          {t("cohorts.none", { cohort: words.lowerOne("cohort"), course: words.lowerOne("course") })}
         </EmptyState>
       ) : (
         <ul className="space-y-2">
@@ -73,21 +75,22 @@ export default async function CohortsPage() {
               <span className="text-sm">
                 <span className="font-medium">{cohort.name}</span>
                 {cohort.code ? (
-                  <span className="ml-2 font-mono text-xs text-[var(--muted)]">
-                    {cohort.code}
-                  </span>
+                  <span className="ml-2 font-mono text-xs text-[var(--muted)]">{cohort.code}</span>
                 ) : null}
                 <span className="block text-xs text-[var(--muted)]">
-                  {cohort.courseTitle} · starts {cohort.startDate}
+                  {t("cohorts.starts", { course: cohort.courseTitle, date: cohort.startDate })}
                 </span>
               </span>
               <span className="flex items-center gap-3">
-                <StatusBadge status={cohort.status} />
+                <StatusBadge
+                  status={cohort.status}
+                  label={maybe(t, `cohortStatus.${cohort.status}`) ?? undefined}
+                />
                 <Link
                   href={`/cohorts/${cohort.id}`}
                   className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
                 >
-                  Open
+                  {t("common.open")}
                 </Link>
               </span>
             </li>
@@ -97,14 +100,10 @@ export default async function CohortsPage() {
 
       {canInvite ? (
         <div className="mt-6">
-          <Card
-            title="Add a cohort from a spreadsheet"
-            description="Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created, then enrol them onto a cohort above."
-          >
+          <Card title={t("cohorts.roster")} description={t("cohorts.rosterIntro")}>
             <RosterForm
               extension={
-                extension?.registered &&
-                session.permissions.includes("extension:use")
+                extension?.registered && session.permissions.includes("extension:use")
                   ? {
                       on: extension.on,
                       available: extension.availability?.available ?? false,

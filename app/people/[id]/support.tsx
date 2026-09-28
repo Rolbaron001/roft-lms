@@ -7,19 +7,15 @@ import {
   recordSupportNeedAction,
   type SupportActionState,
 } from "@/app/people/support-actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
 const buttonClass =
   "rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  mobility: "Mobility",
-  psychological: "Psychological",
-  economic: "Economic",
-  sensory: "Sensory",
-  other: "Other",
-};
+const CATEGORIES = ["mobility", "psychological", "economic", "sensory", "other"] as const;
 
 export type SupportRow = {
   id: string;
@@ -55,6 +51,7 @@ export function Support({
   canManage: boolean;
   today: string;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<SupportActionState, FormData>(
     recordSupportNeedAction,
     {},
@@ -80,16 +77,13 @@ export function Support({
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
       {active.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">No support recorded.</p>
+        <p className="text-sm text-[var(--muted)]">{t("support.none")}</p>
       ) : (
         <ul className="space-y-4">
           {active.map((row) => (
-            <li
-              key={row.id}
-              className="rounded-md border border-[var(--border)] p-3"
-            >
+            <li key={row.id} className="rounded-md border border-[var(--border)] p-3">
               <p className="text-sm font-medium">
-                {CATEGORY_LABEL[row.category] ?? row.category}
+                {maybe(t, `support.category.${row.category}`) ?? row.category}
                 {row.reviewDue ? (
                   <span
                     className={
@@ -98,7 +92,7 @@ export function Support({
                         : "ml-2 text-xs text-[var(--muted)]"
                     }
                   >
-                    review due {row.reviewDue}
+                    {t("support.reviewDue", { date: row.reviewDue })}
                   </span>
                 ) : null}
               </p>
@@ -110,129 +104,78 @@ export function Support({
                   {row.need}
                 </p>
               ) : row.detailWithheld ? (
-                <p className="mt-2 text-xs text-[var(--muted)]">
-                  There is more detail on file. It is restricted, because it is
-                  health or financial information and doing the accommodation
-                  does not require knowing the reason for it.
-                </p>
+                <p className="mt-2 text-xs text-[var(--muted)]">{t("support.withheld")}</p>
               ) : null}
 
               <p className="mt-2 text-xs text-[var(--muted)]">
-                Recorded by {row.raisedByName}
+                {t("support.recordedBy", { name: row.raisedByName })}
                 {row.employerInformed
-                  ? ` · employer informed${row.employerRepresentative ? ` (${row.employerRepresentative})` : ""}`
-                  : " · employer not informed"}
+                  ? `${t("support.employerInformed")}${row.employerRepresentative ? ` (${row.employerRepresentative})` : ""}`
+                  : t("support.employerNotInformed")}
               </p>
 
               {canManage ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {reviewingId === row.id ? (
                     <form action={reviewAction} className="w-full space-y-2">
-                      <input
-                        type="hidden"
-                        name="learnerId"
-                        value={learnerId}
-                      />
-                      <input
-                        type="hidden"
-                        name="supportNeedId"
-                        value={row.id}
-                      />
+                      <input type="hidden" name="learnerId" value={learnerId} />
+                      <input type="hidden" name="supportNeedId" value={row.id} />
                       <div className="flex flex-wrap gap-2">
                         <label className="text-sm">
-                          <span className="mr-2 text-[var(--muted)]">
-                            Reviewed
-                          </span>
-                          <input
-                            type="date"
-                            name="reviewedOn"
-                            defaultValue={today}
-                            className={inputClass}
-                          />
+                          <span className="mr-2 text-[var(--muted)]">{t("support.reviewed")}</span>
+                          <input type="date" name="reviewedOn" defaultValue={today} className={inputClass} />
                         </label>
                         <label className="text-sm">
-                          <span className="mr-2 text-[var(--muted)]">
-                            Working?
-                          </span>
+                          <span className="mr-2 text-[var(--muted)]">{t("support.working")}</span>
                           <select
                             name="working"
                             value={working}
                             onChange={(event) => setWorking(event.target.value)}
                             className={inputClass}
                           >
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
+                            <option value="yes">{t("support.yes")}</option>
+                            <option value="no">{t("support.no")}</option>
                           </select>
                         </label>
                         <label className="text-sm">
-                          <span className="mr-2 text-[var(--muted)]">
-                            Next review
-                          </span>
-                          <input
-                            type="date"
-                            name="nextReviewDue"
-                            className={inputClass}
-                          />
+                          <span className="mr-2 text-[var(--muted)]">{t("support.nextReview")}</span>
+                          <input type="date" name="nextReviewDue" className={inputClass} />
                         </label>
                       </div>
                       <textarea
                         name="note"
                         rows={2}
-                        placeholder="What you found"
+                        placeholder={t("support.found")}
                         className={`${inputClass} block w-full`}
                       />
                       {working === "no" ? (
                         <textarea
                           name="adjustment"
                           rows={2}
-                          placeholder="What is changing as a result"
+                          placeholder={t("support.changing")}
                           className={`${inputClass} block w-full`}
                         />
                       ) : null}
                       <div className="flex gap-2">
-                        <button
-                          type="submit"
-                          disabled={reviewing}
-                          className={buttonClass}
-                        >
-                          {reviewing ? "Saving…" : "Save the review"}
+                        <button type="submit" disabled={reviewing} className={buttonClass}>
+                          {reviewing ? t("common.saving") : t("support.saveReview")}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setReviewingId(null)}
-                          className={buttonClass}
-                        >
-                          Cancel
+                        <button type="button" onClick={() => setReviewingId(null)} className={buttonClass}>
+                          {t("common.cancel")}
                         </button>
                       </div>
                     </form>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setReviewingId(row.id)}
-                        className={buttonClass}
-                      >
-                        Record a review
+                      <button type="button" onClick={() => setReviewingId(row.id)} className={buttonClass}>
+                        {t("support.recordReview")}
                       </button>
                       <form action={closeAction} className="flex gap-2">
-                        <input
-                          type="hidden"
-                          name="learnerId"
-                          value={learnerId}
-                        />
-                        <input
-                          type="hidden"
-                          name="supportNeedId"
-                          value={row.id}
-                        />
-                        <input
-                          name="reason"
-                          placeholder="Why it is ending"
-                          className={inputClass}
-                        />
+                        <input type="hidden" name="learnerId" value={learnerId} />
+                        <input type="hidden" name="supportNeedId" value={row.id} />
+                        <input name="reason" placeholder={t("support.whyEnding")} className={inputClass} />
                         <button type="submit" className={buttonClass}>
-                          Close
+                          {t("support.close")}
                         </button>
                       </form>
                     </>
@@ -246,19 +189,16 @@ export function Support({
 
       {closed.length > 0 ? (
         <p className="text-xs text-[var(--muted)]">
-          {closed.length} closed{" "}
-          {closed.length === 1 ? "record" : "records"} not shown.
+          {closed.length === 1
+            ? t("support.closedOne")
+            : t("support.closedMany", { count: closed.length })}
         </p>
       ) : null}
 
       {canManage ? (
         !open ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className={buttonClass}
-          >
-            Record a support need
+          <button type="button" onClick={() => setOpen(true)} className={buttonClass}>
+            {t("support.recordNeed")}
           </button>
         ) : (
           <form action={action} className="space-y-3">
@@ -266,70 +206,51 @@ export function Support({
 
             <div className="flex flex-wrap gap-2">
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Kind</span>
+                <span className="mr-2 text-[var(--muted)]">{t("support.kind")}</span>
                 <select name="category" className={inputClass}>
-                  {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
+                  {CATEGORIES.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(`support.category.${value}`)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Review due</span>
+                <span className="mr-2 text-[var(--muted)]">{t("support.reviewDueLabel")}</span>
                 <input type="date" name="reviewDue" className={inputClass} />
               </label>
             </div>
 
             <label className="block text-sm">
-              <span className="text-[var(--muted)]">
-                What will be done — shared with whoever has to do it
-              </span>
+              <span className="text-[var(--muted)]">{t("support.accommodation")}</span>
               <textarea
                 name="accommodation"
                 rows={2}
                 required
-                placeholder="Seat near the door. Allow a break every 40 minutes. Provide printed materials."
+                placeholder={t("support.accommodationHint")}
                 className={`${inputClass} mt-1 block w-full`}
               />
             </label>
 
             <label className="block text-sm">
-              <span className="text-[var(--muted)]">
-                The reason behind it — restricted, and better left empty
-              </span>
-              <textarea
-                name="need"
-                rows={2}
-                className={`${inputClass} mt-1 block w-full`}
-              />
-              <span className="mt-1 block text-xs text-[var(--muted)]">
-                Health, disability and financial circumstances are special
-                personal information. A record that says only what to do serves
-                the learner just as well and puts far less at risk. Fill this in
-                only where somebody genuinely could not act without it.
-              </span>
+              <span className="text-[var(--muted)]">{t("support.reason")}</span>
+              <textarea name="need" rows={2} className={`${inputClass} mt-1 block w-full`} />
+              <span className="mt-1 block text-xs text-[var(--muted)]">{t("support.reasonNote")}</span>
             </label>
 
             <div className="flex flex-wrap gap-3">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="learnerConsented" />
-                The learner has agreed to this being recorded
+                {t("support.consented")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="employerInformed" />
-                Employer informed
+                {t("support.informed")}
               </label>
-              <input
-                name="employerRepresentative"
-                placeholder="Who, at the employer"
-                className={inputClass}
-              />
+              <input name="employerRepresentative" placeholder={t("support.who")} className={inputClass} />
             </div>
 
-            {state.notice ? (
-              <p className="text-sm text-[var(--muted)]">{state.notice}</p>
-            ) : null}
+            {state.notice ? <p className="text-sm text-[var(--muted)]">{state.notice}</p> : null}
 
             <div className="flex gap-2">
               <button
@@ -337,14 +258,10 @@ export function Support({
                 disabled={saving}
                 className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               >
-                {saving ? "Saving…" : "Record"}
+                {saving ? t("common.saving") : t("support.record")}
               </button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className={buttonClass}
-              >
-                Cancel
+              <button type="button" onClick={() => setOpen(false)} className={buttonClass}>
+                {t("common.cancel")}
               </button>
             </div>
           </form>

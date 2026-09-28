@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { recordPaymentAction, type PaymentState } from "./payment-actions";
+import { useT } from "@/components/i18n";
 
 const field =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -28,13 +29,13 @@ export function PaymentForm({
   paymentReceivedAt: Date | null;
   reference: string | null;
 }) {
+  const t = useT();
   const [state, act, working] = useActionState<PaymentState, FormData>(
     recordPaymentAction,
     {},
   );
 
-  const asDate = (value: Date | null) =>
-    value ? value.toISOString().slice(0, 10) : "";
+  const asDate = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : "");
 
   return (
     <form action={act} className="space-y-3">
@@ -42,16 +43,11 @@ export function PaymentForm({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Invoiced on</span>
-          <input
-            name="invoicedOn"
-            type="date"
-            defaultValue={asDate(invoicedAt)}
-            className={`${field} w-full`}
-          />
+          <span className="block text-sm font-medium">{t("payment.invoiced")}</span>
+          <input name="invoicedOn" type="date" defaultValue={asDate(invoicedAt)} className={`${field} w-full`} />
         </label>
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Payment received</span>
+          <span className="block text-sm font-medium">{t("payment.received")}</span>
           <input
             name="receivedOn"
             type="date"
@@ -60,16 +56,14 @@ export function PaymentForm({
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Their reference</span>
+          <span className="block text-sm font-medium">{t("payment.reference")}</span>
           <input
             name="reference"
             defaultValue={reference ?? ""}
             placeholder="INV-2026-0041"
             className={`${field} w-full`}
           />
-          <span className="block text-xs text-[var(--muted)]">
-            So it can be matched to what finance holds.
-          </span>
+          <span className="block text-xs text-[var(--muted)]">{t("payment.referenceNote")}</span>
         </label>
       </div>
 
@@ -78,7 +72,7 @@ export function PaymentForm({
         disabled={working}
         className="rounded-md border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
       >
-        {working ? "Recording…" : "Record it"}
+        {working ? t("assessing.recording") : t("payment.record")}
       </button>
 
       {state.error ? (

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { invitePersonAction, type PeopleState } from "./actions";
 import { PersonFields, RoleChecklist } from "./person-fields";
+import { useT } from "@/components/i18n";
 
 export function InviteForm({
   canManageRoles,
@@ -11,6 +12,7 @@ export function InviteForm({
   canManageRoles: boolean;
   managers: { id: string; label: string }[];
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<PeopleState, FormData>(
     invitePersonAction,
     {},
@@ -19,22 +21,14 @@ export function InviteForm({
   return (
     <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        Add somebody
+        {t("people.add")}
       </h2>
 
       {state.password ? (
         <div className="mt-4 rounded-md border-2 border-[var(--success)]/40 bg-[var(--success)]/5 p-4">
-          <p className="text-sm font-medium">
-            Added. Give them this password — it is shown once and cannot be
-            retrieved.
-          </p>
-          <p className="mt-2 font-mono text-lg font-semibold">
-            {state.password}
-          </p>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            There is no mail server connected yet, so nothing was emailed. Ask
-            them to change it after signing in.
-          </p>
+          <p className="text-sm font-medium">{t("people.added")}</p>
+          <p className="mt-2 font-mono text-lg font-semibold">{state.password}</p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{t("people.noMail")}</p>
         </div>
       ) : null}
 
@@ -58,7 +52,7 @@ export function InviteForm({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Adding…" : "Add person"}
+          {pending ? t("people.adding") : t("people.addPerson")}
         </button>
       </form>
     </section>

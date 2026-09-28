@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createCohortAction, type CohortActionState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const field =
   "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -19,8 +20,18 @@ export type CourseOption = {
  * Only published courses are offered. A cohort on a draft course is a group of
  * learners waiting on material that can still change underneath them, and the
  * publish gate exists precisely so that does not happen.
+ *
+ * The provider's own words for a cohort and a course come from the page, which
+ * holds their vocabulary; the browser does not.
  */
-export function NewCohort({ courses }: { courses: CourseOption[] }) {
+export function NewCohort({
+  courses,
+  words,
+}: {
+  courses: CourseOption[];
+  words: { cohort: string; course: string; courses: string; Course: string };
+}) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     createCohortAction,
@@ -28,6 +39,7 @@ export function NewCohort({ courses }: { courses: CourseOption[] }) {
   );
 
   const publishable = courses.filter((course) => course.status === "published");
+  const newLabel = t("cohorts.new", { cohort: words.cohort });
 
   if (!open) {
     return (
@@ -37,36 +49,32 @@ export function NewCohort({ courses }: { courses: CourseOption[] }) {
         className="rounded-md px-4 py-2 text-sm font-semibold text-white"
         style={{ background: "var(--brand-primary)" }}
       >
-        New cohort
+        {newLabel}
       </button>
     );
   }
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        New cohort
-      </h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{newLabel}</h2>
 
       {publishable.length === 0 ? (
         <>
           <p className="mt-3 text-sm">
-            There are no published courses yet. A cohort runs against a
-            published course, so that the material cannot change under a group
-            already working through it.
+            {t("cohorts.noPublished", { courses: words.courses, cohort: words.cohort, course: words.course })}
           </p>
           <button
             type="button"
             onClick={() => setOpen(false)}
             className="mt-3 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
           >
-            Close
+            {t("cohorts.close")}
           </button>
         </>
       ) : (
         <form action={act} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">Course</span>
+            <span className="block text-sm font-medium">{words.Course}</span>
             <select name="courseId" required className={field}>
               {publishable.map((course) => (
                 <option key={course.id} value={course.id}>
@@ -78,37 +86,28 @@ export function NewCohort({ courses }: { courses: CourseOption[] }) {
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Name</span>
-            <input
-              name="name"
-              required
-              minLength={2}
-              placeholder="e.g. Intake 1, 2026"
-              className={field}
-            />
+            <span className="block text-sm font-medium">{t("cohorts.name")}</span>
+            <input name="name" required minLength={2} placeholder={t("cohorts.nameHint")} className={field} />
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              Code{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
+              {t("cohorts.code")}{" "}
+              <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input name="code" placeholder="e.g. HRM-2026-01" className={field} />
+            <input name="code" placeholder={t("cohorts.codeHint")} className={field} />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Start date</span>
+            <span className="block text-sm font-medium">{t("cohorts.start")}</span>
             <input name="startDate" type="date" required className={field} />
-            <span className="block text-xs text-[var(--muted)]">
-              Every deadline is counted from this day. It can be moved later,
-              and everything moves with it.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("cohorts.startNote")}</span>
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              Expected end{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
+              {t("cohorts.end")}{" "}
+              <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
             <input name="endDate" type="date" className={field} />
           </label>
@@ -129,14 +128,14 @@ export function NewCohort({ courses }: { courses: CourseOption[] }) {
               className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               style={{ background: "var(--brand-primary)" }}
             >
-              {pending ? "Creating…" : "Create cohort"}
+              {pending ? t("cohorts.creating") : t("cohorts.create", { cohort: words.cohort })}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>

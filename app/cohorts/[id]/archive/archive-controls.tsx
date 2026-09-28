@@ -11,6 +11,7 @@ import {
   startArchiveAction,
   type ArchiveActionState,
 } from "./actions";
+import { useDates, useT } from "@/components/i18n";
 
 /**
  * The archive's controls. Everything that touches the provider's saved copy
@@ -53,14 +54,17 @@ function percent(done: number, total: number): string {
 }
 
 export function StartArchive({ cohortId, ready }: { cohortId: string; ready: number }) {
+  const t = useT();
   const [state, act, working] = useActionState(startArchiveAction, {});
   return (
     <form action={act}>
       <input type="hidden" name="cohortId" value={cohortId} />
       <button type="submit" disabled={working || ready === 0} className={button}>
         {working
-          ? "Starting…"
-          : `Archive ${ready} ${ready === 1 ? "learner" : "learners"}`}
+          ? t("archive.starting")
+          : ready === 1
+            ? t("archive.startOne")
+            : t("archive.start", { count: ready })}
       </button>
       <Outcome state={state} />
     </form>
@@ -69,16 +73,13 @@ export function StartArchive({ cohortId, ready }: { cohortId: string; ready: num
 
 /** Refreshes the page while an archive is being written, and stops once it is not. */
 export function WhileBuilding() {
+  const t = useT();
   const router = useRouter();
   useEffect(() => {
     const timer = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(timer);
   }, [router]);
-  return (
-    <p className="text-sm text-[var(--muted)]">
-      Being written. This page updates by itself.
-    </p>
-  );
+  return <p className="text-sm text-[var(--muted)]">{t("archive.building")}</p>;
 }
 
 /**
@@ -96,6 +97,8 @@ export function CheckCopy({
   archiveId: string;
   expectedBytes: number;
 }) {
+  const t = useT();
+  const dates = useDates();
   const [progress, setProgress] = useState<string | null>(null);
   const [state, setState] = useState<ArchiveActionState>({});
   const [pending, startTransition] = useTransition();
@@ -106,7 +109,7 @@ export function CheckCopy({
     for (let at = 0; at < file.size; at += CHUNK_BYTES) {
       const piece = new Uint8Array(await file.slice(at, at + CHUNK_BYTES).arrayBuffer());
       await fingerprint.update(piece);
-      setProgress(`Reading your copy: ${percent(at + piece.length, file.size)}`);
+      setProgress(t("archive.reading", { percent: percent(at + piece.length, file.size) }));
     }
     const result = await fingerprint.finish();
     setProgress(null);
@@ -118,7 +121,7 @@ export function CheckCopy({
   return (
     <div>
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Check your saved copy</span>
+        <span className="block text-sm font-medium">{t("archive.checkLabel")}</span>
         <input
           type="file"
           accept=".zip,application/zip"
@@ -131,7 +134,7 @@ export function CheckCopy({
           className="block text-sm"
         />
         <span className="block text-xs text-[var(--muted)]">
-          Choose the archive from where you stored it. It is read on this computer and not uploaded; only its fingerprint is sent. The archive is {expectedBytes.toLocaleString("en-ZA")} bytes.
+          {t("archive.checkNote", { bytes: expectedBytes.toLocaleString(dates) })}
         </span>
       </label>
       {progress ? <p className="mt-2 text-sm text-[var(--muted)]">{progress}</p> : null}
@@ -151,6 +154,7 @@ export function RemoveFiles({
   removing: number;
   keeping: number;
 }) {
+  const t = useT();
   const [state, act, working] = useActionState(removeFilesAction, {});
   const [sure, setSure] = useState(false);
   return (
@@ -164,16 +168,18 @@ export function RemoveFiles({
           onChange={(event) => setSure(event.target.checked)}
           className="mt-1"
         />
-        <span>
-          The copy I checked is stored where our records policy says it should be kept.
-        </span>
+        <span>{t("archive.stored")}</span>
       </label>
       <button type="submit" disabled={working || !sure} className={button}>
-        {working ? "Removing…" : `Remove ${removing} ${removing === 1 ? "file" : "files"} from the platform`}
+        {working
+          ? t("archive.removing")
+          : removing === 1
+            ? t("archive.removeOne")
+            : t("archive.remove", { count: removing })}
       </button>
       {keeping > 0 ? (
         <p className="text-xs text-[var(--muted)]">
-          {keeping} enrolment {keeping === 1 ? "document stays" : "documents stay"} on the platform as well, because another programme of the learner&rsquo;s still needs {keeping === 1 ? "it" : "them"}.
+          {keeping === 1 ? t("archive.keepingOne") : t("archive.keeping", { count: keeping })}
         </p>
       ) : null}
       <Outcome state={state} />
@@ -182,13 +188,14 @@ export function RemoveFiles({
 }
 
 export function Abandon({ cohortId, archiveId }: { cohortId: string; archiveId: string }) {
+  const t = useT();
   const [state, act, working] = useActionState(abandonAction, {});
   return (
     <form action={act}>
       <input type="hidden" name="cohortId" value={cohortId} />
       <input type="hidden" name="archiveId" value={archiveId} />
       <button type="submit" disabled={working} className={`${button} text-[var(--muted)]`}>
-        {working ? "Setting aside…" : "Set this archive aside"}
+        {working ? t("archive.settingAside") : t("archive.setAside")}
       </button>
       <Outcome state={state} />
     </form>
@@ -209,6 +216,8 @@ export function Restore({
   archiveId: string;
   expectedBytes: number;
 }) {
+  const t = useT();
+  const dates = useDates();
   const [progress, setProgress] = useState<string | null>(null);
   const [state, setState] = useState<ArchiveActionState>({});
   const [pending, startTransition] = useTransition();
@@ -217,7 +226,10 @@ export function Restore({
     setState({});
     if (file.size !== expectedBytes) {
       setState({
-        error: `That file is ${file.size.toLocaleString("en-ZA")} bytes and the archive is ${expectedBytes.toLocaleString("en-ZA")}. It is not this archive.`,
+        error: t("archive.wrongSize", {
+          size: file.size.toLocaleString(dates),
+          expected: expectedBytes.toLocaleString(dates),
+        }),
       });
       return;
     }
@@ -226,7 +238,7 @@ export function Restore({
     const status = await fetch(address, { cache: "no-store" });
     const started = (await status.json()) as { received?: number; error?: string };
     if (!status.ok) {
-      setState({ error: started.error ?? "The restore could not start." });
+      setState({ error: started.error ?? t("archive.couldNotStart") });
       return;
     }
 
@@ -237,20 +249,22 @@ export function Restore({
         const response = await fetch(`${address}?offset=${at}`, { method: "POST", body: piece });
         const body = (await response.json()) as { received?: number; error?: string };
         if (!response.ok || body.received === undefined) {
-          throw new Error(body.error ?? "A piece of the upload was refused.");
+          throw new Error(body.error ?? t("archive.pieceRefused"));
         }
         at = body.received;
-        setProgress(`Uploading: ${percent(at, file.size)}`);
+        setProgress(t("archive.uploading", { percent: percent(at, file.size) }));
       }
     } catch (error) {
       setProgress(null);
       setState({
-        error: `${error instanceof Error ? error.message : "The upload stopped."} Choose the file again to carry on from where it stopped.`,
+        error: t("archive.carryOn", {
+          problem: error instanceof Error ? error.message : t("archive.uploadStopped"),
+        }),
       });
       return;
     }
 
-    setProgress("Checking every file…");
+    setProgress(t("archive.checkingFiles"));
     startTransition(async () => {
       setState(await finishRestoreAction(cohortId, archiveId));
       setProgress(null);
@@ -260,7 +274,7 @@ export function Restore({
   return (
     <div>
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Restore from the archive</span>
+        <span className="block text-sm font-medium">{t("archive.restore")}</span>
         <input
           type="file"
           accept=".zip,application/zip"
@@ -272,9 +286,7 @@ export function Restore({
           }}
           className="block text-sm"
         />
-        <span className="block text-xs text-[var(--muted)]">
-          Only needed if these files have to be on the platform again. The archive is uploaded, checked against the fingerprint taken when it was made, and each file is put back where it was.
-        </span>
+        <span className="block text-xs text-[var(--muted)]">{t("archive.restoreNote")}</span>
       </label>
       {progress ? <p className="mt-2 text-sm text-[var(--muted)]">{progress}</p> : null}
       <Outcome state={state} />

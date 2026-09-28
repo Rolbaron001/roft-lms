@@ -6,6 +6,8 @@ import {
   setSittingStatusAction,
   type CohortActionState,
 } from "@/app/cohorts/actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -36,6 +38,7 @@ export function SetUpSitting({
   assessments: SittingOption[];
   invigilators: SittingOption[];
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<CohortActionState, FormData>(
     createSittingAction,
     {},
@@ -43,28 +46,19 @@ export function SetUpSitting({
   const [open, setOpen] = useState(false);
 
   if (assessments.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        A supervised sitting needs an assessment to supervise. Publish one on
-        the course first, and it can be set up here.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("sitting.needsAssessment")}</p>;
   }
 
   if (!open) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[var(--muted)]">
-          Nothing is being supervised at this session. Set one up if this is an
-          invigilated assessment &mdash; it gives you an admission cut-off, a
-          declaration, a camera check, a script register and an incident log.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("sitting.nothing")}</p>
         <button
           type="button"
           onClick={() => setOpen(true)}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white"
         >
-          Set up a supervised sitting
+          {t("sitting.setUp")}
         </button>
       </div>
     );
@@ -77,13 +71,9 @@ export function SetUpSitting({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Which assessment</span>
-          <select
-            name="assessmentId"
-            required
-            className={`${inputClass} mt-1 block w-full`}
-          >
-            <option value="">Choose</option>
+          <span className="text-[var(--muted)]">{t("sitting.which")}</span>
+          <select name="assessmentId" required className={`${inputClass} mt-1 block w-full`}>
+            <option value="">{t("sitting.choose")}</option>
             {assessments.map((row) => (
               <option key={row.id} value={row.id}>
                 {row.label}
@@ -93,14 +83,9 @@ export function SetUpSitting({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">
-            Invigilator &mdash; optional, and can be set on the day
-          </span>
-          <select
-            name="invigilatorId"
-            className={`${inputClass} mt-1 block w-full`}
-          >
-            <option value="">Nobody yet</option>
+          <span className="text-[var(--muted)]">{t("sitting.invigilator")}</span>
+          <select name="invigilatorId" className={`${inputClass} mt-1 block w-full`}>
+            <option value="">{t("sitting.nobodyYet")}</option>
             {invigilators.map((row) => (
               <option key={row.id} value={row.id}>
                 {row.label}
@@ -110,9 +95,7 @@ export function SetUpSitting({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">
-            Candidates arrive this many minutes early
-          </span>
+          <span className="text-[var(--muted)]">{t("sitting.early")}</span>
           <input
             type="number"
             name="arriveBeforeMinutes"
@@ -124,9 +107,7 @@ export function SetUpSitting({
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">
-            Admission closes this many minutes after the start
-          </span>
+          <span className="text-[var(--muted)]">{t("sitting.closesAfter")}</span>
           <input
             type="number"
             name="admissionClosesAfterMinutes"
@@ -140,40 +121,27 @@ export function SetUpSitting({
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="cameraRequired" defaultChecked />
-        A camera must be on throughout
+        {t("sitting.camera")}
       </label>
 
       <label className="block text-sm">
-        <span className="text-[var(--muted)]">
-          What may be brought in &mdash; optional
-        </span>
+        <span className="text-[var(--muted)]">{t("sitting.materials")}</span>
         <textarea
           name="permittedMaterials"
           rows={2}
           maxLength={2000}
-          placeholder="A non-programmable calculator and the issued formula sheet. Nothing else."
+          placeholder={t("sitting.materialsHint")}
           className={`${inputClass} mt-1 block w-full`}
         />
       </label>
 
       <label className="block text-sm">
-        <span className="text-[var(--muted)]">
-          What each candidate agrees to before starting &mdash; optional
-        </span>
-        <textarea
-          name="declarationText"
-          rows={3}
-          maxLength={4000}
-          className={`${inputClass} mt-1 block w-full`}
-        />
+        <span className="text-[var(--muted)]">{t("sitting.declaration")}</span>
+        <textarea name="declarationText" rows={3} maxLength={4000} className={`${inputClass} mt-1 block w-full`} />
       </label>
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.done ? (
-        <p className="text-sm text-[var(--muted)]">{state.done}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.done ? <p className="text-sm text-[var(--muted)]">{state.done}</p> : null}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -181,40 +149,26 @@ export function SetUpSitting({
           disabled={saving}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Setting up…" : "Set it up"}
+          {saving ? t("sitting.settingUp") : t("sitting.setItUp")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-md border border-[var(--border)] px-4 py-2 text-sm"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
   );
 }
 
-const NEXT: Record<string, { status: string; label: string }[]> = {
-  scheduled: [
-    { status: "open", label: "Open for admission" },
-    { status: "cancelled", label: "Cancel" },
-  ],
-  open: [
-    { status: "in_progress", label: "Start" },
-    { status: "cancelled", label: "Cancel" },
-  ],
-  in_progress: [{ status: "closed", label: "Close" }],
+const NEXT: Record<string, string[]> = {
+  scheduled: ["open", "cancelled"],
+  open: ["in_progress", "cancelled"],
+  in_progress: ["closed"],
   closed: [],
   cancelled: [],
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  scheduled: "Scheduled",
-  open: "Open for admission",
-  in_progress: "In progress",
-  closed: "Closed",
-  cancelled: "Cancelled",
 };
 
 /**
@@ -239,6 +193,7 @@ export function SittingStatus({
   sittingId: string;
   status: string;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<CohortActionState, FormData>(
     setSittingStatusAction,
     {},
@@ -249,38 +204,32 @@ export function SittingStatus({
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-3">
       <span className="text-sm">
-        <span className="text-[var(--muted)]">Status:</span>{" "}
-        <span className="font-medium">{STATUS_LABEL[status] ?? status}</span>
+        <span className="text-[var(--muted)]">{t("sitting.status")}</span>{" "}
+        <span className="font-medium">{maybe(t, `sitting.status.${status}`) ?? status}</span>
       </span>
 
       {moves.map((move) => (
-        <form key={move.status} action={action}>
+        <form key={move} action={action}>
           <input type="hidden" name="cohortId" value={cohortId} />
           <input type="hidden" name="sessionId" value={sessionId} />
           <input type="hidden" name="sittingId" value={sittingId} />
-          <input type="hidden" name="status" value={move.status} />
+          <input type="hidden" name="status" value={move} />
           <button
             type="submit"
             disabled={saving}
             className="rounded-md border border-[var(--border)] px-3 py-1 text-xs transition hover:border-[var(--brand-accent)] disabled:opacity-60"
           >
-            {move.label}
+            {maybe(t, `sitting.move.${move}`) ?? move}
           </button>
         </form>
       ))}
 
       {moves.length === 0 ? (
-        <span className="text-xs text-[var(--muted)]">
-          Nothing further to do here.
-        </span>
+        <span className="text-xs text-[var(--muted)]">{t("sitting.nothingFurther")}</span>
       ) : null}
 
-      {state.error ? (
-        <p className="w-full text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.done ? (
-        <p className="w-full text-sm text-[var(--muted)]">{state.done}</p>
-      ) : null}
+      {state.error ? <p className="w-full text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.done ? <p className="w-full text-sm text-[var(--muted)]">{state.done}</p> : null}
     </div>
   );
 }

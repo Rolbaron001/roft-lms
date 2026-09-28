@@ -6,13 +6,15 @@ import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
 import { Feedback } from "./feedback";
 import { PaymentForm } from "./payment-form";
-import { cohortFeedback } from "@/lib/feedback";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { cohortFeedback, HOURS_TO_RESPOND } from "@/lib/feedback";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
 import { listPeople } from "@/lib/people";
 import { stepTimings } from "@/lib/programme-reports";
 import { vocabulary } from "@/lib/terms";
+import { maybe } from "@/lib/i18n/maybe";
+import { Rich } from "@/components/rich-text";
 import { AppShell, Card } from "@/components/app-shell";
 import {
   AddMember,
@@ -26,31 +28,12 @@ import {
  *
  * The blocked list comes first deliberately. It is the only part a facilitator
  * has to act on today; the schedule and the register are reference.
+ *
+ * The assessment grid uses the client's own words, from the consolidated cohort
+ * workbook they run today, kept short because these sit in grid cells: C and
+ * NYC are what an assessor writes. They are in the catalogue like any other
+ * phrase (cohort.grid.*), so a language that abbreviates differently can.
  */
-/**
- * The words the client already uses on this grid. "C" and "NYC" are theirs and
- * are read at a glance by people who have used them for years; spelling them
- * out would make the grid wider and no clearer.
- */
-/**
- * The client's own words, from the consolidated cohort workbook they run
- * today. Kept short because these sit in grid cells, and abbreviated only
- * where the abbreviation is theirs: C and NYC are what an assessor writes.
- */
-const GRID_LABEL: Record<string, string> = {
-  not_started: "—",
-  draft: "Started",
-  submitted: "Submitted",
-  competent: "C",
-  not_yet_competent: "NYC",
-  remediation: "Remediation",
-  redo: "Redo",
-  absent: "Absent",
-  absent_first_attempt: "Absent 1st",
-  transferred: "Transferred",
-  left: "Left",
-};
-
 export default async function CohortPage({
   params,
 }: {
@@ -58,8 +41,9 @@ export default async function CohortPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
   const session = await requirePermission("enrolment:read_all");
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   let detail;
   try {
@@ -112,17 +96,19 @@ export default async function CohortPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link href="/cohorts" className="text-sm text-[var(--muted)] hover:underline">
-          ← Cohorts
+          {t("cohort.back", { cohorts: words.many("cohort") })}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{detail.cohort.name}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Starts {detail.cohort.startDate} · {active.length}{" "}
-          {active.length === 1 ? "learner" : "learners"}
+          {t("cohort.starts", { date: detail.cohort.startDate })} ·{" "}
+          {active.length === 1
+            ? t("cohort.oneLearner", { learner: words.lowerOne("learner") })
+            : t("cohort.learners", { count: active.length, learners: words.lowerMany("learner") })}
           {canArchive ? (
             <>
               {" · "}
               <Link href={`/cohorts/${detail.cohort.id}/archive`} className="hover:underline">
-                Archive evidence
+                {t("cohort.archive")}
               </Link>
             </>
           ) : null}
@@ -139,13 +125,15 @@ export default async function CohortPage({
       {canManage ? (
         <div className="mb-6">
           <Card
-            title="Invoicing and payment"
+            title={t("cohort.payment")}
             description={
               detail.cohort.paymentReceivedAt
-                ? `Paid${detail.cohort.paymentReference ? ` · ${detail.cohort.paymentReference}` : ""}. Everybody on this cohort counts as paid for.`
+                ? detail.cohort.paymentReference
+                  ? t("cohort.paidRef", { reference: detail.cohort.paymentReference })
+                  : t("cohort.paid")
                 : detail.cohort.invoicedAt
-                  ? "Invoiced, and no payment recorded against it yet."
-                  : "Nothing recorded. The enrolment procedure begins here."
+                  ? t("cohort.invoiced")
+                  : t("cohort.nothingRecorded")
             }
           >
             <PaymentForm
@@ -160,38 +148,24 @@ export default async function CohortPage({
 
       {canManage ? (
         <div className="mb-6">
-          <Card
-            title="Move the start"
-            description="Every date below is held as a number of days from this one, so changing it moves the whole rollout for everybody on the cohort."
-          >
-            <Reschedule
-              cohortId={detail.cohort.id}
-              startDate={detail.cohort.startDate}
-            />
+          <Card title={t("cohort.move")} description={t("cohort.moveIntro")}>
+            <Reschedule cohortId={detail.cohort.id} startDate={detail.cohort.startDate} />
           </Card>
         </div>
       ) : null}
 
       {blocked.length > 0 ? (
-        <Card
-          title={`Waiting on something (${blocked.length})`}
-          description="Each learner once, at the earliest step they cannot open."
-        >
+        <Card title={t("cohort.waiting", { count: blocked.length })} description={t("cohort.waitingIntro")}>
           <ul className="space-y-2">
             {blocked.map((row) => (
-              <li
-                key={row.userId}
-                className="rounded-md border border-[var(--border)] px-4 py-3 text-sm"
-              >
+              <li key={row.userId} className="rounded-md border border-[var(--border)] px-4 py-3 text-sm">
                 <span className="font-medium">
                   {row.firstName} {row.lastName}
                 </span>
                 <span className="mt-0.5 block">
-                  Stuck at <strong>{row.stepTitle}</strong>
+                  <Rich text={t("cohort.stuckAt")} parts={{ step: <strong>{row.stepTitle}</strong> }} />
                 </span>
-                <span className="mt-0.5 block text-xs text-[var(--muted)]">
-                  {row.blockedBy.join(" ")}
-                </span>
+                <span className="mt-0.5 block text-xs text-[var(--muted)]">{row.blockedBy.join(" ")}</span>
               </li>
             ))}
           </ul>
@@ -200,44 +174,30 @@ export default async function CohortPage({
 
       {timings.some((row) => row.opened > 0) ? (
         <div className="mt-6">
-          <Card
-            title="Where the cohort has got to"
-            description="Opened and finished per step, and how long it took those who finished. The median rather than the average, so one learner who disappeared for a term does not hide where everybody else is."
-          >
+          <Card title={t("cohort.progress")} description={t("cohort.progressIntro")}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">Step</th>
-                    <th className="pb-2">Opened</th>
-                    <th className="pb-2">Finished</th>
-                    <th className="pb-2">Still on it</th>
-                    <th className="pb-2">Median days</th>
-                    <th className="pb-2">Longest</th>
+                    <th className="pb-2">{t("cohort.step")}</th>
+                    <th className="pb-2">{t("cohort.opened")}</th>
+                    <th className="pb-2">{t("cohort.finished")}</th>
+                    <th className="pb-2">{t("cohort.stillOn")}</th>
+                    <th className="pb-2">{t("cohort.median")}</th>
+                    <th className="pb-2">{t("cohort.longest")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {timings.map((row) => (
-                    <tr
-                      key={row.stepId}
-                      className="border-t border-[var(--border)]"
-                    >
+                    <tr key={row.stepId} className="border-t border-[var(--border)]">
                       <td className="py-2 pr-3">{row.title}</td>
                       <td className="py-2 pr-3 tabular-nums">{row.opened}</td>
                       <td className="py-2 pr-3 tabular-nums">{row.completed}</td>
                       <td className="py-2 pr-3 tabular-nums">
-                        {row.inProgress > 0 ? (
-                          <strong>{row.inProgress}</strong>
-                        ) : (
-                          row.inProgress
-                        )}
+                        {row.inProgress > 0 ? <strong>{row.inProgress}</strong> : row.inProgress}
                       </td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {row.medianDays === null ? "—" : row.medianDays}
-                      </td>
-                      <td className="py-2 tabular-nums">
-                        {row.longestDays === null ? "—" : row.longestDays}
-                      </td>
+                      <td className="py-2 pr-3 tabular-nums">{row.medianDays === null ? "—" : row.medianDays}</td>
+                      <td className="py-2 tabular-nums">{row.longestDays === null ? "—" : row.longestDays}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,9 +207,11 @@ export default async function CohortPage({
             {stalled.length > 0 ? (
               <p className="mt-3 text-sm text-[var(--muted)]">
                 {stalled.length === 1
-                  ? "One step has people sitting on it"
-                  : `${stalled.length} steps have people sitting on them`}
-                : {stalled.map((row) => row.title).join(", ")}.
+                  ? t("cohort.stalledOne", { steps: stalled.map((row) => row.title).join(", ") })
+                  : t("cohort.stalledMany", {
+                      count: stalled.length,
+                      steps: stalled.map((row) => row.title).join(", "),
+                    })}
               </p>
             ) : null}
           </Card>
@@ -257,10 +219,7 @@ export default async function CohortPage({
       ) : null}
 
       <div className="mt-6">
-        <Card
-          title="Roll-out"
-          description="The dated sessions this cohort meets for, and the register taken at each. Where a programme carries credits it has to be facilitator-led, and this is the evidence that it was."
-        >
+        <Card title={t("cohort.rollout")} description={t("cohort.rolloutIntro")}>
           <Rollout
             zone={tenant.timezone}
             cohortId={detail.cohort.id}
@@ -273,42 +232,31 @@ export default async function CohortPage({
 
       {attendance.countable > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Attendance"
-            description="Overall is against the whole programme; to date is against what has actually been held. Early in a programme the first is meaninglessly low and the second is the honest one, so both are given rather than one being chosen for you."
-          >
+          <Card title={t("cohort.attendance")} description={t("cohort.attendanceIntro")}>
             <p className="mb-3 text-sm text-[var(--muted)]">
-              {attendance.held} of {attendance.countable} sessions held.
-              Cancelled sessions and voluntary walk-ins are left out of both.
+              {t("cohort.held", { held: attendance.held, countable: attendance.countable })}
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">Learner</th>
-                    <th className="pb-2">Present</th>
-                    <th className="pb-2">Absent</th>
-                    <th className="pb-2">Excused</th>
-                    <th className="pb-2">To date</th>
-                    <th className="pb-2">Overall</th>
+                    <th className="pb-2">{words.one("learner")}</th>
+                    <th className="pb-2">{t("cohort.present")}</th>
+                    <th className="pb-2">{t("cohort.absent")}</th>
+                    <th className="pb-2">{t("cohort.excused")}</th>
+                    <th className="pb-2">{t("cohort.toDate")}</th>
+                    <th className="pb-2">{t("cohort.overall")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {attendance.learners.map((line) => (
-                    <tr
-                      key={line.userId}
-                      className="border-t border-[var(--border)]"
-                    >
+                    <tr key={line.userId} className="border-t border-[var(--border)]">
                       <td className="py-2 pr-3">{line.name}</td>
                       <td className="py-2 pr-3 tabular-nums">{line.present}</td>
                       <td className="py-2 pr-3 tabular-nums">{line.absent}</td>
                       <td className="py-2 pr-3 tabular-nums">{line.excused}</td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {line.toDatePercent}%
-                      </td>
-                      <td className="py-2 tabular-nums">
-                        {line.overallPercent}%
-                      </td>
+                      <td className="py-2 pr-3 tabular-nums">{line.toDatePercent}%</td>
+                      <td className="py-2 tabular-nums">{line.overallPercent}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -321,8 +269,8 @@ export default async function CohortPage({
       {canReadReports ? (
         <div className="mt-6">
           <Card
-            title={`${words.one("programme")} feedback`}
-            description="Sent after a summative, answered within 48 hours. Nobody acknowledges receipt and nobody transcribes anything: receipt is a row and the report is a query."
+            title={t("cohort.feedback", { programme: words.one("programme") })}
+            description={t("cohort.feedbackIntro", { hours: HOURS_TO_RESPOND })}
           >
             <Feedback
               cohortId={detail.cohort.id}
@@ -340,22 +288,17 @@ export default async function CohortPage({
 
       {grid.assessments.length > 0 && grid.learners.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Assessment"
-            description="Every learner against every piece of assessed work, in the order it is collected. Read from submissions, decisions and registers rather than kept by hand, so it cannot disagree with them."
-          >
+          <Card title={t("cohort.assessment")} description={t("cohort.assessmentIntro")}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2 pr-3">Learner</th>
+                    <th className="pb-2 pr-3">{words.one("learner")}</th>
                     {grid.assessments.map((column) => (
                       <th key={column.id} className="pb-2 pr-3">
                         <span className="block">{column.title}</span>
                         {column.dueOn ? (
-                          <span className="block font-normal normal-case tabular-nums">
-                            {column.dueOn}
-                          </span>
+                          <span className="block font-normal normal-case tabular-nums">{column.dueOn}</span>
                         ) : null}
                       </th>
                     ))}
@@ -363,16 +306,11 @@ export default async function CohortPage({
                 </thead>
                 <tbody>
                   {grid.learners.map((row) => (
-                    <tr
-                      key={row.userId}
-                      className="border-t border-[var(--border)]"
-                    >
+                    <tr key={row.userId} className="border-t border-[var(--border)]">
                       <td className="py-2 pr-3 whitespace-nowrap">
                         {row.name}
                         {row.leftAt ? (
-                          <span className="ml-2 text-xs text-[var(--muted)]">
-                            left
-                          </span>
+                          <span className="ml-2 text-xs text-[var(--muted)]">{t("cohort.left")}</span>
                         ) : null}
                       </td>
                       {row.cells.map((cell) => (
@@ -381,7 +319,9 @@ export default async function CohortPage({
                           className="py-2 pr-3 whitespace-nowrap"
                           title={cell.on ?? undefined}
                         >
-                          {GRID_LABEL[cell.status] ?? cell.status}
+                          {cell.status === "not_started"
+                            ? "—"
+                            : (maybe(t, `cohort.grid.${cell.status}`) ?? cell.status)}
                         </td>
                       ))}
                     </tr>
@@ -389,20 +329,13 @@ export default async function CohortPage({
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-[var(--muted)]">
-              Absent is read from the register of the sitting the work was
-              written at, not from the submission, because a learner who did
-              not attend has no submission for it to be recorded on.
-            </p>
+            <p className="mt-3 text-xs text-[var(--muted)]">{t("cohort.absentNote")}</p>
           </Card>
         </div>
       ) : null}
 
       <div className="mt-6">
-        <Card
-          title="Work on this cohort"
-          description="What has to happen around the teaching: material readied, documents submitted, a moderator appointed, certificates chased."
-        >
+        <Card title={t("cohort.work")} description={t("cohort.workIntro")}>
           <CohortTasks
             cohortId={detail.cohort.id}
             tasks={tasks}
@@ -414,8 +347,8 @@ export default async function CohortPage({
 
       <div className="mt-6">
         <Card
-          title={`${words.one("course")} step release`}
-          description="Held as days from the start. Change the start date and every one of these moves with it."
+          title={t("cohort.release", { course: words.one("course") })}
+          description={t("cohort.releaseIntro")}
         >
           {canManage ? (
             <ScheduleEditor
@@ -432,16 +365,16 @@ export default async function CohortPage({
             />
           ) : detail.steps.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">
-              This cohort&rsquo;s course has no steps yet.
+              {t("cohort.noSteps", { course: words.lowerOne("course") })}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">Step</th>
-                    <th className="pb-2">Opens</th>
-                    <th className="pb-2">Due</th>
+                    <th className="pb-2">{t("cohort.step")}</th>
+                    <th className="pb-2">{t("cohort.opens")}</th>
+                    <th className="pb-2">{t("cohort.due")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -449,22 +382,18 @@ export default async function CohortPage({
                     <tr key={step.id} className="border-t border-[var(--border)]">
                       <td className="py-2">{step.title ?? step.kind}</td>
                       <td className="py-2 tabular-nums">
-                        {step.opensAt
-                          ? step.opensAt.toISOString().slice(0, 10)
-                          : "—"}
+                        {step.opensAt ? step.opensAt.toISOString().slice(0, 10) : "—"}
                         {step.opensAfterDays !== null ? (
                           <span className="ml-2 text-xs text-[var(--muted)]">
-                            day {step.opensAfterDays}
+                            {t("cohort.day", { day: step.opensAfterDays })}
                           </span>
                         ) : null}
                       </td>
                       <td className="py-2 tabular-nums">
-                        {step.dueAt
-                          ? step.dueAt.toISOString().slice(0, 10)
-                          : "—"}
+                        {step.dueAt ? step.dueAt.toISOString().slice(0, 10) : "—"}
                         {step.dueAfterDays !== null ? (
                           <span className="ml-2 text-xs text-[var(--muted)]">
-                            day {step.dueAfterDays}
+                            {t("cohort.day", { day: step.dueAfterDays })}
                           </span>
                         ) : null}
                       </td>
@@ -479,13 +408,11 @@ export default async function CohortPage({
 
       <div className="mt-6">
         <Card
-          title={`On this cohort (${active.length})`}
-          description="Adding somebody here also enrols them on the course. A name on a register who cannot open anything is the half-state this avoids."
+          title={t("cohort.members", { count: active.length })}
+          description={t("cohort.membersIntro", { course: words.lowerOne("course") })}
         >
           {detail.members.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Nobody has been added yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("cohort.nobody")}</p>
           ) : (
             <ul className="space-y-1 text-sm">
               {detail.members.map((member) => (
@@ -500,7 +427,7 @@ export default async function CohortPage({
                     <span className="ml-2 text-xs text-[var(--muted)]">
                       {member.email}
                       {member.leftAt
-                        ? ` · left ${member.leftAt.toISOString().slice(0, 10)}`
+                        ? t("cohort.leftOn", { date: member.leftAt.toISOString().slice(0, 10) })
                         : ""}
                     </span>
                   </span>

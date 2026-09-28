@@ -7,22 +7,11 @@ import {
   type AppealActionState,
 } from "@/app/appeals/actions";
 import { ZonedTime } from "@/components/zoned-time";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
-
-const GROUND_LABEL: Record<string, string> = {
-  result: "Against a result",
-  assessor_conduct: "Against an assessor's conduct",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  lodged: "Lodged",
-  acknowledged: "Acknowledged",
-  under_review: "Under review",
-  resolved: "Resolved",
-  withdrawn: "Withdrawn",
-};
 
 /**
  * Lodging an appeal, and what has been lodged before.
@@ -53,65 +42,53 @@ export function Appeals({
   }[];
   canManage: boolean;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<AppealActionState, FormData>(
     lodgeAppealAction,
     {},
   );
   const [open, setOpen] = useState(false);
+  const ground = (value: string) => maybe(t, `appeals.ground.${value}`) ?? value;
 
   return (
     <div className="space-y-4">
       {existing.length > 0 ? (
         <ul className="space-y-2 text-sm">
           {existing.map((appeal) => (
-            <li
-              key={appeal.id}
-              className="flex flex-wrap items-baseline gap-x-3"
-            >
+            <li key={appeal.id} className="flex flex-wrap items-baseline gap-x-3">
               {canManage ? (
-                <Link
-                  href={`/appeals/${appeal.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {GROUND_LABEL[appeal.ground] ?? appeal.ground}
+                <Link href={`/appeals/${appeal.id}`} className="font-medium hover:underline">
+                  {ground(appeal.ground)}
                 </Link>
               ) : (
-                <span className="font-medium">
-                  {GROUND_LABEL[appeal.ground] ?? appeal.ground}
-                </span>
+                <span className="font-medium">{ground(appeal.ground)}</span>
               )}
               <span className="text-[var(--muted)]">
                 {appeal.cohortName} ·{" "}
-                <ZonedTime
-                  at={appeal.lodgedAt}
-                  zone={zone}
-                  withDate
-                  showViewer={false}
-                />
+                <ZonedTime at={appeal.lodgedAt} zone={zone} withDate showViewer={false} />
               </span>
               <span>
-                {STATUS_LABEL[appeal.status] ?? appeal.status}
-                {appeal.outcome ? `: ${appeal.outcome.replace(/_/g, " ")}` : ""}
+                {maybe(t, `appeals.status.${appeal.status}`) ?? appeal.status}
+                {appeal.outcome
+                  ? `: ${maybe(t, `appeals.outcome.${appeal.outcome}`) ?? appeal.outcome.replace(/_/g, " ")}`
+                  : ""}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-[var(--muted)]">None lodged.</p>
+        <p className="text-sm text-[var(--muted)]">{t("lodge.none")}</p>
       )}
 
       {cohorts.length === 0 ? (
-        <p className="text-xs text-[var(--muted)]">
-          An appeal is filed against a cohort, and this learner is not on a
-          running one.
-        </p>
+        <p className="text-xs text-[var(--muted)]">{t("lodge.noCohort")}</p>
       ) : !open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          Lodge an appeal
+          {t("lodge.start")}
         </button>
       ) : (
         <LodgeForm
@@ -154,6 +131,7 @@ function LodgeForm({
   saving: boolean;
   onCancel: () => void;
 }) {
+  const t = useT();
   const kept = state.values ?? {};
   const [ground, setGround] = useState(kept.ground || "result");
 
@@ -163,13 +141,8 @@ function LodgeForm({
 
       <div className="flex flex-wrap gap-2">
         <label className="text-sm">
-          <span className="mr-2 text-[var(--muted)]">Cohort</span>
-          <select
-            name="cohortId"
-            defaultValue={kept.cohortId}
-            className={inputClass}
-            required
-          >
+          <span className="mr-2 text-[var(--muted)]">{t("lodge.cohort")}</span>
+          <select name="cohortId" defaultValue={kept.cohortId} className={inputClass} required>
             {cohorts.map((cohort) => (
               <option key={cohort.id} value={cohort.id}>
                 {cohort.name}
@@ -179,23 +152,21 @@ function LodgeForm({
         </label>
 
         <label className="text-sm">
-          <span className="mr-2 text-[var(--muted)]">Ground</span>
+          <span className="mr-2 text-[var(--muted)]">{t("lodge.ground")}</span>
           <select
             name="ground"
             value={ground}
             onChange={(event) => setGround(event.target.value)}
             className={inputClass}
           >
-            <option value="result">Against a result</option>
-            <option value="assessor_conduct">
-              Against an assessor&rsquo;s conduct
-            </option>
+            <option value="result">{t("appeals.ground.result")}</option>
+            <option value="assessor_conduct">{t("appeals.ground.assessor_conduct")}</option>
           </select>
         </label>
 
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">
-            {ground === "result" ? "Results received" : "Incident"}
+            {ground === "result" ? t("lodge.resultsReceived") : t("lodge.incident")}
           </span>
           <input
             type="date"
@@ -209,14 +180,9 @@ function LodgeForm({
 
       {ground === "result" ? (
         <label className="block text-sm">
-          <span className="mr-2 text-[var(--muted)]">Assessment</span>
-          <select
-            name="assessmentId"
-            defaultValue={kept.assessmentId}
-            className={inputClass}
-            required
-          >
-            <option value="">Choose one</option>
+          <span className="mr-2 text-[var(--muted)]">{t("lodge.assessment")}</span>
+          <select name="assessmentId" defaultValue={kept.assessmentId} className={inputClass} required>
+            <option value="">{t("lodge.chooseOne")}</option>
             {assessments.map((assessment) => (
               <option key={assessment.id} value={assessment.id}>
                 {assessment.title}
@@ -231,16 +197,14 @@ function LodgeForm({
         rows={4}
         required
         defaultValue={kept.statement}
-        placeholder="What the learner says, in their words where possible."
+        placeholder={t("lodge.statementHint")}
         className={`${inputClass} block w-full`}
       />
 
       {state.needsLateReason ? (
         <div className="rounded-md border border-[var(--border)] p-3">
           <label className="block text-sm">
-            <span className="text-[var(--muted)]">
-              Why this is being accepted out of time
-            </span>
+            <span className="text-[var(--muted)]">{t("lodge.lateWhy")}</span>
             <textarea
               name="lateAcceptanceReason"
               rows={2}
@@ -248,20 +212,12 @@ function LodgeForm({
               className={`${inputClass} mt-1 block w-full`}
             />
           </label>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            A late appeal is still an appeal, and turning it away here would
-            only send it to somebody&rsquo;s inbox. The reason becomes part of
-            the file.
-          </p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{t("lodge.lateNote")}</p>
         </div>
       ) : null}
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
-      {state.notice ? (
-        <p className="text-sm text-[var(--muted)]">{state.notice}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.notice ? <p className="text-sm text-[var(--muted)]">{state.notice}</p> : null}
 
       <div className="flex gap-2">
         <button
@@ -269,14 +225,14 @@ function LodgeForm({
           disabled={saving}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Lodging…" : "Lodge"}
+          {saving ? t("lodge.lodging") : t("lodge.lodge")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>

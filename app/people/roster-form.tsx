@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { AiSwitch } from "@/components/ai-switch";
+import { useT } from "@/components/i18n";
 import {
   commitRosterAction,
   readRosterAction,
@@ -10,6 +11,8 @@ import {
 
 const buttonClass =
   "rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60";
+
+const CREATE_AS = ["learner", "assessor", "moderator", "instructor", "workplace_coach"] as const;
 
 /**
  * Creating a cohort of learners from a spreadsheet.
@@ -28,6 +31,7 @@ export function RosterForm({
   /** Null where this person's role has no model assistance at all. */
   extension: { on: boolean; available: boolean } | null;
 }) {
+  const t = useT();
   const [readState, readAction, reading] = useActionState<
     RosterActionState,
     FormData
@@ -47,67 +51,38 @@ export function RosterForm({
   return (
     <div className="space-y-4">
       <form action={readAction} className="space-y-3">
-        <input
-          type="file"
-          name="file"
-          accept=".csv,.xlsx,.txt"
-          required
-          className="block text-sm"
-        />
+        <input type="file" name="file" accept=".csv,.xlsx,.txt" required className="block text-sm" />
 
         <button type="submit" disabled={reading} className={buttonClass}>
-          {reading ? "Reading…" : "Read the spreadsheet"}
+          {reading ? t("roster.reading") : t("roster.read")}
         </button>
 
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          CSV or Excel. Column headings are matched by name — &ldquo;Surname&rdquo;,
-          &ldquo;Last Name&rdquo; and &ldquo;Van&rdquo; all work, and no
-          extension is needed for any of it.
+          {t("roster.how")}
           {extension?.on && extension.available ? (
             <>
               {" "}
-              <span className="font-medium text-[var(--success)]">
-                Your AI extension is on
-              </span>{" "}
-              and will try to match any heading the rules miss. It is shown the
-              headings only — never the rows, which carry identity numbers.
+              <span className="font-medium text-[var(--success)]">{t("roster.aiOn")}</span>{" "}
+              {t("roster.aiOnWhat")}
             </>
           ) : extension ? (
-            <>
-              {" "}
-              With your AI extension switched on it would additionally match
-              headings the rules do not recognise; it would be shown the
-              headings only, never the rows. The switch is at the top of the
-              page.
-            </>
+            <> {t("roster.aiOff")}</>
           ) : null}
         </p>
 
-        {extension?.available ? (
-          <AiSwitch on={extension.on} />
-        ) : null}
+        {extension?.available ? <AiSwitch on={extension.on} /> : null}
       </form>
 
-      {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : null}
+      {state.error ? <p className="text-sm text-[var(--danger)]">{state.error}</p> : null}
       {state.notice ? (
-        <p className="rounded-md border border-[var(--border)] p-3 text-sm">
-          {state.notice}
-        </p>
+        <p className="rounded-md border border-[var(--border)] p-3 text-sm">{state.notice}</p>
       ) : null}
 
       {/* --- what was created, shown once ---------------------------------- */}
       {state.passwords && state.passwords.length > 0 ? (
         <div className="rounded-md border border-[var(--border)] p-3">
-          <p className="text-sm font-medium">
-            Their first passwords, shown once
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            These are not stored anywhere they can be read again. Copy them now,
-            or reset them individually later. Each person is asked to change
-            theirs on first sign-in.
-          </p>
+          <p className="text-sm font-medium">{t("roster.passwords")}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{t("roster.passwordsNote")}</p>
           <ul className="mt-2 space-y-0.5 font-mono text-xs">
             {state.passwords.map((person) => (
               <li key={person.email}>
@@ -122,46 +97,34 @@ export function RosterForm({
       {proposal && !state.passwords ? (
         <div className="space-y-3 rounded-md border border-[var(--border)] p-3">
           <p className="text-sm font-medium">
-            {proposal.filename} · headings on line {proposal.headerLine}
+            {t("roster.headings", { file: proposal.filename, line: proposal.headerLine })}
           </p>
 
           <div className="text-xs">
-            <p className="text-[var(--muted)]">Columns matched</p>
+            <p className="text-[var(--muted)]">{t("roster.matched")}</p>
             <ul className="mt-1 space-y-0.5">
-              {Object.entries(proposal.detection.mapping).map(
-                ([field, index]) => (
+              {Object.entries(proposal.detection.mapping).map(([field, index]) => {
+                const heading = proposal.headings[index as number];
+                const assisted = proposal.assisted.find((row) => row.heading === heading);
+                return (
                   <li key={field}>
-                    <span className="font-mono">
-                      {proposal.headings[index as number]}
-                    </span>{" "}
-                    → {field}
-                    {proposal.assisted.some(
-                      (row) =>
-                        row.heading === proposal.headings[index as number],
-                    ) ? (
+                    <span className="font-mono">{heading}</span> → {field}
+                    {assisted ? (
                       <span className="ml-2 text-[var(--muted)]">
-                        matched by the AI:{" "}
-                        {
-                          proposal.assisted.find(
-                            (row) =>
-                              row.heading ===
-                              proposal.headings[index as number],
-                          )?.because
-                        }
+                        {t("roster.byAi", { because: assisted.because })}
                       </span>
                     ) : null}
                   </li>
-                ),
-              )}
+                );
+              })}
             </ul>
           </div>
 
           {proposal.detection.unmatched.length > 0 ? (
             <p className="text-xs text-[var(--muted)]">
-              Ignored:{" "}
-              {proposal.detection.unmatched
-                .map((column) => `"${column.heading}"`)
-                .join(", ")}
+              {t("roster.ignored", {
+                columns: proposal.detection.unmatched.map((column) => `"${column.heading}"`).join(", "),
+              })}
             </p>
           ) : null}
 
@@ -172,19 +135,20 @@ export function RosterForm({
           ))}
 
           <p className="text-sm">
-            {usable.length} will be created
-            {problems.length > 0 ? `, ${problems.length} will be skipped` : ""}.
+            {problems.length > 0
+              ? t("roster.willCreateSkip", { count: usable.length, skipped: problems.length })
+              : t("roster.willCreate", { count: usable.length })}
           </p>
 
           {problems.length > 0 ? (
             <ul className="space-y-0.5 text-xs text-[var(--danger)]">
               {problems.slice(0, 10).map((row) => (
                 <li key={row.line}>
-                  Line {row.line}: {row.problems.join(" ")}
+                  {t("roster.line", { line: row.line, problems: row.problems.join(" ") })}
                 </li>
               ))}
               {problems.length > 10 ? (
-                <li>And {problems.length - 10} more.</li>
+                <li>{t("roster.more", { count: problems.length - 10 })}</li>
               ) : null}
             </ul>
           ) : null}
@@ -192,17 +156,17 @@ export function RosterForm({
           {usable.length > 0 ? (
             <form action={commitAction} className="flex flex-wrap items-center gap-2">
               <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">Create them as</span>
+                <span className="mr-2 text-[var(--muted)]">{t("roster.createAs")}</span>
                 <select
                   name="role"
                   defaultValue="learner"
                   className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
                 >
-                  <option value="learner">Learners</option>
-                  <option value="assessor">Assessors</option>
-                  <option value="moderator">Moderators</option>
-                  <option value="instructor">Facilitators</option>
-                  <option value="workplace_coach">Workplace coaches</option>
+                  {CREATE_AS.map((role) => (
+                    <option key={role} value={role}>
+                      {t(`roster.as.${role}`)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <button
@@ -211,8 +175,10 @@ export function RosterForm({
                 className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               >
                 {committing
-                  ? "Creating…"
-                  : `Create ${usable.length} ${usable.length === 1 ? "person" : "people"}`}
+                  ? t("roster.creating")
+                  : usable.length === 1
+                    ? t("roster.createOne")
+                    : t("roster.createMany", { count: usable.length })}
               </button>
             </form>
           ) : null}

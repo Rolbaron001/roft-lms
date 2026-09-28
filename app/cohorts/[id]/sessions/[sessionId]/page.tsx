@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { currentLocale, requirePermission, requireTenant } from "@/lib/request";
+import { catalogueFor, translator } from "@/lib/i18n";
+import { dateLocale } from "@/lib/i18n/locales";
+import { maybe } from "@/lib/i18n/maybe";
+import { I18nProvider } from "@/components/i18n";
 import { sessionRegister, SchedulingError } from "@/lib/scheduling";
 import { Card } from "@/components/ui";
 import { RegisterForm } from "./register-form";
@@ -17,21 +21,13 @@ import {
 import { sittingRegister } from "@/lib/invigilation";
 import { and, eq, ne } from "drizzle-orm";
 
-const KIND_LABEL: Record<string, string> = {
-  induction: "Induction",
-  lecture: "Lecture",
-  revision: "Revision",
-  summative: "Summative assessment",
-  mock_eisa: "Mock EISA",
-  workplace_induction: "Workplace induction",
-  walk_in: "Workplace walk-in",
-};
-
 /**
  * One session's register.
  *
  * The page a facilitator opens with the cohort in front of them, so it holds
- * one thing and no navigation to get lost in.
+ * one thing and no navigation to get lost in. Without the page frame there is
+ * no phrase provider either, so this page supplies its own: the forms on it
+ * run in the browser and ask for their phrases there.
  */
 export default async function SessionRegisterPage({
   params,
@@ -41,6 +37,8 @@ export default async function SessionRegisterPage({
   const { id, sessionId } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("attendance:record");
+  const locale = await currentLocale();
+  const t = translator(locale);
 
   let register;
   try {
@@ -138,31 +136,26 @@ export default async function SessionRegisterPage({
           };
         });
 
+  const kind = maybe(t, `register.kind.${register.session.kind}`);
+
   return (
+    <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)}>
     <main className="mx-auto max-w-4xl px-6 py-8">
-      <Link
-        href={`/cohorts/${id}`}
-        className="text-sm text-[var(--muted)] hover:underline"
-      >
-        ← Back to the cohort
+      <Link href={`/cohorts/${id}`} className="text-sm text-[var(--muted)] hover:underline">
+        {t("register.back")}
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold">
-        {register.session.title ??
-          KIND_LABEL[register.session.kind] ??
-          "Session"}
+        {register.session.title ?? kind ?? t("register.session")}
       </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {KIND_LABEL[register.session.kind] ?? register.session.kind} ·{" "}
-        {register.session.date} · {marked} of {register.lines.length} marked
+        {kind ?? register.session.kind} · {register.session.date} ·{" "}
+        {t("register.marked", { marked, total: register.lines.length })}
       </p>
 
       {supervised ? (
         <div className="mt-6">
-          <Card
-            title="Supervised sitting"
-            description="Who was admitted, what they agreed to, and that their script was received. The meeting itself runs where your lectures do; this is the record of how it was supervised."
-          >
+          <Card title={t("register.supervised")} description={t("register.supervisedIntro")}>
             {canSetUp ? (
               <div className="mb-4">
                 <SittingStatus
@@ -199,10 +192,7 @@ export default async function SessionRegisterPage({
         </div>
       ) : canSetUp ? (
         <div className="mt-6">
-          <Card
-            title="Supervised sitting"
-            description="This is a summative session, so it can be invigilated."
-          >
+          <Card title={t("register.supervised")} description={t("register.canInvigilate")}>
             <SetUpSitting
               cohortId={id}
               sessionId={sessionId}
@@ -214,17 +204,11 @@ export default async function SessionRegisterPage({
       ) : null}
 
       <div className="mt-6">
-        <Card
-          title="Register"
-          description="Who was here. Saved marks can be corrected later, and every change is recorded against whoever made it."
-        >
-          <RegisterForm
-            cohortId={id}
-            sessionId={sessionId}
-            lines={register.lines}
-          />
+        <Card title={t("register.title")} description={t("register.intro")}>
+          <RegisterForm cohortId={id} sessionId={sessionId} lines={register.lines} />
         </Card>
       </div>
     </main>
+    </I18nProvider>
   );
 }
