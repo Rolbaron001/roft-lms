@@ -12,6 +12,9 @@ import {
 // count, and importing it here would pull the Postgres driver into the
 // browser bundle.
 import { StatusBadge } from "@/components/ui";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
+import { Rich } from "@/components/rich-text";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -58,6 +61,7 @@ function CriteriaPicker({
   criteria: Criterion[];
   selected?: string[];
 }) {
+  const t = useT();
   const [filter, setFilter] = useState("");
   const [ticked, setTicked] = useState(() => new Set(selected));
   const words = filter.trim().toLowerCase();
@@ -65,17 +69,17 @@ function CriteriaPicker({
   return (
     <fieldset className="space-y-2 rounded-md border border-[var(--border)] p-3">
       <legend className="px-1 text-xs font-medium">
-        What this question assesses{" "}
+        {t("courseAssess.assesses")}{" "}
         <span className="font-normal text-[var(--muted)]">
-          ({ticked.size} of {criteria.length} ticked)
+          {t("courseAssess.ticked", { ticked: ticked.size, count: criteria.length })}
         </span>
       </legend>
       <input
         type="search"
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
-        placeholder="Narrow by code or wording"
-        aria-label="Narrow the criteria"
+        placeholder={t("courseAssess.narrow")}
+        aria-label={t("courseAssess.narrowLabel")}
         className={inputClass}
       />
       <div className="max-h-60 space-y-1 overflow-y-auto">
@@ -136,6 +140,7 @@ function QuestionRow({
   criteria: Criterion[];
   editable: boolean;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState<AssessmentState, FormData>(
     setQuestionCriteriaAction,
@@ -150,11 +155,15 @@ function QuestionRow({
       <p>
         {number}. {question.stem}{" "}
         <span className="text-xs text-[var(--muted)]">
-          ({question.points} {question.points === 1 ? "mark" : "marks"})
+          {question.points === 1
+            ? t("courseAssess.markOne")
+            : t("courseAssess.marks", { count: question.points })}
         </span>
       </p>
       <p className="mt-1 text-xs text-[var(--muted)]">
-        {codes.length > 0 ? `Assesses ${codes.join(", ")}` : "Linked to no criterion"}
+        {codes.length > 0
+          ? t("courseAssess.assessesCodes", { codes: codes.join(", ") })
+          : t("courseAssess.noCriterion")}
         {editable && !editing ? (
           <>
             {" · "}
@@ -163,7 +172,7 @@ function QuestionRow({
               onClick={() => setEditing(true)}
               className="font-medium text-[var(--brand-accent)] hover:underline"
             >
-              Change
+              {t("courseAssess.change")}
             </button>
           </>
         ) : null}
@@ -181,14 +190,14 @@ function QuestionRow({
               className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               style={{ background: "var(--brand-primary)" }}
             >
-              {pending ? "Saving…" : "Save"}
+              {pending ? t("common.saving") : t("common.save")}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
             >
-              Close
+              {t("courseAssess.close")}
             </button>
           </div>
         </form>
@@ -233,6 +242,7 @@ function QuestionForm({
     addQuestionAction,
     {},
   );
+  const t = useT();
   const [optionCount, setOptionCount] = useState(3);
 
   // Counts the questions added, adjusted during render when a new result
@@ -253,14 +263,12 @@ function QuestionForm({
         name="stem"
         required
         rows={2}
-        placeholder="The question"
+        placeholder={t("courseAssess.question")}
         className={inputClass}
       />
 
       <fieldset className="space-y-2 rounded-md border border-[var(--border)] p-3">
-        <legend className="px-1 text-xs font-medium">
-          Answer options — tick every one that is correct
-        </legend>
+        <legend className="px-1 text-xs font-medium">{t("courseAssess.options")}</legend>
 
         {Array.from({ length: optionCount }).map((_, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -268,11 +276,11 @@ function QuestionForm({
               type="checkbox"
               name="correct"
               value={index}
-              aria-label={`Option ${index + 1} is correct`}
+              aria-label={t("courseAssess.optionCorrect", { number: index + 1 })}
             />
             <input
               name="option"
-              placeholder={`Option ${index + 1}`}
+              placeholder={t("courseAssess.option", { number: index + 1 })}
               className={inputClass}
             />
           </div>
@@ -283,12 +291,12 @@ function QuestionForm({
           onClick={() => setOptionCount((count) => count + 1)}
           className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
         >
-          + Another option
+          {t("courseAssess.anotherOption")}
         </button>
       </fieldset>
 
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Marks</span>
+        <span className="block text-sm font-medium">{t("courseAssess.marksLabel")}</span>
         <input
           name="points"
           type="number"
@@ -313,14 +321,14 @@ function QuestionForm({
           className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Adding…" : "Add question"}
+          {pending ? t("courseAssess.adding") : t("courseAssess.addQuestion")}
         </button>
         <button
           type="button"
           onClick={onDone}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          Done
+          {t("courseAssess.done")}
         </button>
       </div>
     </form>
@@ -334,6 +342,7 @@ function PublishForm({
   courseId: string;
   assessmentId: string;
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<AssessmentState, FormData>(
     publishAssessmentAction,
     {},
@@ -350,7 +359,7 @@ function PublishForm({
           disabled={pending}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium disabled:opacity-60"
         >
-          {pending ? "Publishing…" : "Publish assessment"}
+          {pending ? t("courseAssess.publishing") : t("courseAssess.publish")}
         </button>
       </form>
     </div>
@@ -372,6 +381,7 @@ export function AssessmentManager({
   criteria: Criterion[];
   questions: Question[];
 }) {
+  const t = useT();
   const [createState, createAction, createPending] = useActionState<
     AssessmentState,
     FormData
@@ -391,15 +401,22 @@ export function AssessmentManager({
               <h2 className="font-medium">{assessment.title}</h2>
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {assessment.purpose === "summative"
-                  ? "Summative"
-                  : "Formative"}{" "}
-                · {assessment.type.replace(/_/g, " ")} · pass mark{" "}
-                {assessment.passMark}% ·{" "}
+                  ? t("common.summative")
+                  : t("common.formative")}{" "}
+                ·{" "}
+                {assessment.type === "workplace_logbook"
+                  ? workplaceRecordWord
+                  : (maybe(t, `courseAssess.type.${assessment.type}`) ?? assessment.type.replace(/_/g, " "))}{" "}
+                · {t("courseAssess.passMark", { mark: assessment.passMark })} ·{" "}
                 {assessment.moderationSampleRate >= 1
-                  ? "every decision moderated"
-                  : `${Math.round(assessment.moderationSampleRate * 100)}% moderated`}{" "}
-                · {assessment.itemCount}{" "}
-                {assessment.itemCount === 1 ? "question" : "questions"}
+                  ? t("courseAssess.allModerated")
+                  : t("courseAssess.sampleModerated", {
+                      percent: Math.round(assessment.moderationSampleRate * 100),
+                    })}{" "}
+                ·{" "}
+                {assessment.itemCount === 1
+                  ? t("courseAssess.questionsOne")
+                  : t("courseAssess.questions", { count: assessment.itemCount })}
               </p>
             </div>
             <StatusBadge status={assessment.status} />
@@ -437,7 +454,7 @@ export function AssessmentManager({
                   onClick={() => setOpenQuestionFor(assessment.id)}
                   className="mt-3 text-sm font-medium text-[var(--brand-accent)] hover:underline"
                 >
-                  + Add a question
+                  {t("courseAssess.addAQuestion")}
                 </button>
               )}
 
@@ -447,14 +464,16 @@ export function AssessmentManager({
             // "Learners can take this now" until 26 September, which was
             // not true of one that is on no step: nothing leads a learner to it.
             <p className="mt-3 text-sm text-[var(--muted)]">
-              Published. A learner meets it once it is a step in{" "}
-              <a
-                href={`/courses/${courseId}/steps`}
-                className="underline underline-offset-2"
-              >
-                what a learner works through
-              </a>
-              .
+              <Rich
+                text={t("courseAssess.published")}
+                parts={{
+                  link: (
+                    <a href={`/courses/${courseId}/steps`} className="underline underline-offset-2">
+                      {t("courseAssess.publishedLink")}
+                    </a>
+                  ),
+                }}
+              />
             </p>
           )}
         </section>
@@ -462,7 +481,7 @@ export function AssessmentManager({
 
       <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          New assessment
+          {t("courseAssess.new")}
         </h2>
 
         <div className="mt-3">
@@ -473,42 +492,34 @@ export function AssessmentManager({
           <input type="hidden" name="courseId" value={courseId} />
 
           <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">Title</span>
+            <span className="block text-sm font-medium">{t("courseAssess.titleLabel")}</span>
             <input name="title" required minLength={3} className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Type</span>
+            <span className="block text-sm font-medium">{t("courseAssess.type")}</span>
             <select name="type" defaultValue="quiz" className={inputClass}>
-              <option value="quiz">Quiz — marked automatically</option>
-              <option value="evidence_submission">
-                Evidence — learner uploads work
-              </option>
-              <option value="practical_observation">
-                Practical observation
-              </option>
+              <option value="quiz">{t("courseAssess.typeQuiz")}</option>
+              <option value="evidence_submission">{t("courseAssess.typeEvidence")}</option>
+              <option value="practical_observation">{t("courseAssess.typePractical")}</option>
               <option value="workplace_logbook">{workplaceRecordWord}</option>
             </select>
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Purpose</span>
+            <span className="block text-sm font-medium">{t("courseAssess.purpose")}</span>
             <select
               name="purpose"
               defaultValue="formative"
               className={inputClass}
             >
-              <option value="formative">
-                Formative — practice, not counted
-              </option>
-              <option value="summative">
-                Summative — counts, always moderated
-              </option>
+              <option value="formative">{t("courseAssess.formative")}</option>
+              <option value="summative">{t("courseAssess.summative")}</option>
             </select>
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Pass mark (%)</span>
+            <span className="block text-sm font-medium">{t("courseAssess.passMarkLabel")}</span>
             <input
               name="passMark"
               type="number"
@@ -520,28 +531,18 @@ export function AssessmentManager({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">
-              Moderation sample
-            </span>
+            <span className="block text-sm font-medium">{t("courseAssess.sample")}</span>
             <select
               name="moderationSampleRate"
               defaultValue="0.25"
               className={inputClass}
             >
-              <option value="0.25">25% — platform default</option>
+              <option value="0.25">{t("courseAssess.sampleDefault")}</option>
               <option value="0.5">50%</option>
-              <option value="1">Every decision</option>
-              <option value="0">None</option>
+              <option value="1">{t("courseAssess.sampleEvery")}</option>
+              <option value="0">{t("courseAssess.sampleNone")}</option>
             </select>
-            <span className="block text-xs text-[var(--muted)]">
-              A floor, not a ceiling. Cohort size raises it: a cohort of ten or
-              fewer is moderated in full and one of twenty or fewer at half,
-              because a quarter of eight scripts is two, and two say almost
-              nothing about an assessor&rsquo;s judgement. This figure governs
-              cohorts above twenty. Ignored for a summative assessment, where
-              every decision is moderated, and a newly registered assessor is
-              always moderated in full.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("courseAssess.sampleNote")}</span>
           </label>
 
           <div className="sm:col-span-2">
@@ -551,7 +552,7 @@ export function AssessmentManager({
               className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               style={{ background: "var(--brand-primary)" }}
             >
-              {createPending ? "Creating…" : "Create assessment"}
+              {createPending ? t("courseAssess.creating") : t("courseAssess.create")}
             </button>
           </div>
         </form>

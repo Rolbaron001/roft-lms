@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { Rich } from "@/components/rich-text";
 import { AuthoringError, getCourse } from "@/lib/authoring";
 import { listCourseEnrolments, listEnrollableUsers } from "@/lib/enrolment";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
@@ -15,6 +16,7 @@ export default async function CourseEnrolmentsPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
+  const { t, dates } = await pageLocale();
 
   let detail;
   try {
@@ -46,23 +48,19 @@ export default async function CourseEnrolmentsPage({
         >
           ← {detail.course.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Who is on this course</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t("courseEnrol.title")}</h1>
       </div>
 
       {detail.course.status !== "published" ? (
         <Card>
-          <p className="text-sm">
-            This course is still a draft. It has to be published before anyone
-            can be assigned to it — a draft has not passed the checks that
-            confirm its content covers what it claims to.
-          </p>
+          <p className="text-sm">{t("courseEnrol.draft")}</p>
         </Card>
       ) : (
         <div className="space-y-6">
           {blocked.length > 0 ? (
             <Card
-              title={`Waiting on something (${blocked.length})`}
-              description="Each learner appears once, at the earliest step they cannot open. Being held up at step three is the fact worth acting on; also being held up at steps four to ten is noise."
+              title={t("courseEnrol.waiting", { count: blocked.length })}
+              description={t("courseEnrol.waitingNote")}
             >
               <ul className="space-y-2">
                 {blocked.map((row) => (
@@ -77,7 +75,7 @@ export default async function CourseEnrolmentsPage({
                       </span>
                     </p>
                     <p className="mt-1 text-sm">
-                      Stuck at <strong>{row.stepTitle}</strong>
+                      <Rich text={t("courseEnrol.stuckAt")} parts={{ step: <strong>{row.stepTitle}</strong> }} />
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--muted)]">
                       {row.blockedBy.join(" ")}
@@ -88,20 +86,18 @@ export default async function CourseEnrolmentsPage({
             </Card>
           ) : null}
 
-          <Card title={`Enrolled (${enrolled.length})`}>
+          <Card title={t("courseEnrol.enrolled", { count: enrolled.length })}>
             {enrolled.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">
-                Nobody is enrolled yet.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("courseEnrol.nobody")}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-lg text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                      <th className="pb-2 pr-4 font-medium">Name</th>
-                      <th className="pb-2 pr-4 font-medium">Progress</th>
-                      <th className="pb-2 pr-4 font-medium">Due</th>
-                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 pr-4 font-medium">{t("courseEnrol.name")}</th>
+                      <th className="pb-2 pr-4 font-medium">{t("courseEnrol.progress")}</th>
+                      <th className="pb-2 pr-4 font-medium">{t("courseEnrol.due")}</th>
+                      <th className="pb-2 font-medium">{t("courseEnrol.status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -122,11 +118,11 @@ export default async function CourseEnrolmentsPage({
                           </span>
                         </td>
                         <td className="py-2.5 pr-4 whitespace-nowrap">
-                          {row.completedLessons} of {row.totalLessons}
+                          {t("courseEnrol.progressOf", { done: row.completedLessons, total: row.totalLessons })}
                         </td>
                         <td className="py-2.5 pr-4 whitespace-nowrap text-[var(--muted)]">
                           {row.dueDate
-                            ? row.dueDate.toLocaleDateString("en-ZA")
+                            ? row.dueDate.toLocaleDateString(dates)
                             : "—"}
                         </td>
                         <td className="py-2.5">
@@ -147,7 +143,7 @@ export default async function CourseEnrolmentsPage({
                 .filter((person) => !enrolledIds.has(person.id))
                 .map((person) => ({
                   id: person.id,
-                  label: `${person.firstName} ${person.lastName} — ${person.email}`,
+                  label: `${person.firstName} ${person.lastName} · ${person.email}`,
                 }))}
             />
           ) : null}

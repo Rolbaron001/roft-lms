@@ -12,6 +12,10 @@ import {
 } from "../actions";
 import type { CoverageReport } from "@/lib/authoring";
 import { LessonUpload } from "@/components/lesson-upload";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
+
+const LESSON_TYPES = ["text", "video", "document", "slide_deck", "live_session", "practical_task"] as const;
 
 type Section = {
   id: string;
@@ -73,7 +77,12 @@ export function CourseEditor({
   canAuthor: boolean;
   canPublish: boolean;
 }) {
+  const t = useT();
   const editable = canAuthor && status === "draft";
+  const typeName = (type: string) =>
+    type === "workplace_logbook"
+      ? workplaceRecordWord
+      : (maybe(t, `courseEdit.type.${type}`) ?? type.replace(/_/g, " "));
 
   const [sectionState, sectionAction, sectionPending] = useActionState<
     ActionState,
@@ -109,14 +118,11 @@ export function CourseEditor({
         {/* ---------------------------------------------------------- content */}
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Content
+            {t("courseEdit.content")}
           </h2>
 
           {sections.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              No sections yet. A course is built from sections, and each section
-              holds lessons.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("courseEdit.noSections")}</p>
           ) : (
             <ol className="mt-4 space-y-4">
               {sections.map((section, index) => (
@@ -137,8 +143,8 @@ export function CourseEditor({
                         >
                           <div className="flex items-center justify-between gap-3 text-sm">
                             <span>{lesson.title}</span>
-                            <span className="text-xs capitalize text-[var(--muted)]">
-                              {lesson.contentType.replace(/_/g, " ")}
+                            <span className="text-xs text-[var(--muted)]">
+                              {typeName(lesson.contentType)}
                             </span>
                           </div>
                           <div className="mt-2">
@@ -155,9 +161,7 @@ export function CourseEditor({
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-2 text-sm text-[var(--muted)]">
-                      No lessons in this section yet.
-                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">{t("courseEdit.noLessons")}</p>
                   )}
 
                   {editable ? (
@@ -173,7 +177,7 @@ export function CourseEditor({
                         <input
                           name="title"
                           required
-                          placeholder="Lesson title"
+                          placeholder={t("courseEdit.lessonTitle")}
                           className={inputClass}
                         />
 
@@ -182,12 +186,11 @@ export function CourseEditor({
                           defaultValue="text"
                           className={inputClass}
                         >
-                          <option value="text">Text</option>
-                          <option value="video">Video</option>
-                          <option value="document">Document</option>
-                          <option value="slide_deck">Slide deck</option>
-                          <option value="live_session">Live session</option>
-                          <option value="practical_task">Practical task</option>
+                          {LESSON_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {typeName(type)}
+                            </option>
+                          ))}
                           <option value="workplace_logbook">
                             {workplaceRecordWord}
                           </option>
@@ -196,14 +199,14 @@ export function CourseEditor({
                         <textarea
                           name="body"
                           rows={3}
-                          placeholder="Lesson content (optional)"
+                          placeholder={t("courseEdit.lessonBody")}
                           className={inputClass}
                         />
 
                         {report.criteria.length > 0 ? (
                           <fieldset className="rounded-md border border-[var(--border)] p-3">
                             <legend className="px-1 text-xs font-medium">
-                              Assessment criteria this lesson covers
+                              {t("courseEdit.lessonCovers")}
                             </legend>
                             <div className="space-y-1.5">
                               {report.criteria.map((criterion) => (
@@ -238,14 +241,14 @@ export function CourseEditor({
                             className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
                             style={{ background: "var(--brand-primary)" }}
                           >
-                            {lessonPending ? "Adding…" : "Add lesson"}
+                            {lessonPending ? t("courseEdit.adding") : t("courseEdit.addLesson")}
                           </button>
                           <button
                             type="button"
                             onClick={() => setOpenLessonFor(null)}
                             className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
                           >
-                            Cancel
+                            {t("common.cancel")}
                           </button>
                         </div>
                       </form>
@@ -255,7 +258,7 @@ export function CourseEditor({
                         onClick={() => setOpenLessonFor(section.id)}
                         className="mt-3 text-sm font-medium text-[var(--brand-accent)] hover:underline"
                       >
-                        + Add a lesson
+                        {t("courseEdit.addALesson")}
                       </button>
                     )
                   ) : null}
@@ -275,7 +278,7 @@ export function CourseEditor({
               <input
                 name="title"
                 required
-                placeholder="New section title"
+                placeholder={t("courseEdit.sectionTitle")}
                 className={inputClass}
               />
               <button
@@ -283,7 +286,7 @@ export function CourseEditor({
                 disabled={sectionPending}
                 className="whitespace-nowrap rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium disabled:opacity-60"
               >
-                {sectionPending ? "Adding…" : "Add section"}
+                {sectionPending ? t("courseEdit.adding") : t("courseEdit.addSection")}
               </button>
             </form>
           ) : null}
@@ -292,13 +295,9 @@ export function CourseEditor({
         {/* ---------------------------------------------------- competencies */}
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Competencies
+            {t("courseEdit.competencies")}
           </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            What completing this course demonstrates. A course with no
-            competency cannot be published, because its completions could not be
-            reported as capability.
-          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("courseEdit.competenciesNote")}</p>
 
           {taggedCompetencies.length > 0 ? (
             <ul className="mt-4 space-y-2">
@@ -322,7 +321,7 @@ export function CourseEditor({
                         type="submit"
                         className="text-xs text-[var(--danger)] hover:underline"
                       >
-                        Remove
+                        {t("courseEdit.remove")}
                       </button>
                     </form>
                   ) : null}
@@ -330,9 +329,7 @@ export function CourseEditor({
               ))}
             </ul>
           ) : (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              None tagged yet.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("courseEdit.noneTagged")}</p>
           )}
 
           <div className="mt-3">
@@ -343,10 +340,10 @@ export function CourseEditor({
             <form action={tagAction} className="mt-4 flex gap-2">
               <input type="hidden" name="courseId" value={courseId} />
               <select name="competencyId" defaultValue="" className={inputClass}>
-                <option value="">Choose a competency…</option>
+                <option value="">{t("courseEdit.chooseCompetency")}</option>
                 {untagged.map((competency) => (
                   <option key={competency.id} value={competency.id}>
-                    {competency.code} — {competency.name}
+                    {competency.code}: {competency.name}
                   </option>
                 ))}
               </select>
@@ -355,7 +352,7 @@ export function CourseEditor({
                 disabled={tagPending}
                 className="whitespace-nowrap rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium disabled:opacity-60"
               >
-                {tagPending ? "Tagging…" : "Tag"}
+                {tagPending ? t("courseEdit.tagging") : t("courseEdit.tag")}
               </button>
             </form>
           ) : null}
@@ -366,7 +363,7 @@ export function CourseEditor({
       <aside className="space-y-6">
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Readiness
+            {t("courseEdit.readiness")}
           </h2>
 
           {report.curriculumModuleId || report.studyUnit ? (
@@ -377,17 +374,13 @@ export function CourseEditor({
                 </span>
                 <span className="text-[var(--muted)]">
                   {" "}
-                  of {report.criteria.length} assessment criteria covered
-                  {report.studyUnit ? ` across ${report.studyUnit.code}'s modules` : ""}
+                  {report.studyUnit
+                    ? t("courseEdit.coveredAcross", { count: report.criteria.length, unit: report.studyUnit.code })
+                    : t("courseEdit.covered", { count: report.criteria.length })}
                 </span>
               </p>
               {report.studyUnit ? (
-                <p className="mt-2 text-xs text-[var(--muted)]">
-                  Covered by a lesson on this course, a question on one of its
-                  assessments that is linked to it, or what your alignment
-                  matrix names as assessing it. Upload the matrix on the
-                  qualification to record the last.
-                </p>
+                <p className="mt-2 text-xs text-[var(--muted)]">{t("courseEdit.coveredNote")}</p>
               ) : null}
 
               <ul className="mt-4 space-y-2">
@@ -410,14 +403,15 @@ export function CourseEditor({
                           {criterion.code}
                         </span>
                         <span className="sr-only">
-                          {covered ? " covered" : " not covered"}
+                          {" "}
+                          {covered ? t("courseEdit.isCovered") : t("courseEdit.notCovered")}
                         </span>
                         <span className="block text-xs text-[var(--muted)]">
                           {covered
                             ? criterion.coveredBy.join("; ")
                             : report.studyUnit
-                              ? "Nothing assesses this yet"
-                              : "No lesson covers this"}
+                              ? t("courseEdit.nothingAssesses")
+                              : t("courseEdit.noLessonCovers")}
                         </span>
                       </span>
                     </li>
@@ -426,19 +420,16 @@ export function CourseEditor({
               </ul>
             </>
           ) : (
-            <p className="mt-3 text-sm text-[var(--muted)]">
-              This course is not bound to an accredited curriculum module, so
-              there are no assessment criteria to cover.
-            </p>
+            <p className="mt-3 text-sm text-[var(--muted)]">{t("courseEdit.unbound")}</p>
           )}
 
           <dl className="mt-5 space-y-1 border-t border-[var(--border)] pt-4 text-sm">
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Lessons</dt>
+              <dt className="text-[var(--muted)]">{t("courseEdit.lessons")}</dt>
               <dd>{report.lessonCount}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Competencies</dt>
+              <dt className="text-[var(--muted)]">{t("courseEdit.competencies")}</dt>
               <dd>{report.competencyCount}</dd>
             </div>
           </dl>
@@ -455,12 +446,10 @@ export function CourseEditor({
                 className="w-full rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 style={{ background: "var(--brand-primary)" }}
               >
-                {publishPending ? "Checking…" : "Publish course"}
+                {publishPending ? t("courseEdit.checking") : t("courseEdit.publish")}
               </button>
             </form>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Publishing is refused while anything above is incomplete.
-            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{t("courseEdit.publishNote")}</p>
           </section>
         ) : null}
 
@@ -474,12 +463,10 @@ export function CourseEditor({
                 disabled={versionPending}
                 className="w-full rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60"
               >
-                {versionPending ? "Creating…" : "Start a new version"}
+                {versionPending ? t("courseEdit.creating") : t("courseEdit.newVersion")}
               </button>
             </form>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Learners who completed this version keep their record of it.
-            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{t("courseEdit.newVersionNote")}</p>
           </section>
         ) : null}
       </aside>

@@ -9,21 +9,10 @@ import {
   removeStepAction,
   type SpineState,
 } from "./actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
-const KIND_LABEL: Record<string, string> = {
-  lesson: "Lesson",
-  assessment: "Assessment",
-  document: "Document",
-  workplace: "Workplace",
-};
-
-const RULE_LABEL: Record<string, string> = {
-  opened: "opened",
-  submitted: "handed in",
-  reviewed: "marked and returned",
-  competent: "judged competent",
-  signed_off: "signed off",
-};
+const RULES = ["opened", "submitted", "reviewed", "competent", "signed_off"] as const;
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm";
@@ -35,6 +24,9 @@ const inputClass =
  * adds none of its own, so a gate refused here is refused everywhere.
  */
 export function SpineEditor({ spine }: { spine: CourseSpine }) {
+  const t = useT();
+  const kindName = (kind: string) => maybe(t, `spine.kind.${kind}`) ?? kind;
+  const ruleName = (rule: string) => maybe(t, `spine.rule.${rule}`) ?? rule;
   const [addState, add, adding] = useActionState<SpineState, FormData>(
     addStepAction,
     {},
@@ -80,13 +72,12 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
       {/* ---------------------------------------------------- what is on it */}
       <div>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          In this order
+          {t("spine.inOrder")}
         </h2>
 
         {spine.steps.length === 0 ? (
           <p className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
-            Nothing is on this course yet, so a learner enrolled on it would
-            open it and find an empty page. Add the first thing below.
+            {t("spine.empty")}
           </p>
         ) : (
           <ol className="space-y-2">
@@ -99,7 +90,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                   <span className="text-sm">
                     <span className="text-[var(--muted)]">{index + 1}. </span>
                     <span className="text-xs text-[var(--muted)]">
-                      {KIND_LABEL[step.kind] ?? step.kind}{" "}
+                      {kindName(step.kind)}{" "}
                     </span>
                     <span className={step.ready ? "" : "text-[var(--danger)]"}>
                       {step.title}
@@ -113,17 +104,17 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                     {step.optional ? (
                       <span className="text-xs text-[var(--muted)]">
                         {" "}
-                        optional
+                        {t("spine.optional")}
                       </span>
                     ) : null}
                   </span>
 
                   <span className="flex items-center gap-2">
                     {[
-                      { direction: "up", label: "Up", at: index > 0 },
+                      { direction: "up", label: t("spine.up"), at: index > 0 },
                       {
                         direction: "down",
-                        label: "Down",
+                        label: t("spine.down"),
                         at: index < spine.steps.length - 1,
                       },
                     ].map(({ direction, label, at }) =>
@@ -150,7 +141,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                       }
                       className="rounded-md border border-[var(--border)] px-2 py-1 text-xs"
                     >
-                      Gate
+                      {t("spine.gate")}
                     </button>
 
                     <form action={drop}>
@@ -160,7 +151,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                         type="submit"
                         className="rounded-md border border-[var(--border)] px-2 py-1 text-xs text-[var(--danger)]"
                       >
-                        Remove
+                        {t("spine.remove")}
                       </button>
                     </form>
                   </span>
@@ -177,23 +168,22 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
 
                 {step.prerequisites.length > 0 ? (
                   <p className="mt-1 text-xs text-[var(--muted)]">
-                    Waits for{" "}
-                    {step.prerequisites
-                      .map((one) => {
-                        const required = byId.get(one.requiredStepId);
-                        return `${required?.title ?? "a step"} to be ${RULE_LABEL[one.rule] ?? one.rule}`;
-                      })
-                      .join(", and ")}
-                    .
+                    {t("spine.waitsFor", {
+                      list: step.prerequisites
+                        .map((one) =>
+                          t("spine.waitsForOne", {
+                            step: byId.get(one.requiredStepId)?.title ?? t("spine.aStep"),
+                            rule: ruleName(one.rule),
+                          }),
+                        )
+                        .join(t("spine.and")),
+                    })}
                   </p>
                 ) : step.release === "open" ? (
-                  <p className="mt-1 text-xs text-[var(--muted)]">
-                    Open from the start.
-                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{t("spine.openFromStart")}</p>
                 ) : index > 0 ? (
                   <p className="mt-1 text-xs text-[var(--muted)]">
-                    Waits for the step before it to be{" "}
-                    {RULE_LABEL[step.sequentialRule] ?? step.sequentialRule}.
+                    {t("spine.waitsForBefore", { rule: ruleName(step.sequentialRule) })}
                   </p>
                 ) : null}
 
@@ -205,10 +195,10 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                     <input type="hidden" name="courseId" value={spine.course.id} />
                     <input type="hidden" name="stepId" value={step.id} />
                     <span className="text-xs text-[var(--muted)]">
-                      Hold this shut until
+                      {t("spine.holdUntil")}
                     </span>
                     <select name="requiredStepId" className={inputClass} required>
-                      <option value="">Choose a step…</option>
+                      <option value="">{t("spine.chooseStep")}</option>
                       {spine.steps
                         .filter((other) => other.id !== step.id)
                         .map((other) => (
@@ -217,11 +207,11 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                           </option>
                         ))}
                     </select>
-                    <span className="text-xs text-[var(--muted)]">is</span>
+                    <span className="text-xs text-[var(--muted)]">{t("spine.is")}</span>
                     <select name="rule" className={inputClass} defaultValue="opened">
-                      {Object.entries(RULE_LABEL).map(([value, label]) => (
+                      {RULES.map((value) => (
                         <option key={value} value={value}>
-                          {label}
+                          {ruleName(value)}
                         </option>
                       ))}
                     </select>
@@ -230,7 +220,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                       className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
                       style={{ background: "var(--brand-primary)" }}
                     >
-                      Add the gate
+                      {t("spine.addGate")}
                     </button>
                   </form>
                 ) : null}
@@ -242,13 +232,10 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
 
       {/* ------------------------------------------------------ adding one */}
       <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-        <h2 className="mb-1 text-sm font-semibold">Add a step</h2>
+        <h2 className="mb-1 text-sm font-semibold">{t("spine.add")}</h2>
 
         {spine.choices.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">
-            Everything held against this course is already on the list. Capture
-            a workbook or file a document against it, and it will appear here.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("spine.nothingLeft")}</p>
         ) : (
           <form action={add} className="space-y-3">
             <input type="hidden" name="courseId" value={spine.course.id} />
@@ -257,7 +244,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
 
             <label className="block text-sm">
               <span className="mb-1 block text-xs text-[var(--muted)]">
-                What the learner meets
+                {t("spine.meets")}
               </span>
               <select
                 value={chosen}
@@ -265,7 +252,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                 className={`${inputClass} w-full max-w-xl`}
                 required
               >
-                <option value="">Choose…</option>
+                <option value="">{t("spine.choose")}</option>
                 {(["assessment", "lesson", "document", "workplace"] as const).map(
                   (group) => {
                     const inGroup = spine.choices.filter(
@@ -273,7 +260,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
                     );
                     if (inGroup.length === 0) return null;
                     return (
-                      <optgroup key={group} label={KIND_LABEL[group]}>
+                      <optgroup key={group} label={kindName(group)}>
                         {inGroup.map((choice) => (
                           <option
                             key={choice.id}
@@ -314,12 +301,12 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
             <div className="flex flex-wrap gap-3">
               <input
                 name="title"
-                placeholder="Call it something else (optional)"
+                placeholder={t("spine.rename")}
                 className={`${inputClass} min-w-64 flex-1`}
               />
               <input
                 name="guidance"
-                placeholder="One line of context (optional)"
+                placeholder={t("spine.guidance")}
                 className={`${inputClass} min-w-64 flex-1`}
               />
             </div>
@@ -327,24 +314,24 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
             <div className="flex flex-wrap items-center gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="optional" />
-                A learner may skip it
+                {t("spine.skippable")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="release" value="open" />
-                Open from the start, rather than after the step before it
+                {t("spine.openAtStart")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <span className="text-xs text-[var(--muted)]">
-                  The step before must be
+                  {t("spine.beforeMustBe")}
                 </span>
                 <select
                   name="sequentialRule"
                   defaultValue="opened"
                   className={inputClass}
                 >
-                  {Object.entries(RULE_LABEL).map(([value, label]) => (
+                  {RULES.map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {ruleName(value)}
                     </option>
                   ))}
                 </select>
@@ -357,7 +344,7 @@ export function SpineEditor({ spine }: { spine: CourseSpine }) {
               className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               style={{ background: "var(--brand-primary)" }}
             >
-              {adding ? "Adding…" : "Add it to the end"}
+              {adding ? t("spine.adding") : t("spine.addToEnd")}
             </button>
           </form>
         )}

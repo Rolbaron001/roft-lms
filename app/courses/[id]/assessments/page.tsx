@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { AuthoringError, getCourse } from "@/lib/authoring";
 import {
@@ -18,7 +18,8 @@ export default async function CourseAssessmentsPage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("assessment:author");
 
   let detail;
@@ -46,12 +47,8 @@ export default async function CourseAssessmentsPage({
         >
           ← {detail.course.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Assessments</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          A formative quiz is marked automatically. A summative assessment is
-          always judged by a person and always moderated independently, because
-          it is the one that counts towards a qualification.
-        </p>
+        <h1 className="mt-2 text-xl font-semibold">{t("courseAssess.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("courseAssess.intro")}</p>
       </div>
 
       <AssessmentManager

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { courseSpine, SpineEditorError } from "@/lib/spine-editor";
 import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
@@ -22,7 +22,8 @@ export default async function CourseStepsPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:author");
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   let spine;
   try {
@@ -41,16 +42,13 @@ export default async function CourseStepsPage({
         >
           &larr; {spine.course.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">What a learner works through</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t("spine.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The order this {words.one("course")} is walked in, and what holds each
-          step shut until the one before it is done. Everything here is already
-          held against this {words.one("course")}: putting it on the list is
-          what makes a learner meet it.
+          {t("spine.intro", { course: words.lowerOne("course") })}
         </p>
         {spine.studyUnit ? (
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Delivers {spine.studyUnit.code} {spine.studyUnit.title}.
+            {t("spine.delivers", { code: spine.studyUnit.code, title: spine.studyUnit.title })}
           </p>
         ) : null}
       </div>

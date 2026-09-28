@@ -1,20 +1,15 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { listCourses } from "@/lib/authoring";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { vocabulary } from "@/lib/terms";
-
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge",
-  practical: "Practical",
-  workplace: "Workplace",
-  general: "General",
-};
+import { maybe } from "@/lib/i18n";
 
 export default async function CoursesPage() {
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("course:read");
   const courses = await listCourses(session);
 
@@ -30,7 +25,7 @@ export default async function CoursesPage() {
             className="rounded-md px-4 py-2 text-sm font-semibold text-white"
             style={{ background: "var(--brand-primary)" }}
           >
-            New course
+            {t("courseList.new", { course: words.lowerOne("course") })}
           </Link>
         ) : null}
       </div>
@@ -44,7 +39,7 @@ export default async function CoursesPage() {
           September. The button is the one thing to do here, so it is a button.
         */
         <EmptyState
-          title={`No ${words.many("course").toLowerCase()} yet`}
+          title={t("courseList.none", { courses: words.lowerMany("course") })}
           action={
             canAuthor ? (
               <Link
@@ -52,23 +47,12 @@ export default async function CoursesPage() {
                 className="rounded-md px-4 py-2 text-sm font-semibold text-white"
                 style={{ background: "var(--brand-primary)" }}
               >
-                New {words.one("course").toLowerCase()} &rarr;
+                {t("courseList.new", { course: words.lowerOne("course") })} &rarr;
               </Link>
             ) : null
           }
         >
-          {canAuthor ? (
-            <p>
-              A course is what a learner actually works through. It hangs off a
-              study unit or a curriculum module, so a qualification is worth
-              loading first.
-            </p>
-          ) : (
-            <p>
-              Nothing has been published for you yet. When it has been, what
-              you are enrolled on will be here.
-            </p>
-          )}
+          {canAuthor ? <p>{t("courseList.noneAuthor")}</p> : <p>{t("courseList.noneReader")}</p>}
         </EmptyState>
       ) : (
         <div className="space-y-3">
@@ -84,7 +68,7 @@ export default async function CoursesPage() {
                     {course.title}
                     {course.version > 1 ? (
                       <span className="ml-2 text-xs text-[var(--muted)]">
-                        version {course.version}
+                        {t("courseList.version", { number: course.version })}
                       </span>
                     ) : null}
                   </p>
@@ -99,22 +83,24 @@ export default async function CoursesPage() {
 
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--muted)]">
                 <span>
-                  {course.lessonCount}{" "}
-                  {course.lessonCount === 1 ? "lesson" : "lessons"}
+                  {course.lessonCount === 1
+                    ? t("courseList.lessonsOne")
+                    : t("courseList.lessons", { count: course.lessonCount })}
                 </span>
                 <span>
-                  {course.competencyCount}{" "}
                   {course.competencyCount === 1
-                    ? "competency"
-                    : "competencies"}
+                    ? t("courseList.competenciesOne")
+                    : t("courseList.competencies", { count: course.competencyCount })}
                 </span>
                 {course.curriculumModuleCode ? (
                   <span>
-                    {COMPONENT_LABELS[course.curriculumComponent ?? ""] ?? ""}{" "}
-                    module {course.curriculumModuleCode}
+                    {t("courseList.module", {
+                      component: maybe(t, `courseList.component.${course.curriculumComponent ?? ""}`) ?? "",
+                      code: course.curriculumModuleCode,
+                    })}
                   </span>
                 ) : (
-                  <span>Not part of a qualification</span>
+                  <span>{t("courseList.noQualification")}</span>
                 )}
               </div>
             </Link>

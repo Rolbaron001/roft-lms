@@ -2,12 +2,14 @@
 
 import { useActionState } from "react";
 import { createCourseAction, type ActionState } from "../actions";
+import { useT } from "@/components/i18n";
 
 export function NewCourseForm({
   curriculumModules,
 }: {
   curriculumModules: { id: string; label: string }[];
 }) {
+  const t = useT();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     createCourseAction,
     {},
@@ -25,7 +27,7 @@ export function NewCourseForm({
       ) : null}
 
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Course title</span>
+        <span className="block text-sm font-medium">{t("newCourse.courseTitle")}</span>
         <input
           name="title"
           required
@@ -35,7 +37,7 @@ export function NewCourseForm({
       </label>
 
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">Description</span>
+        <span className="block text-sm font-medium">{t("newCourse.description")}</span>
         <textarea
           name="description"
           rows={3}
@@ -45,26 +47,22 @@ export function NewCourseForm({
 
       <label className="block space-y-1.5">
         <span className="block text-sm font-medium">
-          Curriculum module{" "}
-          <span className="font-normal text-[var(--muted)]">(optional)</span>
+          {t("newCourse.module")}{" "}
+          <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
         </span>
         <select
           name="curriculumModuleId"
           defaultValue=""
           className="w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30"
         >
-          <option value="">Not part of an accredited qualification</option>
+          <option value="">{t("newCourse.noModule")}</option>
           {curriculumModules.map((module) => (
             <option key={module.id} value={module.id}>
               {module.label}
             </option>
           ))}
         </select>
-        <span className="block text-xs text-[var(--muted)]">
-          Bind the course to a curriculum module and the system will check, before
-          it can be published, that every assessment criterion in that module has
-          a lesson behind it.
-        </span>
+        <span className="block text-xs text-[var(--muted)]">{t("newCourse.moduleNote")}</span>
       </label>
 
       <button
@@ -73,7 +71,7 @@ export function NewCourseForm({
         className="rounded-md px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         style={{ background: "var(--brand-primary)" }}
       >
-        {pending ? "Creating…" : "Create course"}
+        {pending ? t("newCourse.creating") : t("newCourse.create")}
       </button>
     </form>
   );

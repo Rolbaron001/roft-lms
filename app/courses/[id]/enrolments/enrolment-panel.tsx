@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { bulkEnrolAction, enrolOneAction, type EnrolState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -34,6 +35,7 @@ export function EnrolmentPanel({
   courseId: string;
   people: { id: string; label: string }[];
 }) {
+  const t = useT();
   const [oneState, oneAction, onePending] = useActionState<EnrolState, FormData>(
     enrolOneAction,
     {},
@@ -47,16 +49,16 @@ export function EnrolmentPanel({
     <div className="grid gap-6 md:grid-cols-2">
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Enrol one person
+          {t("courseEnrol.one")}
         </h2>
 
         <form action={oneAction} className="mt-4 space-y-3">
           <input type="hidden" name="courseId" value={courseId} />
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Person</span>
+            <span className="block text-sm font-medium">{t("courseEnrol.person")}</span>
             <select name="userId" defaultValue="" className={inputClass}>
-              <option value="">Choose someone…</option>
+              <option value="">{t("courseEnrol.choose")}</option>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.label}
@@ -67,8 +69,8 @@ export function EnrolmentPanel({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              Due date{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
+              {t("courseEnrol.dueDate")}{" "}
+              <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
             <input type="date" name="dueDate" className={inputClass} />
           </label>
@@ -81,25 +83,20 @@ export function EnrolmentPanel({
             className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             style={{ background: "var(--brand-primary)" }}
           >
-            {onePending ? "Enrolling…" : "Enrol"}
+            {onePending ? t("courseEnrol.enrolling") : t("courseEnrol.enrol")}
           </button>
 
           {people.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">
-              Everyone in the organisation is already on this course.
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t("courseEnrol.everyone")}</p>
           ) : null}
         </form>
       </section>
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Enrol many at once
+          {t("courseEnrol.many")}
         </h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Paste email addresses, one per line. A column copied straight out of a
-          spreadsheet works.
-        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">{t("courseEnrol.manyNote")}</p>
 
         <form action={bulkAction} className="mt-4 space-y-3">
           <input type="hidden" name="courseId" value={courseId} />
@@ -113,8 +110,8 @@ export function EnrolmentPanel({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">
-              Due date{" "}
-              <span className="font-normal text-[var(--muted)]">(optional)</span>
+              {t("courseEnrol.dueDate")}{" "}
+              <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
             <input type="date" name="dueDate" className={inputClass} />
           </label>
@@ -126,7 +123,7 @@ export function EnrolmentPanel({
             disabled={bulkPending}
             className="rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60"
           >
-            {bulkPending ? "Enrolling…" : "Enrol everyone listed"}
+            {bulkPending ? t("courseEnrol.enrolling") : t("courseEnrol.enrolAll")}
           </button>
         </form>
       </section>

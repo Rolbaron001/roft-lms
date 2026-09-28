@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
@@ -22,7 +22,8 @@ export default async function CoursePage({
 }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("course:read");
   // Drive and OneDrive are offered wherever a folder is, so a provider
   // who keeps their material there never has to download it first.
@@ -56,7 +57,7 @@ export default async function CoursePage({
           href="/courses"
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← All courses
+          {t("courseEdit.all", { courses: words.lowerMany("course") })}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{detail.course.title}</h1>
@@ -72,7 +73,7 @@ export default async function CoursePage({
                 href={`/courses/${id}/steps`}
                 className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
               >
-                What a learner works through
+                {t("courseEdit.steps")}
               </Link>
             ) : null}
             {session.permissions.includes("assessment:author") ? (
@@ -80,7 +81,7 @@ export default async function CoursePage({
                 href={`/courses/${id}/assessments`}
                 className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
               >
-                Assessments
+                {t("courseEdit.assessments")}
               </Link>
             ) : null}
             {session.permissions.includes("enrolment:read_all") ? (
@@ -88,12 +89,12 @@ export default async function CoursePage({
                 href={`/courses/${id}/enrolments`}
                 className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
               >
-                Who is on this course
+                {t("courseEdit.enrolments")}
               </Link>
             ) : null}
             {detail.course.version > 1 ? (
               <span className="text-xs text-[var(--muted)]">
-                version {detail.course.version}
+                {t("courseList.version", { number: detail.course.version })}
               </span>
             ) : null}
             <StatusBadge status={detail.course.status} />
@@ -109,11 +110,8 @@ export default async function CoursePage({
       {detail.course.status === "published" ? (
         <Card>
           <p className="text-sm">
-            This course is published, so its content is fixed. Learners who
-            completed it have records that refer to exactly this version.
-            {session.permissions.includes("course:author")
-              ? " To change it, open a new version — the published one stays as it is."
-              : ""}
+            {t("courseEdit.published")}
+            {session.permissions.includes("course:author") ? ` ${t("courseEdit.publishedAuthor")}` : ""}
           </p>
         </Card>
       ) : null}
@@ -153,12 +151,12 @@ export default async function CoursePage({
       {canAuthorHere ? (
         <div className="mb-6">
           <Card
-            title="Add documents from a folder"
-            description="Choose the folder this course's material lives in and everything in it — including its subfolders — is read, filed and indexed. You see what it would file before anything is written."
+            title={t("courseEdit.folder")}
+            description={t("courseEdit.folderNote")}
           >
             <FolderPicker
               courseId={id}
-              label="The course's folder, from your own computer"
+              label={t("courseEdit.folderLabel")}
               extension={
                 mayUseExtension
                   ? {
@@ -171,11 +169,9 @@ export default async function CoursePage({
               }
               hint={
                 <>
-                  Guides, workbooks, policies and templates are filed against
-                  this course and their text indexed so they can be searched.
+                  {t("courseEdit.folderHint")}
                   <br />
-                  Structure is not created from here: the course&rsquo;s own
-                  shape is built in the editor below or from a qualification&rsquo;s modules. This files what it holds.
+                  {t("courseEdit.folderHint2")}
                 </>
               }
             />
@@ -186,8 +182,8 @@ export default async function CoursePage({
       {drives.length > 0 ? (
         <div className="mt-6">
           <Card
-            title="Or from a drive you have connected"
-            description="The same folder, read where it already lives. It ends in the same place — a proposal to check before anything is written."
+            title={t("courseEdit.drive")}
+            description={t("courseEdit.driveNote")}
           >
             <DrivePicker
               drives={drives.map((one) => ({
