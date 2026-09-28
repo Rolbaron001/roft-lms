@@ -33,6 +33,7 @@ const MOVED = [
   "app/papers",
   "app/people",
   "app/cohorts",
+  "app/qualifications",
 ];
 
 /**
@@ -72,9 +73,13 @@ export function englishIn(source: string): string[] {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    // Text between tags on one line: >Some words<
-    for (const match of line.matchAll(/>([^<>{}]*[A-Za-z]{2,}[^<>{}]*)</g)) {
-      if (/[A-Za-z]{2,}/.test(match[1]) && !/^\s*[-=|&]/.test(match[1])) found.push(trimmed);
+    // Text between tags on one line: >Some words<. The arrow of a function
+    // type (=> Promise<State>) is not a tag, and a name with an underscore in
+    // it (a folder called _control) is not wording.
+    for (const match of line.matchAll(/(?<!=)>([^<>{}]*[A-Za-z]{2,}[^<>{}]*)</g)) {
+      const text = match[1];
+      if (/^\s*\w*_\w*\s*$/.test(text)) continue;
+      if (/[A-Za-z]{2,}/.test(text) && !/^\s*[-=|&]/.test(text)) found.push(trimmed);
     }
     // A line that is nothing but words, as JSX text wrapped over lines.
     if (/^[A-Z][A-Za-z'’,.:;?!()\- ]*[a-z][A-Za-z'’,.:;?!()\- ]*$/.test(trimmed) && trimmed.includes(" ")) {
@@ -102,6 +107,22 @@ describe("screens moved into the catalogue", () => {
       expect(englishIn(readFileSync(join(process.cwd(), path), "utf8"))).toEqual([]);
     });
   }
+});
+
+describe("reading a moved screen's English back for older tests", () => {
+  it("puts each phrase's English where the screen asks for it", async () => {
+    const { withPhrases } = await import("./helpers/phrases");
+    expect(withPhrases('<h1>{t("appeals.title")}</h1>')).toBe("<h1>Appeals</h1>");
+    expect(withPhrases('<p>{t("appeals.late", { count: overdue.length })}</p>')).toBe(
+      "<p>{count} not acknowledged in time</p>",
+    );
+    expect(withPhrases('placeholder={t("people.search")}')).toBe("placeholder=Search by name or email");
+    expect(withPhrases('const label = t("people.search");')).toBe('const label = "Search by name or email";');
+    expect(withPhrases('t("people.intro", { provider })')).toBe(
+      't("Everyone in {provider}, their roles, and whether their record carries what a statutory return needs.", { provider })',
+    );
+    expect(withPhrases('{maybe(t, `x.${y}`)}')).toBe("{maybe(t, `x.${y}`)}");
+  });
 });
 
 describe("the check itself", () => {

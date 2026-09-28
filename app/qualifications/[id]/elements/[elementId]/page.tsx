@@ -1,24 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { TopicElementError, topicElementDetail } from "@/lib/topic-element";
 import { AppShell, Card } from "@/components/app-shell";
-
-const ELEMENT_LABELS: Record<string, string> = {
-  knowledge_topic: "Topic element",
-  practical_activity: "Required performance",
-  applied_knowledge: "Applied knowledge",
-  work_activity: "Work activity",
-  contextual_knowledge: "Contextual workplace knowledge",
-  supporting_evidence: "Supporting evidence",
-};
-
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge module",
-  practical: "Practical skills module",
-  workplace: "Work experience module",
-  general: "Module",
-};
+import { maybe } from "@/lib/i18n";
 
 /**
  * One curriculum line, opened.
@@ -42,6 +27,7 @@ export default async function TopicElementPage({
   const { id, elementId } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+  const t = await pageT();
 
   let detail;
   try {
@@ -71,7 +57,7 @@ export default async function TopicElementPage({
         </Link>
 
         <p className="mt-2 text-xs uppercase tracking-wide text-[var(--muted)]">
-          {COMPONENT_LABELS[module.component] ?? "Module"}{" "}
+          {maybe(t, `qualPage.componentModule.${module.component}`) ?? t("qualPage.componentModule.general")}{" "}
           <span className="font-mono">{module.code}</span> · {module.title}
           {" · "}
           <span className="font-mono">{topic.code}</span> {topic.title}
@@ -85,35 +71,23 @@ export default async function TopicElementPage({
         </h1>
 
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {ELEMENT_LABELS[element.kind] ?? element.kind}, exactly as the
-          curriculum document words it. Nothing on this page may be edited here:
-          a published curriculum is the QCTO&apos;s, not the provider&apos;s.
+          {t("element.asWorded", { kind: maybe(t, `elementKind.${element.kind}`) ?? element.kind })}
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card
-          title="What covers it"
-          description="From the Curriculum Alignment Matrix, as the provider wrote it there."
-        >
+        <Card title={t("element.covers")} description={t("element.coversNote")}>
           {coverage.length === 0 ? (
             <div className="space-y-2 text-sm">
-              <p style={{ color: "var(--danger)" }}>
-                Nothing is recorded as covering this line.
-              </p>
-              <p className="text-[var(--muted)]">
-                That is either a real gap in the programme or a matrix that has
-                not been uploaded yet. Upload the Curriculum Alignment Matrix
-                against this qualification and every line it names is filled in
-                at once.
-              </p>
+              <p style={{ color: "var(--danger)" }}>{t("element.uncovered")}</p>
+              <p className="text-[var(--muted)]">{t("element.uncoveredNote")}</p>
             </div>
           ) : (
             <ul className="space-y-2 text-sm">
               {coverage.map((cover) => (
                 <li key={cover.id}>
                   <span className="text-xs uppercase tracking-wide text-[var(--muted)]">
-                    {cover.kind.replace(/_/g, " ")}
+                    {maybe(t, `element.resource.${cover.kind}`) ?? cover.kind.replace(/_/g, " ")}
                   </span>
                   <br />
                   {cover.document ? (
@@ -134,10 +108,7 @@ export default async function TopicElementPage({
                         between a document held here and a name in a
                         spreadsheet.
                       */}
-                      <span className="text-xs text-[var(--muted)]">
-                        — named in the matrix, but no document held here has
-                        that name.
-                      </span>
+                      <span className="text-xs text-[var(--muted)]">· {t("element.notHeld")}</span>
                     </>
                   )}
                 </li>
@@ -146,25 +117,16 @@ export default async function TopicElementPage({
           )}
         </Card>
 
-        <Card
-          title="What it is assessed by"
-          description="The internal assessment criteria of the topic this line belongs to."
-        >
+        <Card title={t("element.assessed")} description={t("element.assessedNote")}>
           {criteria.length === 0 && module.component === "workplace" ? (
             /*
               A work experience module has no criteria by design, so this is
               what finished looks like rather than what missing looks like.
             */
-            <p className="text-sm text-[var(--muted)]">
-              A work experience module has no assessment criteria. What it
-              requires is evidenced by a signed record of the work itself,
-              accepted by an assessor, rather than judged against criteria.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("element.workplace")}</p>
           ) : criteria.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--danger)" }}>
-              This topic has no assessment criteria, so nothing here can ever be
-              achieved. Until they are captured from the curriculum document,
-              no learner can complete this module.
+              {t("element.noCriteria")}
             </p>
           ) : (
             <ul className="space-y-1.5 text-sm">
@@ -183,10 +145,7 @@ export default async function TopicElementPage({
 
       {detail.studyUnits.length > 0 ? (
         <div className="mt-4">
-          <Card
-            title="Where it is taught"
-            description="The study units this module is delivered in."
-          >
+          <Card title={t("element.taught")} description={t("element.taughtNote")}>
             <ul className="space-y-1 text-sm">
               {detail.studyUnits.map((unit) => (
                 <li key={unit.id}>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { pageT } from "@/lib/request";
+import type { MessageKey } from "@/lib/i18n";
 
 /**
  * The three ways to add a qualification, and nothing else until one is picked.
@@ -23,43 +25,23 @@ import Link from "next/link";
 
 export type HowOption = {
   /** The value in the query string. */
-  id: string;
-  title: string;
+  id: "documents" | "folder" | "blank";
+  title: MessageKey;
   /** What it is for, in one line. */
-  summary: string;
+  summary: MessageKey;
   /** What it needs from the person. */
-  needs: string;
+  needs: MessageKey;
   /** What it costs in time, honestly. */
-  speed: string;
+  speed: MessageKey;
 };
 
-export const HOW_OPTIONS: HowOption[] = [
-  {
-    id: "documents",
-    title: "From its documents",
-    summary:
-      "The curriculum document, the SAQA qualification document and the assessment specification. The App reads the whole curriculum out of them.",
-    needs: "Two or three PDFs or Word files.",
-    speed: "Seconds. No AI involved at any point.",
-  },
-  {
-    id: "folder",
-    title: "From a folder",
-    summary:
-      "Everything at once: the curriculum, the study units, the guides, the workbooks and the policies, filed as they are read.",
-    needs: "The qualification's whole folder, from your computer or a drive.",
-    speed:
-      "Minutes. A folder that includes a summary of itself needs no AI; one that does not has its structure worked out, and that part does.",
-  },
-  {
-    id: "blank",
-    title: "From scratch",
-    summary:
-      "An empty qualification you build by hand - the title, the code, the level and credits, then its modules one at a time.",
-    needs: "The details in front of you.",
-    speed: "As long as it takes. Nothing is read for you.",
-  },
-];
+export const HOW_OPTIONS: HowOption[] = (["documents", "folder", "blank"] as const).map((id) => ({
+  id,
+  title: `how.${id}.title`,
+  summary: `how.${id}.summary`,
+  needs: `how.${id}.needs`,
+  speed: `how.${id}.speed`,
+}));
 
 /**
  * Three cards with "or" between them, and one link each.
@@ -68,41 +50,31 @@ export const HOW_OPTIONS: HowOption[] = [
  * actually choosing between. "From its documents" and "From a folder" are not
  * distinguishable by name alone.
  */
-export function HowChooser({ basePath }: { basePath: string }) {
+export async function HowChooser({ basePath }: { basePath: string }) {
+  const t = await pageT();
   return (
     <div>
-      <h2 className="text-sm font-semibold">
-        How would you like to add it?
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-        Three ways in. Pick one and only that one opens; you can close it again
-        and choose differently.
-      </p>
+      <h2 className="text-sm font-semibold">{t("how.title")}</h2>
+      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("how.intro")}</p>
 
       <ol className="mt-4 space-y-3">
         {HOW_OPTIONS.map((option, index) => (
           <li key={option.id}>
             {index > 0 ? (
-              <p className="mb-3 text-sm font-medium text-[var(--muted)]">or</p>
+              <p className="mb-3 text-sm font-medium text-[var(--muted)]">{t("how.or")}</p>
             ) : null}
 
             <Link
               href={`${basePath}?view=add&how=${option.id}`}
               className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--brand-accent)]"
             >
-              <p className="font-medium">{option.title}</p>
-              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-                {option.summary}
-              </p>
+              <p className="font-medium">{t(option.title)}</p>
+              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t(option.summary)}</p>
               <p className="mt-2 text-xs text-[var(--muted)]">
-                <span className="font-medium text-[var(--foreground)]">
-                  Needs:
-                </span>{" "}
-                {option.needs}{" "}
-                <span className="font-medium text-[var(--foreground)]">
-                  Takes:
-                </span>{" "}
-                {option.speed}
+                <span className="font-medium text-[var(--foreground)]">{t("how.needs")}</span>{" "}
+                {t(option.needs)}{" "}
+                <span className="font-medium text-[var(--foreground)]">{t("how.takes")}</span>{" "}
+                {t(option.speed)}
               </p>
             </Link>
           </li>
@@ -113,14 +85,15 @@ export function HowChooser({ basePath }: { basePath: string }) {
 }
 
 /** The way back, shown above whichever one was chosen. */
-export function ChooseDifferently({ basePath }: { basePath: string }) {
+export async function ChooseDifferently({ basePath }: { basePath: string }) {
+  const t = await pageT();
   return (
     <p className="mb-4">
       <Link
         href={`${basePath}?view=add`}
         className="text-sm text-[var(--muted)] underline-offset-2 hover:underline"
       >
-        ← Choose a different way
+        {t("how.back")}
       </Link>
     </p>
   );

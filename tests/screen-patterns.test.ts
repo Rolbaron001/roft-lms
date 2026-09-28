@@ -20,9 +20,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { wayBackFrom } from "@/lib/capture";
+import { withPhrases } from "./helpers/phrases";
 
+/** With each catalogue phrase back in English (job sheet D9, stage 4). */
 function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return withPhrases(readFileSync(join(process.cwd(), path), "utf8"));
 }
 
 /** The prose, with the explanatory comments stripped out. */

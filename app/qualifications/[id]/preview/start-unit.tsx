@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { startStudyUnitAction, type StartState } from "./actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The way out of "nothing has been built for this study unit yet".
@@ -17,6 +18,7 @@ export function StartUnit({
   qualificationId: string;
   studyUnitId: string;
 }) {
+  const t = useT();
   const [state, act, working] = useActionState<StartState, FormData>(
     startStudyUnitAction,
     {},
@@ -32,7 +34,7 @@ export function StartUnit({
         className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         style={{ background: "var(--brand-primary)" }}
       >
-        {working ? "Starting…" : "Start building this study unit"}
+        {working ? t("qualPreview.starting") : t("qualPreview.start")}
       </button>
       {state.error ? (
         <p role="alert" className="mt-1 text-xs text-[var(--danger)]">

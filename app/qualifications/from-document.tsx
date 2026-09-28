@@ -10,36 +10,17 @@ import {
   type ReadingState,
 } from "./actions";
 import { AttentionMascot } from "@/components/tenant-illustration";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const field =
   "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
 
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge",
-  practical: "Practical skill",
-  workplace: "Work experience",
-};
-
 /** The three documents a qualification is founded on, in the order they matter. */
 const SOURCES = [
-  {
-    name: "curriculum",
-    label: "Curriculum Document",
-    required: true,
-    note: "The modules, topics and internal assessment criteria.",
-  },
-  {
-    name: "qualification",
-    label: "Qualification Document",
-    required: false,
-    note: "The SAQA registration extract. The only source of the SAQA ID and the Exit Level Outcomes.",
-  },
-  {
-    name: "assessmentSpecification",
-    label: "Assessment Specification",
-    required: false,
-    note: "The EISA specification. Filed and indexed so it is searchable.",
-  },
+  { name: "curriculum", required: true },
+  { name: "qualification", required: false },
+  { name: "assessmentSpecification", required: false },
 ] as const;
 
 /**
@@ -50,8 +31,8 @@ const SOURCES = [
  * that looks wrong is abandoned by closing the panel rather than by undoing a
  * half-made qualification.
  *
- * The files are held in one form across both steps — the read button and the
- * create button post the same form — so nothing is uploaded twice by the person
+ * The files are held in one form across both steps (the read button and the
+ * create button post the same form), so nothing is uploaded twice by the person
  * and nothing is parked on the server waiting to be come back to.
  */
 export function FromDocument({
@@ -63,14 +44,12 @@ export function FromDocument({
   /** Where "Close" goes when the choice was made by a link rather than here. */
   closeHref?: string;
 } = {}) {
-  const [reading, read, readPending] = useActionState<ReadingState, FormData>(
-    readCurriculumAction,
+  const t = useT();
+  const [reading, read, readPending] = useActionState<ReadingState, FormData>(readCurriculumAction, {});
+  const [created, create, createPending] = useActionState<CreateFromDocumentState, FormData>(
+    createFromDocumentAction,
     {},
   );
-  const [created, create, createPending] = useActionState<
-    CreateFromDocumentState,
-    FormData
-  >(createFromDocumentAction, {});
 
   const [open, setOpen] = useState(startOpen);
   const [chosen, setChosen] = useState<Record<string, string>>({});
@@ -82,7 +61,7 @@ export function FromDocument({
    * Puts the chosen files back after every render.
    *
    * React clears an uncontrolled form once a form action resolves, which here
-   * empties all three file inputs the moment the read finishes — so the create
+   * empties all three file inputs the moment the read finishes, so the create
    * step that follows would post no documents at all, and be blocked by the
    * required-file validation with nothing on screen explaining why. Holding
    * the File objects and reattaching them is what makes the second step
@@ -90,9 +69,7 @@ export function FromDocument({
    */
   useEffect(() => {
     for (const [name, file] of Object.entries(held.current)) {
-      const input = formRef.current?.querySelector<HTMLInputElement>(
-        `input[name="${name}"]`,
-      );
+      const input = formRef.current?.querySelector<HTMLInputElement>(`input[name="${name}"]`);
       if (!input || (input.files && input.files.length > 0)) continue;
 
       const transfer = new DataTransfer();
@@ -115,16 +92,12 @@ export function FromDocument({
   useEffect(() => {
     if (!readPending) return;
     const started = Date.now();
-    const timer = setInterval(
-      () => setSeconds(Math.round((Date.now() - started) / 1000)),
-      1000,
-    );
+    const timer = setInterval(() => setSeconds(Math.round((Date.now() - started) / 1000)), 1000);
     return () => {
       clearInterval(timer);
       setSeconds(0);
     };
   }, [readPending]);
-
 
   if (!open) {
     return (
@@ -134,7 +107,7 @@ export function FromDocument({
         className="rounded-md px-4 py-2 text-sm font-semibold text-white"
         style={{ background: "var(--brand-primary)" }}
       >
-        Build one from its documents
+        {t("fromDoc.open")}
       </button>
     );
   }
@@ -151,6 +124,15 @@ export function FromDocument({
    */
   const step = found ? 2 : 1;
 
+  const componentLabel = (component: string) =>
+    component === "knowledge"
+      ? t("component.knowledge")
+      : component === "practical"
+        ? t("component.practical")
+        : component === "workplace"
+          ? t("component.workplaceShort")
+          : component;
+
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
       {/*
@@ -158,22 +140,12 @@ export function FromDocument({
         qualification, so a third step would be a state this component never
         sees - and a step somebody never arrives at is worse than no step.
       */}
-      <Steps
-        current={step}
-        labels={["Choose the documents", "Check what was found"]}
-      />
+      <Steps current={step} labels={[t("fromDoc.step1"), t("fromDoc.step2")]} hereLabel={t("fromDoc.youAreHere")} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            From the qualification documents
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            These three are the foundation everything else is built on. Upload
-            them and the App reads the qualification&rsquo;s details, its Exit
-            Level Outcomes and its whole curriculum out of them. Check what it
-            found, correct anything it got wrong, and it is written in one go.
-          </p>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{t("fromDoc.title")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("fromDoc.intro")}</p>
         </div>
         {/*
           A link where the choice was made on the screen before this one, so
@@ -181,11 +153,8 @@ export function FromDocument({
           button on an otherwise empty page.
         */}
         {closeHref ? (
-          <Link
-            href={closeHref}
-            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
-          >
-            Close
+          <Link href={closeHref} className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm">
+            {t("fromDoc.close")}
           </Link>
         ) : (
           <button
@@ -193,7 +162,7 @@ export function FromDocument({
             onClick={() => setOpen(false)}
             className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
           >
-            Close
+            {t("fromDoc.close")}
           </button>
         )}
       </div>
@@ -204,12 +173,9 @@ export function FromDocument({
           {SOURCES.map((source) => (
             <label key={source.name} className="block space-y-1.5">
               <span className="block text-sm font-medium">
-                {source.label}
+                {t(`fromDoc.source.${source.name}`)}
                 {source.required ? null : (
-                  <span className="font-normal text-[var(--muted)]">
-                    {" "}
-                    (recommended)
-                  </span>
+                  <span className="font-normal text-[var(--muted)]">{t("fromDoc.recommended")}</span>
                 )}
               </span>
               <input
@@ -228,9 +194,7 @@ export function FromDocument({
                 }}
                 className="block w-full text-xs file:mr-2 file:rounded-md file:border file:border-[var(--border)] file:bg-[var(--surface)] file:px-2 file:py-1 file:text-xs"
               />
-              <span className="block text-xs text-[var(--muted)]">
-                {source.note}
-              </span>
+              <span className="block text-xs text-[var(--muted)]">{t(`fromDoc.source.${source.name}.note`)}</span>
             </label>
           ))}
         </div>
@@ -246,7 +210,7 @@ export function FromDocument({
                 : ""
             }`}
           >
-            {readPending ? "Reading…" : "Read them"}
+            {readPending ? t("fromDoc.reading") : t("fromDoc.read")}
           </button>
 
           {anyChosen && !readPending && !found ? (
@@ -255,22 +219,17 @@ export function FromDocument({
               <span aria-hidden className="motion-safe:animate-bounce">
                 ←
               </span>
-              Now press this. Nothing is written yet.
+              {t("fromDoc.pressThis")}
             </p>
           ) : null}
 
           {readPending ? (
-            <p
-              role="status"
-              className="flex items-center gap-2 text-sm text-[var(--muted)]"
-            >
+            <p role="status" className="flex items-center gap-2 text-sm text-[var(--muted)]">
               <span
                 aria-hidden
                 className="inline-block h-4 w-4 rounded-full border-2 border-[var(--border)] border-t-[var(--brand-accent)] motion-safe:animate-spin"
               />
-              {seconds < 15
-                ? "Reading the documents…"
-                : `Still reading — ${seconds} seconds. A curriculum document is long; this is normal.`}
+              {seconds < 15 ? t("fromDoc.readingDocs") : t("fromDoc.stillReading", { seconds })}
             </p>
           ) : null}
         </div>
@@ -288,19 +247,21 @@ export function FromDocument({
         {found ? (
           <div className="mt-6 border-t border-[var(--border)] pt-5">
             <p className="text-sm">
-              Read <strong>{found.totals.modules} modules</strong>,{" "}
-              {found.totals.topics} topics, {found.totals.elements} lines to
-              teach and <strong>{found.totals.criteria} assessment criteria</strong>
-              {found.totals.exitLevelOutcomes > 0 ? (
-                <>
-                  , plus{" "}
-                  <strong>
-                    {found.totals.exitLevelOutcomes} Exit Level Outcomes
-                  </strong>{" "}
-                  with {found.totals.associatedCriteria} associated criteria
-                </>
-              ) : null}
-              .
+              {found.totals.exitLevelOutcomes > 0
+                ? t("fromDoc.foundWithElo", {
+                    modules: found.totals.modules,
+                    topics: found.totals.topics,
+                    elements: found.totals.elements,
+                    criteria: found.totals.criteria,
+                    outcomes: found.totals.exitLevelOutcomes,
+                    associated: found.totals.associatedCriteria,
+                  })
+                : t("fromDoc.found", {
+                    modules: found.totals.modules,
+                    topics: found.totals.topics,
+                    elements: found.totals.elements,
+                    criteria: found.totals.criteria,
+                  })}
             </p>
 
             {/*
@@ -312,25 +273,23 @@ export function FromDocument({
             {found.part ? (
               <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm">
                 <p>
-                  Its document says this is a{" "}
-                  <strong>
-                    {found.details.kind === "part"
-                      ? "part qualification"
-                      : "skills programme"}
-                  </strong>{" "}
-                  drawn from <strong>{found.part.parent.title}</strong>. Nothing
-                  will be copied: it shares that qualification&rsquo;s
-                  curriculum, and takes{" "}
-                  {found.part.modules.filter((entry) => entry.found).length} of
-                  its modules.
+                  <Rich
+                    text={t("fromDoc.partOf")}
+                    parts={{
+                      kind: (
+                        <strong>
+                          {found.details.kind === "part" ? t("fromDoc.kindPart") : t("fromDoc.kindProgramme")}
+                        </strong>
+                      ),
+                      parent: <strong>{found.part.parent.title}</strong>,
+                      count: found.part.modules.filter((entry) => entry.found).length,
+                    }}
+                  />
                 </p>
                 {found.part.modules.length > 0 ? (
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     {found.part.modules
-                      .map(
-                        (entry) =>
-                          `${entry.code}${entry.found ? "" : " (not found)"}`,
-                      )
+                      .map((entry) => `${entry.code}${entry.found ? "" : t("fromDoc.notFound")}`)
                       .join(" · ")}
                   </p>
                 ) : null}
@@ -342,36 +301,27 @@ export function FromDocument({
                 This was a red alert over a dead button: "Open that
                 qualification instead", with nothing to press and no way to get
                 there. A disabled control with the reason stated is better than
-                one without, and a way forward is better than either — this is
+                one without, and a way forward is better than either: this is
                 the ordinary case of somebody importing a qualification that
                 somebody else already started, and the thing they want next is
                 one click away.
               */
               <div className="mt-3 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-3 text-sm">
-                <p className="font-medium">
-                  {found.existing.title} is already here.
-                </p>
-                <p className="mt-1 text-[var(--muted)]">
-                  Importing the curriculum again would replace the one it has,
-                  and anything tagged to a criterion would go with it. What you
-                  probably want is to add what is missing — the material, or
-                  the parts of the curriculum that never made it — which is
-                  done on the qualification itself and leaves everything
-                  already there untouched.
-                </p>
+                <p className="font-medium">{t("fromDoc.already", { title: found.existing.title })}</p>
+                <p className="mt-1 text-[var(--muted)]">{t("fromDoc.alreadyWhy")}</p>
                 <Link
                   href={`/qualifications/${found.existing.id}`}
                   className="mt-2 inline-block rounded-md px-4 py-2 text-sm font-semibold text-white"
                   style={{ background: "var(--brand-primary)" }}
                 >
-                  Open it, and add what is missing
+                  {t("fromDoc.openIt")}
                 </Link>
               </div>
             ) : null}
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1.5 sm:col-span-2">
-                <span className="block text-sm font-medium">Title</span>
+                <span className="block text-sm font-medium">{t("fromDoc.titleField")}</span>
                 <input
                   name="title"
                   required
@@ -383,23 +333,16 @@ export function FromDocument({
 
               <label className="block space-y-1.5">
                 <span className="block text-sm font-medium">
-                  SAQA ID
+                  {t("fromDoc.saqaId")}
                   {found.details.saqaId ? null : (
-                    <span className="font-normal text-[var(--muted)]">
-                      {" "}
-                      (no Qualification Document supplied)
-                    </span>
+                    <span className="font-normal text-[var(--muted)]">{t("fromDoc.noQualDoc")}</span>
                   )}
                 </span>
-                <input
-                  name="saqaId"
-                  defaultValue={found.details.saqaId ?? ""}
-                  className={`${field} font-mono`}
-                />
+                <input name="saqaId" defaultValue={found.details.saqaId ?? ""} className={`${field} font-mono`} />
               </label>
 
               <label className="block space-y-1.5">
-                <span className="block text-sm font-medium">Curriculum code</span>
+                <span className="block text-sm font-medium">{t("fromDoc.curriculumCode")}</span>
                 <input
                   name="curriculumCode"
                   defaultValue={found.details.curriculumCode ?? ""}
@@ -408,7 +351,7 @@ export function FromDocument({
               </label>
 
               <label className="block space-y-1.5">
-                <span className="block text-sm font-medium">NQF level</span>
+                <span className="block text-sm font-medium">{t("fromDoc.nqf")}</span>
                 <input
                   name="nqfLevel"
                   type="number"
@@ -420,7 +363,7 @@ export function FromDocument({
               </label>
 
               <label className="block space-y-1.5">
-                <span className="block text-sm font-medium">Total credits</span>
+                <span className="block text-sm font-medium">{t("fromDoc.credits")}</span>
                 <input
                   name="totalCredits"
                   type="number"
@@ -433,50 +376,31 @@ export function FromDocument({
 
             <details className="mt-4">
               <summary className="cursor-pointer text-sm font-medium">
-                The {found.modules.length} modules it found
+                {t("fromDoc.modulesFound", { count: found.modules.length })}
               </summary>
               <div className="mt-2 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                      <th className="pb-2">Module</th>
-                      <th className="pb-2">Kind</th>
-                      <th className="pb-2">Credits</th>
-                      <th className="pb-2">Topics</th>
-                      <th className="pb-2">To teach</th>
-                      <th className="pb-2">Criteria</th>
+                      <th className="pb-2">{t("fromDoc.module")}</th>
+                      <th className="pb-2">{t("fromDoc.kind")}</th>
+                      <th className="pb-2">{t("fromDoc.creditsCol")}</th>
+                      <th className="pb-2">{t("fromDoc.topics")}</th>
+                      <th className="pb-2">{t("fromDoc.toTeach")}</th>
+                      <th className="pb-2">{t("fromDoc.criteria")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {found.modules.map((row) => (
-                      <tr
-                        key={row.code}
-                        className="border-t border-[var(--border)]"
-                      >
+                      <tr key={row.code} className="border-t border-[var(--border)]">
                         <td className="py-2 pr-3">
-                          <span className="font-mono text-xs">
-                            {row.code}
-                          </span>{" "}
-                          {row.title}
+                          <span className="font-mono text-xs">{row.code}</span> {row.title}
                         </td>
-                        <td className="py-2 pr-3 text-xs">
-                          {COMPONENT_LABELS[row.component] ??
-                            row.component}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {row.credits ?? "—"}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {row.topics}
-                        </td>
-                        <td className="py-2 pr-3 tabular-nums">
-                          {row.elements}
-                        </td>
-                        <td className="py-2 tabular-nums">
-                          {row.component === "workplace"
-                            ? "—"
-                            : row.criteria}
-                        </td>
+                        <td className="py-2 pr-3 text-xs">{componentLabel(row.component)}</td>
+                        <td className="py-2 pr-3 tabular-nums">{row.credits ?? "—"}</td>
+                        <td className="py-2 pr-3 tabular-nums">{row.topics}</td>
+                        <td className="py-2 pr-3 tabular-nums">{row.elements}</td>
+                        <td className="py-2 tabular-nums">{row.component === "workplace" ? "—" : row.criteria}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -487,15 +411,15 @@ export function FromDocument({
             {found.exitLevelOutcomes.length > 0 ? (
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm font-medium">
-                  The {found.exitLevelOutcomes.length} Exit Level Outcomes
+                  {t("fromDoc.outcomes", { count: found.exitLevelOutcomes.length })}
                 </summary>
                 <ul className="mt-2 space-y-2 text-sm">
                   {found.exitLevelOutcomes.map((outcome) => (
                     <li key={outcome.number}>
-                      <span className="font-medium">ELO {outcome.number}.</span>{" "}
+                      <span className="font-medium">{t("fromDoc.elo", { number: outcome.number })}</span>{" "}
                       {outcome.description}
                       <span className="ml-1 text-xs text-[var(--muted)]">
-                        ({outcome.criteria.length} associated criteria)
+                        {t("fromDoc.associated", { count: outcome.criteria.length })}
                       </span>
                     </li>
                   ))}
@@ -506,7 +430,7 @@ export function FromDocument({
             {found.notes.length > 0 ? (
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm font-medium text-[var(--brand-accent)]">
-                  {found.notes.length} things to check
+                  {t("fromDoc.toCheck", { count: found.notes.length })}
                 </summary>
                 <ul className="mt-2 space-y-1 text-sm text-[var(--muted)]">
                   {found.notes.map((note, index) => (
@@ -540,15 +464,13 @@ export function FromDocument({
                   style={{ background: "var(--brand-primary)" }}
                 >
                   {createPending
-                    ? "Creating…"
+                    ? t("fromDoc.creating")
                     : found.part
-                      ? "Create it, drawing on its parent's curriculum"
-                      : "Create it, with this curriculum"}
+                      ? t("fromDoc.createPart")
+                      : t("fromDoc.create")}
                 </button>
                 <p className="mt-2 text-xs text-[var(--muted)]">
-                  {found.part
-                    ? "Its own Qualification Document is filed against it. The curriculum document and the assessment specification are not: they belong to the qualification it comes from, and are already filed there."
-                    : "Every document you supplied is filed against the qualification, so a moderator can open the source of any criterion — and so the readiness gate is satisfied before material is authored."}
+                  {found.part ? t("fromDoc.filedPart") : t("fromDoc.filed")}
                 </p>
               </>
             )}
@@ -562,16 +484,18 @@ export function FromDocument({
 /**
  * Where you are, and what is left.
  *
- * Three steps rather than a bar with a percentage, because the steps are real
- * and a percentage would not be. Each is named by what the person does at it,
- * not by what the system does - "check what was found" rather than "parsing".
+ * Steps rather than a bar with a percentage, because the steps are real and a
+ * percentage would not be. Each is named by what the person does at it, not by
+ * what the system does: "check what was found" rather than "parsing".
  */
 function Steps({
   current,
   labels,
+  hereLabel,
 }: {
   current: number;
   labels: string[];
+  hereLabel: string;
 }) {
   return (
     <ol className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -594,15 +518,9 @@ function Steps({
             >
               {done ? "✓" : number}
             </span>
-            <span
-              className={
-                here
-                  ? "font-medium text-[var(--foreground)]"
-                  : "text-[var(--muted)]"
-              }
-            >
+            <span className={here ? "font-medium text-[var(--foreground)]" : "text-[var(--muted)]"}>
               {label}
-              {here ? <span className="sr-only"> (you are here)</span> : null}
+              {here ? <span className="sr-only">{hereLabel}</span> : null}
             </span>
             {number < labels.length ? (
               <span aria-hidden className="text-[var(--muted)]">

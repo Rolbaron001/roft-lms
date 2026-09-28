@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { removeQualificationAction, type RemoveState } from "./remove-actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 /**
  * Removing a qualification, or being told why not.
@@ -32,22 +34,16 @@ export function RemoveQualification({
   /** What would go with it. */
   removes: { what: string; count: number }[];
 }) {
-  const [state, action, working] = useActionState<RemoveState, FormData>(
-    removeQualificationAction,
-    {},
-  );
+  const t = useT();
+  const [state, action, working] = useActionState<RemoveState, FormData>(removeQualificationAction, {});
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
 
   if (holds.length > 0) {
     return (
       <section className="mt-8 rounded-lg border border-[var(--border)] p-4">
-        <p className="text-sm font-medium">This qualification cannot be removed</p>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Things have been recorded against it, and the platform keeps them.
-          They are what a QCTO audit asks about, and they outlive the
-          qualification they were recorded under.
-        </p>
+        <p className="text-sm font-medium">{t("removeQual.cannot")}</p>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("removeQual.cannotWhy")}</p>
         <ul className="mt-2 space-y-0.5 text-sm">
           {holds.map((hold) => (
             <li key={hold.what}>
@@ -60,28 +56,22 @@ export function RemoveQualification({
     );
   }
 
+  const listed = removes.map((row) => `${row.count} ${row.what}`);
+  const items =
+    listed.length > 1
+      ? `${listed.slice(0, -1).join(", ")}${t("removeQual.and")}${listed[listed.length - 1]}`
+      : (listed[0] ?? "");
+
   return (
     <section
       className="mt-8 rounded-lg border p-4"
       style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
     >
-      <p className="text-sm font-medium">Remove this qualification</p>
-      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-        Nothing has been recorded against it — no learner is enrolled, no
-        sitting is registered and no Statement of Results has been issued — so
-        it can be removed. This cannot be undone.
-      </p>
+      <p className="text-sm font-medium">{t("removeQual.title")}</p>
+      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("removeQual.canWhy")}</p>
 
       {removes.length > 0 ? (
-        <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-          It would take{" "}
-          {removes
-            .map((row) => `${row.count} ${row.what}`)
-            .join(", ")
-            .replace(/, ([^,]*)$/, " and $1")}{" "}
-          with it, along with every topic, element, criterion and filed
-          document beneath them.
-        </p>
+        <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">{t("removeQual.wouldTake", { items })}</p>
       ) : null}
 
       {state.error ? (
@@ -97,7 +87,7 @@ export function RemoveQualification({
 
           <label className="block max-w-xl text-sm">
             <span className="text-[var(--muted)]">
-              Type the title to confirm: <span className="font-medium">{title}</span>
+              <Rich text={t("removeQual.typeTitle")} parts={{ title: <span className="font-medium">{title}</span> }} />
             </span>
             <input
               name="confirm"
@@ -115,7 +105,7 @@ export function RemoveQualification({
               className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               style={{ background: "var(--danger)" }}
             >
-              {working ? "Removing…" : "Remove it permanently"}
+              {working ? t("removeQual.removing") : t("removeQual.remove")}
             </button>
             <button
               type="button"
@@ -125,7 +115,7 @@ export function RemoveQualification({
               }}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -136,7 +126,7 @@ export function RemoveQualification({
           className="mt-3 rounded-md border px-3 py-1.5 text-sm"
           style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
         >
-          Remove this qualification…
+          {t("removeQual.start")}
         </button>
       )}
     </section>

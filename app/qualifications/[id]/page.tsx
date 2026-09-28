@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAnyPermission, requireCapability } from "@/lib/request";
+import { pageT, requireAnyPermission, requireCapability } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
@@ -12,7 +12,9 @@ import {
 } from "@/lib/programme-documents";
 import { describeSize } from "@/lib/media";
 import { extensionOffered, extensionState } from "@/lib/extensions";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card } from "@/components/app-shell";
+import { Rich } from "@/components/rich-text";
 import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
@@ -26,30 +28,15 @@ import { CaptureList } from "./capture/capture-list";
 import { RemoveQualification } from "./remove-qualification";
 import { connectionsFor } from "@/lib/drive";
 
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge module",
-  practical: "Practical skills module",
-  workplace: "Work experience module",
-  general: "Module",
-};
-
 /**
  * What the curriculum document says, as the platform holds it.
  *
  * Codes are shown exactly as the document numbers them, in the document's
  * order, so somebody can read the two side by side and check the transcription
- * line by line. That check is the point: everything downstream — the Learning
- * Material Matrix, readiness, the Statement of Results — is only as good as
+ * line by line. That check is the point: everything downstream (the Learning
+ * Material Matrix, readiness, the Statement of Results) is only as good as
  * what was typed in here.
  */
-const ELEMENT_LABELS: Record<string, string> = {
-  knowledge_topic: "Topic elements",
-  practical_activity: "Required performance",
-  applied_knowledge: "Applied knowledge",
-  work_activity: "Work activities",
-  contextual_knowledge: "Contextual workplace knowledge",
-  supporting_evidence: "Supporting evidence",
-};
 
 /*
  * `?just=created` is no longer read.
@@ -99,6 +86,10 @@ export default async function QualificationPage({
     "assessment:assess",
     "assessment:moderate",
   ]);
+  const t = await pageT();
+  const componentLabel = (component: string) => maybe(t, `qualPage.componentModule.${component}`) ?? component;
+  const kindLabel = (kind: string) =>
+    maybe(t, `docKind.${kind}`) ?? DOCUMENT_KIND_LABELS[kind as DocumentKind] ?? kind;
   const canManage = session.permissions.includes("qualification:manage");
   // Administrators and facilitators, which is who job sheet 2.1 named.
   const canAuthorCourses = session.permissions.includes("course:author");
@@ -107,8 +98,7 @@ export default async function QualificationPage({
   const drives = canManage ? await connectionsFor(session) : [];
 
   const outline = await curriculumOutline(session, id);
-  const { qualification, modules, studyUnits, outcomes, unplacedModules } =
-    outline;
+  const { qualification, modules, studyUnits, outcomes, unplacedModules } = outline;
   const [documents, uploadTargets] = await Promise.all([
     listProgrammeDocuments(session, id),
     // Only where something will be uploaded. It asserts the permission to
@@ -148,20 +138,15 @@ export default async function QualificationPage({
    * there is a curriculum to describe - a blueprint of no modules is not a
    * file worth downloading, and the reader would ignore it anyway.
    */
-  const blueprint =
-    canManage && modules.length > 0 ? blueprintFrom(outline) : null;
+  const blueprint = canManage && modules.length > 0 ? blueprintFrom(outline) : null;
 
   // Read only so the top-up form can say what an extension would add. A folder
   // that includes a summary of itself needs none.
   const extension = await extensionState(session);
-  const mayUseExtension =
-    extensionOffered() && session.permissions.includes("extension:use");
+  const mayUseExtension = extensionOffered() && session.permissions.includes("extension:use");
 
   const totalCriteria = modules.reduce(
-    (sum, m) =>
-      sum +
-      m.topics.reduce((t, topic) => t + topic.criteria.length, 0) +
-      m.looseCriteria.length,
+    (sum, m) => sum + m.topics.reduce((total, topic) => total + topic.criteria.length, 0) + m.looseCriteria.length,
     0,
   );
   /*
@@ -169,14 +154,14 @@ export default async function QualificationPage({
    *
    * A work experience module is not one of them, ever. It is proved by a
    * logbook a coach signs rather than by assessment criteria, so having none
-   * is its finished state — the parser and the importer both already know
+   * is its finished state: the parser and the importer both already know
    * that, and this screen did not.
    *
    * The result was a warning on every correctly imported QCTO qualification:
    * the HRM Officer read perfectly and then announced "5 of 15 modules have no
    * criteria yet", because five of its fifteen are work experience modules.
    * Somebody importing for the first time reads that as the import having
-   * half failed — which is exactly the kind of false alarm that made the test
+   * half failed, which is exactly the kind of false alarm that made the test
    * on 16 September feel like a failure.
    */
   const notCaptured = modules.filter(
@@ -196,8 +181,7 @@ export default async function QualificationPage({
    * convenience rather than by rule. What matters is that somebody can see
    * which of them are outstanding without reading the whole page.
    */
-  const studyUnitsPlaced =
-    studyUnits.length > 0 && unplacedModules.length === 0;
+  const studyUnitsPlaced = studyUnits.length > 0 && unplacedModules.length === 0;
 
   /*
    * What is taught from, as opposed to what the qualification is built out of.
@@ -210,9 +194,7 @@ export default async function QualificationPage({
    * TEACHING_KINDS names them positively instead, so a kind that nobody has
    * classified does not quietly count.
    */
-  const teachingMaterial = documents.filter((document) =>
-    TEACHING_KINDS.has(document.kind as DocumentKind),
-  );
+  const teachingMaterial = documents.filter((document) => TEACHING_KINDS.has(document.kind as DocumentKind));
 
   /*
    * Each study unit's own material, so it can be read where somebody looks
@@ -251,28 +233,30 @@ export default async function QualificationPage({
    */
   const steps = [
     {
-      title: "The curriculum",
+      title: t("qualPage.step.curriculum"),
       done: modules.length > 0,
       state:
         modules.length > 0
-          ? `${modules.length} modules, ${totalCriteria} assessment criteria, read from the qualification's own documents.`
-          : "Nothing here can be taught or assessed until its modules exist.",
+          ? t("qualPage.step.curriculumDone", { modules: modules.length, criteria: totalCriteria })
+          : t("qualPage.step.curriculumTodo"),
       href: "#curriculum",
-      action: "Build it by hand",
+      action: t("qualPage.step.curriculumAction"),
     },
     {
-      title: "Study units",
+      title: t("qualPage.step.units"),
       done: studyUnitsPlaced,
       state: studyUnitsPlaced
-        ? `${studyUnits.length} units, with every module placed in one.`
+        ? t("qualPage.step.unitsDone", { count: studyUnits.length })
         : studyUnits.length === 0
-          ? "The curriculum publishes modules and says nothing about how you group them, so this is yours to decide. Your alignment document does it in one upload — Word or Excel."
-          : `${unplacedModules.length} ${unplacedModules.length === 1 ? "module belongs" : "modules belong"} to no unit yet. A module no study unit delivers is a module nobody teaches.`,
+          ? t("qualPage.step.unitsNone")
+          : unplacedModules.length === 1
+            ? t("qualPage.step.unitsSomeOne")
+            : t("qualPage.step.unitsSome", { count: unplacedModules.length }),
       href: `/qualifications/${id}?view=build#add-document`,
-      action: "Upload the alignment document",
+      action: t("qualPage.step.unitsAction"),
     },
     {
-      title: "The material",
+      title: t("qualPage.step.material"),
       /*
        * Teaching material, not the qualification's own source documents.
        *
@@ -285,10 +269,10 @@ export default async function QualificationPage({
       done: teachingMaterial.length > 0,
       state:
         teachingMaterial.length > 0
-          ? `${teachingMaterial.length} theory guides, workbooks and assessments filed.`
-          : "The theory guides, workbooks and assessments. The whole folder goes in at once, answer guides are recognised and withheld from learners, and no AI is involved at any point.",
+          ? t("qualPage.step.materialDone", { count: teachingMaterial.length })
+          : t("qualPage.step.materialTodo"),
       href: `/qualifications/${id}?view=build#material`,
-      action: "Add the folder",
+      action: t("qualPage.step.materialAction"),
     },
     /*
      * The step that was missing entirely.
@@ -306,62 +290,63 @@ export default async function QualificationPage({
     ...(capture && capture.total > 0
       ? [
           {
-            title: "Workbooks and assessments",
+            title: t("qualPage.step.capture"),
             done: capture.captured === capture.total,
             state:
               capture.captured === capture.total
-                ? `All ${capture.total} captured. Learners can answer them on screen.`
-                : `${capture.captured} of ${capture.total} captured. The rest are files a learner can only download.`,
+                ? t("qualPage.step.captureDone", { count: capture.total })
+                : t("qualPage.step.captureTodo", { captured: capture.captured, total: capture.total }),
             href: `/qualifications/${id}?view=build#capture`,
-            action: "Capture them",
+            action: t("qualPage.step.captureAction"),
           },
         ]
       : []),
   ];
 
+  const folderExtension = mayUseExtension
+    ? {
+        on: extension.on,
+        available: extension.availability?.available ?? false,
+        registered: extension.registered,
+        reason: extension.availability?.reason ?? null,
+      }
+    : null;
+  const driveList = drives.map((one) => ({
+    provider: one.provider,
+    label: one.label,
+    accountLabel: one.accountLabel,
+  }));
+
   return (
     <AppShell tenant={tenant} session={session}>
-      {/*
-        What just happened, and what is left.
-
-        Creating a qualification from its documents used to land somebody on a
-        full screen with nothing to say that anything had happened — the
-        curriculum is in, the material is not, and the difference is not
-        obvious from looking at it. Heidi had no way to tell how far she had
-        got, which is half of why the test on 16 September felt like a failure
-        rather than a step.
-
-        Shown once, on arrival. It is not a state the qualification is in.
-      */}
-
-
       <div className="mb-6">
-        <Link
-          href="/qualifications"
-          className="text-sm text-[var(--muted)] underline-offset-2 hover:underline"
-        >
-          ← All qualifications
+        <Link href="/qualifications" className="text-sm text-[var(--muted)] underline-offset-2 hover:underline">
+          {t("qualPage.all")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{qualification.title}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {[
-            qualification.saqaId ? `SAQA ${qualification.saqaId}` : null,
+            qualification.saqaId ? t("qualPage.saqa", { id: qualification.saqaId }) : null,
             qualification.curriculumCode,
-            qualification.nqfLevel ? `NQF ${qualification.nqfLevel}` : null,
-            qualification.totalCredits
-              ? `${qualification.totalCredits} credits`
-              : null,
+            qualification.nqfLevel ? t("qualPage.nqf", { level: qualification.nqfLevel }) : null,
+            qualification.totalCredits ? t("qualPage.credits", { credits: qualification.totalCredits }) : null,
             qualification.assessmentQualityPartner,
           ]
             .filter(Boolean)
             .join(" · ")}
         </p>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          {modules.length} modules · {totalCriteria} internal assessment
-          criteria ·{" "}
-          {qualification.componentWeights
-            ? `weighted ${Math.round(qualification.componentWeights.knowledge * 100)}/${Math.round(qualification.componentWeights.practical * 100)}/${Math.round(qualification.componentWeights.workplace * 100)} as stated in the document`
-            : "no component weighting stated — readiness derives it from credits"}
+          {t("qualPage.summary", {
+            modules: modules.length,
+            criteria: totalCriteria,
+            weighting: qualification.componentWeights
+              ? t("qualPage.weighted", {
+                  k: Math.round(qualification.componentWeights.knowledge * 100),
+                  p: Math.round(qualification.componentWeights.practical * 100),
+                  w: Math.round(qualification.componentWeights.workplace * 100),
+                })
+              : t("qualPage.notWeighted"),
+          })}
         </p>
         {/*
           A part qualification is not built here and must not offer to be. Its
@@ -370,16 +355,19 @@ export default async function QualificationPage({
         */}
         {qualification.parentQualificationId ? (
           <p className="mt-2 text-sm text-[var(--muted)]">
-            A part qualification drawn from{" "}
-            <Link
-              href={`/qualifications/${qualification.parentQualificationId}`}
-              className="underline underline-offset-2"
-            >
-              its parent qualification
-            </Link>
-            , whose curriculum it shares. Nothing is copied, so a
-            learner&rsquo;s work against a module counts once wherever they met
-            it.
+            <Rich
+              text={t("qualPage.partOf")}
+              parts={{
+                parent: (
+                  <Link
+                    href={`/qualifications/${qualification.parentQualificationId}`}
+                    className="underline underline-offset-2"
+                  >
+                    {t("qualPage.parentLink")}
+                  </Link>
+                ),
+              }}
+            />
           </p>
         ) : null}
 
@@ -392,9 +380,7 @@ export default async function QualificationPage({
             }
             className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
           >
-            {qualification.parentQualificationId
-              ? "Choose which modules this takes"
-              : "Build the curriculum"}
+            {qualification.parentQualificationId ? t("qualPage.chooseModules") : t("qualPage.buildCurriculum")}
           </Link>
         ) : null}
       </div>
@@ -410,161 +396,101 @@ export default async function QualificationPage({
           basePath={`/qualifications/${id}`}
           current={view}
           tabs={[
-            { id: "holds", label: "The qualification" },
-            { id: "build", label: "Add to it" },
+            { id: "holds", label: t("qualPage.tabHolds") },
+            { id: "build", label: t("qualPage.tabBuild") },
           ]}
         />
       ) : null}
 
       {view === "build" ? (
         <section className="mb-8">
-          <h2 className="mb-2 font-semibold">Add to this qualification</h2>
-          <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-            Everything that puts something in. What is already here is on the
-            other tab.
-          </p>
-        {canManage ? (
-          <>
-            {/*
-          Finishing a curriculum, rather than filing material against one.
+          <h2 className="mb-2 font-semibold">{t("qualPage.addTitle")}</h2>
+          <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">{t("qualPage.addIntro")}</p>
+          {canManage ? (
+            <>
+              {/*
+                Finishing a curriculum, rather than filing material against one.
 
-          Roland asked on 15 September whether a qualification loaded from an
-          incomplete folder could be completed by pointing at the finished one.
-          It can, and this is where. It is deliberately a separate control from
-          the material picker below: the two do different things to the same
-          folder, and nothing on the screen would otherwise say which one a
-          person was about to get.
-        */}
-            <Card>
-              <p className="mb-3 text-sm font-medium">
-                Finish this qualification from a fuller folder
-              </p>
-              <FolderPicker
-                qualificationId={id}
-                topUp
-                label="The completed folder for this qualification, from your own computer"
-                extension={
-                  mayUseExtension
-                    ? {
-                        on: extension.on,
-                        available: extension.availability?.available ?? false,
-                        registered: extension.registered,
-                        reason: extension.availability?.reason ?? null,
-                      }
-                    : null
-                }
-                hint={
-                  <>
-                    For a qualification that was loaded before its documents
-                    were complete. The whole folder is read again — the
-                    curriculum as well as the material — and only what is
-                    missing is added.
-                    <br />
-                    Nothing already here is changed or replaced, down to the
-                    wording of a single criterion, and running it twice does
-                    nothing the second time. You still see everything it found
-                    and confirm it before any of it is written.
-                  </>
-                }
-              />
-
-              {drives.length > 0 ? (
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <p className="mb-2 text-xs text-[var(--muted)]">
-                    Or the completed folder from a drive you have connected. It
-                    tops up the same way: only what is missing is added.
-                  </p>
-                  <DrivePicker
-                    drives={drives.map((one) => ({
-                      provider: one.provider,
-                      label: one.label,
-                      accountLabel: one.accountLabel,
-                    }))}
-                    qualificationId={id}
-                    topUp
-                  />
-                </div>
-              ) : null}
-            </Card>
-
-            <div id="material" className="mt-4 scroll-mt-24">
-              {studyUnitsPlaced && teachingMaterial.length === 0 ? (
-                <PointHere>
-                  The material goes here — the whole folder at once. Nothing is
-                  saved until you have seen what it found.
-                </PointHere>
-              ) : null}
+                Roland asked on 15 September whether a qualification loaded from an
+                incomplete folder could be completed by pointing at the finished one.
+                It can, and this is where. It is deliberately a separate control from
+                the material picker below: the two do different things to the same
+                folder, and nothing on the screen would otherwise say which one a
+                person was about to get.
+              */}
               <Card>
-                <p className="mb-3 text-sm font-medium">
-                  A whole folder at once
-                </p>
+                <p className="mb-3 text-sm font-medium">{t("qualPage.finish")}</p>
                 <FolderPicker
                   qualificationId={id}
-                  label="A folder of material, from your own computer"
+                  topUp
+                  label={t("qualPage.finishLabel")}
+                  extension={folderExtension}
                   hint={
                     <>
-                      Theory guides and workbooks go to the study unit their
-                      filename names, policies and contracts to the document
-                      library, and everything else against this qualification.
-                      No AI is used here at all — sorting documents by name is a
-                      rule rather than a judgement.
+                      {t("qualPage.finishHint")}
+                      <br />
+                      {t("qualPage.finishHint2")}
                     </>
                   }
                 />
-              </Card>
-            </div>
 
-            {drives.length > 0 ? (
-              <div className="mt-4">
+                {drives.length > 0 ? (
+                  <div className="mt-4 border-t border-[var(--border)] pt-4">
+                    <p className="mb-2 text-xs text-[var(--muted)]">{t("qualPage.finishDrive")}</p>
+                    <DrivePicker drives={driveList} qualificationId={id} topUp />
+                  </div>
+                ) : null}
+              </Card>
+
+              <div id="material" className="mt-4 scroll-mt-24">
+                {studyUnitsPlaced && teachingMaterial.length === 0 ? (
+                  <PointHere>{t("qualPage.materialHere")}</PointHere>
+                ) : null}
                 <Card>
-                  <p className="mb-3 text-sm font-medium">
-                    Or the folder where it already lives
-                  </p>
-                  <DrivePicker
-                    drives={drives.map((one) => ({
-                      provider: one.provider,
-                      label: one.label,
-                      accountLabel: one.accountLabel,
-                    }))}
+                  <p className="mb-3 text-sm font-medium">{t("qualPage.wholeFolder")}</p>
+                  <FolderPicker
                     qualificationId={id}
+                    label={t("qualPage.materialLabel")}
+                    hint={<>{t("qualPage.materialHint")}</>}
                   />
                 </Card>
               </div>
-            ) : null}
 
-            <div className="mt-4">
-              {/*
-                The pointer sits on the control, not in a sentence describing
-                where the control might be. Shown only while this is the step
-                somebody is on, so it is never pointing at finished work.
-              */}
-              {!studyUnitsPlaced && modules.length > 0 ? (
-                <PointHere>
-                  Your alignment document goes here — choose it, set its kind to
-                  Curriculum Alignment Matrix, and upload. That builds the study
-                  units.
-                </PointHere>
+              {drives.length > 0 ? (
+                <div className="mt-4">
+                  <Card>
+                    <p className="mb-3 text-sm font-medium">{t("qualPage.whereItLives")}</p>
+                    <DrivePicker drives={driveList} qualificationId={id} />
+                  </Card>
+                </div>
               ) : null}
-              <Card>
-                <p
-                  id="add-document"
-                  className="mb-3 scroll-mt-24 text-sm font-medium"
-                >
-                  Or one document
-                </p>
-                <DocumentUploader
-                  qualificationId={id}
-                  kinds={DOCUMENT_KINDS.map((kind) => ({
-                    value: kind,
-                    label: DOCUMENT_KIND_LABELS[kind],
-                  }))}
-                  units={uploadTargets?.units ?? []}
-                  modules={uploadTargets?.modules ?? []}
-                />
-              </Card>
-            </div>
-          </>
-        ) : null}
+
+              <div className="mt-4">
+                {/*
+                  The pointer sits on the control, not in a sentence describing
+                  where the control might be. Shown only while this is the step
+                  somebody is on, so it is never pointing at finished work.
+                */}
+                {!studyUnitsPlaced && modules.length > 0 ? (
+                  <PointHere>{t("qualPage.alignmentHere")}</PointHere>
+                ) : null}
+                <Card>
+                  <p id="add-document" className="mb-3 scroll-mt-24 text-sm font-medium">
+                    {t("qualPage.oneDocument")}
+                  </p>
+                  <DocumentUploader
+                    qualificationId={id}
+                    kinds={DOCUMENT_KINDS.map((kind) => ({
+                      value: kind,
+                      label: kindLabel(kind),
+                    }))}
+                    units={uploadTargets?.units ?? []}
+                    modules={uploadTargets?.modules ?? []}
+                  />
+                </Card>
+              </div>
+            </>
+          ) : null}
           {/*
             Turning the filed workbooks into something a learner can answer.
 
@@ -576,9 +502,7 @@ export default async function QualificationPage({
           {capturable.length > 0 ? (
             <div id="capture" className="mt-6 scroll-mt-24">
               <Card>
-                <p className="mb-2 text-sm font-medium">
-                  Workbooks and assessments
-                </p>
+                <p className="mb-2 text-sm font-medium">{t("qualPage.capture")}</p>
                 <CaptureList qualificationId={id} rows={capturable} />
               </Card>
             </div>
@@ -595,40 +519,38 @@ export default async function QualificationPage({
           */}
           {blueprint ? (
             <div className="mt-6">
-            <Card>
-              <p className="text-sm font-medium">Save its blueprint</p>
-              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-                A file describing this curriculum exactly:{" "}
-                {blueprint.file.knowledge_modules.length +
-                  blueprint.file.practical_modules.length +
-                  blueprint.file.workplace_modules.length}{" "}
-                modules, with their topics, what each teaches and what each is
-                assessed by. Put it in the qualification folder&rsquo;s{" "}
-                <code className="rounded bg-[var(--surface)] px-1">_control</code>{" "}
-                directory and every import of that folder afterwards reads it
-                straight off — in seconds, with no AI extension involved at any
-                point.
-              </p>
-              <a
-                href={`/api/blueprint/${id}`}
-                className="mt-3 inline-block rounded-md px-3 py-1.5 text-sm font-medium text-white"
-                style={{ background: "var(--brand-primary)" }}
-              >
-                Download {blueprint.filename}
-              </a>
-              {blueprint.notes.length > 0 ? (
-                <div className="mt-3 border-t border-[var(--border)] pt-3">
-                  <p className="text-xs font-medium text-[var(--muted)]">
-                    What the file does not carry
-                  </p>
-                  <ul className="mt-1 list-disc pl-5 text-xs text-[var(--muted)]">
-                    {blueprint.notes.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </Card>
+              <Card>
+                <p className="text-sm font-medium">{t("qualPage.blueprint")}</p>
+                <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+                  <Rich
+                    text={t("qualPage.blueprintIntro")}
+                    parts={{
+                      count:
+                        blueprint.file.knowledge_modules.length +
+                        blueprint.file.practical_modules.length +
+                        blueprint.file.workplace_modules.length,
+                      folder: <code className="rounded bg-[var(--surface)] px-1">_control</code>,
+                    }}
+                  />
+                </p>
+                <a
+                  href={`/api/blueprint/${id}`}
+                  className="mt-3 inline-block rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                  style={{ background: "var(--brand-primary)" }}
+                >
+                  {t("qualPage.download", { file: blueprint.filename })}
+                </a>
+                {blueprint.notes.length > 0 ? (
+                  <div className="mt-3 border-t border-[var(--border)] pt-3">
+                    <p className="text-xs font-medium text-[var(--muted)]">{t("qualPage.notCarried")}</p>
+                    <ul className="mt-1 list-disc pl-5 text-xs text-[var(--muted)]">
+                      {blueprint.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </Card>
             </div>
           ) : null}
 
@@ -647,557 +569,430 @@ export default async function QualificationPage({
           ) : null}
         </section>
       ) : (
-      <>
-
-      {/*
-        The way around the long tab.
-
-        Roland, 19 September: "A floating navigation bar or sub-menu would work
-        better for such long pages." This one runs to fifteen modules, five
-        hundred curriculum lines and eighty documents; by the time somebody is
-        reading a criterion the headings are a screen and a half above them.
-
-        Only on this tab. The build tab is a column of forms somebody works
-        down in order, and a menu over the top of it would be answering a
-        question nobody is asking there.
-      */}
-      <PageNav />
-
-      {notCaptured.length > 0 ? (
-        <div
-          className="mb-6 rounded-lg border-2 p-4"
-          style={{ borderColor: "var(--danger)" }}
-        >
-          <p
-            className="text-sm font-semibold"
-            style={{ color: "var(--danger)" }}
-          >
-            {notCaptured.length} of {modules.length} modules have no criteria
-            yet.
-          </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Nobody can be declared ready for the EISA against this qualification
-            until the whole curriculum document has been transcribed — a module
-            with no criteria cannot be failed, so leaving them empty would make
-            every learner look finished.
-          </p>
-        </div>
-      ) : null}
-
-      {studyUnits.length > 0 || outcomes.length > 0 ? (
-        <section
-          id="structure"
-          data-page-section="Study units"
-          className="mb-8 scroll-mt-24"
-        >
-          <h2 className="mb-2 font-semibold">Delivery structure</h2>
-          <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-            The curriculum publishes modules; a provider teaches study units.
-            Each bundles the Knowledge, Practical and Work Experience modules
-            that serve one Exit Level Outcome, which is what the External
-            Integrated Summative Assessment is set against. Two providers may
-            group the same qualification differently and both be correct, so
-            this is the provider&rsquo;s structure rather than the
-            curriculum&rsquo;s.
-          </p>
-
+        <>
           {/*
-            The way to see whether any of it actually reaches a learner.
+            The way around the long tab.
 
-            Job sheet 2.1. Every screen here shows what exists; that one shows
-            what is reachable, and names the study units a learner would open
-            and find empty. A tested pipeline with no screen is a feature that
-            does not exist, and a screen with no link to it is the same thing.
+            Roland, 19 September: "A floating navigation bar or sub-menu would work
+            better for such long pages." This one runs to fifteen modules, five
+            hundred curriculum lines and eighty documents; by the time somebody is
+            reading a criterion the headings are a screen and a half above them.
+
+            Only on this tab. The build tab is a column of forms somebody works
+            down in order, and a menu over the top of it would be answering a
+            question nobody is asking there.
           */}
-          {canAuthorCourses ? (
-            <p className="mb-4 text-sm">
-              <Link
-                href={`/qualifications/${id}/preview`}
-                className="underline underline-offset-2"
-              >
-                See it as a learner will
-              </Link>
-              <span className="text-[var(--muted)]">
-                {" "}
-                shows the whole programme in the order it is walked, with
-                anything a learner would not find named. Nothing is started and
-                nothing is recorded.
-              </span>
-            </p>
+          <PageNav />
+
+          {notCaptured.length > 0 ? (
+            <div className="mb-6 rounded-lg border-2 p-4" style={{ borderColor: "var(--danger)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--danger)" }}>
+                {t("qualPage.notCaptured", { count: notCaptured.length, total: modules.length })}
+              </p>
+              <p className="mt-1 text-sm text-[var(--muted)]">{t("qualPage.notCapturedWhy")}</p>
+            </div>
           ) : null}
 
-          {/*
-            Two different situations, and they were being told apart by nobody.
+          {studyUnits.length > 0 || outcomes.length > 0 ? (
+            <section id="structure" data-page-section={t("qualPage.nav.units")} className="mb-8 scroll-mt-24">
+              <h2 className="mb-2 font-semibold">{t("qualPage.structure")}</h2>
+              <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">{t("qualPage.structureIntro")}</p>
 
-            A qualification built from its two base documents has no study
-            units at all, because a curriculum publishes modules and says
-            nothing about how a provider groups them. So every module is
-            unplaced, and the first thing somebody saw after a successful
-            import was a red box announcing that fifteen modules were taught
-            by nobody - which reads as the import having failed when it did
-            exactly what it was asked to.
+              {/*
+                The way to see whether any of it actually reaches a learner.
 
-            The alarming version is right once some study units exist: modules
-            left out of a structure that is otherwise built is a real gap.
-            Before that it is simply the next step, and saying what that step
-            is matters more than the colour of the box.
-          */}
-          {unplacedModules.length > 0 ? (
-            studyUnits.length === 0 ? (
-              <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-                <p className="text-sm font-semibold">
-                  The next step: group these modules into study units.
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  The curriculum publishes modules and says nothing about study
-                  units, because grouping them is the provider&rsquo;s own
-                  decision — so a qualification read from its documents arrives
-                  with all {unplacedModules.length} of its modules unplaced.
-                  That is expected, not a fault in the import.
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  Upload your alignment document — the one mapping each Exit
-                  Level Outcome to its modules, in Word or Excel. It creates the
-                  study units, names them, and places every module it covers.
-                </p>
-                {/*
-                  A link, because "under the documents below" is not a
-                  direction on a page this long. The sentence that used to sit
-                  here also offered to build them "by hand here", pointing at a
-                  screen that does not exist - worse than a vague pointer,
-                  because somebody looks for it.
-                */}
-                <p className="mt-2">
-                  <Link
-                    href={`/qualifications/${id}?view=build#add-document`}
-                    className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
-                    style={{ background: "var(--brand-primary)" }}
-                  >
-                    Take me to the upload →
+                Job sheet 2.1. Every screen here shows what exists; that one shows
+                what is reachable, and names the study units a learner would open
+                and find empty. A tested pipeline with no screen is a feature that
+                does not exist, and a screen with no link to it is the same thing.
+              */}
+              {canAuthorCourses ? (
+                <p className="mb-4 text-sm">
+                  <Link href={`/qualifications/${id}/preview`} className="underline underline-offset-2">
+                    {t("qualPage.seeAsLearner")}
                   </Link>
+                  <span className="text-[var(--muted)]">{t("qualPage.seeAsLearnerNote")}</span>
                 </p>
-              </div>
-            ) : (
-              <div
-                className="mb-4 rounded-lg border-2 p-4"
-                style={{ borderColor: "var(--danger)" }}
-              >
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: "var(--danger)" }}
-                >
-                  {unplacedModules.length}{" "}
-                  {unplacedModules.length === 1
-                    ? "module belongs"
-                    : "modules belong"}{" "}
-                  to no study unit.
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  {unplacedModules.map((m) => m.code).join(", ")}. A module no
-                  study unit delivers is a module nobody teaches, however
-                  completely its curriculum has been captured.
-                </p>
-              </div>
-            )
-          ) : null}
+              ) : null}
 
-          <div className="space-y-3">
-            {studyUnits.map((unit) => (
-              <Card key={unit.id}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <p className="font-medium">
-                      <span className="font-mono text-sm">{unit.code}</span>{" "}
-                      {unit.title}
+              {/*
+                Two different situations, and they were being told apart by nobody.
+
+                A qualification built from its two base documents has no study
+                units at all, because a curriculum publishes modules and says
+                nothing about how a provider groups them. So every module is
+                unplaced, and the first thing somebody saw after a successful
+                import was a red box announcing that fifteen modules were taught
+                by nobody - which reads as the import having failed when it did
+                exactly what it was asked to.
+
+                The alarming version is right once some study units exist: modules
+                left out of a structure that is otherwise built is a real gap.
+                Before that it is simply the next step, and saying what that step
+                is matters more than the colour of the box.
+              */}
+              {unplacedModules.length > 0 ? (
+                studyUnits.length === 0 ? (
+                  <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <p className="text-sm font-semibold">{t("qualPage.nextStep")}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      {t("qualPage.nextStepWhy", { count: unplacedModules.length })}
                     </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {unit.outcome
-                        ? `Exit Level Outcome ${unit.outcome.number}`
-                        : "Aligned to no Exit Level Outcome"}
-                      {unit.credits ? ` · ${unit.credits} credits` : ""}
+                    <p className="mt-1 text-sm text-[var(--muted)]">{t("qualPage.nextStepHow")}</p>
+                    {/*
+                      A link, because "under the documents below" is not a
+                      direction on a page this long. The sentence that used to sit
+                      here also offered to build them "by hand here", pointing at a
+                      screen that does not exist - worse than a vague pointer,
+                      because somebody looks for it.
+                    */}
+                    <p className="mt-2">
+                      <Link
+                        href={`/qualifications/${id}?view=build#add-document`}
+                        className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+                        style={{ background: "var(--brand-primary)" }}
+                      >
+                        {t("qualPage.takeMe")}
+                      </Link>
                     </p>
                   </div>
-                  <p className="text-sm text-[var(--muted)] tabular-nums">
-                    {unit.modules.length}{" "}
-                    {unit.modules.length === 1 ? "module" : "modules"}
-                  </p>
-                </div>
+                ) : (
+                  <div className="mb-4 rounded-lg border-2 p-4" style={{ borderColor: "var(--danger)" }}>
+                    <p className="text-sm font-semibold" style={{ color: "var(--danger)" }}>
+                      {unplacedModules.length === 1
+                        ? t("qualPage.unplacedOne")
+                        : t("qualPage.unplaced", { count: unplacedModules.length })}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      {t("qualPage.unplacedWhy", { modules: unplacedModules.map((m) => m.code).join(", ") })}
+                    </p>
+                  </div>
+                )
+              ) : null}
 
-                {unit.outcome ? (
-                  <div className="mt-3 border-t border-[var(--border)] pt-3">
-                    <p className="text-sm">{unit.outcome.description}</p>
-                    {unit.outcome.criteria.length > 0 ? (
-                      <>
-                        <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                          Associated assessment criteria — what the EISA tests
+              <div className="space-y-3">
+                {studyUnits.map((unit) => (
+                  <Card key={unit.id}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          <span className="font-mono text-sm">{unit.code}</span> {unit.title}
+                        </p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {unit.outcome ? t("qualPage.elo", { number: unit.outcome.number }) : t("qualPage.noElo")}
+                          {unit.credits ? ` · ${t("qualPage.credits", { credits: unit.credits })}` : ""}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[var(--muted)] tabular-nums">
+                        {unit.modules.length === 1 ? t("qual.oneModule") : t("qual.modules", { count: unit.modules.length })}
+                      </p>
+                    </div>
+
+                    {unit.outcome ? (
+                      <div className="mt-3 border-t border-[var(--border)] pt-3">
+                        <p className="text-sm">{unit.outcome.description}</p>
+                        {unit.outcome.criteria.length > 0 ? (
+                          <>
+                            <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                              {t("qualPage.eisaTests")}
+                            </p>
+                            <ul className="mt-1.5 space-y-1">
+                              {unit.outcome.criteria.map((criterion) => (
+                                <li key={criterion.id} className="text-sm">
+                                  {criterion.description}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {unit.modules.length > 0 ? (
+                      <ul className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+                        {/*
+                          Chips that go somewhere.
+
+                          Roland: "there are no links on the buttons, so I can't
+                          view the respective modules." They looked exactly like
+                          controls and did nothing. There is no page per module -
+                          a module's content is a card further down this one - so
+                          each goes to that card.
+                        */}
+                        {unit.modules.map((entry) => (
+                          <li key={entry.id}>
+                            <Link
+                              href={`#module-${entry.code}`}
+                              className="block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/5"
+                            >
+                              <span className="font-mono">{entry.code}</span>{" "}
+                              <span className="text-[var(--muted)]">
+                                {componentLabel(entry.component)}
+                                {entry.credits ? ` · ${t("qualPage.cr", { credits: entry.credits })}` : ""}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p
+                        className="mt-3 border-t border-[var(--border)] pt-3 text-sm"
+                        style={{ color: "var(--danger)" }}
+                      >
+                        {t("qualPage.noModules")}
+                      </p>
+                    )}
+
+                    {/*
+                      What a learner and a facilitator actually work from, in the
+                      place somebody looks for it. Each one opens.
+
+                      The restricted kinds - memoranda, answer guides, summative
+                      papers - are marked, because this is a screen a facilitator
+                      reads and the difference between a workbook and its answer
+                      guide matters at a glance. What is withheld from learners is
+                      enforced on the download itself, not here; this is a label,
+                      not the lock.
+                    */}
+                    {(materialByUnit.get(unit.code) ?? []).length > 0 ? (
+                      <div className="mt-3 border-t border-[var(--border)] pt-3">
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                          {t("qualPage.unitMaterial")}
+                        </p>
+                        <ul className="space-y-1">
+                          {(materialByUnit.get(unit.code) ?? []).map((document) => (
+                            <li key={document.id} className="text-sm">
+                              <Link
+                                href={`/api/programme-documents/${document.id}`}
+                                className="underline-offset-2 hover:underline"
+                              >
+                                {document.title}
+                              </Link>{" "}
+                              <span className="text-xs text-[var(--muted)]">
+                                {kindLabel(document.kind)}
+                                {document.version ? ` · ${document.version}` : ""}
+                              </span>
+                              {RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind) ? (
+                                <span className="ml-1.5 rounded bg-[var(--border)]/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                                  {t("qualPage.withheld")}
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section id="documents" data-page-section={t("qualPage.nav.documents")} className="mb-8 scroll-mt-24">
+            <h2 className="mb-2 font-semibold">{t("qualPage.documents")}</h2>
+            <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">{t("qualPage.documentsIntro")}</p>
+            <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
+              <span className="font-medium text-[var(--foreground)]">{t("qualPage.recordNotThing")}</span>{" "}
+              {t("qualPage.recordWhy")}
+            </p>
+
+            {documents.length > 0 ? (
+              <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">{t("qualPage.document")}</th>
+                      <th className="px-4 py-3 font-medium">{t("qualPage.kind")}</th>
+                      <th className="px-4 py-3 font-medium">{t("qualPage.attached")}</th>
+                      <th className="px-4 py-3 font-medium">{t("qualPage.size")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map((document) => (
+                      <tr key={document.id} className="border-b border-[var(--border)] last:border-0">
+                        <td className="px-4 py-3">
+                          <a
+                            href={`/api/programme-documents/${document.id}`}
+                            className="font-medium underline-offset-2 hover:underline"
+                          >
+                            {document.title}
+                          </a>
+                          {document.version ? (
+                            <span className="ml-2 text-xs text-[var(--muted)]">{document.version}</span>
+                          ) : null}
+                          <p className="text-xs text-[var(--muted)]">{document.filename}</p>
+                        </td>
+                        <td className="px-4 py-3 text-[var(--muted)]">{kindLabel(document.kind)}</td>
+                        <td className="px-4 py-3 text-[var(--muted)]">
+                          {document.studyUnitCode ?? document.moduleCode ?? t("qualPage.wholeQualification")}
+                        </td>
+                        <td className="px-4 py-3 text-[var(--muted)] tabular-nums">
+                          {describeSize(document.sizeBytes)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--muted)]">{t("qualPage.noDocuments")}</p>
+            )}
+          </section>
+
+          <h2 id="curriculum" data-page-section={t("qualPage.nav.curriculum")} className="mb-2 scroll-mt-24 font-semibold">
+            {t("qualPage.curriculum")}
+          </h2>
+          <div className="space-y-4">
+            {modules.map((curriculumModule) => {
+              const criteriaHere =
+                curriculumModule.topics.reduce((sum, topic) => sum + topic.criteria.length, 0) +
+                curriculumModule.looseCriteria.length;
+
+              return (
+                /* The destination for the chips in the delivery structure
+                   above. scroll-mt-24 keeps the heading clear of the fixed
+                   header when somebody arrives. */
+                <div
+                  key={curriculumModule.id}
+                  id={`module-${curriculumModule.code}`}
+                  className="scroll-mt-24"
+                >
+                  <Card>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          <span className="font-mono text-sm">{curriculumModule.code}</span> {curriculumModule.title}
+                        </p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {componentLabel(curriculumModule.component)}
+                          {curriculumModule.credits
+                            ? ` · ${t("qualPage.credits", { credits: curriculumModule.credits })}`
+                            : ""}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[var(--muted)] tabular-nums">
+                        {criteriaHere === 1 ? t("qual.oneCriterion") : t("qual.criteria", { count: criteriaHere })}
+                      </p>
+                    </div>
+
+                    {curriculumModule.topics.length === 0 && curriculumModule.looseCriteria.length === 0 ? (
+                      <p className="mt-3 text-sm text-[var(--muted)]">{t("qualPage.notTranscribed")}</p>
+                    ) : null}
+
+                    {curriculumModule.topics.map((topic) => {
+                      const byKind = new Map<string, typeof topic.elements>();
+                      for (const element of topic.elements) {
+                        byKind.set(element.kind, [...(byKind.get(element.kind) ?? []), element]);
+                      }
+
+                      return (
+                        <div key={topic.id} className="mt-4 border-t border-[var(--border)] pt-4">
+                          <p className="text-sm font-medium">
+                            <span className="font-mono">{topic.code}</span> {topic.title}
+                            {topic.weightPercent !== null ? (
+                              <span className="ml-2 text-xs text-[var(--muted)]">
+                                {t("qualPage.ofModule", { percent: topic.weightPercent })}
+                              </span>
+                            ) : null}
+                          </p>
+
+                          <div className="mt-3 grid gap-4 md:grid-cols-2">
+                            {[...byKind.entries()].map(([kind, items]) => (
+                              <div key={kind}>
+                                <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                                  {t("qualPage.toTeach", { kind: maybe(t, `qualPage.element.${kind}`) ?? kind })}
+                                </p>
+                                <ul className="mt-1.5 space-y-1">
+                                  {items.map((element) => (
+                                    <li key={element.id} className="text-sm">
+                                      {/*
+                                        A link, because Roland asked on 15 September
+                                        how these are viewed and the honest answer
+                                        was that they were not: the wording was all
+                                        there, but what teaches and assesses a line
+                                        was three records away and reachable from
+                                        nowhere.
+                                      */}
+                                      <Link
+                                        href={`/qualifications/${id}/elements/${element.id}`}
+                                        className="underline-offset-2 hover:underline"
+                                      >
+                                        <span className="font-mono text-xs text-[var(--muted)]">{element.code}</span>{" "}
+                                        {element.description}
+                                      </Link>
+                                      {element.coveredBy.length > 0 ? (
+                                        <span className="mt-1 flex flex-wrap gap-1">
+                                          {element.coveredBy.map((cover) => (
+                                            <span
+                                              key={cover.id}
+                                              title={cover.kind.replace(/_/g, " ")}
+                                              className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-[var(--muted)]"
+                                            >
+                                              {cover.reference}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+
+                            {topic.criteria.length > 0 ? (
+                              <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                                  {t("qualPage.iac")}
+                                </p>
+                                <ul className="mt-1.5 space-y-1">
+                                  {topic.criteria.map((criterion) => (
+                                    <li key={criterion.id} className="text-sm">
+                                      <span className="font-mono text-xs text-[var(--muted)]">{criterion.code}</span>{" "}
+                                      {criterion.description}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : curriculumModule.component === "workplace" ? (
+                              /*
+                                Not a fault here. A work experience module is proved
+                                by a logbook a coach signs and an assessor accepts,
+                                so having no criteria is its finished state - and
+                                colouring that red taught somebody reading a
+                                correctly imported qualification to distrust it.
+                              */
+                              <p className="text-sm text-[var(--muted)]">{t("qualPage.workplaceNone")}</p>
+                            ) : (
+                              <p className="text-sm" style={{ color: "var(--danger)" }}>
+                                {t("qualPage.neverAchieved")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {curriculumModule.looseCriteria.length > 0 ? (
+                      <div className="mt-4 border-t border-[var(--border)] pt-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                          {t("qualPage.looseCriteria")}
                         </p>
                         <ul className="mt-1.5 space-y-1">
-                          {unit.outcome.criteria.map((criterion) => (
+                          {curriculumModule.looseCriteria.map((criterion) => (
                             <li key={criterion.id} className="text-sm">
+                              <span className="font-mono text-xs text-[var(--muted)]">{criterion.code}</span>{" "}
                               {criterion.description}
                             </li>
                           ))}
                         </ul>
-                      </>
+                      </div>
                     ) : null}
-                  </div>
-                ) : null}
-
-                {unit.modules.length > 0 ? (
-                  <ul className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-                    {/*
-                      Chips that go somewhere.
-
-                      Roland: "there are no links on the buttons, so I can't
-                      view the respective modules." They looked exactly like
-                      controls and did nothing. There is no page per module -
-                      a module's content is a card further down this one - so
-                      each goes to that card.
-                    */}
-                    {unit.modules.map((entry) => (
-                      <li key={entry.id}>
-                        <Link
-                          href={`#module-${entry.code}`}
-                          className="block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/5"
-                        >
-                          <span className="font-mono">{entry.code}</span>{" "}
-                          <span className="text-[var(--muted)]">
-                            {COMPONENT_LABELS[entry.component] ?? entry.component}
-                            {entry.credits ? ` · ${entry.credits} cr` : ""}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p
-                    className="mt-3 border-t border-[var(--border)] pt-3 text-sm"
-                    style={{ color: "var(--danger)" }}
-                  >
-                    This study unit delivers no modules.
-                  </p>
-                )}
-
-                {/*
-                  What a learner and a facilitator actually work from, in the
-                  place somebody looks for it. Each one opens.
-
-                  The restricted kinds - memoranda, answer guides, summative
-                  papers - are marked, because this is a screen a facilitator
-                  reads and the difference between a workbook and its answer
-                  guide matters at a glance. What is withheld from learners is
-                  enforced on the download itself, not here; this is a label,
-                  not the lock.
-                */}
-                {(materialByUnit.get(unit.code) ?? []).length > 0 ? (
-                  <div className="mt-3 border-t border-[var(--border)] pt-3">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                      Material filed against this unit
-                    </p>
-                    <ul className="space-y-1">
-                      {(materialByUnit.get(unit.code) ?? []).map((document) => (
-                        <li key={document.id} className="text-sm">
-                          <Link
-                            href={`/api/programme-documents/${document.id}`}
-                            className="underline-offset-2 hover:underline"
-                          >
-                            {document.title}
-                          </Link>{" "}
-                          <span className="text-xs text-[var(--muted)]">
-                            {DOCUMENT_KIND_LABELS[
-                              document.kind as DocumentKind
-                            ] ?? document.kind}
-                            {document.version ? ` · ${document.version}` : ""}
-                          </span>
-                          {RESTRICTED_TO_ASSESSORS.has(
-                            document.kind as DocumentKind,
-                          ) ? (
-                            <span className="ml-1.5 rounded bg-[var(--border)]/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
-                              withheld from learners
-                            </span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </Card>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section
-        id="documents"
-        data-page-section="Documents"
-        className="mb-8 scroll-mt-24"
-      >
-        <h2 className="mb-2 font-semibold">Programme documents</h2>
-        <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-          Filed here are the authoritative copies: the source documents this
-          qualification is built from, each attached to the part of the
-          curriculum it serves and hashed so it can be proved unchanged.
-        </p>
-        <p className="mb-4 max-w-3xl text-sm text-[var(--muted)]">
-          <span className="font-medium text-[var(--foreground)]">
-            A workbook or an assessment filed here is a record, not the thing a
-            learner works on.
-          </span>{" "}
-          Those are read in and presented on screen, so a learner answers in the
-          platform and a facilitator marks and comments there. Upload the Word
-          document under Capture rather than here, and it becomes the questions
-          themselves. Handbooks, guides and workplace sign-off sheets are
-          different: they stay as documents, because a facilitator annotates
-          them and a coach signs them on paper.
-        </p>
-
-
-        {documents.length > 0 ? (
-          <div className="mt-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-            <table className="w-full text-sm">
-              <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Document</th>
-                  <th className="px-4 py-3 font-medium">Kind</th>
-                  <th className="px-4 py-3 font-medium">Attached to</th>
-                  <th className="px-4 py-3 font-medium">Size</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((document) => (
-                  <tr
-                    key={document.id}
-                    className="border-b border-[var(--border)] last:border-0"
-                  >
-                    <td className="px-4 py-3">
-                      <a
-                        href={`/api/programme-documents/${document.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {document.title}
-                      </a>
-                      {document.version ? (
-                        <span className="ml-2 text-xs text-[var(--muted)]">
-                          {document.version}
-                        </span>
-                      ) : null}
-                      <p className="text-xs text-[var(--muted)]">
-                        {document.filename}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--muted)]">
-                      {DOCUMENT_KIND_LABELS[
-                        document.kind as keyof typeof DOCUMENT_KIND_LABELS
-                      ] ?? document.kind}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--muted)]">
-                      {document.studyUnitCode ??
-                        document.moduleCode ??
-                        "Qualification"}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--muted)] tabular-nums">
-                      {describeSize(document.sizeBytes)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            No documents held yet.
-          </p>
-        )}
-      </section>
-
-      <h2
-        id="curriculum"
-        data-page-section="Curriculum"
-        className="mb-2 scroll-mt-24 font-semibold"
-      >
-        Curriculum
-      </h2>
-      <div className="space-y-4">
-        {modules.map((curriculumModule) => {
-          const criteriaHere =
-            curriculumModule.topics.reduce(
-              (sum, topic) => sum + topic.criteria.length,
-              0,
-            ) + curriculumModule.looseCriteria.length;
-
-          return (
-            /* The destination for the chips in the delivery structure
-               above. scroll-mt-24 keeps the heading clear of the fixed
-               header when somebody arrives. */
-            <div
-              key={curriculumModule.id}
-              id={`module-${curriculumModule.code}`}
-              className="scroll-mt-24"
-            >
-            <Card>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                  <p className="font-medium">
-                    <span className="font-mono text-sm">
-                      {curriculumModule.code}
-                    </span>{" "}
-                    {curriculumModule.title}
-                  </p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {COMPONENT_LABELS[curriculumModule.component] ??
-                      curriculumModule.component}
-                    {curriculumModule.credits
-                      ? ` · ${curriculumModule.credits} credits`
-                      : ""}
-                  </p>
+                  </Card>
                 </div>
-                <p className="text-sm text-[var(--muted)] tabular-nums">
-                  {criteriaHere} {criteriaHere === 1 ? "criterion" : "criteria"}
-                </p>
-              </div>
-
-              {curriculumModule.topics.length === 0 &&
-              curriculumModule.looseCriteria.length === 0 ? (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  Not yet transcribed from the curriculum document.
-                </p>
-              ) : null}
-
-              {curriculumModule.topics.map((topic) => {
-                const byKind = new Map<string, typeof topic.elements>();
-                for (const element of topic.elements) {
-                  byKind.set(element.kind, [
-                    ...(byKind.get(element.kind) ?? []),
-                    element,
-                  ]);
-                }
-
-                return (
-                  <div
-                    key={topic.id}
-                    className="mt-4 border-t border-[var(--border)] pt-4"
-                  >
-                    <p className="text-sm font-medium">
-                      <span className="font-mono">{topic.code}</span>{" "}
-                      {topic.title}
-                      {topic.weightPercent !== null ? (
-                        <span className="ml-2 text-xs text-[var(--muted)]">
-                          {topic.weightPercent}% of the module
-                        </span>
-                      ) : null}
-                    </p>
-
-                    <div className="mt-3 grid gap-4 md:grid-cols-2">
-                      {[...byKind.entries()].map(([kind, items]) => (
-                        <div key={kind}>
-                          <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                            {ELEMENT_LABELS[kind] ?? kind} — what must be taught
-                          </p>
-                          <ul className="mt-1.5 space-y-1">
-                            {items.map((element) => (
-                              <li key={element.id} className="text-sm">
-                                {/*
-                                  A link, because Roland asked on 15 September
-                                  how these are viewed and the honest answer
-                                  was that they were not: the wording was all
-                                  there, but what teaches and assesses a line
-                                  was three records away and reachable from
-                                  nowhere.
-                                */}
-                                <Link
-                                  href={`/qualifications/${id}/elements/${element.id}`}
-                                  className="underline-offset-2 hover:underline"
-                                >
-                                  <span className="font-mono text-xs text-[var(--muted)]">
-                                    {element.code}
-                                  </span>{" "}
-                                  {element.description}
-                                </Link>
-                                {element.coveredBy.length > 0 ? (
-                                  <span className="mt-1 flex flex-wrap gap-1">
-                                    {element.coveredBy.map((cover) => (
-                                      <span
-                                        key={cover.id}
-                                        title={cover.kind.replace(/_/g, " ")}
-                                        className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-[var(--muted)]"
-                                      >
-                                        {cover.reference}
-                                      </span>
-                                    ))}
-                                  </span>
-                                ) : null}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-
-                      {topic.criteria.length > 0 ? (
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                            Internal assessment criteria — what must be achieved
-                          </p>
-                          <ul className="mt-1.5 space-y-1">
-                            {topic.criteria.map((criterion) => (
-                              <li key={criterion.id} className="text-sm">
-                                <span className="font-mono text-xs text-[var(--muted)]">
-                                  {criterion.code}
-                                </span>{" "}
-                                {criterion.description}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : curriculumModule.component === "workplace" ? (
-                        /*
-                          Not a fault here. A work experience module is proved
-                          by a logbook a coach signs and an assessor accepts,
-                          so having no criteria is its finished state - and
-                          colouring that red taught somebody reading a
-                          correctly imported qualification to distrust it.
-                        */
-                        <p className="text-sm text-[var(--muted)]">
-                          No assessment criteria, which is right for work
-                          experience: it is proved by a signed record of the
-                          work rather than judged against criteria.
-                        </p>
-                      ) : (
-                        <p
-                          className="text-sm"
-                          style={{ color: "var(--danger)" }}
-                        >
-                          No assessment criteria, so this topic can never be
-                          achieved.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {curriculumModule.looseCriteria.length > 0 ? (
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                    Assessment criteria
-                  </p>
-                  <ul className="mt-1.5 space-y-1">
-                    {curriculumModule.looseCriteria.map((criterion) => (
-                      <li key={criterion.id} className="text-sm">
-                        <span className="font-mono text-xs text-[var(--muted)]">
-                          {criterion.code}
-                        </span>{" "}
-                        {criterion.description}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </Card>
-            </div>
-          );
-        })}
-      </div>
-      </>
+              );
+            })}
+          </div>
+        </>
       )}
     </AppShell>
   );

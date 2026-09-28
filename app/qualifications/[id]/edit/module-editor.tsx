@@ -16,6 +16,8 @@ import {
   type EditorState,
 } from "./actions";
 import { ELEMENT_KINDS_BY_COMPONENT } from "@/lib/curriculum-shape";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const input =
   "rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm";
@@ -56,12 +58,14 @@ export function ModuleEditor({
   qualificationId: string;
   module: EditableModule;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const kinds = ELEMENT_KINDS_BY_COMPONENT[module.component] ?? [];
   const takesCriteria = module.component !== "workplace";
+  const kindName = (kind: string) => maybe(t, `elementKind.${kind}`) ?? kind.replace(/_/g, " ");
 
-  const weighted = module.topics.filter((t) => t.weightPercent !== null);
-  const total = weighted.reduce((sum, t) => sum + (t.weightPercent ?? 0), 0);
+  const weighted = module.topics.filter((topic) => topic.weightPercent !== null);
+  const total = weighted.reduce((sum, topic) => sum + (topic.weightPercent ?? 0), 0);
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
@@ -75,12 +79,12 @@ export function ModuleEditor({
           <span className="font-mono text-sm font-semibold">{module.code}</span>
           <span className="ml-3 text-sm">{module.title}</span>
           <span className={`ml-3 ${small}`}>
-            {module.component.replace(/_/g, " ")}
-            {module.credits !== null ? ` · ${module.credits} credits` : ""}
+            {maybe(t, `component.${module.component}`) ?? module.component.replace(/_/g, " ")}
+            {module.credits !== null ? ` · ${t("editor.credits", { count: module.credits })}` : ""}
           </span>
         </span>
         <span className={small}>
-          {module.topics.length} topics · {module.criteria.length} criteria
+          {t("editor.summary", { topics: module.topics.length, criteria: module.criteria.length })}
           {weighted.length === module.topics.length &&
           module.topics.length > 0 &&
           total !== 100
@@ -95,25 +99,25 @@ export function ModuleEditor({
           <Row
             action={updateModuleAction}
             hidden={{ qualificationId, moduleId: module.id }}
-            label="Rename this module"
+            label={t("editor.rename")}
           >
-            <input name="code" defaultValue={module.code} className={`${input} w-44 font-mono`} aria-label="Module code" />
-            <input name="title" defaultValue={module.title} className={`${input} min-w-48 flex-1`} aria-label="Module title" />
+            <input name="code" defaultValue={module.code} className={`${input} w-44 font-mono`} aria-label={t("editor.moduleCode")} />
+            <input name="title" defaultValue={module.title} className={`${input} min-w-48 flex-1`} aria-label={t("editor.moduleTitle")} />
             <input
               name="credits"
               type="number"
               min={0}
               defaultValue={module.credits ?? ""}
-              placeholder="credits"
+              placeholder={t("editor.creditsHint")}
               className={`${input} w-24`}
-              aria-label="Credits"
+              aria-label={t("editor.creditsLabel")}
             />
           </Row>
 
           {/* --- topics --- */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Topics
+              {t("editor.topics")}
             </h3>
 
             <div className="mt-2 space-y-4">
@@ -128,11 +132,11 @@ export function ModuleEditor({
                     remove={{
                       action: removeTopicAction,
                       hidden: { qualificationId, topicId: topic.id },
-                      confirm: `Remove ${topic.code} and everything in it?`,
+                      confirm: t("editor.removeTopic", { code: topic.code }),
                     }}
                   >
-                    <input name="code" defaultValue={topic.code} className={`${input} w-32 font-mono`} aria-label="Topic code" />
-                    <input name="title" defaultValue={topic.title} className={`${input} min-w-48 flex-1`} aria-label="Topic title" />
+                    <input name="code" defaultValue={topic.code} className={`${input} w-32 font-mono`} aria-label={t("editor.topicCode")} />
+                    <input name="title" defaultValue={topic.title} className={`${input} min-w-48 flex-1`} aria-label={t("editor.topicTitle")} />
                     <input
                       name="weightPercent"
                       type="number"
@@ -141,7 +145,7 @@ export function ModuleEditor({
                       defaultValue={topic.weightPercent ?? ""}
                       placeholder="%"
                       className={`${input} w-20`}
-                      aria-label="Percentage of the module"
+                      aria-label={t("editor.topicWeight")}
                     />
                   </Row>
 
@@ -156,16 +160,14 @@ export function ModuleEditor({
                             hidden: { qualificationId, elementId: element.id },
                           }}
                         >
-                          <input name="code" defaultValue={element.code} className={`${input} w-28 font-mono`} aria-label="Element code" />
+                          <input name="code" defaultValue={element.code} className={`${input} w-28 font-mono`} aria-label={t("editor.elementCode")} />
                           <input
                             name="description"
                             defaultValue={element.description}
                             className={`${input} min-w-64 flex-1`}
-                            aria-label="What must be taught"
+                            aria-label={t("editor.elementText")}
                           />
-                          <span className={small}>
-                            {element.kind.replace(/_/g, " ")}
-                          </span>
+                          <span className={small}>{kindName(element.kind)}</span>
                         </Row>
                       </li>
                     ))}
@@ -174,23 +176,23 @@ export function ModuleEditor({
                   <Row
                     action={addElementAction}
                     hidden={{ qualificationId, topicId: topic.id }}
-                    label="Add a line of what must be taught"
-                    submit="Add"
+                    label={t("editor.addElement")}
+                    submit={t("editor.add")}
                   >
-                    <select name="kind" className={input} aria-label="Kind">
+                    <select name="kind" className={input} aria-label={t("editor.kind")}>
                       {kinds.map((kind) => (
                         <option key={kind} value={kind}>
-                          {kind.replace(/_/g, " ")}
+                          {kindName(kind)}
                         </option>
                       ))}
                     </select>
-                    <input name="code" placeholder="KT0101" required className={`${input} w-28 font-mono`} aria-label="Element code" />
+                    <input name="code" placeholder="KT0101" required className={`${input} w-28 font-mono`} aria-label={t("editor.elementCode")} />
                     <input
                       name="description"
-                      placeholder="As the curriculum document words it"
+                      placeholder={t("editor.wordedHint")}
                       required
                       className={`${input} min-w-64 flex-1`}
-                      aria-label="Description"
+                      aria-label={t("editor.description")}
                     />
                   </Row>
                 </div>
@@ -200,11 +202,11 @@ export function ModuleEditor({
             <Row
               action={addTopicAction}
               hidden={{ qualificationId, moduleId: module.id }}
-              label="Add a topic"
-              submit="Add topic"
+              label={t("editor.addTopic")}
+              submit={t("editor.addTopicButton")}
             >
-              <input name="code" placeholder="KM0101" required className={`${input} w-32 font-mono`} aria-label="Topic code" />
-              <input name="title" placeholder="Title" required className={`${input} min-w-48 flex-1`} aria-label="Topic title" />
+              <input name="code" placeholder="KM0101" required className={`${input} w-32 font-mono`} aria-label={t("editor.topicCode")} />
+              <input name="title" placeholder={t("editor.titleHint")} required className={`${input} min-w-48 flex-1`} aria-label={t("editor.topicTitle")} />
               <input
                 name="weightPercent"
                 type="number"
@@ -212,7 +214,7 @@ export function ModuleEditor({
                 max={100}
                 placeholder="%"
                 className={`${input} w-20`}
-                aria-label="Percentage"
+                aria-label={t("editor.percentage")}
               />
             </Row>
           </div>
@@ -220,15 +222,11 @@ export function ModuleEditor({
           {/* --- criteria --- */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Assessment criteria
+              {t("editor.criteria")}
             </h3>
 
             {!takesCriteria ? (
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                A work experience module carries none. It is evidenced by a
-                logbook the coach signs and an assessor accepts, so its work
-                activities go in the topics above.
-              </p>
+              <p className="mt-2 text-sm text-[var(--muted)]">{t("editor.noCriteria")}</p>
             ) : (
               <>
                 <ul className="mt-2 space-y-2">
@@ -245,12 +243,12 @@ export function ModuleEditor({
                           },
                         }}
                       >
-                        <input name="code" defaultValue={criterion.code} className={`${input} w-28 font-mono`} aria-label="Criterion code" />
+                        <input name="code" defaultValue={criterion.code} className={`${input} w-28 font-mono`} aria-label={t("editor.criterionCode")} />
                         <input
                           name="description"
                           defaultValue={criterion.description}
                           className={`${input} min-w-64 flex-1`}
-                          aria-label="What a learner must demonstrate"
+                          aria-label={t("editor.criterionText")}
                         />
                       </Row>
                     </li>
@@ -260,16 +258,16 @@ export function ModuleEditor({
                 <Row
                   action={addCriterionAction}
                   hidden={{ qualificationId, moduleId: module.id }}
-                  label="Add a criterion"
-                  submit="Add criterion"
+                  label={t("editor.addCriterion")}
+                  submit={t("editor.addCriterionButton")}
                 >
-                  <input name="code" placeholder="IAC0101" required className={`${input} w-28 font-mono`} aria-label="Criterion code" />
+                  <input name="code" placeholder="IAC0101" required className={`${input} w-28 font-mono`} aria-label={t("editor.criterionCode")} />
                   <input
                     name="description"
-                    placeholder="As the curriculum document words it"
+                    placeholder={t("editor.wordedHint")}
                     required
                     className={`${input} min-w-64 flex-1`}
-                    aria-label="Description"
+                    aria-label={t("editor.description")}
                   />
                 </Row>
               </>
@@ -279,9 +277,9 @@ export function ModuleEditor({
           <Row
             action={removeModuleAction}
             hidden={{ qualificationId, moduleId: module.id }}
-            submit="Remove this module"
+            submit={t("editor.removeModule")}
             danger
-            confirm={`Remove ${module.code} and everything in it?`}
+            confirm={t("editor.removeTopic", { code: module.code })}
           />
         </div>
       ) : null}
@@ -301,7 +299,7 @@ function Row({
   hidden,
   children,
   label,
-  submit = "Save",
+  submit,
   remove,
   danger = false,
   confirm,
@@ -319,6 +317,7 @@ function Row({
   danger?: boolean;
   confirm?: string;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<EditorState, FormData>(
     action,
     {},
@@ -349,7 +348,7 @@ function Row({
                 : "border border-[var(--border)]"
             }`}
           >
-            {pending ? "…" : submit}
+            {pending ? "…" : (submit ?? t("common.save"))}
           </button>
         </form>
 
@@ -374,6 +373,7 @@ function RemoveButton({
   hidden: Record<string, string>;
   confirm?: string;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<EditorState, FormData>(
     action,
     {},
@@ -395,7 +395,7 @@ function RemoveButton({
           disabled={pending}
           className="rounded-md border border-[var(--danger)]/40 px-2 py-1 text-xs text-[var(--danger)] disabled:opacity-50"
         >
-          {pending ? "…" : "Remove"}
+          {pending ? "…" : t("editor.remove")}
         </button>
       </form>
       {state.error ? (

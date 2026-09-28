@@ -2,13 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { selectModulesAction, type ActionState } from "./actions";
-
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge",
-  practical: "Practical skill",
-  workplace: "Workplace experience",
-  general: "General",
-};
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const COMPONENT_ORDER = ["knowledge", "practical", "workplace", "general"];
 
@@ -44,6 +39,7 @@ export function ModuleSelection({
   chosen: string[];
   claimedCredits: number | null;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<ActionState, FormData>(
     selectModulesAction,
     {},
@@ -90,10 +86,10 @@ export function ModuleSelection({
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-              {COMPONENT_LABELS[group.component] ?? group.component}
+              {maybe(t, `component.${group.component}`) ?? group.component}
             </h2>
             <span className="text-xs text-[var(--muted)]">
-              {perComponent.get(group.component) ?? 0} credits chosen
+              {t("partModules.creditsChosen", { count: perComponent.get(group.component) ?? 0 })}
             </span>
           </div>
 
@@ -121,8 +117,8 @@ export function ModuleSelection({
                     {module.title}
                     <span className="block text-xs text-[var(--muted)]">
                       {module.credits === null
-                        ? "No credits recorded"
-                        : `${module.credits} credits`}
+                        ? t("partModules.noCredits")
+                        : t("editor.credits", { count: module.credits })}
                     </span>
                   </span>
                 </label>
@@ -141,18 +137,18 @@ export function ModuleSelection({
       >
         <p className="text-sm">
           <span className="font-medium">
-            {running} credits chosen
+            {t("partModules.creditsChosen", { count: running })}
             {claimedCredits === null
               ? ""
-              : ` · ${claimedCredits} claimed on the document`}
+              : ` · ${t("partModules.claimed", { count: claimedCredits })}`}
           </span>
         </p>
         <p className="mt-1 text-xs text-[var(--muted)]">
           {claimedCredits === null
-            ? "No credit total is recorded for this qualification, so there is nothing to check against. Its SAQA document states one under Minimum Credits."
+            ? t("partModules.noClaim")
             : agrees
-              ? "These agree, which is the sign the right modules are ticked."
-              : "These do not agree. Either a module is ticked that the SAQA document does not list, or one it lists is missing, or the credits on a module were read in wrongly. Worth checking before saving — but the platform will save what you tell it."}
+              ? t("partModules.agree")
+              : t("partModules.disagree")}
         </p>
       </section>
 
@@ -182,7 +178,7 @@ export function ModuleSelection({
             className="mt-2 inline-block rounded-md px-3 py-1.5 text-sm font-medium text-white"
             style={{ background: "var(--brand-primary)" }}
           >
-            Back to the qualification &rarr;
+            {t("partModules.back")} &rarr;
           </a>
         </div>
       ) : null}
@@ -193,7 +189,7 @@ export function ModuleSelection({
         className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--brand-primary)" }}
       >
-        {saving ? "Saving…" : "Save which modules this takes"}
+        {saving ? t("common.saving") : t("partModules.save")}
       </button>
     </form>
   );

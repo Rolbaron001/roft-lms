@@ -22,11 +22,13 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
 const root = process.cwd();
 
+/** With each catalogue phrase back in English (job sheet D9, stage 4). */
 function source(path: string): string {
-  return readFileSync(join(root, path), "utf8");
+  return withPhrases(readFileSync(join(root, path), "utf8"));
 }
 
 /** Every screen that offers a folder and then asks somebody to press a button. */

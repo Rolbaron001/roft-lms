@@ -5,8 +5,9 @@ import { withTenant } from "@/db/client";
 import { qualifications } from "@/db/schema";
 import { listCurriculumModules } from "@/lib/authoring";
 import { modulesOf } from "@/lib/part-qualifications";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { AppShell, Card } from "@/components/app-shell";
+import { Rich } from "@/components/rich-text";
 import { ModuleSelection } from "./module-selection";
 
 /**
@@ -30,6 +31,7 @@ export default async function PartModulesPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+  const t = await pageT();
 
   const [entry] = await withTenant(session.organisationId, (tx) =>
     tx
@@ -66,6 +68,12 @@ export default async function PartModulesPage({
   const available = await listCurriculumModules(session, entry.parentId!);
   const chosen = await modulesOf(session, id);
 
+  const parentLink = (
+    <Link href={`/qualifications/${parent?.id}`} className="underline underline-offset-2">
+      {parent?.title}
+    </Link>
+  );
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
@@ -77,39 +85,23 @@ export default async function PartModulesPage({
             {entry.title}
           </Link>
         </p>
-        <h1 className="mt-1 text-xl font-semibold">
-          Which modules this takes
-        </h1>
+        <h1 className="mt-1 text-xl font-semibold">{t("partModules.title")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-          {entry.kind === "part" ? "This part qualification" : "This programme"}{" "}
-          is drawn from{" "}
-          <Link
-            href={`/qualifications/${parent?.id}`}
-            className="underline underline-offset-2"
-          >
-            {parent?.title}
-          </Link>
-          {parent?.curriculumCode
-            ? ` and shares its curriculum, ${parent.curriculumCode}.`
-            : " and shares its curriculum."}{" "}
-          Tick the modules its own SAQA document lists under{" "}
-          <em>Qualification Rules</em>. Nothing is copied: a learner&rsquo;s
-          work against a module counts once, wherever they met it.
+          <Rich
+            text={entry.kind === "part" ? t("partModules.introPart") : t("partModules.introOther")}
+            parts={{
+              parent: parentLink,
+              code: parent?.curriculumCode ? `, ${parent.curriculumCode}` : "",
+              rules: <em>{t("partModules.rules")}</em>,
+            }}
+          />
         </p>
       </div>
 
       {available.length === 0 ? (
-        <Card title="The parent's curriculum has not been read in yet">
+        <Card title={t("partModules.notRead")}>
           <p className="text-sm text-[var(--muted)]">
-            There is nothing to choose from until{" "}
-            <Link
-              href={`/qualifications/${parent?.id}`}
-              className="underline underline-offset-2"
-            >
-              {parent?.title}
-            </Link>{" "}
-            has its curriculum document read in. Do that first, and this list
-            fills itself.
+            <Rich text={t("partModules.notReadNote")} parts={{ parent: parentLink }} />
           </p>
         </Card>
       ) : (

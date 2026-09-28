@@ -18,9 +18,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
+/** With each catalogue phrase back in English (job sheet D9, stage 4). */
 function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return withPhrases(readFileSync(join(process.cwd(), path), "utf8"));
 }
 
 /** The prose with the explanatory comments stripped out. */
@@ -95,7 +97,10 @@ describe("it reports what a learner would not find", () => {
     // A total with no denominator says nothing. "12 of 40 ready" is the line
     // somebody testing a programme before a cohort actually acts on.
     expect(library).toMatch(/counts: \{ units: [^}]*steps: [^}]*ready: /);
-    expect(screen).toMatch(/\{counts\.ready\} of \{counts\.steps\} ready/);
+    expect(screen).toMatch(/\{ready\} of \{steps\} ready/);
+    expect(readFileSync(join(process.cwd(), "app/qualifications/[id]/preview/page.tsx"), "utf8")).toMatch(
+      /ready: counts\.ready, steps: counts\.steps/,
+    );
   });
 
   it("puts the gaps above the detail rather than below it", () => {

@@ -21,11 +21,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { en } from "@/lib/i18n/en";
+import { withPhrases } from "./helpers/phrases";
 
 const root = process.cwd();
 
+/** With each catalogue phrase back in English (job sheet D9, stage 4). */
 function source(path: string): string {
-  return readFileSync(join(root, path), "utf8");
+  return withPhrases(readFileSync(join(root, path), "utf8"));
 }
 
 const detail = source("app/qualifications/[id]/page.tsx");
@@ -161,13 +164,12 @@ describe("choosing how to add a qualification", () => {
   const chooser = source("app/qualifications/how-chooser.tsx");
   const page = source("app/qualifications/page.tsx");
 
+  // The wording is in the language catalogue since job sheet D9, stage 4.
   it("offers exactly the three ways Roland named", () => {
-    for (const id of ["documents", "folder", "blank"]) {
-      expect(chooser).toContain(`id: "${id}"`);
-    }
-    expect(chooser).toMatch(/From its documents/);
-    expect(chooser).toMatch(/From a folder/);
-    expect(chooser).toMatch(/From scratch/);
+    expect(chooser).toContain('(["documents", "folder", "blank"] as const)');
+    expect(en["how.documents.title"]).toBe("From its documents");
+    expect(en["how.folder.title"]).toBe("From a folder");
+    expect(en["how.blank.title"]).toBe("From scratch");
   });
 
   it("puts 'or' between them", () => {
@@ -178,8 +180,12 @@ describe("choosing how to add a qualification", () => {
 
   it("says what each needs and what it costs", () => {
     // "From its documents" and "From a folder" are not told apart by name.
-    expect(chooser).toMatch(/needs: string/);
-    expect(chooser).toMatch(/speed: string/);
+    expect(chooser).toMatch(/needs: MessageKey/);
+    expect(chooser).toMatch(/speed: MessageKey/);
+    for (const id of ["documents", "folder", "blank"] as const) {
+      expect(en[`how.${id}.needs`].length).toBeGreaterThan(0);
+      expect(en[`how.${id}.speed`].length).toBeGreaterThan(0);
+    }
   });
 
   it("shows nothing but the choice until one is made", () => {

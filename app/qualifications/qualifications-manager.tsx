@@ -8,13 +8,10 @@ import {
   createQualificationAction,
   type ActionState,
 } from "./actions";
-
-const COMPONENT_LABELS: Record<string, string> = {
-  knowledge: "Knowledge",
-  practical: "Practical skill",
-  workplace: "Workplace experience",
-  general: "General",
-};
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
+import { maybe } from "@/lib/i18n/maybe";
+import type { Translate } from "@/lib/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -40,28 +37,20 @@ type Qualification = {
   modules: Module[];
 };
 
-const KIND_LABELS: Record<Qualification["kind"], string> = {
-  full: "Full qualification",
-  part: "Part qualification",
-  skills_programme: "Skills programme",
-};
+const COMPONENTS = ["knowledge", "practical", "workplace", "general"] as const;
 
 /** What is inside, said on the row itself so it need not be opened to find out. */
-function summarise(qualification: Qualification): string {
+function summarise(qualification: Qualification, t: Translate): string {
   if (qualification.modules.length === 0) {
-    return qualification.parentQualificationId
-      ? "No modules chosen yet"
-      : "No modules yet";
+    return qualification.parentQualificationId ? t("manager.noneChosen") : t("manager.none");
   }
 
-  const criteria = qualification.modules.reduce(
-    (total, module) => total + module.criterionCount,
-    0,
-  );
-
-  return `${qualification.modules.length} ${
-    qualification.modules.length === 1 ? "module" : "modules"
-  } · ${criteria} ${criteria === 1 ? "criterion" : "criteria"}`;
+  const criteria = qualification.modules.reduce((total, module) => total + module.criterionCount, 0);
+  const modules =
+    qualification.modules.length === 1
+      ? t("qual.oneModule")
+      : t("qual.modules", { count: qualification.modules.length });
+  return `${modules} · ${criteria === 1 ? t("qual.oneCriterion") : t("qual.criteria", { count: criteria })}`;
 }
 
 function Message({ state }: { state: ActionState }) {
@@ -112,6 +101,7 @@ export function QualificationsManager({
    */
   show?: "both" | "list" | "create";
 }) {
+  const t = useT();
   const [createState, createAction, createPending] = useActionState<
     ActionState,
     FormData
@@ -129,7 +119,7 @@ export function QualificationsManager({
   const [openCriterionFor, setOpenCriterionFor] = useState<string | null>(null);
 
   // Collapsed to start with. This page is the way in to every qualification a
-  // provider offers, and a curriculum runs to a dozen modules — opened by
+  // provider offers, and a curriculum runs to a dozen modules: opened by
   // default, four qualifications bury the list of qualifications itself.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
@@ -146,17 +136,11 @@ export function QualificationsManager({
    */
   function parentOf(qualification: Qualification): string | null {
     if (!qualification.parentQualificationId) return null;
-    return (
-      qualifications.find(
-        (row) => row.id === qualification.parentQualificationId,
-      )?.title ?? null
-    );
+    return qualifications.find((row) => row.id === qualification.parentQualificationId)?.title ?? null;
   }
 
   function partsOfRow(qualification: Qualification) {
-    return qualifications.filter(
-      (row) => row.parentQualificationId === qualification.id,
-    );
+    return qualifications.filter((row) => row.parentQualificationId === qualification.id);
   }
 
   function toggle(id: string) {
@@ -172,323 +156,261 @@ export function QualificationsManager({
       {show === "create"
         ? null
         : qualifications.map((qualification) => (
-        <section
-          key={qualification.id}
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-medium">
-                <Link
-                  href={`/qualifications/${qualification.id}`}
-                  className="underline-offset-2 hover:underline"
-                >
-                  {qualification.title}
-                </Link>
-              </h2>
-              {qualification.kind !== "full" ? (
-                <p className="mt-1 text-xs">
-                  <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[var(--muted)]">
-                    {KIND_LABELS[qualification.kind]}
-                  </span>{" "}
-                  {parentOf(qualification) ? (
-                    <span className="text-[var(--muted)]">
-                      drawn from{" "}
-                      <Link
-                        href={`/qualifications/${qualification.parentQualificationId}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {parentOf(qualification)}
-                      </Link>
-                      , whose curriculum it shares
-                    </span>
-                  ) : (
-                    <span className="text-[var(--muted)]">
-                      standing on its own, with its own curriculum
-                    </span>
-                  )}
-                </p>
-              ) : null}
-
-              {partsOfRow(qualification).length > 0 ? (
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  Parts drawn from this:{" "}
-                  {partsOfRow(qualification).map((part, index) => (
-                    <span key={part.id}>
-                      {index > 0 ? ", " : ""}
-                      <Link
-                        href={`/qualifications/${part.id}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {part.title}
-                      </Link>
-                    </span>
-                  ))}
-                </p>
-              ) : null}
-
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                {[
-                  qualification.curriculumCode
-                    ? // What the curriculum document itself calls it.
-                      `Curriculum ${qualification.curriculumCode}`
-                    : null,
-                  qualification.saqaId ? `SAQA ${qualification.saqaId}` : null,
-                  qualification.nqfLevel
-                    ? `NQF level ${qualification.nqfLevel}`
-                    : null,
-                  qualification.totalCredits
-                    ? `${qualification.totalCredits} credits`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "No statutory identifiers recorded"}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => toggle(qualification.id)}
-              aria-expanded={expanded.has(qualification.id)}
-              aria-controls={`modules-${qualification.id}`}
-              className="flex items-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted)]"
+            <section
+              key={qualification.id}
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
             >
-              {summarise(qualification)}
-              <span aria-hidden="true">
-                {expanded.has(qualification.id) ? "▲" : "▼"}
-              </span>
-            </button>
-          </div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-medium">
+                    <Link href={`/qualifications/${qualification.id}`} className="underline-offset-2 hover:underline">
+                      {qualification.title}
+                    </Link>
+                  </h2>
+                  {qualification.kind !== "full" ? (
+                    <p className="mt-1 text-xs">
+                      <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[var(--muted)]">
+                        {t(`qualKind.${qualification.kind}`)}
+                      </span>{" "}
+                      {parentOf(qualification) ? (
+                        <span className="text-[var(--muted)]">
+                          <Rich
+                            text={t("manager.drawnFrom")}
+                            parts={{
+                              parent: (
+                                <Link
+                                  href={`/qualifications/${qualification.parentQualificationId}`}
+                                  className="underline-offset-2 hover:underline"
+                                >
+                                  {parentOf(qualification)}
+                                </Link>
+                              ),
+                            }}
+                          />
+                        </span>
+                      ) : (
+                        <span className="text-[var(--muted)]">{t("manager.standsAlone")}</span>
+                      )}
+                    </p>
+                  ) : null}
 
-          <div
-            id={`modules-${qualification.id}`}
-            hidden={!expanded.has(qualification.id)}
-          >
-            {qualification.modules.length > 0 ? (
-              <ul className="mt-4 space-y-2">
-                {qualification.modules.map((module) => (
-                  <li
-                    key={module.id}
-                    className="rounded-md border border-[var(--border)] px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm">
-                        <span className="font-medium">{module.code}</span>{" "}
-                        {module.title}
-                      </span>
-                      <span className="text-xs text-[var(--muted)]">
-                        {COMPONENT_LABELS[module.component] ?? module.component}
-                        {module.credits
-                          ? ` · ${module.credits} credits`
-                          : ""} ·{" "}
-                        <Link
-                          href={`/qualifications/${qualification.id}`}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {module.criterionCount}{" "}
-                          {module.criterionCount === 1
-                            ? "criterion"
-                            : "criteria"}
-                        </Link>
-                      </span>
-                    </div>
+                  {partsOfRow(qualification).length > 0 ? (
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {t("manager.parts")}{" "}
+                      {partsOfRow(qualification).map((part, index) => (
+                        <span key={part.id}>
+                          {index > 0 ? ", " : ""}
+                          <Link href={`/qualifications/${part.id}`} className="underline-offset-2 hover:underline">
+                            {part.title}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                  ) : null}
 
-                    {qualification.parentQualificationId ? null : openCriterionFor ===
-                      module.id ? (
-                      <form action={criterionAction} className="mt-3 space-y-2">
-                        <input
-                          type="hidden"
-                          name="curriculumModuleId"
-                          value={module.id}
-                        />
-                        <input
-                          name="code"
-                          required
-                          placeholder="Criterion code, e.g. IAC-01"
-                          className={inputClass}
-                        />
-                        <textarea
-                          name="description"
-                          required
-                          rows={2}
-                          placeholder="What the learner must demonstrate"
-                          className={inputClass}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            disabled={criterionPending}
-                            className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-                            style={{ background: "var(--brand-primary)" }}
-                          >
-                            {criterionPending ? "Adding…" : "Add criterion"}
-                          </button>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {[
+                      qualification.curriculumCode
+                        ? // What the curriculum document itself calls it.
+                          t("qual.curriculum", { code: qualification.curriculumCode })
+                        : null,
+                      qualification.saqaId ? t("qual.saqa", { id: qualification.saqaId }) : null,
+                      qualification.nqfLevel ? t("qual.nqf", { level: qualification.nqfLevel }) : null,
+                      qualification.totalCredits ? t("qual.credits", { credits: qualification.totalCredits }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || t("qual.noIdentifiers")}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggle(qualification.id)}
+                  aria-expanded={expanded.has(qualification.id)}
+                  aria-controls={`modules-${qualification.id}`}
+                  className="flex items-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted)]"
+                >
+                  {summarise(qualification, t)}
+                  <span aria-hidden="true">{expanded.has(qualification.id) ? "▲" : "▼"}</span>
+                </button>
+              </div>
+
+              <div id={`modules-${qualification.id}`} hidden={!expanded.has(qualification.id)}>
+                {qualification.modules.length > 0 ? (
+                  <ul className="mt-4 space-y-2">
+                    {qualification.modules.map((module) => (
+                      <li key={module.id} className="rounded-md border border-[var(--border)] px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-sm">
+                            <span className="font-medium">{module.code}</span> {module.title}
+                          </span>
+                          <span className="text-xs text-[var(--muted)]">
+                            {maybe(t, `component.${module.component}`) ?? module.component}
+                            {module.credits ? ` · ${t("qual.credits", { credits: module.credits })}` : ""} ·{" "}
+                            <Link
+                              href={`/qualifications/${qualification.id}`}
+                              className="underline-offset-2 hover:underline"
+                            >
+                              {module.criterionCount === 1
+                                ? t("qual.oneCriterion")
+                                : t("qual.criteria", { count: module.criterionCount })}
+                            </Link>
+                          </span>
+                        </div>
+
+                        {qualification.parentQualificationId ? null : openCriterionFor === module.id ? (
+                          <form action={criterionAction} className="mt-3 space-y-2">
+                            <input type="hidden" name="curriculumModuleId" value={module.id} />
+                            <input
+                              name="code"
+                              required
+                              placeholder={t("manager.criterionCode")}
+                              className={inputClass}
+                            />
+                            <textarea
+                              name="description"
+                              required
+                              rows={2}
+                              placeholder={t("manager.criterionWhat")}
+                              className={inputClass}
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="submit"
+                                disabled={criterionPending}
+                                className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                                style={{ background: "var(--brand-primary)" }}
+                              >
+                                {criterionPending ? t("manager.adding") : t("manager.addCriterion")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setOpenCriterionFor(null)}
+                                className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+                              >
+                                {t("common.cancel")}
+                              </button>
+                            </div>
+                          </form>
+                        ) : canManage ? (
                           <button
                             type="button"
-                            onClick={() => setOpenCriterionFor(null)}
-                            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+                            onClick={() => setOpenCriterionFor(module.id)}
+                            className="mt-2 text-sm font-medium text-[var(--brand-accent)] hover:underline"
                           >
-                            Cancel
+                            {t("manager.addCriterionStart")}
                           </button>
-                        </div>
-                      </form>
-                    ) : canManage ? (
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-[var(--muted)]">
+                    {qualification.parentQualificationId ? t("manager.noneFromParent") : t("manager.noModules")}
+                  </p>
+                )}
+
+                <div className="mt-3 space-y-2">
+                  <Message state={criterionState} />
+                  <Message state={moduleState} />
+                </div>
+
+                {qualification.parentQualificationId ? (
+                  <p className="mt-3 text-sm">
+                    <Link
+                      href={`/qualifications/${qualification.id}/modules`}
+                      className="font-medium text-[var(--brand-accent)] hover:underline"
+                    >
+                      {t("manager.choose")}
+                    </Link>
+                    <span className="mt-1 block text-xs text-[var(--muted)]">{t("manager.chooseNote")}</span>
+                  </p>
+                ) : openModuleFor === qualification.id ? (
+                  <form action={moduleAction} className="mt-4 space-y-2">
+                    <input type="hidden" name="qualificationId" value={qualification.id} />
+                    <select name="component" defaultValue="knowledge" className={inputClass}>
+                      {COMPONENTS.map((component) => (
+                        <option key={component} value={component}>
+                          {t(`manager.componentModule.${component}`)}
+                        </option>
+                      ))}
+                    </select>
+                    <input name="code" required placeholder={t("manager.moduleCode")} className={inputClass} />
+                    <input name="title" required placeholder={t("manager.moduleTitle")} className={inputClass} />
+                    <input
+                      name="credits"
+                      type="number"
+                      min={0}
+                      placeholder={t("manager.creditsOptional")}
+                      className={inputClass}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={modulePending}
+                        className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                        style={{ background: "var(--brand-primary)" }}
+                      >
+                        {modulePending ? t("manager.adding") : t("manager.addModule")}
+                      </button>
                       <button
                         type="button"
-                        onClick={() => setOpenCriterionFor(module.id)}
-                        className="mt-2 text-sm font-medium text-[var(--brand-accent)] hover:underline"
+                        onClick={() => setOpenModuleFor(null)}
+                        className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
                       >
-                        + Add an assessment criterion
+                        {t("common.cancel")}
                       </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-[var(--muted)]">
-                {qualification.parentQualificationId
-                  ? "No modules chosen from the parent's curriculum yet."
-                  : "No curriculum modules yet."}
-              </p>
-            )}
-
-            <div className="mt-3 space-y-2">
-              <Message state={criterionState} />
-              <Message state={moduleState} />
-            </div>
-
-            {qualification.parentQualificationId ? (
-              <p className="mt-3 text-sm">
-                <Link
-                  href={`/qualifications/${qualification.id}/modules`}
-                  className="font-medium text-[var(--brand-accent)] hover:underline"
-                >
-                  Choose which of the parent&rsquo;s modules this takes
-                </Link>
-                <span className="mt-1 block text-xs text-[var(--muted)]">
-                  Modules are not added here. This draws from its parent&rsquo;s
-                  curriculum, so a learner&rsquo;s work against a module counts
-                  once wherever they met it.
-                </span>
-              </p>
-            ) : openModuleFor === qualification.id ? (
-              <form action={moduleAction} className="mt-4 space-y-2">
-                <input
-                  type="hidden"
-                  name="qualificationId"
-                  value={qualification.id}
-                />
-                <select
-                  name="component"
-                  defaultValue="knowledge"
-                  className={inputClass}
-                >
-                  <option value="knowledge">Knowledge module</option>
-                  <option value="practical">Practical skill module</option>
-                  <option value="workplace">Workplace experience module</option>
-                  <option value="general">General (non-accredited)</option>
-                </select>
-                <input
-                  name="code"
-                  required
-                  placeholder="Module code, e.g. KM-01"
-                  className={inputClass}
-                />
-                <input
-                  name="title"
-                  required
-                  placeholder="Module title"
-                  className={inputClass}
-                />
-                <input
-                  name="credits"
-                  type="number"
-                  min={0}
-                  placeholder="Credits (optional)"
-                  className={inputClass}
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={modulePending}
-                    className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-                    style={{ background: "var(--brand-primary)" }}
-                  >
-                    {modulePending ? "Adding…" : "Add module"}
-                  </button>
+                    </div>
+                  </form>
+                ) : canManage ? (
                   <button
                     type="button"
-                    onClick={() => setOpenModuleFor(null)}
-                    className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
+                    onClick={() => setOpenModuleFor(qualification.id)}
+                    className="mt-3 text-sm font-medium text-[var(--brand-accent)] hover:underline"
                   >
-                    Cancel
+                    {t("manager.addModuleStart")}
                   </button>
-                </div>
-              </form>
-            ) : canManage ? (
-              <button
-                type="button"
-                onClick={() => setOpenModuleFor(qualification.id)}
-                className="mt-3 text-sm font-medium text-[var(--brand-accent)] hover:underline"
-              >
-                + Add a curriculum module
-              </button>
-            ) : null}
-          </div>
-        </section>
-        ))}
+                ) : null}
+              </div>
+            </section>
+          ))}
 
       {canManage && show !== "list" ? (
         <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            New qualification
-          </h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{t("manager.new")}</h2>
 
           <div className="mt-3">
             <Message state={createState} />
           </div>
 
-          <form
-            action={createAction}
-            className="mt-4 grid gap-3 sm:grid-cols-2"
-          >
+          <form action={createAction} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="block space-y-1.5 sm:col-span-2">
-              <span className="block text-sm font-medium">Title</span>
-              <input
-                name="title"
-                required
-                minLength={3}
-                className={inputClass}
-              />
+              <span className="block text-sm font-medium">{t("manager.title")}</span>
+              <input name="title" required minLength={3} className={inputClass} />
             </label>
 
             <label className="block space-y-1.5">
-              <span className="block text-sm font-medium">What this is</span>
+              <span className="block text-sm font-medium">{t("manager.what")}</span>
               <select
                 name="kind"
                 value={newKind}
-                onChange={(event) =>
-                  setNewKind(event.target.value as Qualification["kind"])
-                }
+                onChange={(event) => setNewKind(event.target.value as Qualification["kind"])}
                 className={inputClass}
               >
-                <option value="full">Full qualification</option>
-                <option value="part">Part qualification</option>
-                <option value="skills_programme">
-                  Occupational skills programme
-                </option>
+                <option value="full">{t("qualKind.full")}</option>
+                <option value="part">{t("qualKind.part")}</option>
+                <option value="skills_programme">{t("manager.skillsProgramme")}</option>
               </select>
               <span className="block text-xs text-[var(--muted)]">
-                The SAQA document says which. Look for{" "}
-                <em>Qualification Type</em> on its first page.
+                <Rich text={t("manager.whichNote")} parts={{ field: <em>{t("manager.whichField")}</em> }} />
               </span>
             </label>
 
             <label className="block space-y-1.5">
               <span className="block text-sm font-medium">
-                Drawn from{" "}
+                {t("manager.drawnFromLabel")}{" "}
                 <span className="font-normal text-[var(--muted)]">
-                  {newKind === "part" ? "" : "(optional)"}
+                  {newKind === "part" ? "" : t("common.optional")}
                 </span>
               </span>
               <select
@@ -498,11 +420,7 @@ export function QualificationsManager({
                 defaultValue=""
                 className={`${inputClass} disabled:opacity-50`}
               >
-                <option value="">
-                  {newKind === "full"
-                    ? "Not applicable"
-                    : "Nothing — it stands on its own"}
-                </option>
+                <option value="">{newKind === "full" ? t("manager.notApplicable") : t("manager.standsOnOwn")}</option>
                 {qualifications
                   .filter((row) => row.kind === "full")
                   .map((row) => (
@@ -512,73 +430,45 @@ export function QualificationsManager({
                   ))}
               </select>
               <span className="block text-xs text-[var(--muted)]">
-                {newKind === "full"
-                  ? "A full qualification carries its own curriculum."
-                  : "It shares that qualification's curriculum and takes a subset of its modules — you choose which, once it exists."}
+                {newKind === "full" ? t("manager.fullOwn") : t("manager.sharesNote")}
               </span>
             </label>
 
             <label className="block space-y-1.5">
               <span className="block text-sm font-medium">
-                Curriculum code{" "}
-                <span className="font-normal text-[var(--muted)]">
-                  (optional)
-                </span>
+                {t("manager.curriculumCode")}{" "}
+                <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
               </span>
               <input name="curriculumCode" className={inputClass} />
               <span className="block text-xs text-[var(--muted)]">
-                {newKind === "full"
-                  ? "As written on the curriculum document. Never worked out — only the QCTO or the OFO can say what it is."
-                  : "The same code as the qualification it comes from. They share one curriculum, so they share its code."}
+                {newKind === "full" ? t("manager.codeFull") : t("manager.codePart")}
               </span>
             </label>
 
             <label className="block space-y-1.5">
               <span className="block text-sm font-medium">
-                SAQA ID{" "}
-                <span className="font-normal text-[var(--muted)]">
-                  (optional)
-                </span>
+                {t("manager.saqaId")} <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
               </span>
               <input name="saqaId" className={inputClass} />
             </label>
 
             <label className="block space-y-1.5 sm:col-span-2">
               <span className="block text-sm font-medium">
-                Accreditation number{" "}
-                <span className="font-normal text-[var(--muted)]">
-                  (optional)
-                </span>
+                {t("manager.accreditation")}{" "}
+                <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
               </span>
               <input name="accreditationNumber" className={inputClass} />
-              <span className="block text-xs text-[var(--muted)]">
-                The number this qualification is accredited under. One
-                accreditation letter usually covers several qualifications, so
-                this is not always the same as the provider&rsquo;s own number.
-                Leave it blank and reports fall back to the provider&rsquo;s and
-                say so.
-              </span>
+              <span className="block text-xs text-[var(--muted)]">{t("manager.accreditationNote")}</span>
             </label>
 
             <label className="block space-y-1.5">
-              <span className="block text-sm font-medium">NQF level</span>
-              <input
-                name="nqfLevel"
-                type="number"
-                min={1}
-                max={10}
-                className={inputClass}
-              />
+              <span className="block text-sm font-medium">{t("manager.nqf")}</span>
+              <input name="nqfLevel" type="number" min={1} max={10} className={inputClass} />
             </label>
 
             <label className="block space-y-1.5">
-              <span className="block text-sm font-medium">Total credits</span>
-              <input
-                name="totalCredits"
-                type="number"
-                min={0}
-                className={inputClass}
-              />
+              <span className="block text-sm font-medium">{t("manager.totalCredits")}</span>
+              <input name="totalCredits" type="number" min={0} className={inputClass} />
             </label>
 
             <div className="sm:col-span-2">
@@ -588,7 +478,7 @@ export function QualificationsManager({
                 className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 style={{ background: "var(--brand-primary)" }}
               >
-                {createPending ? "Creating…" : "Create qualification"}
+                {createPending ? t("manager.creating") : t("manager.create")}
               </button>
             </div>
           </form>

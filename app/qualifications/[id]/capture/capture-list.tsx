@@ -2,10 +2,8 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import {
-  captureFiledAction,
-  type CaptureFiledState,
-} from "./actions";
+import { captureFiledAction, type CaptureFiledState } from "./actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The papers this qualification holds, and the one button that captures them.
@@ -33,6 +31,7 @@ export type CapturableRow = {
 };
 
 function CaptureButton({ label }: { label: string }) {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
@@ -41,7 +40,7 @@ function CaptureButton({ label }: { label: string }) {
       className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
       style={{ background: "var(--brand-primary)" }}
     >
-      {pending ? "Reading…" : label}
+      {pending ? t("captureList.reading") : label}
     </button>
   );
 }
@@ -53,10 +52,8 @@ export function CaptureList({
   qualificationId: string;
   rows: CapturableRow[];
 }) {
-  const [state, act] = useActionState<CaptureFiledState, FormData>(
-    captureFiledAction,
-    {},
-  );
+  const t = useT();
+  const [state, act] = useActionState<CaptureFiledState, FormData>(captureFiledAction, {});
 
   const outstanding = rows.filter((row) => !row.captured);
 
@@ -71,16 +68,11 @@ export function CaptureList({
         </p>
       ) : null}
 
-      <p className="mb-3 text-sm text-[var(--muted)]">
-        These are already in the platform. Capturing one reads its questions
-        out of the Word file and pairs the answer guide filed beside it &mdash;
-        nothing is uploaded again. What it proposes is shown to you before any
-        of it becomes an assessment.
-      </p>
+      <p className="mb-3 text-sm text-[var(--muted)]">{t("captureList.intro")}</p>
 
       {outstanding.length === 0 ? (
         <p className="text-sm" style={{ color: "var(--success)" }}>
-          All {rows.length} captured. Learners can answer these on screen.
+          {t("captureList.all", { count: rows.length })}
         </p>
       ) : null}
 
@@ -93,47 +85,35 @@ export function CaptureList({
             <div className="min-w-0">
               <p className="text-sm font-medium">
                 {row.studyUnitCode ? (
-                  <span className="mr-2 text-xs text-[var(--muted)]">
-                    {row.studyUnitCode}
-                  </span>
+                  <span className="mr-2 text-xs text-[var(--muted)]">{row.studyUnitCode}</span>
                 ) : null}
                 {row.filename}
               </p>
               <p className="mt-0.5 text-xs text-[var(--muted)]">
-                {row.kind === "workbook" ? "Workbook" : "Summative assessment"}
+                {row.kind === "workbook" ? t("captureList.workbook") : t("captureList.summative")}
                 {" · "}
                 {row.guide ? (
-                  <>answer guide: {row.guide.filename}</>
+                  t("captureList.guide", { file: row.guide.filename })
                 ) : (
                   /*
                     Said plainly rather than left to be discovered after the
                     capture. Without a guide there are no correct answers and
                     no marks, and every question has to be completed by hand.
                   */
-                  <span style={{ color: "var(--danger)" }}>
-                    no answer guide filed &mdash; every question would need its
-                    answer and marks by hand
-                  </span>
+                  <span style={{ color: "var(--danger)" }}>{t("captureList.noGuide")}</span>
                 )}
               </p>
             </div>
 
             {row.captured ? (
-              <span
-                className="text-xs font-medium"
-                style={{ color: "var(--success)" }}
-              >
-                &#10003; captured
+              <span className="text-xs font-medium" style={{ color: "var(--success)" }}>
+                {t("captureList.captured")}
               </span>
             ) : (
               <form action={act}>
-                <input
-                  type="hidden"
-                  name="qualificationId"
-                  value={qualificationId}
-                />
+                <input type="hidden" name="qualificationId" value={qualificationId} />
                 <input type="hidden" name="documentId" value={row.documentId} />
-                <CaptureButton label="Capture this &rarr;" />
+                <CaptureButton label={t("captureList.capture")} />
               </form>
             )}
           </li>

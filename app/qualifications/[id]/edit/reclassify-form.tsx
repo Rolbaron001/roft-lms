@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { reclassifyAction, type EditorState } from "./actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const field =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -37,6 +39,7 @@ export function ReclassifyForm({
   /** Full qualifications this one could be a part of. */
   candidates: { id: string; title: string }[];
 }) {
+  const t = useT();
   const [state, act, working] = useActionState<EditorState, FormData>(
     reclassifyAction,
     {},
@@ -51,16 +54,13 @@ export function ReclassifyForm({
     return (
       <div className="space-y-2 text-sm">
         <p>
-          This is recorded as{" "}
-          <span className="font-medium">{LABELS[kind]}</span>.
+          <Rich
+            text={t("reclassify.recordedAs")}
+            parts={{ kind: <span className="font-medium">{t(`reclassify.lower.${kind}`)}</span> }}
+          />
         </p>
         <p className="text-[var(--muted)]">
-          It cannot be changed: {enrolled}{" "}
-          {enrolled === 1 ? "learner is" : "learners are"} enrolled on it.
-          Enrolment is per programme ID, and changing what this is would change
-          which modules they are assessed against — and so what they have to do
-          to finish. If it is genuinely the wrong sort of thing, create the
-          right one and enrol them onto that.
+          {enrolled === 1 ? t("reclassify.lockedOne") : t("reclassify.locked", { count: enrolled })}
         </p>
       </div>
     );
@@ -72,7 +72,7 @@ export function ReclassifyForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">What this is</span>
+          <span className="block text-sm font-medium">{t("reclassify.whatItIs")}</span>
           <select
             name="kind"
             value={chosen}
@@ -81,32 +81,29 @@ export function ReclassifyForm({
             }
             className={`${field} w-full`}
           >
-            <option value="full">A full qualification</option>
-            <option value="part">A part qualification</option>
-            <option value="skills_programme">A skills programme</option>
+            <option value="full">{t("reclassify.kind.full")}</option>
+            <option value="part">{t("reclassify.kind.part")}</option>
+            <option value="skills_programme">{t("reclassify.kind.skills_programme")}</option>
           </select>
         </label>
 
         {needsParent ? (
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Drawn from</span>
+            <span className="block text-sm font-medium">{t("reclassify.drawnFrom")}</span>
             <select
               name="parentId"
               defaultValue={parentId ?? ""}
               required
               className={`${field} w-full`}
             >
-              <option value="">Choose the full qualification</option>
+              <option value="">{t("reclassify.chooseParent")}</option>
               {candidates.map((one) => (
                 <option key={one.id} value={one.id}>
                   {one.title}
                 </option>
               ))}
             </select>
-            <span className="block text-xs text-[var(--muted)]">
-              A part has no curriculum document of its own — it uses its
-              parent&rsquo;s, and selects modules from it.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("reclassify.parentNote")}</span>
           </label>
         ) : null}
       </div>
@@ -114,21 +111,15 @@ export function ReclassifyForm({
       {/* What the change leaves behind, said before it is made. */}
       {needsParent && ownModules > 0 ? (
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          This qualification has {ownModules}{" "}
-          {ownModules === 1 ? "module" : "modules"} of its own curriculum, from
-          when it was imported. Those stay where they are — recording it as a
-          part does not delete them, and you choose separately which of the
-          parent&rsquo;s modules it selects.
+          {ownModules === 1 ? t("reclassify.ownModulesOne") : t("reclassify.ownModules", { count: ownModules })}
         </p>
       ) : null}
 
       {chosen === "full" && selectedModules > 0 ? (
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          The {selectedModules}{" "}
-          {selectedModules === 1 ? "module" : "modules"} selected from its
-          parent will be cleared. A full qualification selects nothing from
-          anybody, and leaving them would keep them counting towards its
-          credits.
+          {selectedModules === 1
+            ? t("reclassify.selectedOne")
+            : t("reclassify.selected", { count: selectedModules })}
         </p>
       ) : null}
 
@@ -137,7 +128,7 @@ export function ReclassifyForm({
         disabled={working}
         className="rounded-md border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
       >
-        {working ? "Recording…" : "Record what this is"}
+        {working ? t("reclassify.recording") : t("reclassify.record")}
       </button>
 
       {state.error ? (
@@ -156,9 +147,3 @@ export function ReclassifyForm({
     </form>
   );
 }
-
-const LABELS: Record<string, string> = {
-  full: "a full qualification",
-  part: "a part qualification",
-  skills_programme: "a skills programme",
-};

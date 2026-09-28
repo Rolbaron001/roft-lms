@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
 import { previewQualification, PreviewError } from "@/lib/qualification-preview";
 import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
@@ -16,12 +17,6 @@ import { StartUnit } from "./start-unit";
  *
  * Nothing here writes. No enrolment, no attempt, no step recorded as opened.
  */
-const KIND_LABEL: Record<string, string> = {
-  lesson: "Lesson",
-  assessment: "Assessment",
-  document: "Document",
-  workplace: "Workplace",
-};
 
 export default async function QualificationPreviewPage({
   params,
@@ -31,6 +26,7 @@ export default async function QualificationPreviewPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:author");
+  const { t, locale } = await pageLocale();
 
   let preview;
   try {
@@ -40,7 +36,7 @@ export default async function QualificationPreviewPage({
     throw error;
   }
 
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const { qualification, counts } = preview;
 
   return (
@@ -52,16 +48,13 @@ export default async function QualificationPreviewPage({
         >
           &larr; {qualification.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">As a learner will see it</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t("qualPreview.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The whole {words.one("programme")} in the order somebody enrolled on
-          it walks it. Nothing here starts anything: no enrolment is made, no
-          attempt is opened and no progress is recorded, so this can be read as
-          often as you like.
+          {t("qualPreview.intro", { programme: words.lowerOne("programme") })}
         </p>
         <p className="mt-2 text-sm">
-          {counts.units} {counts.units === 1 ? "study unit" : "study units"},{" "}
-          {counts.steps} {counts.steps === 1 ? "step" : "steps"},{" "}
+          {counts.units === 1 ? t("qualPreview.unitsOne") : t("qualPreview.units", { count: counts.units })},{" "}
+          {counts.steps === 1 ? t("qualPreview.stepsOne") : t("qualPreview.steps", { count: counts.steps })},{" "}
           <span
             className={
               counts.ready === counts.steps
@@ -69,7 +62,7 @@ export default async function QualificationPreviewPage({
                 : "font-medium text-[var(--danger)]"
             }
           >
-            {counts.ready} of {counts.steps} ready
+            {t("qualPreview.ready", { ready: counts.ready, steps: counts.steps })}
           </span>
           .
         </p>
@@ -84,7 +77,7 @@ export default async function QualificationPreviewPage({
       */}
       {preview.gaps.length > 0 ? (
         <div className="mb-6">
-          <Card title="What a learner would not find">
+          <Card title={t("qualPreview.gaps")}>
             <ul className="list-disc space-y-1 pl-5 text-sm">
               {preview.gaps.map((gap) => (
                 <li key={gap}>{gap}</li>
@@ -94,12 +87,8 @@ export default async function QualificationPreviewPage({
         </div>
       ) : (
         <div className="mb-6">
-          <Card title="Ready">
-            <p className="text-sm">
-              Every step in every study unit has something behind it. A learner
-              enrolled on this {words.one("programme")} today would find the
-              whole of it.
-            </p>
+          <Card title={t("qualPreview.allReady")}>
+            <p className="text-sm">{t("qualPreview.allReadyNote", { programme: words.lowerOne("programme") })}</p>
           </Card>
         </div>
       )}
@@ -113,13 +102,14 @@ export default async function QualificationPreviewPage({
               </span>
               {unit.credits !== null ? (
                 <span className="text-xs text-[var(--muted)]">
-                  {unit.credits} credits
+                  {t("qualPreview.credits", { count: unit.credits })}
                 </span>
               ) : null}
               {unit.steps.length > 0 ? (
                 <span className="text-xs text-[var(--muted)]">
-                  {unit.steps.length}{" "}
-                  {unit.steps.length === 1 ? "step" : "steps"}
+                  {unit.steps.length === 1
+                    ? t("qualPreview.stepsOne")
+                    : t("qualPreview.steps", { count: unit.steps.length })}
                 </span>
               ) : null}
             </div>
@@ -142,7 +132,7 @@ export default async function QualificationPreviewPage({
                     href={`/courses/${unit.courseId}/steps`}
                     className="mt-2 inline-block text-sm underline underline-offset-2"
                   >
-                    Build what a learner works through
+                    {t("qualPreview.build")}
                   </Link>
                 ) : (
                   <StartUnit qualificationId={id} studyUnitId={unit.id} />
@@ -159,14 +149,14 @@ export default async function QualificationPreviewPage({
                       {index + 1}.
                     </span>
                     <span className="text-xs text-[var(--muted)]">
-                      {KIND_LABEL[step.kind] ?? step.kind}
+                      {maybe(t, `qualPreview.kind.${step.kind}`) ?? step.kind}
                     </span>
                     <span className={step.ready ? "" : "text-[var(--danger)]"}>
                       {step.title}
                     </span>
                     {step.optional ? (
                       <span className="text-xs text-[var(--muted)]">
-                        optional
+                        {t("qualPreview.optional")}
                       </span>
                     ) : null}
                     {step.note ? (
@@ -179,7 +169,7 @@ export default async function QualificationPreviewPage({
                         href={step.href}
                         className="text-xs underline underline-offset-2"
                       >
-                        Open it as a learner sees it
+                        {t("qualPreview.open")}
                       </Link>
                     ) : null}
                     {step.guidance ? (
@@ -197,7 +187,7 @@ export default async function QualificationPreviewPage({
                 href={`/courses/${unit.courseId}/steps`}
                 className="mt-3 inline-block text-xs underline underline-offset-2"
               >
-                Change the order or what is on it
+                {t("qualPreview.change")}
               </Link>
             ) : null}
           </Card>

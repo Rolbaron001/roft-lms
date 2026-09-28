@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import {
   curriculumForEditing,
   curriculumProblems,
@@ -34,6 +34,7 @@ export default async function EditCurriculumPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+  const t = await pageT();
 
   let curriculum;
   try {
@@ -70,29 +71,26 @@ export default async function EditCurriculumPage({
         >
           ← {curriculum.qualification.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Build the curriculum</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Enter it as the curriculum document prints it — the same codes, in the
-          same order — so the two can be read side by side. Every line saves as
-          you enter it.
-        </p>
+        <h1 className="mt-2 text-xl font-semibold">{t("buildCurr.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("buildCurr.intro")}</p>
         <Link
           href={`/qualifications/${id}/edit/from-document`}
           className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
         >
-          Start from the curriculum document
+          {t("buildCurr.fromDocument")}
         </Link>
       </div>
 
       {readiness.ready ? (
         <p className="mb-6 rounded-md border border-[var(--success)]/40 bg-[var(--success)]/5 px-4 py-3 text-sm">
-          Ready for material. {readiness.curriculum.modules} modules and{" "}
-          {readiness.curriculum.criteria} criteria are in, so a question can be
-          tagged to what it evidences.
+          {t("buildCurr.ready", {
+            modules: readiness.curriculum.modules,
+            criteria: readiness.curriculum.criteria,
+          })}
         </p>
       ) : (
         <div className="mb-6 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 text-sm">
-          <p className="font-medium">Not ready for material yet.</p>
+          <p className="font-medium">{t("buildCurr.notReady")}</p>
           <ul className="mt-1 space-y-0.5 text-[var(--muted)]">
             {readiness.gaps.map((gap, index) => (
               <li key={index}>· {gap.action}</li>
@@ -103,8 +101,8 @@ export default async function EditCurriculumPage({
 
       <div className="mb-6">
         <Card
-          title="What this qualification is"
-          description="Set when it was imported, and correctable here. A full qualification has its own curriculum; a part or a skills programme selects modules from one."
+          title={t("buildCurr.whatItIs")}
+          description={t("buildCurr.whatItIsNote")}
         >
           <ReclassifyForm
             qualificationId={id}
@@ -120,8 +118,8 @@ export default async function EditCurriculumPage({
 
       {faults.length > 0 ? (
         <Card
-          title={`${faults.length} to sort out`}
-          description="Not a gate — you can leave and come back. But each of these is something the platform cannot work around later."
+          title={t("buildCurr.faults", { count: faults.length })}
+          description={t("buildCurr.faultsNote")}
         >
           <ul className="space-y-1.5 text-sm">
             {faults.map((problem, index) => (
@@ -136,7 +134,7 @@ export default async function EditCurriculumPage({
 
       {notes.length > 0 ? (
         <div className="mt-4">
-          <Card title="Worth knowing">
+          <Card title={t("buildCurr.worthKnowing")}>
             <ul className="space-y-1.5 text-sm text-[var(--muted)]">
               {notes.map((problem, index) => (
                 <li key={index}>

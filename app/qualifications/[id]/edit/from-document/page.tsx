@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { proposalForQualification } from "@/lib/curriculum-from-document";
 import { AppShell, Card } from "@/components/app-shell";
 import { AcceptModule } from "./accept-module";
@@ -21,6 +21,7 @@ export default async function FromDocumentPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+  const t = await pageT();
 
   const proposal = await proposalForQualification(session, id);
 
@@ -33,24 +34,24 @@ export default async function FromDocumentPage({
           href={`/qualifications/${id}/edit`}
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← Build the curriculum
+          {t("takeDoc.back")}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Take it from the document</h1>
+        <h1 className="mt-2 text-xl font-semibold">{t("takeDoc.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
           {proposal.document
-            ? `Read from ${proposal.document.filename}. Nothing below has been added yet — open a module, check it against the document, and take it if it is right.`
-            : "Nothing has been read yet."}
+            ? t("takeDoc.readFrom", { file: proposal.document.filename })
+            : t("takeDoc.nothingRead")}
         </p>
       </div>
 
       {proposal.blocked ? (
-        <Card title="Nothing to propose">
+        <Card title={t("takeDoc.nothing")}>
           <p className="text-sm">{proposal.blocked}</p>
           <Link
             href={`/qualifications/${id}`}
             className="mt-3 inline-block text-sm underline underline-offset-2"
           >
-            Go to the documents for this qualification
+            {t("takeDoc.goToDocuments")}
           </Link>
         </Card>
       ) : null}
@@ -58,8 +59,8 @@ export default async function FromDocumentPage({
       {proposal.notes.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${proposal.notes.length} things to check`}
-            description="What the reading could not account for, and what the document itself does not add up. Neither stops you taking a module — but both are worth reading first."
+            title={t("takeDoc.notes", { count: proposal.notes.length })}
+            description={t("takeDoc.notesNote")}
           >
             <ul className="space-y-1 text-sm text-[var(--muted)]">
               {proposal.notes.map((note, index) => (
@@ -73,9 +74,9 @@ export default async function FromDocumentPage({
       {proposal.modules.length > 0 ? (
         <>
           <p className="mb-3 text-sm text-[var(--muted)]">
-            {proposal.modules.length} modules read
+            {t("takeDoc.read", { count: proposal.modules.length })}
             {waiting.length < proposal.modules.length
-              ? ` · ${proposal.modules.length - waiting.length} already in the curriculum`
+              ? ` · ${t("takeDoc.already", { count: proposal.modules.length - waiting.length })}`
               : ""}
           </p>
 
