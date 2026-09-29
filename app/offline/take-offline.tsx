@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n";
 
 /**
  * "Make this available offline" — a deliberate download, not a silent cache.
@@ -26,6 +27,7 @@ export function TakeOffline({
   /** The pages that make it up. */
   paths: string[];
 }) {
+  const t = useT();
   const [state, setState] = useState<
     "unknown" | "held" | "not_held" | "working" | "unsupported"
   >("unknown");
@@ -83,9 +85,7 @@ export function TakeOffline({
 
         if (quota && free < needed) {
           setState("not_held");
-          setMessage(
-            "There is not enough room on this phone. Remove something held for another study unit first — nothing has been downloaded.",
-          );
+          setMessage(t("offline.noRoom"));
           return;
         }
       }
@@ -125,12 +125,10 @@ export function TakeOffline({
       }
 
       setState("held");
-      setMessage(`${label} is on this phone. You can read it with no signal.`);
+      setMessage(t("offline.onPhone", { label }));
     } catch {
       setState("not_held");
-      setMessage(
-        "That did not download completely, so none of it has been kept. Try again where the signal is better.",
-      );
+      setMessage(t("offline.incomplete"));
     }
   }
 
@@ -138,15 +136,11 @@ export function TakeOffline({
     const cache = await caches.open("roft-lms-v1");
     await Promise.all(paths.map((path) => cache.delete(path)));
     setState("not_held");
-    setMessage(`${label} is no longer held. It freed up room on this phone.`);
+    setMessage(t("offline.released", { label }));
   }
 
   if (state === "unsupported") {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        This browser cannot keep material for use without a signal.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("offline.cannotKeep")}</p>;
   }
 
   return (
@@ -157,7 +151,7 @@ export function TakeOffline({
           onClick={release}
           className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
         >
-          Remove from this phone
+          {t("offline.remove")}
         </button>
       ) : (
         <button
@@ -167,16 +161,16 @@ export function TakeOffline({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {state === "working"
-            ? "Downloading…"
-            : "Make this available offline"}
+          {state === "working" ? t("offline.downloading") : t("offline.makeAvailable")}
         </button>
       )}
 
       <p className="text-xs text-[var(--muted)]">
         {state === "held"
-          ? `${label} is held on this phone.`
-          : `${paths.length} ${paths.length === 1 ? "page" : "pages"}. Download it before you go out.`}
+          ? t("offline.isHeld", { label })
+          : paths.length === 1
+            ? t("offline.pageOne")
+            : t("offline.pages", { count: paths.length })}
       </p>
 
       {message ? <p className="text-sm">{message}</p> : null}

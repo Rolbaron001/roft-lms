@@ -6,6 +6,8 @@ import {
   recordDisposalAction,
   type RecordsActionState,
 } from "./actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -35,6 +37,7 @@ export function FileDocument({
 }: {
   current: { id: string; title: string; version: string | null }[];
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<RecordsActionState, FormData>(
     fileDocumentAction,
     {},
@@ -48,7 +51,7 @@ export function FileDocument({
         onClick={() => setOpen(true)}
         className={buttonClass}
       >
-        File a document
+        {t("records.file")}
       </button>
     );
   }
@@ -59,39 +62,39 @@ export function FileDocument({
         <select name="category" className={inputClass}>
           {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
-              {label}
+              {maybe(t, `records.category.${value}`) ?? label}
             </option>
           ))}
         </select>
         <input
           name="title"
           required
-          placeholder="Title"
+          placeholder={t("records.titleHint")}
           className={inputClass}
         />
-        <input name="version" placeholder="Version" className={inputClass} />
+        <input name="version" placeholder={t("records.versionHint")} className={inputClass} />
         <input
           name="reference"
-          placeholder="Your reference"
+          placeholder={t("records.referenceHint")}
           className={inputClass}
         />
       </div>
 
       <div className="flex flex-wrap gap-2">
         <label className="text-sm">
-          <span className="mr-2 text-[var(--muted)]">Effective from</span>
+          <span className="mr-2 text-[var(--muted)]">{t("records.effective")}</span>
           <input type="date" name="effectiveFrom" className={inputClass} />
         </label>
         <label className="text-sm">
-          <span className="mr-2 text-[var(--muted)]">Expires</span>
+          <span className="mr-2 text-[var(--muted)]">{t("records.expiresLabel")}</span>
           <input type="date" name="expiresOn" className={inputClass} />
         </label>
       </div>
 
       <label className="block text-sm">
-        <span className="mr-2 text-[var(--muted)]">Replaces</span>
+        <span className="mr-2 text-[var(--muted)]">{t("records.replaces")}</span>
         <select name="supersedesId" defaultValue="" className={inputClass}>
-          <option value="">Nothing — this is new</option>
+          <option value="">{t("records.new")}</option>
           {current.map((row) => (
             <option key={row.id} value={row.id}>
               {row.title}
@@ -99,16 +102,13 @@ export function FileDocument({
             </option>
           ))}
         </select>
-        <span className="mt-1 block text-xs text-[var(--muted)]">
-          The one it replaces is kept and marked superseded. The policy that
-          governed in March is what an audit of March asks about.
-        </span>
+        <span className="mt-1 block text-xs text-[var(--muted)]">{t("records.replacesNote")}</span>
       </label>
 
       <textarea
         name="description"
         rows={2}
-        placeholder="What it is, if the title does not say"
+        placeholder={t("records.descriptionHint")}
         className={`${inputClass} block w-full`}
       />
 
@@ -125,12 +125,8 @@ export function FileDocument({
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" name="visibleToAll" className="mt-1" />
         <span>
-          Anybody signed in may read this
-          <span className="block text-xs text-[var(--muted)]">
-            Applies to statutory documents. A learner guide is always shown to
-            learners; policies, contracts, accreditation and operational
-            documents never are.
-          </span>
+          {t("records.anybody")}
+          <span className="block text-xs text-[var(--muted)]">{t("records.anybodyNote")}</span>
         </span>
       </label>
 
@@ -149,14 +145,14 @@ export function FileDocument({
           disabled={saving}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Filing…" : "File it"}
+          {saving ? t("records.filing") : t("records.fileIt")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className={buttonClass}
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </form>
@@ -180,6 +176,7 @@ export function DisposalForm({
   name: string;
   dueOn: string;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<RecordsActionState, FormData>(
     recordDisposalAction,
     {},
@@ -199,12 +196,12 @@ export function DisposalForm({
           onChange={(event) => setStatus(event.target.value)}
           className={inputClass}
         >
-          <option value="archived">Archive — move it out of the way</option>
-          <option value="retained">Keep it beyond retention</option>
-          <option value="destroyed">Destroy it</option>
+          <option value="archived">{t("records.archive")}</option>
+          <option value="retained">{t("records.keep")}</option>
+          <option value="destroyed">{t("records.destroy")}</option>
         </select>
         <button type="submit" disabled={saving} className={buttonClass}>
-          {saving ? "Recording…" : "Record"}
+          {saving ? t("records.recording") : t("records.record")}
         </button>
       </div>
 
@@ -212,11 +209,7 @@ export function DisposalForm({
         <input
           name="reason"
           required
-          placeholder={
-            status === "destroyed"
-              ? "Why this may be destroyed"
-              : "Why this is being kept"
-          }
+          placeholder={status === "destroyed" ? t("records.whyDestroy") : t("records.whyKeep")}
           className={`${inputClass} block w-full`}
         />
       ) : null}

@@ -1,24 +1,25 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import { listMailbox, MailboxError } from "@/lib/mailbox";
 import { mailIsConfigured } from "@/lib/mail";
 import { AppShell, Card } from "@/components/app-shell";
+import { Rich } from "@/components/rich-text";
 import { Compose } from "./compose";
 
-function when(value: Date): string {
+function when(value: Date, dates: string): string {
   const now = Date.now();
   const days = Math.floor((now - value.getTime()) / 86_400_000);
 
   if (days === 0) {
-    return value.toLocaleTimeString("en-ZA", {
+    return value.toLocaleTimeString(dates, {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
   if (days < 7) {
-    return value.toLocaleDateString("en-ZA", { weekday: "short" });
+    return value.toLocaleDateString(dates, { weekday: "short" });
   }
-  return value.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+  return value.toLocaleDateString(dates, { day: "numeric", month: "short" });
 }
 
 /**
@@ -33,6 +34,7 @@ function when(value: Date): string {
 export default async function MailPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, dates } = await pageLocale();
 
   let mailbox;
   try {
@@ -41,7 +43,7 @@ export default async function MailPage() {
     if (error instanceof MailboxError && error.code === "no_mailbox") {
       return (
         <AppShell tenant={tenant} session={session}>
-          <h1 className="mb-4 text-xl font-semibold">Mail</h1>
+          <h1 className="mb-4 text-xl font-semibold">{t("mailbox.title")}</h1>
           <Card>
             <p className="text-sm text-[var(--muted)]">{error.message}</p>
           </Card>
@@ -57,10 +59,10 @@ export default async function MailPage() {
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Mail</h1>
+          <h1 className="text-xl font-semibold">{t("mailbox.title")}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             <span className="font-mono">{mailbox.address}</span>
-            {mailbox.unread > 0 ? ` · ${mailbox.unread} unread` : ""}
+            {mailbox.unread > 0 ? ` · ${t("mailbox.unread", { count: mailbox.unread })}` : ""}
           </p>
         </div>
         <Compose canSend={canSend} />
@@ -69,9 +71,10 @@ export default async function MailPage() {
       {mailbox.messages.length === 0 ? (
         <Card>
           <p className="text-sm text-[var(--muted)]">
-            Nothing here yet. Anything sent to{" "}
-            <span className="font-mono">{mailbox.address}</span> arrives in this
-            list, with attachments stored the same way assessment evidence is.
+            <Rich
+              text={t("mailbox.empty")}
+              parts={{ address: <span className="font-mono">{mailbox.address}</span> }}
+            />
           </p>
         </Card>
       ) : (
@@ -91,18 +94,18 @@ export default async function MailPage() {
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className={unread ? "font-semibold" : ""}>
                         {message.direction === "outbound"
-                          ? `To ${message.toAddresses}`
+                          ? t("mailbox.to", { address: message.toAddresses })
                           : (message.fromName ?? message.fromAddress)}
                       </p>
                       <p className="text-xs text-[var(--muted)]">
                         {message.attachments > 0
                           ? `📎 ${message.attachments} · `
                           : ""}
-                        {when(message.receivedAt)}
+                        {when(message.receivedAt, dates)}
                       </p>
                     </div>
                     <p className={`text-sm ${unread ? "font-medium" : ""}`}>
-                      {message.subject ?? "(no subject)"}
+                      {message.subject ?? t("mailbox.noSubject")}
                     </p>
                     <p className="truncate text-sm text-[var(--muted)]">
                       {message.preview}

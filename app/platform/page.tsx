@@ -1,17 +1,13 @@
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { listTenants, platformHealth } from "@/lib/provisioning";
+import { maybe } from "@/lib/i18n";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { NewTenantForm } from "./new-tenant-form";
-
-const MODE_LABELS: Record<string, string> = {
-  shared_cloud: "Shared cloud",
-  dedicated_cloud: "Dedicated cloud",
-  on_premise: "On premise",
-};
 
 export default async function PlatformPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("platform:manage_tenants");
+  const t = await pageT();
 
   const [tenants, health] = await Promise.all([
     listTenants(session),
@@ -21,22 +17,16 @@ export default async function PlatformPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Client organisations</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Every organisation on the platform. You can see how much each is
-          using and manage their configuration — but not their learners,
-          courses or assessment records. Hosting a client&rsquo;s system is not
-          the same as being entitled to read it, and the platform enforces that
-          rather than relying on restraint.
-        </p>
+        <h1 className="text-xl font-semibold">{t("platformPage.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("platformPage.intro")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ["Organisations", health.activeTenants],
-          ["People", health.people],
-          ["Courses assigned", health.enrolments],
-          ["Certificates issued", health.certificates],
+          [t("platformPage.organisations"), health.activeTenants],
+          [t("platformPage.people"), health.people],
+          [t("platformPage.assigned"), health.enrolments],
+          [t("platformPage.certificates"), health.certificates],
         ].map(([label, value]) => (
           <div
             key={label as string}
@@ -50,11 +40,9 @@ export default async function PlatformPage() {
 
       {health.tenantsWithoutAdministrator > 0 ? (
         <p className="mt-4 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-4 py-3 text-sm text-[var(--danger)]">
-          {health.tenantsWithoutAdministrator}{" "}
           {health.tenantsWithoutAdministrator === 1
-            ? "organisation has"
-            : "organisations have"}{" "}
-          no administrator. Nobody there can manage their own system.
+            ? t("platformPage.noAdminOne")
+            : t("platformPage.noAdmin", { count: health.tenantsWithoutAdministrator })}
         </p>
       ) : null}
 
@@ -64,11 +52,11 @@ export default async function PlatformPage() {
             <table className="w-full min-w-lg text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                  <th className="pb-2 pr-4 font-medium">Organisation</th>
-                  <th className="pb-2 pr-4 font-medium">Address</th>
-                  <th className="pb-2 pr-4 font-medium">Mode</th>
-                  <th className="pb-2 pr-4 font-medium">Usage</th>
-                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 pr-4 font-medium">{t("platformPage.organisation")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("platformPage.address")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("platformPage.mode")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("platformPage.usage")}</th>
+                  <th className="pb-2 font-medium">{t("platformPage.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,13 +75,13 @@ export default async function PlatformPage() {
                       {row.customDomain ?? `${row.slug}.…`}
                     </td>
                     <td className="py-2.5 pr-4 text-xs">
-                      {MODE_LABELS[row.deploymentMode] ?? row.deploymentMode}
+                      {maybe(t, `platformPage.mode.${row.deploymentMode}`) ?? row.deploymentMode}
                     </td>
                     <td className="py-2.5 pr-4 text-xs text-[var(--muted)]">
-                      {row.people} people · {row.certificates} certificates
+                      {t("platformPage.usageCounts", { people: row.people, certificates: row.certificates })}
                       {row.administrators === 0 ? (
                         <span className="block font-medium text-[var(--danger)]">
-                          No administrator
+                          {t("platformPage.noAdministrator")}
                         </span>
                       ) : null}
                     </td>

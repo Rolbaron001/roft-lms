@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import {
   EnrolmentFormError,
   getEnrolmentForm,
@@ -32,6 +32,9 @@ export default async function EnrolmentFormPage({
   const { learner: requested } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, dates } = await pageLocale();
+  const longDate = (value: Date) =>
+    value.toLocaleDateString(dates, { day: "numeric", month: "long", year: "numeric" });
 
   const learnerId = requested || session.userId;
 
@@ -51,31 +54,21 @@ export default async function EnrolmentFormPage({
 
   const onSomebodyElsesBehalf = learnerId !== session.userId;
 
+  const notRecorded = t("enrolForm.notRecorded");
   const known: [string, string][] = [
-    ["Name", `${view.learner.firstName} ${view.learner.lastName}`],
-    ["Identity number", view.learner.nationalId ?? "Not recorded"],
+    [t("enrolForm.name"), `${view.learner.firstName} ${view.learner.lastName}`],
+    [t("enrolForm.idNumber"), view.learner.nationalId ?? notRecorded],
+    [t("enrolForm.birth"), view.learner.dateOfBirth ? longDate(view.learner.dateOfBirth) : notRecorded],
+    [t("enrolForm.email"), view.learner.email],
     [
-      "Date of birth",
-      view.learner.dateOfBirth
-        ? view.learner.dateOfBirth.toLocaleDateString("en-ZA", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-        : "Not recorded",
-    ],
-    ["Email", view.learner.email],
-    [
-      "Population group",
-      view.learner.equityCode
-        ? labelFor("equityCode", view.learner.equityCode)
-        : "Not recorded",
+      t("enrolForm.population"),
+      view.learner.equityCode ? labelFor("equityCode", view.learner.equityCode) : notRecorded,
     ],
     [
-      "Disability",
+      t("enrolForm.disability"),
       view.learner.disabilityCode
         ? labelFor("disabilityStatusCode", view.learner.disabilityCode)
-        : "Not recorded",
+        : notRecorded,
     ],
   ];
 
@@ -84,14 +77,11 @@ export default async function EnrolmentFormPage({
       <div className="mb-6">
         <h1 className="text-xl font-semibold">
           {onSomebodyElsesBehalf
-            ? `Enrolment form: ${view.learner.firstName} ${view.learner.lastName}`
-            : "Your enrolment form"}
+            ? t("enrolForm.titleOther", { name: `${view.learner.firstName} ${view.learner.lastName}` })
+            : t("enrolForm.titleOwn")}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          {tenant.displayName} has to send these details to the Quality Council
-          for Trades and Occupations when you are enrolled. Most of it is
-          already known and shown below; the rest is what nobody can answer
-          except you. You can save as you go and come back to it.
+          {t("enrolForm.intro", { provider: tenant.displayName })}
         </p>
       </div>
 
@@ -101,10 +91,7 @@ export default async function EnrolmentFormPage({
         for a date the platform already holds is how a form loses its reader.
       */}
       <div className="mb-6">
-        <Card
-          title="What is already on record"
-          description="Tell your coordinator if any of this is wrong; it is not yours to change here."
-        >
+        <Card title={t("enrolForm.onRecord")} description={t("enrolForm.onRecordNote")}>
           <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
             {known.map(([label, value]) => (
               <div key={label} className="grid grid-cols-[9rem_1fr] gap-2">
@@ -122,9 +109,10 @@ export default async function EnrolmentFormPage({
                   <span className="text-[var(--muted)]">
                     {" "}
                     · {row.cohortName}
+                    {" · "}
                     {row.inductionOn
-                      ? ` · induction ${row.inductionOn}`
-                      : " · induction not yet dated"}
+                      ? t("enrolForm.induction", { date: row.inductionOn })
+                      : t("enrolForm.noInduction")}
                   </span>
                 </p>
               ))}
@@ -134,7 +122,7 @@ export default async function EnrolmentFormPage({
           {disagreements.length > 0 ? (
             <div className="mt-4 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2">
               <p className="text-sm font-medium text-[var(--danger)]">
-                Something here does not add up
+                {t("enrolForm.doesNotAdd")}
               </p>
               <ul className="mt-1 space-y-1">
                 {disagreements.map((problem) => (
@@ -143,11 +131,7 @@ export default async function EnrolmentFormPage({
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                A South African identity number carries the date of birth and
-                the gender inside it, and the QCTO checks that they agree. It is
-                usually a mistyped digit. Your coordinator can correct it.
-              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">{t("enrolForm.idNote")}</p>
             </div>
           ) : null}
         </Card>
@@ -156,8 +140,8 @@ export default async function EnrolmentFormPage({
       {view.outstanding.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${view.outstanding.length} still to answer`}
-            description="Nothing is lost if you stop partway. This is what would be missing from the submission as it stands."
+            title={t("enrolForm.stillToAnswer", { count: view.outstanding.length })}
+            description={t("enrolForm.stillNote")}
           >
             <ul className="space-y-1.5">
               {view.outstanding.map((item) => (
@@ -173,20 +157,11 @@ export default async function EnrolmentFormPage({
         </div>
       ) : (
         <div className="mb-6">
-          <Card
-            title="Complete"
-            description="Everything the submission needs is here."
-          >
+          <Card title={t("enrolForm.complete")} description={t("enrolForm.completeNote")}>
             <p className="text-sm text-[var(--muted)]">
-              Confirmed{" "}
-              {view.profile.confirmedAt
-                ? view.profile.confirmedAt.toLocaleDateString("en-ZA", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "recently"}
-              .
+              {t("enrolForm.confirmed", {
+                date: view.profile.confirmedAt ? longDate(view.profile.confirmedAt) : t("enrolForm.recently"),
+              })}
             </p>
           </Card>
         </div>
@@ -201,11 +176,9 @@ export default async function EnrolmentFormPage({
           href={`/enrolment-form/document${onSomebodyElsesBehalf ? `?learner=${learnerId}` : ""}`}
           className="text-sm underline underline-offset-2"
         >
-          Print this form
+          {t("enrolForm.print")}
         </Link>
-        <span className="ml-2 text-sm text-[var(--muted)]">
-          for signing and filing.
-        </span>
+        <span className="ml-2 text-sm text-[var(--muted)]">{t("enrolForm.printNote")}</span>
       </p>
 
       <EnrolmentForm

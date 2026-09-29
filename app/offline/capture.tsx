@@ -9,15 +9,11 @@ import {
   queued,
   type QueuedItem,
 } from "@/lib/device-queue";
+import { useDates, useT } from "@/components/i18n";
+import { readable } from "./held-on-device";
 
 const field =
   "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
-
-function readable(bytes: number): string {
-  if (bytes < 1024) return `${bytes} bytes`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 /**
  * Recording work with no signal, and sending it when there is one.
@@ -47,6 +43,8 @@ export function Capture({
   qualificationId?: string;
   kind?: string;
 }) {
+  const t = useT();
+  const dates = useDates();
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [shrunk, setShrunk] = useState<{ from: number; to: number } | null>(
@@ -102,9 +100,9 @@ export function Capture({
           if (result.sent > 0 || result.dropped.length > 0) {
             setMessage(
               [
-                result.sent > 0 ? `${result.sent} sent.` : "",
+                result.sent > 0 ? t("offline.sent", { count: result.sent }) : "",
                 result.dropped.length > 0
-                  ? `${result.dropped.length} could not be accepted: ${result.dropped[0].why}`
+                  ? t("offline.dropped", { count: result.dropped.length, why: result.dropped[0].why })
                   : "",
               ]
                 .filter(Boolean)
@@ -120,7 +118,7 @@ export function Capture({
     if (navigator.onLine) send();
 
     return () => window.removeEventListener("online", send);
-  }, []);
+  }, [t]);
 
   async function choose(chosen: File | null) {
     setShrunk(null);
@@ -144,7 +142,7 @@ export function Capture({
 
   async function record() {
     if (!note.trim() && !file) {
-      setMessage("Write a note or add a photograph first.");
+      setMessage(t("offline.writeFirst"));
       return;
     }
 
@@ -166,9 +164,7 @@ export function Capture({
       await refresh();
 
       setMessage(
-        navigator.onLine
-          ? "Recorded. Sending it now."
-          : "Recorded on this phone. It will go when you have a signal.",
+        navigator.onLine ? t("offline.sending") : t("offline.willGo"),
       );
 
       if (navigator.onLine) {
@@ -183,18 +179,18 @@ export function Capture({
   return (
     <div className="space-y-4">
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">What you did</span>
+        <span className="block text-sm font-medium">{t("offline.whatYouDid")}</span>
         <textarea
           rows={3}
           value={note}
           onChange={(event) => setNote(event.target.value)}
           className={field}
-          placeholder="Inspected the fence line along the eastern boundary."
+          placeholder={t("offline.whatYouDidHint")}
         />
       </label>
 
       <label className="block space-y-1.5">
-        <span className="block text-sm font-medium">A photograph</span>
+        <span className="block text-sm font-medium">{t("offline.photo")}</span>
         <input
           type="file"
           accept="image/*"
@@ -205,8 +201,7 @@ export function Capture({
         />
         {shrunk ? (
           <span className="block text-xs text-[var(--muted)]">
-            Made smaller to save room: {readable(shrunk.from)} →{" "}
-            {readable(shrunk.to)}. Still clear enough to assess.
+            {t("offline.shrunk", { from: readable(shrunk.from, t), to: readable(shrunk.to, t) })}
           </span>
         ) : null}
       </label>
@@ -218,7 +213,7 @@ export function Capture({
         className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--brand-primary)" }}
       >
-        {busy ? "Recording…" : "Record it"}
+        {busy ? t("offline.recording") : t("offline.recordIt")}
       </button>
 
       {message ? (
@@ -229,11 +224,11 @@ export function Capture({
 
       <div className="border-t border-[var(--border)] pt-3">
         <p className="text-sm font-medium">
-          Waiting to send
+          {t("offline.waitingSend")}
           <span className="ml-2 font-normal text-[var(--muted)]">
             {size.count === 0
-              ? "nothing"
-              : `${size.count} ${size.count === 1 ? "item" : "items"} · ${readable(size.bytes)}`}
+              ? t("offline.nothing")
+              : `${size.count === 1 ? t("offline.itemOne") : t("offline.items", { count: size.count })} · ${readable(size.bytes, t)}`}
           </span>
         </p>
 
@@ -243,11 +238,11 @@ export function Capture({
               <li key={item.deviceKey} className="text-sm">
                 {String(item.payload.note ?? "").slice(0, 60) ||
                   item.fileName ||
-                  "Recorded work"}
+                  t("offline.recordedWork")}
                 <span className="block text-xs text-[var(--muted)]">
-                  Recorded {new Date(item.capturedAt).toLocaleString("en-ZA")}
+                  {t("offline.recordedAt", { date: new Date(item.capturedAt).toLocaleString(dates) })}
                   {item.attempts > 0
-                    ? ` · tried ${item.attempts} ${item.attempts === 1 ? "time" : "times"}`
+                    ? ` · ${item.attempts === 1 ? t("offline.triedOne") : t("offline.tried", { count: item.attempts })}`
                     : ""}
                   {item.lastError ? ` · ${item.lastError}` : ""}
                 </span>

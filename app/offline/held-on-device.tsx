@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useT } from "@/components/i18n";
+
+type Translate = ReturnType<typeof useT>;
 
 /**
  * What this phone is actually holding, read from the browser itself.
@@ -15,10 +18,10 @@ import { useEffect, useState, useSyncExternalStore } from "react";
  */
 type Held = { count: number; bytes: number; quota: number | null };
 
-function readable(bytes: number): string {
-  if (bytes < 1024) return `${bytes} bytes`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+export function readable(bytes: number, t: Translate): string {
+  if (bytes < 1024) return t("offline.bytes", { count: bytes });
+  if (bytes < 1024 * 1024) return t("offline.kb", { count: Math.round(bytes / 1024) });
+  return t("offline.mb", { count: (bytes / (1024 * 1024)).toFixed(1) });
 }
 
 /** Subscribes to the browser's own online and offline events. */
@@ -32,6 +35,7 @@ function subscribeToConnection(onChange: () => void): () => void {
 }
 
 export function HeldOnDevice() {
+  const t = useT();
   const [held, setHeld] = useState<Held | null>(null);
   const [supported, setSupported] = useState(true);
 
@@ -106,10 +110,7 @@ export function HeldOnDevice() {
   if (!supported) {
     return (
       <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-        <p className="text-sm text-[var(--muted)]">
-          This browser cannot hold material for use without a signal. Everything
-          still works normally while you are connected.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("offline.cannotHold")}</p>
       </div>
     );
   }
@@ -117,26 +118,21 @@ export function HeldOnDevice() {
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold">Held on this phone</h2>
+        <h2 className="text-sm font-semibold">{t("offline.held")}</h2>
         <span className="text-xs text-[var(--muted)]">
-          {online ? "Connected" : "No signal — showing what is held"}
+          {online ? t("offline.connected") : t("offline.noSignal")}
         </span>
       </div>
 
       {held === null ? (
-        <p className="mt-2 text-sm text-[var(--muted)]">Checking…</p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{t("offline.checking")}</p>
       ) : held.count === 0 ? (
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Nothing is held yet. Open a study unit and choose to make it available
-          offline before you go out.
-        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{t("offline.nothingHeld")}</p>
       ) : (
         <p className="mt-2 text-sm">
-          {held.count} {held.count === 1 ? "item" : "items"} ·{" "}
-          {readable(held.bytes)}
-          {held.quota
-            ? ` of about ${readable(held.quota)} this phone will allow`
-            : ""}
+          {held.count === 1 ? t("offline.itemOne") : t("offline.items", { count: held.count })} ·{" "}
+          {readable(held.bytes, t)}
+          {held.quota ? ` ${t("offline.ofQuota", { quota: readable(held.quota, t) })}` : ""}
         </p>
       )}
 
@@ -145,11 +141,9 @@ export function HeldOnDevice() {
         onClick={makePersistent}
         className="mt-3 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
       >
-        Keep this on the phone
+        {t("offline.keep")}
       </button>
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        Asks the phone not to clear it while you are away.
-      </p>
+      <p className="mt-1 text-xs text-[var(--muted)]">{t("offline.keepNote")}</p>
     </div>
   );
 }

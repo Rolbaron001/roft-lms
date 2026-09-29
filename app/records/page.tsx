@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageT, requireSession, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
 import {
   disposalRegister,
   expiringDocuments,
@@ -12,12 +13,6 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { CATEGORY_LABEL, DisposalForm, FileDocument } from "./forms";
 
-const SUBJECT_LABEL: Record<string, string> = {
-  learner_documents: "Learner documents",
-  assessment_evidence: "Assessment evidence",
-  library_document: "Library document",
-};
-
 /**
  * The document library, and what has reached the end of its retention period.
  *
@@ -28,6 +23,7 @@ const SUBJECT_LABEL: Record<string, string> = {
 export default async function RecordsPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  const t = await pageT();
 
   const canManage = session.permissions.includes("records:manage");
   const canReadAll = session.permissions.includes("records:read");
@@ -55,25 +51,16 @@ export default async function RecordsPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Policies and documents</h1>
+        <h1 className="text-xl font-semibold">{t("records.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The Quality Management System and its policies, accreditation
-          letters, contracts, and statutory documents like the PAIA manual —
-          everything the provider holds that does not belong to one learner or
-          one qualification. Importing a qualification folder files its QMS
-          policies here automatically.
-          {canManage
-            ? " And what has reached the end of its retention period."
-            : ""}
+          {t("records.intro")}
+          {canManage ? ` ${t("records.introManage")}` : ""}
         </p>
       </div>
 
       {expiring.length > 0 ? (
         <div className="mb-6">
-          <Card
-            title={`${expiring.length} expiring`}
-            description="An expired tax clearance is the kind of thing nobody notices until the week it is needed."
-          >
+          <Card title={t("records.expiring", { count: expiring.length })} description={t("records.expiringNote")}>
             <ul className="space-y-1 text-sm">
               {expiring.map((row) => (
                 <li key={row.id}>
@@ -86,8 +73,8 @@ export default async function RecordsPage() {
                     }
                   >
                     {row.expiresOn && row.expiresOn < today
-                      ? `expired ${row.expiresOn}`
-                      : `expires ${row.expiresOn}`}
+                      ? t("records.expired", { date: row.expiresOn })
+                      : t("records.expires", { date: row.expiresOn ?? "" })}
                   </span>
                 </li>
               ))}
@@ -96,23 +83,18 @@ export default async function RecordsPage() {
         </div>
       ) : null}
 
-      <Card
-        title="The library"
-        description="Superseded versions are kept, because the policy that governed in March is the one an audit of March asks about."
-      >
+      <Card title={t("records.library")} description={t("records.libraryNote")}>
         {documents.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
-            Nothing filed yet.
-            {canManage
-              ? " The accreditation letter is the one worth putting in first."
-              : ""}
+            {t("records.nothing")}
+            {canManage ? ` ${t("records.nothingManage")}` : ""}
           </p>
         ) : (
           <div className="space-y-5">
             {[...byCategory.entries()].map(([category, rows]) => (
               <div key={category}>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                  {CATEGORY_LABEL[category] ?? category}
+                  {maybe(t, `records.category.${category}`) ?? CATEGORY_LABEL[category] ?? category}
                 </h3>
                 <ul className="mt-2 space-y-1 text-sm">
                   {rows.map((row) => (
@@ -138,22 +120,18 @@ export default async function RecordsPage() {
                       ) : null}
                       {row.status !== "current" ? (
                         <span className="text-[var(--muted)]">
-                          {row.status}
+                          {maybe(t, `records.status.${row.status}`) ?? row.status}
                         </span>
                       ) : null}
                       {row.effectiveFrom ? (
                         <span className="text-[var(--muted)]">
-                          from {row.effectiveFrom}
+                          {t("records.from", { date: row.effectiveFrom })}
                         </span>
                       ) : null}
                       {row.category === "learner_guide" ? (
-                        <span className="text-[var(--muted)]">
-                          written for learners
-                        </span>
+                        <span className="text-[var(--muted)]">{t("records.forLearners")}</span>
                       ) : row.visibleToAll ? (
-                        <span className="text-[var(--muted)]">
-                          everybody can read this
-                        </span>
+                        <span className="text-[var(--muted)]">{t("records.everybody")}</span>
                       ) : null}
                     </li>
                   ))}
@@ -180,10 +158,7 @@ export default async function RecordsPage() {
 
       {canManage && due.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title={`${due.length} past the retention period`}
-            description="Counted from the certification date, over the retention period on this tenant. Nothing here has been archived or destroyed: the platform says what is due and a person decides."
-          >
+          <Card title={t("records.retention", { count: due.length })} description={t("records.retentionNote")}>
             <ul className="space-y-4 text-sm">
               {due.map((row) => (
                 <li key={row.userId}>
@@ -195,7 +170,7 @@ export default async function RecordsPage() {
                       {row.name}
                     </Link>
                     <span className="ml-2 text-[var(--muted)]">
-                      certified {row.certifiedOn} · due {row.dueOn}
+                      {t("records.certified", { certified: row.certifiedOn, due: row.dueOn })}
                     </span>
                   </p>
                   <DisposalForm
@@ -212,20 +187,18 @@ export default async function RecordsPage() {
 
       {canReadAll && register.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Disposal register"
-            description="Everything decided about a record past its date, with who decided it. A record that quietly disappeared is worse than one kept too long."
-          >
+          <Card title={t("records.register")} description={t("records.registerNote")}>
             <ul className="space-y-1 text-sm">
               {register.map((row) => (
                 <li key={row.id} className="flex flex-wrap gap-x-3">
-                  <span className="font-medium capitalize">{row.status}</span>
+                  <span className="font-medium">{maybe(t, `records.decision.${row.status}`) ?? row.status}</span>
                   <span className="text-[var(--muted)]">
-                    {SUBJECT_LABEL[row.subject] ?? row.subject} · due {row.dueOn}
+                    {maybe(t, `records.subject.${row.subject}`) ?? row.subject} ·{" "}
+                    {t("records.due", { date: row.dueOn })}
                   </span>
                   {row.firstName ? (
                     <span className="text-[var(--muted)]">
-                      by {row.firstName} {row.lastName}
+                      {t("records.by", { name: `${row.firstName} ${row.lastName}` })}
                     </span>
                   ) : null}
                   {row.reason ? <span>{row.reason}</span> : null}

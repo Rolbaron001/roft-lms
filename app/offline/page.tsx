@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import {
   awaitingResolution,
   capturedUnderRelaxedRule,
@@ -32,6 +32,7 @@ export default async function OfflinePage() {
   if (!tenant.offlineEnabled) notFound();
 
   const session = await requireSession();
+  const { t, dates } = await pageLocale();
 
   const canSeeQueue = session.permissions.includes("enrolment:read_all");
   const packs = await offlinePacksFor(session);
@@ -45,12 +46,8 @@ export default async function OfflinePage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Working without a signal</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Download what you need before you go out. Anything you record while
-          you are away is kept on this phone and sent back the next time you
-          have a signal.
-        </p>
+        <h1 className="text-xl font-semibold">{t("offline.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("offline.intro")}</p>
       </div>
 
       <div className="mb-6">
@@ -62,15 +59,9 @@ export default async function OfflinePage() {
         you, and record what you did while you were there.
       */}
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card
-          title="Take it with you"
-          description="Download what you need before you go. Nothing is kept that you did not ask for."
-        >
+        <Card title={t("offline.take")} description={t("offline.takeNote")}>
           {packs.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              You have nothing to study at the moment. Anything you are
-              enrolled on appears here to download.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("offline.nothingToStudy")}</p>
           ) : (
             <div className="space-y-5">
               {packs.map((pack) => (
@@ -83,10 +74,7 @@ export default async function OfflinePage() {
           )}
         </Card>
 
-        <Card
-          title="Record what you did"
-          description="Works with no signal. It waits on this phone and goes when you next have one."
-        >
+        <Card title={t("offline.record")} description={t("offline.recordNote")}>
           <Capture
             targetType="workplace_logbook"
             targetId={session.userId}
@@ -98,8 +86,8 @@ export default async function OfflinePage() {
       {canSeeQueue && held.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${held.length} waiting for a decision`}
-            description="Something changed while the learner was away. Nothing has been merged or overwritten — somebody has to choose."
+            title={t("offline.waitingDecision", { count: held.length })}
+            description={t("offline.waitingDecisionNote")}
           >
             <ul className="space-y-2">
               {held.map((row) => (
@@ -117,9 +105,10 @@ export default async function OfflinePage() {
                     the reader is shown the gap rather than asked to trust it.
                   */}
                   <span className="block text-xs text-[var(--muted)]">
-                    Recorded on the device{" "}
-                    {row.capturedAt.toLocaleString("en-ZA")} · reached us{" "}
-                    {row.receivedAt.toLocaleString("en-ZA")}
+                    {t("offline.bothDates", {
+                      captured: row.capturedAt.toLocaleString(dates),
+                      received: row.receivedAt.toLocaleString(dates),
+                    })}
                   </span>
                 </li>
               ))}
@@ -130,25 +119,21 @@ export default async function OfflinePage() {
 
       {canSeeQueue && relaxed.length > 0 ? (
         <div className="mb-6">
-          <Card
-            title={`${relaxed.length} captured under the looser rule`}
-            description="Work recorded while this programme allowed summatives to be taken offline. If the programme is accredited later, that work does not become defensible retrospectively — this is the list, so it is a decision rather than a discovery at a monitoring visit."
-          >
+          <Card title={t("offline.relaxed", { count: relaxed.length })} description={t("offline.relaxedNote")}>
             <ul className="space-y-1">
               {relaxed.slice(0, 20).map((row) => (
                 <li key={row.id} className="text-sm">
                   {row.firstName} {row.lastName}
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.kind} · recorded{" "}
-                    {row.capturedAt.toLocaleDateString("en-ZA")}
+                    · {row.kind} · {t("offline.recordedOn", { date: row.capturedAt.toLocaleDateString(dates) })}
                   </span>
                 </li>
               ))}
             </ul>
             {relaxed.length > 20 ? (
               <p className="mt-2 text-xs text-[var(--muted)]">
-                and {relaxed.length - 20} more.
+                {t("offline.more", { count: relaxed.length - 20 })}
               </p>
             ) : null}
           </Card>

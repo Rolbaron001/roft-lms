@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { Rich } from "@/components/rich-text";
 import { getMailMessage, MailboxError } from "@/lib/mailbox";
 import { mailIsConfigured } from "@/lib/mail";
 import { describeSize } from "@/lib/media";
@@ -15,6 +16,7 @@ export default async function MailMessagePage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, dates } = await pageLocale();
 
   let view;
   try {
@@ -34,27 +36,27 @@ export default async function MailMessagePage({
           href="/mail"
           className="text-sm text-[var(--muted)] underline-offset-2 hover:underline"
         >
-          ← Mail
+          {t("mailbox.back")}
         </Link>
       </div>
 
       <Card>
         <h1 className="text-lg font-semibold">
-          {message.subject ?? "(no subject)"}
+          {message.subject ?? t("mailbox.noSubject")}
         </h1>
 
         <div className="mt-2 text-sm text-[var(--muted)]">
           <p>
-            <span className="font-medium">From:</span>{" "}
+            <span className="font-medium">{t("mailbox.from")}</span>{" "}
             {message.fromName ? `${message.fromName} ` : ""}
             <span className="font-mono">{message.fromAddress}</span>
           </p>
           <p>
-            <span className="font-medium">To:</span>{" "}
+            <span className="font-medium">{t("mailbox.toLabel")}</span>{" "}
             <span className="font-mono">{message.toAddresses}</span>
           </p>
           <p>
-            {message.receivedAt.toLocaleString("en-ZA", {
+            {message.receivedAt.toLocaleString(dates, {
               dateStyle: "full",
               timeStyle: "short",
             })}
@@ -64,21 +66,21 @@ export default async function MailMessagePage({
         {inbound && message.envelopeFrom &&
         message.envelopeFrom !== message.fromAddress ? (
           <p className="mt-3 rounded-md border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted)]">
-            The sending server identified itself as{" "}
-            <span className="font-mono">{message.envelopeFrom}</span>, which is
-            not the address in the From line. Ordinary for mailing lists and
-            forwarded mail, and also what a forged sender looks like.
+            <Rich
+              text={t("mailbox.envelope")}
+              parts={{ address: <span className="font-mono">{message.envelopeFrom}</span> }}
+            />
           </p>
         ) : null}
 
         <pre className="mt-4 whitespace-pre-wrap font-sans text-sm">
-          {message.bodyText ?? "(no text content)"}
+          {message.bodyText ?? t("mailbox.noText")}
         </pre>
 
         {attachments.length > 0 ? (
           <div className="mt-6 border-t border-[var(--border)] pt-4">
             <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-              Attachments
+              {t("mailbox.attachments")}
             </h2>
             <ul className="mt-2 space-y-2">
               {attachments.map((file) => (

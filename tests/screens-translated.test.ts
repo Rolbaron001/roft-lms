@@ -50,6 +50,13 @@ const MOVED = [
   "app/not-permitted",
   "app/unknown-tenant",
   "app/workplace/setup",
+  "app/enrolment-form",
+  "app/records",
+  "app/offline",
+  "app/mail",
+  "app/learning-records",
+  "app/verify",
+  "app/platform",
 ];
 
 /**

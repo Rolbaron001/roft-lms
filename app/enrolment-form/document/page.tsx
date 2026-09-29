@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageT, requireSession, requireTenant } from "@/lib/request";
 import {
   documentValuesFor,
   EnrolmentFormError,
@@ -40,6 +40,10 @@ export default async function EnrolmentFormDocumentPage({
   const { learner: requested } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
+  // The controls around the document are in the reader's language. The
+  // document itself is the provider's template, filed as evidence, and stays
+  // in the words the provider wrote.
+  const t = await pageT();
 
   const learnerId = requested || session.userId;
 
@@ -105,18 +109,17 @@ export default async function EnrolmentFormDocumentPage({
         <p className="text-sm text-[var(--muted)]">
           {view.outstanding.length > 0 ? (
             <span style={{ color: "var(--danger)" }}>
-              {view.outstanding.length} answers are still missing, so this form
-              will print with blanks. They are listed on the form itself.
+              {t("enrolForm.missingPrint", { count: view.outstanding.length })}
             </span>
           ) : (
-            "Complete. Print it, have the learner sign it, and file it."
+            t("enrolForm.completePrint")
           )}
         </p>
         <Link
           href={`/enrolment-form${requested ? `?learner=${requested}` : ""}`}
           className="text-sm underline underline-offset-2"
         >
-          Back to the form
+          {t("enrolForm.back")}
         </Link>
       </div>
 
@@ -141,11 +144,11 @@ export default async function EnrolmentFormDocumentPage({
 
       {view.outstanding.length > 0 ? (
         <div className="no-print mx-auto mt-4 max-w-3xl">
-          <p className="text-sm font-medium">Still unanswered</p>
+          <p className="text-sm font-medium">{t("enrolForm.unanswered")}</p>
           <ul className="mt-1 space-y-0.5">
             {view.outstanding.map((item) => (
               <li key={item.field} className="text-sm text-[var(--muted)]">
-                {item.field} — {item.why}
+                {item.field}: {item.why}
               </li>
             ))}
           </ul>
