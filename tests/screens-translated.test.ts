@@ -57,6 +57,7 @@ const MOVED = [
   "app/learning-records",
   "app/verify",
   "app/platform",
+  "components",
 ];
 
 /**
@@ -93,7 +94,8 @@ export function englishIn(source: string): string[] {
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "")
     // Monospace is code: a command, a module code, a web address. Not wording.
-    .replace(/(<span className="font-mono">)[^<]*(<\/span>)/g, "$1$2");
+    .replace(/(<span className="font-mono">)[^<]*(<\/span>)/g, "$1$2")
+    .replace(/(<code>)[^<]*(<\/code>)/g, "$1$2");
   const lines = withoutComments.split("\n");
 
   for (const line of lines) {

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 /**
  * Attaching a file to a lesson.
@@ -21,6 +23,7 @@ export function LessonUpload({
   existing: { filename: string | null; mimeType: string | null } | null;
   disabled?: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -65,20 +68,23 @@ export function LessonUpload({
         const scorm = payload.scorm;
         setNotice(
           scorm
-            ? `SCORM 1.2 package "${scorm.title ?? payload.filename}" unpacked, ${scorm.files} files. Learners play it in this lesson, and it completes the lesson when they finish.` +
-                (scorm.parts > 1 ? ` It has ${scorm.parts} parts; only the first is played for now.` : "")
-            : `${payload.label ?? "File"} attached: ${payload.filename}`,
+            ? t("lessonUpload.scorm", { title: scorm.title ?? payload.filename ?? "", files: scorm.files }) +
+                (scorm.parts > 1 ? " " + t("lessonUpload.scormParts", { parts: scorm.parts }) : "")
+            : t("lessonUpload.attached", {
+                label: payload.label ?? t("lessonUpload.file"),
+                file: payload.filename ?? "",
+              }),
         );
         if (inputRef.current) inputRef.current.value = "";
         router.refresh();
       } else {
-        setError(payload.error ?? "That file could not be uploaded.");
+        setError(payload.error ?? t("lessonUpload.notUploaded"));
       }
     });
 
     request.addEventListener("error", () => {
       setProgress(null);
-      setError("The upload failed. Check your connection and try again.");
+      setError(t("lessonUpload.failed"));
     });
 
     request.send(body);
@@ -87,7 +93,7 @@ export function LessonUpload({
   if (disabled) {
     return existing?.filename ? (
       <p className="text-xs text-[var(--muted)]">
-        Attached: {existing.filename}
+        {t("lessonUpload.attachedLine", { file: existing.filename })}
       </p>
     ) : null;
   }
@@ -96,19 +102,18 @@ export function LessonUpload({
     <div className="space-y-2">
       {existing?.filename ? (
         <p className="text-xs text-[var(--muted)]">
-          Attached: <span className="font-medium">{existing.filename}</span>.
-          Uploading another replaces it.
+          <Rich
+            text={t("lessonUpload.replaces")}
+            parts={{ file: <span className="font-medium">{existing.filename}</span> }}
+          />
         </p>
       ) : null}
-      <p className="text-xs text-[var(--muted)]">
-        A SCORM 1.2 package (a .zip from an authoring tool) plays inside the lesson. Its own scripts run with the
-        learner&rsquo;s access to this platform, so use packages only from sources you trust.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{t("lessonUpload.scormNote")}</p>
 
       <input
         ref={inputRef}
         type="file"
-        aria-label="Choose a file for this lesson"
+        aria-label={t("lessonUpload.choose")}
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) upload(file);
@@ -128,7 +133,7 @@ export function LessonUpload({
             />
           </div>
           <p className="text-xs text-[var(--muted)]">
-            Uploading… {progress}%
+            {t("lessonUpload.uploading", { percent: progress })}
           </p>
         </div>
       ) : null}
@@ -146,10 +151,7 @@ export function LessonUpload({
         <p className="text-xs font-medium text-[var(--success)]">{notice}</p>
       ) : null}
 
-      <p className="text-xs text-[var(--muted)]">
-        Video, images, audio, PDF, Word, PowerPoint or Excel. The file is
-        checked by its contents, not its name.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{t("lessonUpload.kinds")}</p>
     </div>
   );
 }

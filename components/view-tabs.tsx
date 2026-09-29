@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pageT } from "@/lib/request";
 
 /**
  * Two jobs on one screen, told apart.
@@ -26,7 +27,7 @@ export type ViewTab = {
   count?: number;
 };
 
-export function ViewTabs({
+export async function ViewTabs({
   tabs,
   current,
   param = "view",
@@ -39,6 +40,7 @@ export function ViewTabs({
   /** The page the tabs belong to, without a query string. */
   basePath: string;
 }) {
+  const t = await pageT();
   return (
     <nav
       /*
@@ -49,7 +51,7 @@ export function ViewTabs({
         name and no way to tell which was which. They are different things:
         this switches between views of the page, PageNav moves within one.
       */
-      aria-label="Views of this page"
+      aria-label={t("viewTabs.label")}
       className="mb-6 flex flex-wrap gap-1 border-b border-[var(--border)]"
     >
       {tabs.map((tab, index) => {

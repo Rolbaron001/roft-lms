@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AttentionMascot } from "./tenant-illustration";
+import { pageT } from "@/lib/request";
 
 /**
  * Where you are in a sequence, and what to press next.
@@ -40,18 +41,17 @@ export type Step = {
  * it cannot answer "how far have I got" - which is the question somebody has
  * after pressing Create and landing on a full screen.
  */
-export function ProgressMap({ steps }: { steps: Step[] }) {
+export async function ProgressMap({ steps }: { steps: Step[] }) {
+  const t = await pageT();
   const next = steps.find((step) => !step.done) ?? null;
   const done = steps.filter((step) => step.done).length;
 
   return (
     <nav
-      aria-label="Progress through this qualification"
+      aria-label={t("progress.label")}
       className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
     >
-      <p className="text-sm font-semibold">
-        {done} of {steps.length} done
-      </p>
+      <p className="text-sm font-semibold">{t("progress.done", { done, total: steps.length })}</p>
 
       <ol className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
         {steps.map((step, index) => {
@@ -85,7 +85,7 @@ export function ProgressMap({ steps }: { steps: Step[] }) {
                   {step.title}
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--muted)]">
-                  {step.done ? step.state : current ? "You are here" : "After that"}
+                  {step.done ? step.state : current ? t("progress.here") : t("progress.after")}
                 </p>
               </div>
 
@@ -105,7 +105,7 @@ export function ProgressMap({ steps }: { steps: Step[] }) {
         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-3">
           <AttentionMascot height={56} />
           <p className="text-sm">
-            <span className="font-medium">Next: {next.title.toLowerCase()}.</span>{" "}
+            <span className="font-medium">{t("progress.next", { title: next.title.toLowerCase() })}</span>{" "}
             <span className="text-[var(--muted)]">{next.state}</span>
           </p>
           {/*

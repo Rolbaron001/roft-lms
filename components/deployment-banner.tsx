@@ -22,17 +22,20 @@ export function deploymentLabel(
   return label ? label : null;
 }
 
-export function DeploymentBanner() {
+export async function DeploymentBanner() {
   const label = deploymentLabel();
   if (!label) return null;
+  // Loaded here rather than at the top, so importing deploymentLabel alone
+  // (the tests do) does not bring the request and database layer with it.
+  const { pageT } = await import("@/lib/request");
+  const t = await pageT();
 
   return (
     <div
       role="note"
       className="bg-[#2b333d] px-4 py-1.5 text-center text-xs font-medium text-white"
     >
-      {label} site. Nothing done here reaches the live platform, and the
-      learners here are copies.
+      {t("banner.site", { label })}
     </div>
   );
 }

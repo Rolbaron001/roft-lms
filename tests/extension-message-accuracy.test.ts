@@ -20,10 +20,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
-const picker = readFileSync(
-  join(process.cwd(), "components/folder-picker.tsx"),
-  "utf8",
+const picker = withPhrases(
+  readFileSync(join(process.cwd(), "components/folder-picker.tsx"), "utf8"),
 );
 
 /** Every screen that hands this component an extension has to pass all of it. */

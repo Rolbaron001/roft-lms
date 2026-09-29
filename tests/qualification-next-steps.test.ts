@@ -21,13 +21,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
 const root = process.cwd();
 const page = readFileSync(
   join(root, "app/qualifications/[id]/page.tsx"),
   "utf8",
 );
-const map = readFileSync(join(root, "components/progress-map.tsx"), "utf8");
+const map = withPhrases(readFileSync(join(root, "components/progress-map.tsx"), "utf8"));
 
 /**
  * The page with its comments removed.
@@ -53,7 +54,10 @@ describe("the progress map", () => {
     // This is what makes it a map rather than a to-do list. Hiding finished
     // steps hides the answer to "how far have I got".
     expect(map).toMatch(/steps\.map\(/);
-    expect(map).toMatch(/\{done\} of \{steps\.length\} done/);
+    expect(map).toMatch(/\{done\} of \{total\} done/);
+    expect(readFileSync(join(root, "components/progress-map.tsx"), "utf8")).toMatch(
+      /t\("progress\.done", \{ done, total: steps\.length \}\)/,
+    );
     expect(map).toMatch(/You are here/);
   });
 

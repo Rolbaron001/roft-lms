@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { setAiAction } from "@/app/ai/actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The switch itself.
@@ -24,6 +25,7 @@ export function AiSwitch({
   on: boolean;
   variant?: "inline" | "header";
 }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -35,7 +37,7 @@ export function AiSwitch({
     });
   }
 
-  const label = on ? "AI on" : "AI off";
+  const label = on ? t("aiSwitch.on") : t("aiSwitch.off");
 
   return (
     <div className={variant === "header" ? "flex items-center" : "space-y-1"}>
@@ -44,11 +46,7 @@ export function AiSwitch({
         onClick={toggle}
         disabled={pending}
         aria-pressed={on}
-        title={
-          on
-            ? "Your AI extension is on for this sitting. It switches off when you sign out."
-            : "Switch your AI extension on for this sitting."
-        }
+        title={on ? t("aiSwitch.onTitle") : t("aiSwitch.offTitle")}
         className={[
           "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-60",
           on

@@ -1,5 +1,10 @@
 "use client";
 
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
+
+type Translate = ReturnType<typeof useT>;
+
 /**
  * Presenting a lesson's file according to what it actually is.
  *
@@ -17,15 +22,17 @@ export type LessonMedia = {
   sizeBytes: number | null;
 };
 
-function describeSize(bytes: number | null): string {
+function describeSize(bytes: number | null, t: Translate): string {
   if (!bytes) return "";
-  if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
-  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes >= 1024 * 1024) return t("media.mb", { count: Math.round(bytes / (1024 * 1024)) });
+  return t("media.kb", { count: Math.max(1, Math.round(bytes / 1024)) });
 }
 
 export function LessonMediaView({ media }: { media: LessonMedia }) {
+  const t = useT();
   const src = `/api/lessons/${media.lessonId}/media`;
   const mime = media.mimeType ?? "";
+  const instead = <a href={`${src}?download`}>{t("media.downloadInstead")}</a>;
 
   if (mime.startsWith("video/")) {
     return (
@@ -36,8 +43,7 @@ export function LessonMediaView({ media }: { media: LessonMedia }) {
         style={{ maxHeight: "70vh" }}
       >
         <source src={src} type={mime} />
-        Your browser cannot play this video.{" "}
-        <a href={`${src}?download`}>Download it instead</a>.
+        <Rich text={t("media.noVideo")} parts={{ link: instead }} />
       </video>
     );
   }
@@ -46,8 +52,7 @@ export function LessonMediaView({ media }: { media: LessonMedia }) {
     return (
       <audio controls preload="metadata" className="w-full">
         <source src={src} type={mime} />
-        Your browser cannot play this recording.{" "}
-        <a href={`${src}?download`}>Download it instead</a>.
+        <Rich text={t("media.noAudio")} parts={{ link: instead }} />
       </audio>
     );
   }
@@ -57,7 +62,7 @@ export function LessonMediaView({ media }: { media: LessonMedia }) {
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
-        alt={media.filename ?? "Lesson image"}
+        alt={media.filename ?? t("media.image")}
         className="max-w-full rounded-md border border-[var(--border)]"
       />
     );
@@ -68,18 +73,24 @@ export function LessonMediaView({ media }: { media: LessonMedia }) {
       <div className="space-y-2">
         <iframe
           src={src}
-          title={media.filename ?? "Lesson document"}
+          title={media.filename ?? t("media.document")}
           className="w-full rounded-md border border-[var(--border)]"
           style={{ height: "70vh" }}
         />
         <p className="text-xs text-[var(--muted)]">
-          <a
-            href={`${src}?download`}
-            className="font-medium text-[var(--brand-accent)] hover:underline"
-          >
-            Download {media.filename}
-          </a>{" "}
-          ({describeSize(media.sizeBytes)}) if it does not display here.
+          <Rich
+            text={t("media.pdfFallback", { size: describeSize(media.sizeBytes, t) })}
+            parts={{
+              link: (
+                <a
+                  href={`${src}?download`}
+                  className="font-medium text-[var(--brand-accent)] hover:underline"
+                >
+                  {t("media.download", { file: media.filename ?? "" })}
+                </a>
+              ),
+            }}
+          />
         </p>
       </div>
     );
@@ -103,7 +114,7 @@ export function LessonMediaView({ media }: { media: LessonMedia }) {
           {media.filename}
         </span>
         <span className="block text-xs text-[var(--muted)]">
-          {describeSize(media.sizeBytes)} · downloads to open
+          {t("media.downloads", { size: describeSize(media.sizeBytes, t) })}
         </span>
       </span>
     </a>

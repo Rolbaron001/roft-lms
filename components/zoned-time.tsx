@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { clockInZone, stampInZone, viewerTimeZone, zoneLabel } from "@/lib/timezone";
+import { useT } from "@/components/i18n";
 
 /**
  * The zone the person reading is in, or null while rendering on the server.
@@ -52,6 +53,7 @@ export function ZonedTime({
   withDate?: boolean;
   showViewer?: boolean;
 }) {
+  const t = useT();
   const viewer = useViewerZone(zone);
 
   if (!at) return <span className="text-[var(--muted)]">—</span>;
@@ -67,8 +69,9 @@ export function ZonedTime({
       {showViewer && viewer ? (
         <span className="text-[var(--muted)]">
           {" "}
-          ({withDate ? stampInZone(instant, viewer) : clockInZone(instant, viewer)}{" "}
-          {zoneLabel(viewer, instant)} your time)
+          {t("zoned.yourTime", {
+            time: `${withDate ? stampInZone(instant, viewer) : clockInZone(instant, viewer)} ${zoneLabel(viewer, instant)}`,
+          })}
         </span>
       ) : null}
     </span>
@@ -84,19 +87,15 @@ export function ZonedTime({
  * so once, at the top, rather than being left to work it out per row.
  */
 export function ProviderClockNote({ zone }: { zone: string }) {
+  const t = useT();
   const viewer = useViewerZone(zone);
   const now = new Date();
 
   return (
     <p className="text-xs text-[var(--muted)]">
-      Times are {zoneLabel(zone, now)}
-      {viewer ? (
-        <>
-          , the provider&rsquo;s clock. You are reading this from{" "}
-          {zoneLabel(viewer, now)}
-        </>
-      ) : null}
-      .
+      {viewer
+        ? t("zoned.timesViewer", { zone: zoneLabel(zone, now), viewer: zoneLabel(viewer, now) })
+        : t("zoned.times", { zone: zoneLabel(zone, now) })}
     </p>
   );
 }

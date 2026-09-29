@@ -125,9 +125,8 @@ describe("the attention prompt", () => {
  * identical job, which is exactly what he ended up with.
  */
 describe("the pointer after a read", () => {
-  const picker = readFileSync(
-    join(process.cwd(), "components/folder-picker.tsx"),
-    "utf8",
+  const picker = withPhrases(
+    readFileSync(join(process.cwd(), "components/folder-picker.tsx"), "utf8"),
   );
 
   it("knows a read has already produced something", () => {

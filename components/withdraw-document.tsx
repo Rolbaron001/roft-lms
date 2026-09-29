@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useT } from "@/components/i18n";
 
 type WithdrawState = { error?: string; notice?: string };
 
@@ -35,6 +36,7 @@ export function WithdrawDocument({
   /** Who is affected, said plainly before somebody commits. */
   consequence: string;
 }) {
+  const t = useT();
   const [state, submit, saving] = useActionState<WithdrawState, FormData>(
     action,
     {},
@@ -54,7 +56,7 @@ export function WithdrawDocument({
         onClick={() => setOpen(true)}
         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] transition hover:border-[var(--danger)] hover:text-[var(--danger)] print:hidden"
       >
-        Withdraw {what}
+        {t("withdraw.start", { what })}
       </button>
     );
   }
@@ -64,14 +66,12 @@ export function WithdrawDocument({
       <input type="hidden" name={idName} value={idValue} />
 
       <p className="text-sm">
-        <span className="font-medium">Withdraw {what}?</span>{" "}
+        <span className="font-medium">{t("withdraw.confirm", { what })}</span>{" "}
         <span className="text-[var(--muted)]">{consequence}</span>
       </p>
 
       <label className="block text-sm">
-        <span className="text-[var(--muted)]">
-          Why it is being withdrawn &mdash; this is the record
-        </span>
+        <span className="text-[var(--muted)]">{t("withdraw.why")}</span>
         <textarea
           name="reason"
           required
@@ -91,14 +91,14 @@ export function WithdrawDocument({
           disabled={saving}
           className="rounded-md border border-[var(--danger)] px-3 py-1.5 text-sm text-[var(--danger)] disabled:opacity-60"
         >
-          {saving ? "Withdrawing…" : "Withdraw it"}
+          {saving ? t("withdraw.withdrawing") : t("withdraw.do")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          Keep it
+          {t("withdraw.keep")}
         </button>
       </div>
     </form>

@@ -8,6 +8,8 @@ import {
 } from "@/app/imports/actions";
 import { AiSwitch } from "./ai-switch";
 import { AttentionMascot } from "./tenant-illustration";
+import { useT } from "./i18n";
+import { Rich } from "./rich-text";
 
 /**
  * Choosing a folder to read.
@@ -70,6 +72,7 @@ export function FolderPicker({
     reason: string | null;
   } | null;
 }) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<ImportActionState>({});
   const [chosen, setChosen] = useState<{ count: number; name: string } | null>(
@@ -127,7 +130,7 @@ export function FolderPicker({
     }
 
     const first = relativePathOf(files[0]);
-    setChosen({ count: files.length, name: first.split("/")[0] || "a folder" });
+    setChosen({ count: files.length, name: first.split("/")[0] || t("folderPick.aFolder") });
     setState({});
   }
 
@@ -140,7 +143,7 @@ export function FolderPicker({
     if (courseId) body.append("courseId", courseId);
     if (learningPathId) body.append("learningPathId", learningPathId);
     if (topUp) body.append("topUp", "yes");
-    body.append("folderName", chosen?.name ?? "an uploaded folder");
+    body.append("folderName", chosen?.name ?? t("folderPick.uploaded"));
 
     // Appended in step, so the two lists line up on the server.
     for (const file of files) {
@@ -183,21 +186,19 @@ export function FolderPicker({
 
       {needsExtension && !extensionUsable ? (
         <div className="max-w-2xl rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-2 text-sm">
-          <p className="font-medium">
-            Building a qualification from a folder needs an AI extension, unless
-            the folder describes itself.
-          </p>
+          <p className="font-medium">{t("folderPick.needs")}</p>
           <p className="mt-1 text-[var(--muted)]">
             {extensionPossible
-              ? "Yours is not switched on for this sitting. Switch it on below, or use the documents route instead — that needs no AI at all and reads the whole curriculum."
+              ? t("folderPick.notOn")
               : extension
-                ? `Yours cannot run here: ${extension.reason ?? "it is not available on this machine."} Use the documents route instead — it needs no AI at all and reads the whole curriculum.`
-                : "You do not have one set up. Use the documents route instead — it needs no AI at all and reads the whole curriculum, which is how the Commercial Cleaner qualification was imported."}
+                ? t("folderPick.cannotRun", { reason: extension.reason ?? t("folderPick.notAvailable") })
+                : t("folderPick.none")}
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            A folder produced by a programme development system includes a
-            summary of itself (a <code>_control/blueprint.json</code>), and one
-            of those imports here in seconds with no extension involved.
+            <Rich
+              text={t("folderPick.blueprint")}
+              parts={{ file: <code>_control/blueprint.json</code> }}
+            />
           </p>
         </div>
       ) : null}
@@ -232,15 +233,17 @@ export function FolderPicker({
         <p className="text-xs text-[var(--muted)]">
           <span className="font-medium text-[var(--foreground)]">
             {chosen.name}
-          </span>{" "}
-          — {chosen.count} {chosen.count === 1 ? "file" : "files"}, including
-          everything in its subfolders.{" "}
+          </span>
+          {": "}
+          {chosen.count === 1
+            ? t("folderPick.chosenOne")
+            : t("folderPick.chosen", { count: chosen.count })}{" "}
           <button
             type="button"
             onClick={openPicker}
             className="underline"
           >
-            Choose a different folder
+            {t("folderPick.different")}
           </button>
         </p>
       ) : null}
@@ -269,16 +272,14 @@ export function FolderPicker({
             </span>
             <p className="text-sm">
               <span className="text-[var(--muted)]">{state.notice}</span>{" "}
-              <span className="font-medium">
-                Nothing is saved until you have checked it.
-              </span>
+              <span className="font-medium">{t("folderPick.notSaved")}</span>
             </p>
             <Link
               href={`/imports/${state.jobId}`}
               className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
               style={{ background: "var(--brand-primary)" }}
             >
-              Review what it found →
+              {t("folderPick.review")}
             </Link>
           </div>
         ) : (
@@ -311,12 +312,12 @@ export function FolderPicker({
           }`}
         >
           {pending
-            ? "Reading…"
+            ? t("folderPick.reading")
             : read
-              ? "Read it again"
+              ? t("folderPick.again")
               : chosen
-                ? "Read this folder"
-                : "Choose a folder…"}
+                ? t("folderPick.readThis")
+                : t("folderPick.choose")}
         </button>
 
         {chosen && !pending && !read ? (
@@ -328,7 +329,7 @@ export function FolderPicker({
             <span aria-hidden className="motion-safe:animate-bounce">
               ←
             </span>
-            Now press this to read it. Nothing is saved yet.
+            {t("folderPick.pressThis")}
           </p>
         ) : null}
 
@@ -342,10 +343,10 @@ export function FolderPicker({
               className="inline-block h-4 w-4 rounded-full border-2 border-[var(--border)] border-t-[var(--brand-accent)] motion-safe:animate-spin"
             />
             {seconds < 20
-              ? "Reading the folder…"
+              ? t("folderPick.readingFolder")
               : seconds < 90
-                ? `Still reading — ${seconds} seconds so far. A curriculum document takes a few minutes.`
-                : `Still going — ${Math.floor(seconds / 60)} min ${seconds % 60}s. This is normal for a large folder; leave the page open.`}
+                ? t("folderPick.stillReading", { seconds })
+                : t("folderPick.stillGoing", { minutes: Math.floor(seconds / 60), seconds: seconds % 60 })}
           </p>
         ) : null}
       </div>
@@ -367,12 +368,9 @@ export function FolderPicker({
             {extension.on && extension.available ? (
               <>
                 <span className="font-medium text-[var(--success)]">
-                  Your AI extension is on for this sitting.
+                  {t("folderPick.onTitle")}
                 </span>{" "}
-                A folder that does not include a summary of itself will have its
-                structure worked out from the documents instead — slower, and
-                worth checking against the curriculum document. Switch it off
-                when you are done with it.
+                {t("folderPick.onNote")}
               </>
             ) : !extension.registered ? (
               /*
@@ -383,31 +381,18 @@ export function FolderPicker({
                 have been - two statements about a thing they do not have.
               */
               <>
-                <span className="font-medium">
-                  You do not have an AI extension set up.
-                </span>{" "}
-                It adds one thing here: working out the structure from the
-                documents, when a folder does not include a summary of itself.
-                Everything else on this page works without it. Settings, under
-                your AI extension, if you want one.
+                <span className="font-medium">{t("folderPick.noneTitle")}</span>{" "}
+                {t("folderPick.noneNote")}
               </>
             ) : !extension.available ? (
               <>
-                <span className="font-medium">
-                  Your AI extension cannot run here.
-                </span>{" "}
-                {extension.reason} A folder that includes a summary of itself
-                still imports normally; one without it cannot have its structure
-                worked out.
+                <span className="font-medium">{t("folderPick.cannotTitle")}</span>{" "}
+                {extension.reason} {t("folderPick.cannotNote")}
               </>
             ) : (
               <>
-                <span className="font-medium">
-                  Your AI extension is off, which is how every sitting starts.
-                </span>{" "}
-                It adds one thing here: working out the structure from the
-                documents, when a folder does not include a summary of itself.
-                Everything else on this page works without it.
+                <span className="font-medium">{t("folderPick.offTitle")}</span>{" "}
+                {t("folderPick.offNote")}
               </>
             )}
           </p>

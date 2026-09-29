@@ -236,7 +236,7 @@ export function ScormPlayer({
         const body = await response.json();
         if (!live) return;
         if (!response.ok) {
-          setProblem(body.error ?? "The package could not be opened.");
+          setProblem(body.error ?? "cannotOpen");
           return;
         }
         // The connection first, then the frame: a package that looks for API
@@ -252,7 +252,11 @@ export function ScormPlayer({
   }, [lessonId, enrolmentId]);
 
   if (problem) {
-    return <p className="text-sm text-[var(--danger)]">{problem === "failed" ? t("scorm.failed") : problem}</p>;
+    return <p className="text-sm text-[var(--danger)]">{problem === "failed"
+          ? t("scorm.failed")
+          : problem === "cannotOpen"
+            ? t("scormPlayer.cannotOpen")
+            : problem}</p>;
   }
   if (!launch) {
     return <p className="text-sm text-[var(--muted)]">{t("scorm.opening")}</p>;
@@ -261,7 +265,7 @@ export function ScormPlayer({
     <div className="space-y-2">
       <iframe
         src={launch.launchUrl}
-        title="Course package"
+        title={t("scormPlayer.package")}
         className="h-[70vh] w-full rounded-md border border-[var(--border)] bg-white"
         allow="fullscreen; autoplay"
       />

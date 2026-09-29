@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/components/i18n";
+
 /**
  * Printing or saving a document the platform issued.
  *
@@ -12,18 +14,15 @@
  *
  * Hidden when printing, so it does not appear on the page it produces.
  */
-export function PrintButton({
-  label = "Print or save as PDF",
-}: {
-  label?: string;
-}) {
+export function PrintButton({ label }: { label?: string }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={() => window.print()}
       className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm transition hover:bg-[var(--brand-accent)] print:hidden"
     >
-      {label}
+      {label ?? t("printButton.default")}
     </button>
   );
 }
