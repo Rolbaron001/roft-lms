@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { driveProviderByName } from "@/lib/drive";
 
 /**
@@ -52,12 +52,12 @@ export async function GET(
 
   const provider = driveProviderByName(name);
   if (!provider) {
-    return new Response("No such drive.", { status: 404 });
+    return new Response(await said("No such drive."), { status: 404 });
   }
 
   if (!provider.configured()) {
     return new Response(
-      `${provider.label} is not set up on this deployment. Whoever maintains it has to register an application with ${provider.label} and put its client id and secret in the configuration.`,
+      await said(`${provider.label} is not set up on this deployment. Whoever maintains it has to register an application with ${provider.label} and put its client id and secret in the configuration.`),
       { status: 503 },
     );
   }

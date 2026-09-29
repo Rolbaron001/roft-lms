@@ -7,7 +7,7 @@ import { Rollout } from "./rollout";
 import { Feedback } from "./feedback";
 import { PaymentForm } from "./payment-form";
 import { cohortFeedback, HOURS_TO_RESPOND } from "@/lib/feedback";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { CohortError, getCohort } from "@/lib/cohorts";
 import { blockedLearners } from "@/lib/spine";
 import { listPeople } from "@/lib/people";
@@ -53,7 +53,7 @@ export default async function CohortPage({
     throw error;
   }
 
-  const blocked = await blockedLearners(session, detail.cohort.courseId);
+  const blocked = await said(await blockedLearners(session, detail.cohort.courseId));
   const active = detail.members.filter((member) => member.leftAt === null);
 
   const canManage = session.permissions.includes("enrolment:manage");

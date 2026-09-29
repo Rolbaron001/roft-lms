@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   AssessmentError,
   recordAssessorDecision,
@@ -57,7 +57,7 @@ export async function recordDecisionAction(
       criterionNotes: some(criterionNotes),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/assess");
@@ -80,9 +80,9 @@ export async function recordModerationAction(
         undefined,
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/moderate");
-  return { notice: "Recorded." };
+  return said({ notice: "Recorded." });
 }

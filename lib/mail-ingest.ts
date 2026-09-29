@@ -149,7 +149,7 @@ export async function ingestMessage(
 
   const notes = rejected.length
     ? `\n\n[The platform did not keep ${rejected.length} attachment(s): ${rejected
-        .map((entry) => `${entry.filename} — ${entry.reason}`)
+        .map((entry) => `${entry.filename}: ${entry.reason}`)
         .join("; ")}]`
     : "";
 

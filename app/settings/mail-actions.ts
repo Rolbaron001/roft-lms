@@ -1,6 +1,6 @@
 "use server";
 
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { assertSessionCan } from "@/lib/session";
 import { mailIsConfigured, verifyRelay } from "@/lib/mail";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -39,36 +39,36 @@ export async function testMailAction(): Promise<MailTestState> {
     assertSessionCan(session, "tenant:manage_settings");
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not include testing the mail server." };
+      return said({ error: "Your role does not include testing the mail server." });
     }
     throw error;
   }
 
   if (!mailIsConfigured()) {
-    return {
+    return said({
       ok: false,
       message:
         "No mail server is set up on this deployment, so nothing can be sent yet.",
       detail:
         "Whoever maintains the platform needs to set MAIL_HOST and MAIL_FROM.",
-    };
+    });
   }
 
   const result = await verifyRelay();
 
   if (result.ok) {
-    return {
+    return said({
       ok: true,
       message:
         "The mail server accepted the connection. Learners can be sent their sign-in details and notifications.",
-    };
+    });
   }
 
-  return {
+  return said({
     ok: false,
     message: result.retryable
-      ? "The mail server could not be reached just now. This may be temporary — try again shortly."
+      ? "The mail server could not be reached just now. This may be temporary; try again shortly."
       : "The mail server refused the connection, so nothing can be sent.",
     detail: result.error,
-  };
+  });
 }

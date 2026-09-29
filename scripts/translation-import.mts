@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { en } from "../lib/i18n/en";
+import { server } from "../lib/i18n/en-server";
 import { isLocale, localeOf } from "../lib/i18n/locales";
 import { placeTranslations, readPhraseLines, refLabel, type Translation } from "../lib/i18n/phrase-document";
 import { readDocxText } from "../lib/office";
@@ -31,7 +32,8 @@ if (!code || !file || !isLocale(code) || code === "en") {
   process.exit(1);
 }
 
-const english = en as Record<string, string>;
+// The screens' phrases and the messages the server writes (stage 5).
+const english = { ...en, ...server } as Record<string, string>;
 const refs = JSON.parse(readFileSync(REFS, "utf8")) as Record<string, number>;
 const lines = readPhraseLines(readDocxText(new Uint8Array(readFileSync(file))));
 if (lines.size === 0) {

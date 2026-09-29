@@ -17,6 +17,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { af } from "../lib/i18n/af";
 import { en } from "../lib/i18n/en";
+import { server } from "../lib/i18n/en-server";
 import { LOCALES, isLocale, localeOf } from "../lib/i18n/locales";
 import { assignRefs, buildPhraseDocument, type Translation } from "../lib/i18n/phrase-document";
 
@@ -33,8 +34,11 @@ if (target && (!isLocale(target) || target === "en")) {
   process.exit(1);
 }
 
+// The screens' phrases, then the messages the server writes (stage 5).
+const english = { ...en, ...server } as Record<string, string>;
+
 const before = JSON.parse(readFileSync(REFS, "utf8")) as Record<string, number>;
-const refs = assignRefs(before, Object.keys(en));
+const refs = assignRefs(before, Object.keys(english));
 const added = Object.keys(refs).length - Object.keys(before).length;
 if (added > 0) writeFileSync(REFS, `${JSON.stringify(refs, null, 2)}\n`);
 if (refsOnly) {
@@ -43,7 +47,6 @@ if (refsOnly) {
 }
 
 const translated = JSON.parse(readFileSync(TRANSLATED, "utf8")) as Record<string, Record<string, Translation>>;
-const english = en as Record<string, string>;
 const has = (key: string) =>
   translated[target!]?.[key]?.from === english[key] || (target === "af" && key in af);
 

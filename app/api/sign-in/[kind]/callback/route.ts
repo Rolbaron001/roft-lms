@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { currentTenant, requestContext } from "@/lib/request";
+import { currentTenant, requestContext, said } from "@/lib/request";
 import { SESSION_COOKIE } from "@/lib/session";
 import { finishSignIn, unpackPending, type SsoKind } from "@/lib/single-sign-on";
 import { callbackAddress, PENDING_COOKIE } from "../route";
@@ -15,7 +15,7 @@ import { callbackAddress, PENDING_COOKIE } from "../route";
 export async function GET(request: Request, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
   const tenant = await currentTenant();
-  if (!tenant) return new Response("Not found.", { status: 404 });
+  if (!tenant) return new Response(await said("Not found."), { status: 404 });
 
   const url = new URL(request.url);
   const jar = await cookies();

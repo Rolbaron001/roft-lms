@@ -143,7 +143,7 @@ export async function reach(
     throw new Error(
       aborted
         ? `${who} did not answer in time.`
-        : `${who} could not be reached from this machine. Nothing is wrong with your connection to it and nothing needs reconnecting - the server the platform runs on could not get there. If it keeps happening, whoever maintains the deployment should check that it is allowed to reach ${who} over the network.`,
+        : `${who} could not be reached from this machine. Nothing is wrong with your connection to it and nothing needs reconnecting: the server the platform runs on could not get there. If it keeps happening, whoever maintains the deployment should check that it is allowed to reach ${who} over the network.`,
     );
   }
 }

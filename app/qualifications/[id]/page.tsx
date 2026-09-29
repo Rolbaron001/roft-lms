@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requireAnyPermission, requireCapability } from "@/lib/request";
+import { pageT, requireAnyPermission, requireCapability, said } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
 import {
   DOCUMENT_KINDS,
@@ -113,7 +113,7 @@ export default async function QualificationPage({
    * Only asked for somebody who could act on the answer - it is several
    * counting queries, and a facilitator has no use for them.
    */
-  const removal = canManage ? await qualificationUsage(session, id) : null;
+  const removal = canManage ? await said(await qualificationUsage(session, id)) : null;
 
   /*
    * How many of this qualification's papers a learner can actually answer.
@@ -138,11 +138,11 @@ export default async function QualificationPage({
    * there is a curriculum to describe - a blueprint of no modules is not a
    * file worth downloading, and the reader would ignore it anyway.
    */
-  const blueprint = canManage && modules.length > 0 ? blueprintFrom(outline) : null;
+  const blueprint = canManage && modules.length > 0 ? await said(blueprintFrom(outline)) : null;
 
   // Read only so the top-up form can say what an extension would add. A folder
   // that includes a summary of itself needs none.
-  const extension = await extensionState(session);
+  const extension = await said(await extensionState(session));
   const mayUseExtension = extensionOffered() && session.permissions.includes("extension:use");
 
   const totalCriteria = modules.reduce(

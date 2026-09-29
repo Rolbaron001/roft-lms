@@ -289,7 +289,7 @@ export async function readQualificationSources(
 
     if (!parent) {
       notes.push(
-        "This is a part qualification, but the full qualification it comes from is not on the platform yet. Import that one first — a part carries no curriculum of its own, so there is nothing to attach it to until the parent exists.",
+        "This is a part qualification, but the full qualification it comes from is not on the platform yet. Import that one first: a part carries no curriculum of its own, so there is nothing to attach it to until the parent exists.",
       );
     } else {
       /**
@@ -472,7 +472,7 @@ async function createPartFromDocuments(
       elements: 0,
       criteria: 0,
       warnings: [
-        `Created as a part of "${part.parent.title}", taking ${ids.length} of its ${parentModules.length} modules. Its curriculum is the parent's — nothing was copied, so a learner's work against a module counts once wherever they met it.`,
+        `Created as a part of "${part.parent.title}", taking ${ids.length} of its ${parentModules.length} modules. Its curriculum is the parent's; nothing was copied, so a learner's work against a module counts once wherever they met it.`,
         ...warnings,
       ],
     },
@@ -516,7 +516,7 @@ export async function createQualificationFromDocuments(
 
   if (reading.details.kind !== "full") {
     throw new QualificationImportError(
-      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, but the full qualification it comes from is not on the platform. Import that one first — this one shares its curriculum and has none of its own.`,
+      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, but the full qualification it comes from is not on the platform. Import that one first: this one shares its curriculum and has none of its own.`,
       "not_a_curriculum",
     );
   }

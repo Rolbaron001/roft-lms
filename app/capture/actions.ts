@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { inArray } from "drizzle-orm";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { withTenant } from "@/db/client";
 import { assessmentCriteria } from "@/db/schema";
 import {
@@ -30,10 +30,10 @@ export async function uploadCaptureAction(
   const guide = formData.get("guide");
 
   if (!qualificationId) {
-    return { error: "Choose the qualification this material belongs to." };
+    return said({ error: "Choose the qualification this material belongs to." });
   }
   if (!(paper instanceof File) || paper.size === 0) {
-    return { error: "Choose the learner's copy of the paper." };
+    return said({ error: "Choose the learner's copy of the paper." });
   }
 
   let jobId: string;
@@ -57,13 +57,13 @@ export async function uploadCaptureAction(
     // The sequencing refusal is not a failure to explain away: it is the
     // platform telling somebody what to do first, so it says exactly that.
     if (error instanceof NotReadyError) {
-      return {
+      return said({
         error: error.message,
         gaps: error.gaps.map((gap) => `${gap.what} ${gap.action}`),
-      };
+      });
     }
     if (error instanceof CaptureError || error instanceof PermissionDeniedError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
@@ -86,8 +86,8 @@ export async function commitCaptureAction(
   // inside a catch that would treat its control-flow throw as a failure.
   let paperId: string | null = null;
 
-  if (!assessmentId) return { error: "Choose which assessment this belongs to." };
-  if (!paperCode) return { error: "Give the paper a code, such as V1." };
+  if (!assessmentId) return said({ error: "Choose which assessment this belongs to." });
+  if (!paperCode) return said({ error: "Give the paper a code, such as V1." });
 
   try {
     const job = await getCaptureJob(session, jobId);
@@ -100,16 +100,16 @@ export async function commitCaptureAction(
       try {
         confirmed = JSON.parse(edited) as ParsedPaper;
       } catch {
-        return {
+        return said({
           error:
-            "The corrections could not be read. Reload the page and try again — nothing has been committed.",
-        };
+            "The corrections could not be read. Reload the page and try again. Nothing has been committed.",
+        });
       }
     }
 
     const problems = validate(confirmed);
     if (problems.length > 0) {
-      return { error: problems[0] };
+      return said({ error: problems[0] });
     }
 
     // Criterion codes are resolved here rather than in the parser, which knows
@@ -148,11 +148,11 @@ export async function commitCaptureAction(
     revalidatePath("/capture");
 
     if (!result.published.ok) {
-      return {
+      return said({
         error:
           "Committed, but the paper could not be published: " +
           result.published.reasons.join(" "),
-      };
+      });
     }
 
     /*
@@ -171,7 +171,7 @@ export async function commitCaptureAction(
       error instanceof PaperError ||
       error instanceof PermissionDeniedError
     ) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }

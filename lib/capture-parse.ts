@@ -1245,7 +1245,7 @@ export function mergeMemorandum(
     for (const item of section.items) {
       if (item.points !== null && item.points === 0) {
         problems.push(
-          `"${short(item.stem)}" is worth no marks. Either give it some or take it out — a question worth nothing still costs a learner time.`,
+          `"${short(item.stem)}" is worth no marks. Either give it some or take it out: a question worth nothing still costs a learner time.`,
         );
       }
 

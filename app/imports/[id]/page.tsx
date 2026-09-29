@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { Rich } from "@/components/rich-text";
 import { IngestError, getIngestJob } from "@/lib/folder-import";
 import type { IngestionPlan } from "@/lib/folder-plan";
@@ -23,7 +23,7 @@ export default async function ImportJobPage({
 
   let job;
   try {
-    job = await getIngestJob(session, id);
+    job = await said(await getIngestJob(session, id));
   } catch (error) {
     if (error instanceof IngestError) notFound();
     throw error;

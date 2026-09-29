@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   RecordsError,
   fileLibraryDocument,
@@ -39,7 +39,7 @@ export async function fileDocumentAction(
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a file." };
+    return said({ error: "Choose a file." });
   }
 
   try {
@@ -64,11 +64,11 @@ export async function fileDocumentAction(
       bytes: new Uint8Array(await file.arrayBuffer()),
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/records");
-  return { notice: "Filed." };
+  return said({ notice: "Filed." });
 }
 
 export async function recordDisposalAction(
@@ -93,9 +93,9 @@ export async function recordDisposalAction(
       reason: field(formData, "reason") || undefined,
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/records");
-  return { notice: "Recorded." };
+  return said({ notice: "Recorded." });
 }

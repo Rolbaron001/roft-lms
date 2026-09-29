@@ -7,7 +7,7 @@ import {
   type EnrolmentFormInput,
 } from "@/lib/enrolment-form";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type FormState = { error?: string; notice?: string };
 
@@ -63,18 +63,18 @@ export async function saveEnrolmentFormAction(
   try {
     await saveEnrolmentForm(session, learnerId, input, { confirm });
   } catch (error) {
-    if (error instanceof EnrolmentFormError) return { error: error.message };
+    if (error instanceof EnrolmentFormError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }
 
   revalidatePath("/enrolment-form");
 
-  return {
+  return said({
     notice: confirm
       ? "Confirmed, and the date recorded. Change anything here later and it will ask you to confirm again."
       : "Saved. You can come back and finish it later.",
-  };
+  });
 }

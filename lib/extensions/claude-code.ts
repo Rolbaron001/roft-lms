@@ -253,10 +253,10 @@ function explain(message: string): string {
     lowered.includes("401")
   ) {
     return [
-      "Your Claude token is no longer valid - it has been revoked, or it has expired.",
+      "Your Claude token is no longer valid: it has been revoked, or it has expired.",
       "Nothing is wrong with the platform and nothing was lost, and this affects only you: a token is yours rather than the tenant's.",
       "It cannot be renewed or extended. Generate a new one, which replaces the old:",
-      "1. On your own computer - not on the server - open a terminal.",
+      "1. On your own computer, not on the server, open a terminal.",
       "2. Windows, in PowerShell: claude.cmd setup-token. Note the .cmd; plain `claude` usually fails there with \"running scripts is disabled on this system\", which is a Windows default rather than a fault, and the .cmd form avoids it without changing any security setting. Mac or Linux: claude setup-token.",
       "3. Sign in when it opens your browser. You need a Claude subscription of your own.",
       "4. It prints a token beginning sk-ant-oat. Copy the whole string.",
@@ -313,7 +313,7 @@ export const claudeCodeProvider: AiProvider = {
          * sent her to Roland with nothing wrong to find.
          */
         remedy:
-          "This provider works by running a program on the same machine as the platform, and the hosted platform does not have it. That is by design rather than a fault: nothing is wrong with your account and there is nothing for anybody to fix. Choose Google Gemini or OpenAI instead - those are called over the internet and work wherever the platform runs. Claude Code remains the right choice when the platform is running on your own computer.",
+          "This provider works by running a program on the same machine as the platform, and the hosted platform does not have it. That is by design rather than a fault: nothing is wrong with your account and there is nothing for anybody to fix. Choose Google Gemini or OpenAI instead: those are called over the internet and work wherever the platform runs. Claude Code remains the right choice when the platform is running on your own computer.",
       };
     }
 

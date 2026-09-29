@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { bulkEnrol, EnrolmentError, enrolUser } from "@/lib/enrolment";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -28,7 +28,7 @@ export async function enrolOneAction(
   const dueDate = String(formData.get("dueDate") ?? "");
 
   if (!userId) {
-    return { error: "Choose someone to enrol." };
+    return said({ error: "Choose someone to enrol." });
   }
 
   try {
@@ -38,11 +38,11 @@ export async function enrolOneAction(
       dueDate: dueDate || undefined,
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/enrolments`);
-  return { notice: "Enrolled." };
+  return said({ notice: "Enrolled." });
 }
 
 export async function bulkEnrolAction(
@@ -61,7 +61,7 @@ export async function bulkEnrolAction(
     .filter(Boolean);
 
   if (emails.length === 0) {
-    return { error: "Paste at least one email address." };
+    return said({ error: "Paste at least one email address." });
   }
 
   try {
@@ -91,10 +91,10 @@ export async function bulkEnrolAction(
 
     // An unrecognised address is a problem the person needs to fix, so it is
     // reported as an error even when other addresses were enrolled fine.
-    return result.unknown.length > 0
+    return said(result.unknown.length > 0
       ? { error: parts.join(" ") }
-      : { notice: parts.join(" ") || "Nothing to do." };
+      : { notice: parts.join(" ") || "Nothing to do." });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }

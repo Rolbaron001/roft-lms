@@ -10,7 +10,7 @@ import {
   sendToRecordStore,
 } from "@/lib/record-store";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type ImportState = { error?: string; summary?: ImportSummary };
 export type StoreState = { error?: string; notice?: string };
@@ -48,27 +48,27 @@ export async function saveStoreAction(_previous: StoreState, formData: FormData)
       await ownAddress(),
     );
   } catch (error) {
-    return { error: storeProblem(error) };
+    return said({ error: storeProblem(error) });
   }
   revalidatePath("/learning-records");
-  return { notice: "Saved. Records go to the store every hour; send them now to check the connection." };
+  return said({ notice: "Saved. Records go to the store every hour; send them now to check the connection." });
 }
 
 export async function sendNowAction(): Promise<StoreState> {
   const session = await requireSession();
   if (!session.permissions.includes("records:manage")) {
-    return { error: "Only a provider administrator may send records." };
+    return said({ error: "Only a provider administrator may send records." });
   }
   const result = await sendToRecordStore(session.organisationId);
   revalidatePath("/learning-records");
-  if (!result) return { error: "No store is connected, or it is switched off." };
-  if (result.error) return { error: `${result.sent} sent before it stopped. ${result.error}` };
-  return {
+  if (!result) return said({ error: "No store is connected, or it is switched off." });
+  if (result.error) return said({ error: `${result.sent} sent before it stopped. ${result.error}` });
+  return said({
     notice:
       result.sent + result.alreadyHeld === 0
         ? "Nothing new to send. The store has every record."
         : `Sent ${result.sent}${result.alreadyHeld ? `; the store already held ${result.alreadyHeld}` : ""}.`,
-  };
+  });
 }
 
 export async function removeStoreAction(): Promise<StoreState> {
@@ -76,10 +76,10 @@ export async function removeStoreAction(): Promise<StoreState> {
   try {
     await removeRecordStore(session);
   } catch (error) {
-    return { error: storeProblem(error) };
+    return said({ error: storeProblem(error) });
   }
   revalidatePath("/learning-records");
-  return { notice: "Disconnected, and its key forgotten." };
+  return said({ notice: "Disconnected, and its key forgotten." });
 }
 
 export async function importStatementsAction(
@@ -89,7 +89,7 @@ export async function importStatementsAction(
   const session = await requireSession();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose the file of statements to import." };
+    return said({ error: "Choose the file of statements to import." });
   }
 
   try {
@@ -98,11 +98,11 @@ export async function importStatementsAction(
       bytes: new Uint8Array(await file.arrayBuffer()),
     });
     revalidatePath("/learning-records");
-    return { summary };
+    return said({ summary });
   } catch (error) {
-    if (error instanceof XapiError) return { error: error.message };
+    if (error instanceof XapiError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Only a provider administrator may import learning records." };
+      return said({ error: "Only a provider administrator may import learning records." });
     }
     throw error;
   }

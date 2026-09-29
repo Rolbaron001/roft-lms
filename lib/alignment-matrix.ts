@@ -301,7 +301,7 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
    */
   if (looksLikeWord(bytes)) {
     throw new AlignmentMatrixError(
-      "That is a Word document. The document itself is kept, filed and searchable - what could not happen is reading it, because the alignment matrix is read as a spreadsheet: one row per curriculum line, with a column headed something like “Topic Elements”. Save the matrix as a spreadsheet and upload that as well, and each line of the curriculum will show what covers it.",
+      "That is a Word document. The document itself is kept, filed and searchable. What could not happen is reading it, because the alignment matrix is read as a spreadsheet: one row per curriculum line, with a column headed something like “Topic Elements”. Save the matrix as a spreadsheet and upload that as well, and each line of the curriculum will show what covers it.",
     );
   }
 
@@ -322,7 +322,7 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
 
   if (sheets.every((sheet) => sheet.columns.length === 0)) {
     throw new AlignmentMatrixError(
-      "The matrix has no resource columns that could be recognised — nothing headed Workbook, Assessment, Theory Guide, Legislation and so on.",
+      "The matrix has no resource columns that could be recognised: nothing headed Workbook, Assessment, Theory Guide, Legislation and so on.",
     );
   }
 
@@ -613,7 +613,7 @@ export async function importAlignmentMatrix(
 
     if (curriculum.modules.length === 0) {
       throw new AlignmentMatrixError(
-        "Import the curriculum document before the alignment matrix — there is nothing yet for its rows to attach to.",
+        "Import the curriculum document before the alignment matrix: there is nothing yet for its rows to attach to.",
       );
     }
 

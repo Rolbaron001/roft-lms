@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { translator } from "./i18n";
 
 /**
  * Delivering email.
@@ -28,6 +29,12 @@ export type OutgoingEmail = {
   /** Set when this is a reply, so mail clients thread it correctly. */
   inReplyTo?: string | null;
   references?: string | null;
+  /**
+   * The recipient's language, for the greeting and the line at the foot (D9).
+   * The subject and body arrive already written: a message a person wrote is
+   * theirs and goes as they wrote it.
+   */
+  locale?: string | null;
 };
 
 export type DeliveryResult =
@@ -65,17 +72,15 @@ export function mailIsConfigured(): boolean {
 
 /** The plain-text body, assembled the same way regardless of transport. */
 export function renderEmail(email: OutgoingEmail): string {
-  const lines = [`Hello ${email.toName},`, "", email.body];
+  const t = translator(email.locale);
+  const lines = [t("email.hello", { name: email.toName }), "", email.body];
 
   if (email.linkUrl) {
     lines.push("", email.linkUrl);
   }
 
-  lines.push(
-    "",
-    "—",
-    "You are receiving this because you have a learning record on this system.",
-  );
+  // "-- " is the line mail programs recognise as the start of a footer.
+  lines.push("", "-- ", t("email.why"));
 
   return lines.join("\n");
 }

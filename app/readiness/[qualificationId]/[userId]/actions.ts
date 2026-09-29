@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   issueStatementOfResults,
   StatementError,
@@ -44,12 +44,12 @@ export async function recordAwardAction(
       note: String(formData.get("note") ?? "") || undefined,
     });
   } catch (error) {
-    return { error: awardProblem(error) };
+    return said({ error: awardProblem(error) });
   }
 
   revalidatePath(`/readiness/${qualificationId}/${userId}`);
   revalidatePath(`/people/${userId}`);
-  return { notice: "Recorded." };
+  return said({ notice: "Recorded." });
 }
 
 export async function removeAwardAction(
@@ -67,12 +67,12 @@ export async function removeAwardAction(
       String(formData.get("reason") ?? ""),
     );
   } catch (error) {
-    return { error: awardProblem(error) };
+    return said({ error: awardProblem(error) });
   }
 
   revalidatePath(`/readiness/${qualificationId}/${userId}`);
   revalidatePath(`/people/${userId}`);
-  return { notice: "Removed." };
+  return said({ notice: "Removed." });
 }
 
 export type IssueState = {
@@ -101,17 +101,17 @@ export async function issueStatementAction(
     );
 
     if (!result.ok) {
-      return { reasons: result.reasons };
+      return said({ reasons: result.reasons });
     }
 
     revalidatePath(`/readiness/${qualificationId}/${userId}`);
-    return { statementId: result.statementId };
+    return said({ statementId: result.statementId });
   } catch (error) {
     if (error instanceof StatementError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     if (error instanceof PermissionDeniedError) {
-      return { error: "Issuing a Statement of Results is limited to staff who can issue certificates." };
+      return said({ error: "Issuing a Statement of Results is limited to staff who can issue certificates." });
     }
     throw error;
   }

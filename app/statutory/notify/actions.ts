@@ -9,7 +9,7 @@ import {
   setOwnInduction,
 } from "@/lib/statutory-notification";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type NotifyState = { error?: string; notice?: string };
 
@@ -30,7 +30,7 @@ export async function draftAction(
 
   const learnerIds = formData.getAll("learnerIds").map(String).filter(Boolean);
   if (learnerIds.length === 0) {
-    return { error: "Choose at least one learner to notify about." };
+    return said({ error: "Choose at least one learner to notify about." });
   }
 
   const kindRaw = String(formData.get("kind") ?? "");
@@ -48,13 +48,13 @@ export async function draftAction(
       learnerIds,
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/statutory/notify");
-  return {
+  return said({
     notice: `Drafted, covering ${learnerIds.length} ${learnerIds.length === 1 ? "learner" : "learners"}. Download the workbook, check it, then record that it went.`,
-  };
+  });
 }
 
 /** Records that the workbook was uploaded to the QCTO. */
@@ -67,11 +67,11 @@ export async function submitAction(
   try {
     await markSubmitted(session, String(formData.get("notificationId") ?? ""));
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/statutory/notify");
-  return { notice: "Recorded as sent. Add the acknowledgement when it comes back." };
+  return said({ notice: "Recorded as sent. Add the acknowledgement when it comes back." });
 }
 
 /** Records the reference the QCTO issued, and the date. */
@@ -93,11 +93,11 @@ export async function acknowledgeAction(
       },
     );
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/statutory/notify");
-  return { notice: "Acknowledgement recorded." };
+  return said({ notice: "Acknowledgement recorded." });
 }
 
 /**
@@ -122,13 +122,13 @@ export async function ownInductionAction(
       on || null,
     );
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/statutory/notify");
-  return {
+  return said({
     notice: on
       ? "Their own induction date is recorded, and their deadline now runs from it."
       : "Back to the cohort's own induction date.",
-  };
+  });
 }

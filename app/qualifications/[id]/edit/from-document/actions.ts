@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { AuthoringError } from "@/lib/authoring";
 import {
   acceptProposedModule,
@@ -32,7 +32,7 @@ export async function acceptModuleAction(
       error instanceof AuthoringError ||
       error instanceof PermissionDeniedError
     ) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
@@ -41,5 +41,5 @@ export async function acceptModuleAction(
   revalidatePath(`/qualifications/${qualificationId}/edit`);
   revalidatePath(`/qualifications/${qualificationId}`);
 
-  return { done };
+  return said({ done });
 }

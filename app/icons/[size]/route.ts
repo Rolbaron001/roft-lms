@@ -1,5 +1,5 @@
 import { iconPng } from "@/lib/app-icon";
-import { currentTenant } from "@/lib/request";
+import { currentTenant, said } from "@/lib/request";
 
 /**
  * The install icons, drawn in the provider's own colour (lib/app-icon.ts).
@@ -18,10 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ size: string }> },
 ) {
   const tenant = await currentTenant();
-  if (!tenant?.offlineEnabled) return new Response("Not found.", { status: 404 });
+  if (!tenant?.offlineEnabled) return new Response(await said("Not found."), { status: 404 });
 
   const size = Number((await params).size);
-  if (!SIZES.has(size)) return new Response("Not found.", { status: 404 });
+  if (!SIZES.has(size)) return new Response(await said("Not found."), { status: 404 });
 
   return new Response(new Uint8Array(iconPng(size, tenant.primaryColour ?? "")), {
     headers: { "content-type": "image/png", "cache-control": "public, max-age=86400" },

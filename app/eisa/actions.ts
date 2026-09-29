@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { RegistrationError, recordEisaSitting } from "@/lib/eisa-registration";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -27,21 +27,21 @@ export async function recordSittingAction(
       note: field(formData, "note") || undefined,
     });
   } catch (error) {
-    if (error instanceof RegistrationError) return { error: error.message };
+    if (error instanceof RegistrationError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error && typeof error === "object" && "issues" in error) {
-      return {
+      return said({
         error: (error as { issues: { message: string }[] }).issues
           .map((issue) => issue.message)
           .join(" "),
-      };
+      });
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return said({ error: "That could not be saved. Please try again." });
   }
 
   revalidatePath("/eisa");
-  return { notice: "Recorded. The countdown to registration starts now." };
+  return said({ notice: "Recorded. The countdown to registration starts now." });
 }

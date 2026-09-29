@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { Rich } from "@/components/rich-text";
 import { AuthoringError, getCourse } from "@/lib/authoring";
 import { listCourseEnrolments, listEnrollableUsers } from "@/lib/enrolment";
@@ -33,7 +33,7 @@ export default async function CourseEnrolmentsPage({
     session.permissions.includes("user:read")
       ? listEnrollableUsers(session)
       : Promise.resolve([]),
-    blockedLearners(session, id),
+    blockedLearners(session, id).then(said),
   ]);
 
   const canManage = session.permissions.includes("enrolment:manage");

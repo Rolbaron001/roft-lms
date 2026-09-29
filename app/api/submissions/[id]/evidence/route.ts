@@ -1,4 +1,4 @@
-import { currentSession, requestContext } from "@/lib/request";
+import { currentSession, requestContext, said } from "@/lib/request";
 import { uploadEvidence } from "@/lib/uploads";
 import { errorResponse } from "@/app/api/lessons/[id]/media/route";
 
@@ -10,14 +10,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
 
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > ABSOLUTE_MAX_BYTES) {
     return Response.json(
-      { error: "That is larger than this platform accepts." },
+      await said({ error: "That is larger than this platform accepts." }),
       { status: 413 },
     );
   }
@@ -29,7 +29,7 @@ export async function POST(
       .filter((entry): entry is File => entry instanceof File);
 
     if (files.length === 0) {
-      return Response.json({ error: "No files were sent." }, { status: 400 });
+      return Response.json(await said({ error: "No files were sent." }), { status: 400 });
     }
 
     const context = await requestContext();

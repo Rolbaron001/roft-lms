@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   addAssessmentItem,
   AssessmentError,
@@ -47,11 +47,11 @@ export async function createAssessmentAction(
       moderationSampleRate: Number(formData.get("moderationSampleRate") ?? 0.25),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/assessments`);
-  return { notice: "Assessment created." };
+  return said({ notice: "Assessment created." });
 }
 
 export async function addQuestionAction(
@@ -87,12 +87,12 @@ export async function addQuestionAction(
       criterionIds: formData.getAll("criterionId").map(String).filter(Boolean),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/assessments`);
   revalidatePath(`/courses/${courseId}`);
-  return { notice: "Question added." };
+  return said({ notice: "Question added." });
 }
 
 export async function setQuestionCriteriaAction(
@@ -109,12 +109,12 @@ export async function setQuestionCriteriaAction(
       formData.getAll("criterionId").map(String).filter(Boolean),
     );
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/assessments`);
   revalidatePath(`/courses/${courseId}`);
-  return { notice: "Criteria saved." };
+  return said({ notice: "Criteria saved." });
 }
 
 export async function publishAssessmentAction(
@@ -127,9 +127,9 @@ export async function publishAssessmentAction(
   try {
     await publishAssessment(session, String(formData.get("assessmentId") ?? ""));
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/assessments`);
-  return { notice: "Assessment published." };
+  return said({ notice: "Assessment published." });
 }

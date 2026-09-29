@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { PermissionDeniedError } from "@/lib/rbac";
 import {
   QualificationInUseError,
@@ -32,25 +32,25 @@ export async function removeQualificationAction(
   const title = String(formData.get("title") ?? "").trim();
 
   if (typed !== title) {
-    return {
+    return said({
       error:
         "That is not the title. Type it exactly as it appears above to confirm which qualification you mean.",
-    };
+    });
   }
 
   try {
     await deleteQualification(session, id);
   } catch (error) {
-    if (error instanceof QualificationInUseError) return { error: error.message };
+    if (error instanceof QualificationInUseError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not include managing qualifications." };
+      return said({ error: "Your role does not include managing qualifications." });
     }
-    return {
+    return said({
       error:
         error instanceof Error
           ? error.message
           : "That qualification could not be removed.",
-    };
+    });
   }
 
   revalidatePath("/qualifications");

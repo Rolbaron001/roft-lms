@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { defineBadge, retireBadge } from "@/lib/badges";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -56,11 +56,11 @@ export async function defineBadgeAction(
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return {
+      return said({
         error: "Your role does not include designing badges.",
         values: raw,
         attempt: (previous.attempt ?? 0) + 1,
-      };
+      });
     }
 
     // A unique index refusing a second badge for the same thing, most likely.
@@ -71,15 +71,15 @@ export async function defineBadgeAction(
           ? error.message
           : "That could not be saved.";
 
-    return {
+    return said({
       error: message,
       values: raw,
       attempt: (previous.attempt ?? 0) + 1,
-    };
+    });
   }
 
   revalidatePath("/badges");
-  return { notice: "Badge created. It is earned from now on." };
+  return said({ notice: "Badge created. It is earned from now on." });
 }
 
 export async function retireBadgeAction(
@@ -91,15 +91,15 @@ export async function retireBadgeAction(
   try {
     await retireBadge(session, String(formData.get("badgeId") ?? ""));
   } catch (error) {
-    return {
+    return said({
       error:
         error instanceof Error ? error.message : "That could not be retired.",
-    };
+    });
   }
 
   revalidatePath("/badges");
-  return {
+  return said({
     notice:
       "Retired. Nobody earns it from now on, and everybody who already holds it keeps it.",
-  };
+  });
 }

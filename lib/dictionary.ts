@@ -64,7 +64,7 @@ export function getDictionary(): Dictionary {
 /** How each `definedBy` value is explained on screen. */
 export const DEFINED_BY_MEANING: Record<DefinedBy, string> = {
   authority:
-    "Defined by an authority. Use it as they do — changing the meaning puts a submission at risk.",
+    "Defined by an authority. Use it as they do: changing the meaning puts a submission at risk.",
   platform:
     "This platform's own word for it. Ours to change; no authority prescribes it.",
   practice:

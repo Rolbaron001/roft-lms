@@ -1,4 +1,4 @@
-import { pageT, requireAnyPermission, requireCapability } from "@/lib/request";
+import { pageT, requireAnyPermission, requireCapability, said } from "@/lib/request";
 import { listCurriculumModules, listQualifications } from "@/lib/authoring";
 import { AppShell } from "@/components/app-shell";
 import { QualificationsManager } from "./qualifications-manager";
@@ -62,7 +62,7 @@ export default async function QualificationsPage({
   // Folder import is ordinary functionality and is shown to everybody who can
   // manage a qualification. The extension state is read only so the form can
   // say what an extension would add, not to decide whether to offer it.
-  const extension = await extensionState(session);
+  const extension = await said(await extensionState(session));
   const mayUseExtension =
     extensionOffered() && session.permissions.includes("extension:use");
 

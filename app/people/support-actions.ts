@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   SupportError,
   closeSupportNeed,
@@ -52,7 +52,7 @@ export async function recordSupportNeedAction(
   const session = await requirePermission("support:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () =>
       recordSupportNeed(session, {
         learnerId,
@@ -72,7 +72,7 @@ export async function recordSupportNeedAction(
       }),
     "Recorded. Whoever is teaching this learner will see the accommodation.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 export async function recordReviewAction(
@@ -82,7 +82,7 @@ export async function recordReviewAction(
   const session = await requirePermission("support:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () =>
       recordSupportReview(session, {
         supportNeedId: field(formData, "supportNeedId"),
@@ -94,7 +94,7 @@ export async function recordReviewAction(
       }),
     "Review recorded.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 export async function closeSupportNeedAction(
@@ -104,7 +104,7 @@ export async function closeSupportNeedAction(
   const session = await requirePermission("support:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () =>
       closeSupportNeed(session, {
         supportNeedId: field(formData, "supportNeedId"),
@@ -112,7 +112,7 @@ export async function closeSupportNeedAction(
       }),
     "Closed.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 export async function recordMissedAssessmentAction(
@@ -122,7 +122,7 @@ export async function recordMissedAssessmentAction(
   const session = await requirePermission("support:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () =>
       recordMissedAssessment(session, {
         learnerId,
@@ -133,7 +133,7 @@ export async function recordMissedAssessmentAction(
       }),
     "Additional date set. The procedure allows one, so there will not be another.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 export async function recordAdditionalDateOutcomeAction(
@@ -143,7 +143,7 @@ export async function recordAdditionalDateOutcomeAction(
   const session = await requirePermission("support:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () =>
       recordAdditionalDateOutcome(session, {
         missedAssessmentId: field(formData, "missedAssessmentId"),
@@ -156,5 +156,5 @@ export async function recordAdditionalDateOutcomeAction(
       }),
     "Recorded.",
     [`/people/${learnerId}`],
-  );
+  ));
 }

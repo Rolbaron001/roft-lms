@@ -1,4 +1,4 @@
-import { currentSession, currentTenant } from "@/lib/request";
+import { currentSession, currentTenant, said } from "@/lib/request";
 import { readTenantLogo, uploadTenantLogo, UploadError } from "@/lib/uploads";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -17,7 +17,7 @@ const ABSOLUTE_MAX_BYTES = 8 * 1024 * 1024;
 
 export async function GET() {
   const tenant = await currentTenant();
-  if (!tenant) return new Response("Not found.", { status: 404 });
+  if (!tenant) return new Response(await said("Not found."), { status: 404 });
 
   try {
     const file = await readTenantLogo(tenant.id);
@@ -32,18 +32,18 @@ export async function GET() {
       },
     });
   } catch {
-    return new Response("Not found.", { status: 404 });
+    return new Response(await said("Not found."), { status: 404 });
   }
 }
 
 export async function POST(request: Request) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > ABSOLUTE_MAX_BYTES) {
     return Response.json(
-      { error: "That image is larger than this platform accepts." },
+      await said({ error: "That image is larger than this platform accepts." }),
       { status: 413 },
     );
   }
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return Response.json({ error: "No file was sent." }, { status: 400 });
+      return Response.json(await said({ error: "No file was sent." }), { status: 400 });
     }
 
     const stored = await uploadTenantLogo(session, {
@@ -65,14 +65,14 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
       return Response.json(
-        { error: "You cannot change this organisation's branding." },
+        await said({ error: "You cannot change this organisation's branding." }),
         { status: 403 },
       );
     }
     if (error instanceof UploadError) {
       const status =
         error.code === "too_large" ? 413 : error.code === "not_found" ? 404 : 400;
-      return Response.json({ error: error.message }, { status });
+      return Response.json(await said({ error: error.message }), { status });
     }
     throw error;
   }

@@ -255,7 +255,7 @@ export async function buildNlrdDataset(
         issues.push({
           severity: "blocking",
           entity: "enrolment",
-          subject: `${name} — ${row.qualificationTitle}`,
+          subject: `${name}: ${row.qualificationTitle}`,
           field: "SAQA qualification ID",
           message:
             "The qualification has no SAQA ID, so the enrolment cannot be filed against it.",
@@ -271,7 +271,7 @@ export async function buildNlrdDataset(
         issues.push({
           severity: "blocking",
           entity: "enrolment",
-          subject: `${name} — ${row.qualificationTitle}`,
+          subject: `${name}: ${row.qualificationTitle}`,
           field: "enrolment date",
           message:
             "The learner was enrolled after the qualification's registration period closed.",
@@ -380,7 +380,7 @@ export async function buildNlrdDataset(
         issues.push({
           severity: "blocking",
           entity: "achievement",
-          subject: `${name} — ${module.code}`,
+          subject: `${name}: ${module.code}`,
           field: "assessor registration",
           message:
             "The assessor has no registration number recorded. The NLRD verifies assessor registration against the achievement.",
@@ -391,7 +391,7 @@ export async function buildNlrdDataset(
         issues.push({
           severity: "warning",
           entity: "achievement",
-          subject: `${name} — ${module.code}`,
+          subject: `${name}: ${module.code}`,
           field: "moderator registration",
           message: "The moderator has no registration number recorded.",
         });
@@ -401,7 +401,7 @@ export async function buildNlrdDataset(
         issues.push({
           severity: "warning",
           entity: "achievement",
-          subject: `${name} — ${module.code}`,
+          subject: `${name}: ${module.code}`,
           field: "credits",
           message: "The curriculum module has no credit value recorded.",
         });

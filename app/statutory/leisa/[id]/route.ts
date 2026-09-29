@@ -1,4 +1,4 @@
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 import { can } from "@/lib/rbac";
 import { buildLeisa, leisaCsv } from "@/lib/statutory-notification";
 
@@ -18,10 +18,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   if (!can(session, "report:statutory")) {
-    return new Response("Not permitted.", { status: 403 });
+    return new Response(await said("Not permitted."), { status: 403 });
   }
 
   const { id } = await params;

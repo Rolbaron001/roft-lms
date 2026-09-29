@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { revokeCertificate } from "@/lib/certificates";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -29,14 +29,14 @@ export async function withdrawCertificateAction(
     await revokeCertificate(session, id, String(formData.get("reason") ?? ""));
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not include withdrawing a certificate." };
+      return said({ error: "Your role does not include withdrawing a certificate." });
     }
-    return {
+    return said({
       error:
         error instanceof Error ? error.message : "That could not be withdrawn.",
-    };
+    });
   }
 
   revalidatePath(`/certificates/${id}`);
-  return { notice: "Withdrawn. Anybody checking the reference is now told so." };
+  return said({ notice: "Withdrawn. Anybody checking the reference is now told so." });
 }

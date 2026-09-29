@@ -94,7 +94,7 @@ export async function setNamingConvention(
   for (const [code] of codes) {
     if (!/^[A-Z0-9]{1,10}$/.test(code)) {
       throw new CaptureError(
-        `"${code}" cannot be an artefact code. Use letters and digits only, up to ten of them — it has to be readable as one word in a filename.`,
+        `"${code}" cannot be an artefact code. Use letters and digits only, up to ten of them: it has to be readable as one word in a filename.`,
         "invalid",
       );
     }

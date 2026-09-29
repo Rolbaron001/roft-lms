@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   commitRoster,
   proposeRoster,
@@ -47,7 +47,7 @@ export async function readRosterAction(
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a spreadsheet." };
+    return said({ error: "Choose a spreadsheet." });
   }
 
   try {
@@ -57,12 +57,12 @@ export async function readRosterAction(
     });
 
     const usable = proposal.rows.filter((row) => row.problems.length === 0);
-    return {
+    return said({
       proposal,
       notice: `Read ${proposal.rows.length} rows, ${usable.length} of them usable. Check what it found before creating anybody.`,
-    };
+    });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 }
 
@@ -73,7 +73,7 @@ export async function commitRosterAction(
   const session = await requirePermission("user:invite");
 
   if (!previous.proposal) {
-    return { error: "Read a spreadsheet first." };
+    return said({ error: "Read a spreadsheet first." });
   }
 
   // What was read is carried in the action's own state rather than re-read
@@ -90,17 +90,17 @@ export async function commitRosterAction(
 
     const refused =
       report.refused.length > 0
-        ? ` ${report.skipped} were skipped: ${report.refused.slice(0, 6).join(" ")}${report.refused.length > 6 ? ` And ${report.refused.length - 6} more.` : ""}`
+        ? ` ${report.skipped} were skipped: ${report.refused.slice(0, 6).join(" ")}${report.refused.length > 6 ? ` There are ${report.refused.length - 6} more.` : ""}`
         : "";
 
-    return {
+    return said({
       notice: `Created ${report.created} ${report.created === 1 ? "person" : "people"}.${refused}`,
       passwords: report.people.map((person) => ({
         email: person.email,
         initialPassword: person.initialPassword,
       })),
-    };
+    });
   } catch (error) {
-    return { ...explain(error), proposal: previous.proposal };
+    return said({ ...explain(error), proposal: previous.proposal });
   }
 }

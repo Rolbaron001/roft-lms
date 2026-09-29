@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   accessTokenFor,
   connectionsFor,
@@ -68,9 +68,9 @@ export async function browseDriveAction(
 
     const folders = await provider.folders({ accessToken, parentId });
 
-    return { trail, folders };
+    return said({ trail, folders });
   } catch (error) {
-    return { error: explain(error), trail };
+    return said({ error: explain(error), trail });
   }
 }
 
@@ -92,7 +92,7 @@ export async function importFromDriveAction(
   const folderId = String(formData.get("folderId") ?? "");
   const folderName = String(formData.get("folderName") ?? "a folder");
 
-  if (!folderId) return { error: "Choose a folder first." };
+  if (!folderId) return said({ error: "Choose a folder first." });
 
   const qualificationId = String(formData.get("qualificationId") ?? "");
   const courseId = String(formData.get("courseId") ?? "");
@@ -123,15 +123,15 @@ export async function importFromDriveAction(
     revalidatePath("/imports");
 
     if (job.status !== "proposed") {
-      return { error: job.error ?? "That folder could not be read." };
+      return said({ error: job.error ?? "That folder could not be read." });
     }
 
-    return {
+    return said({
       notice: "Read. Check what it found before committing any of it.",
       jobId: job.id,
-    };
+    });
   } catch (error) {
-    return { error: explain(error) };
+    return said({ error: explain(error) });
   }
 }
 
@@ -141,9 +141,9 @@ export async function connectedDrives(): Promise<
 > {
   const session = await requirePermission("qualification:manage");
   const rows = await connectionsFor(session);
-  return rows.map((one) => ({
+  return said(rows.map((one) => ({
     provider: one.provider,
     label: one.label,
     accountLabel: one.accountLabel,
-  }));
+  })));
 }

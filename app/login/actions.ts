@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requestContext, currentTenant, localeFor } from "@/lib/request";
+import { requestContext, currentTenant, localeFor, said } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { signIn, signOut, SESSION_COOKIE } from "@/lib/session";
 
@@ -27,7 +27,7 @@ export async function loginAction(
 ): Promise<LoginState> {
   const tenant = await currentTenant();
   if (!tenant) {
-    return { error: "This address does not belong to a known organisation." };
+    return said({ error: "This address does not belong to a known organisation." });
   }
 
   const parsed = credentialsSchema.safeParse({
@@ -39,7 +39,7 @@ export async function loginAction(
   const t = translator(localeFor(tenant, null));
 
   if (!parsed.success) {
-    return { error: t("login.missing") };
+    return said({ error: t("login.missing") });
   }
 
   const context = await requestContext();
@@ -51,9 +51,9 @@ export async function loginAction(
   );
 
   if (!result.ok) {
-    return {
+    return said({
       error: result.reason === "locked" ? t("login.locked") : t("login.wrong"),
-    };
+    });
   }
 
   const cookieStore = await cookies();

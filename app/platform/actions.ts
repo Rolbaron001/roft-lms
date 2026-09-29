@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { structureFrom } from "@/lib/features";
 import {
   createTenant,
@@ -86,13 +86,13 @@ export async function createTenantAction(
 
     revalidatePath("/platform");
 
-    return {
+    return said({
       notice: `${fields.displayName} is set up.`,
       password: initialPassword,
       tenantUrl: fields.slug,
-    };
+    });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -106,12 +106,12 @@ export async function updateTenantAction(
   try {
     await updateTenant(session, tenantId, readTenantFields(formData));
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/platform");
   revalidatePath(`/platform/${tenantId}`);
-  return { notice: "Saved." };
+  return said({ notice: "Saved." });
 }
 
 export async function setTenantStatusAction(
@@ -133,15 +133,15 @@ export async function setTenantStatusAction(
       String(formData.get("reason") ?? ""),
     );
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/platform");
   revalidatePath(`/platform/${tenantId}`);
-  return {
+  return said({
     notice:
       status === "active"
         ? "Reactivated. Their address works again."
         : "Suspended. Nobody there can reach a login page now.",
-  };
+  });
 }

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { users } from "@/db/schema";
-import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import { canAny } from "@/lib/rbac";
 import { FisaError, getInstrument } from "@/lib/fisa";
 import type { ChecklistAnswer } from "@/lib/fisa-checklist";
@@ -51,7 +51,7 @@ export default async function FisaDetailPage({
 
   let view;
   try {
-    view = await getInstrument(session, id);
+    view = await said(await getInstrument(session, id));
   } catch (error) {
     if (error instanceof FisaError) notFound();
     throw error;

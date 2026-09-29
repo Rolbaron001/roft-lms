@@ -5,6 +5,7 @@ import { AppShell, Card } from "@/components/app-shell";
 import { MarkAllRead } from "./mark-all-read";
 import { translator, type Translate } from "@/lib/i18n";
 import { dateLocale, localeFor } from "@/lib/i18n/locales";
+import { sayer } from "@/lib/i18n/said";
 
 function relative(date: Date, t: Translate, locale: string): string {
   const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
@@ -22,6 +23,8 @@ export default async function NotificationsPage() {
   const session = await requireSession();
   const locale = localeFor(tenant, session);
   const t = translator(locale);
+  // Written in English when they were raised; read in the reader's language.
+  const say = sayer(locale);
   const items = await myNotifications(session);
 
   const unread = items.filter((item) => !item.readAt);
@@ -62,13 +65,13 @@ export default async function NotificationsPage() {
                         style={{ background: "var(--brand-accent)" }}
                       />
                     ) : null}
-                    {item.subject}
+                    {say(item.subject)}
                   </p>
                   <span className="shrink-0 text-xs text-[var(--muted)]">
                     {relative(item.createdAt, t, locale)}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-[var(--muted)]">{item.body}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{say(item.body)}</p>
               </>
             );
 

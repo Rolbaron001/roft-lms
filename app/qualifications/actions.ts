@@ -9,7 +9,7 @@ import {
   type DocumentReading,
   type SourceDocuments,
 } from "@/lib/qualification-from-document";
-import { requirePermission, requireSession } from "@/lib/request";
+import { requirePermission, requireSession, said } from "@/lib/request";
 import {
   addAssessmentCriterion,
   addCurriculumModule,
@@ -66,11 +66,11 @@ export async function createQualificationAction(
         String(formData.get("accreditationNumber") ?? "") || undefined,
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/qualifications");
-  return { notice: "Qualification created." };
+  return said({ notice: "Qualification created." });
 }
 
 export async function addModuleAction(
@@ -90,11 +90,11 @@ export async function addModuleAction(
         : undefined,
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/qualifications");
-  return { notice: "Module added." };
+  return said({ notice: "Module added." });
 }
 
 export async function addCriterionAction(
@@ -110,11 +110,11 @@ export async function addCriterionAction(
       description: String(formData.get("description") ?? ""),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/qualifications");
-  return { notice: "Assessment criterion added." };
+  return said({ notice: "Assessment criterion added." });
 }
 
 export type ReadingState = {
@@ -150,7 +150,7 @@ async function sourcesFrom(
 
   const curriculum = await take("curriculum");
   if (!curriculum) {
-    return { error: "Choose the Curriculum Document — it is the one that states the modules." };
+    return { error: "Choose the Curriculum Document: it is the one that states the modules." };
   }
 
   return {
@@ -167,15 +167,15 @@ export async function readCurriculumAction(
   const session = await requirePermission("qualification:manage");
 
   const sources = await sourcesFrom(formData);
-  if ("error" in sources) return { error: sources.error };
+  if ("error" in sources) return said({ error: sources.error });
 
   try {
-    return { reading: await readQualificationSources(session, sources) };
+    return said({ reading: await readQualificationSources(session, sources) });
   } catch (error) {
     if (error instanceof QualificationImportError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -192,7 +192,7 @@ export async function createFromDocumentAction(
 
   const sources = await sourcesFrom(formData);
   if ("error" in sources) {
-    return { error: "The documents were not sent with the form. Choose them again." };
+    return said({ error: "The documents were not sent with the form. Choose them again." });
   }
 
   let created: { qualificationId: string };
@@ -211,9 +211,9 @@ export async function createFromDocumentAction(
     });
   } catch (error) {
     if (error instanceof QualificationImportError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/qualifications");

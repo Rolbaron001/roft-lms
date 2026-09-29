@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 import { can } from "@/lib/rbac";
 import {
   buildNlrdDataset,
@@ -21,11 +21,11 @@ export async function GET(
 ) {
   const session = await currentSession();
   if (!session) {
-    return new Response("Sign in first.", { status: 401 });
+    return new Response(await said("Sign in first."), { status: 401 });
   }
 
   if (!can(session, "report:statutory")) {
-    return new Response("Not permitted.", { status: 403 });
+    return new Response(await said("Not permitted."), { status: 403 });
   }
 
   const { file } = await params;
@@ -40,7 +40,7 @@ export async function GET(
 
   if (!dataset.submittable) {
     return new Response(
-      "This return has problems that must be fixed before the files can be produced. See the statutory reporting page.",
+      await said("This return has problems that must be fixed before the files can be produced. See the statutory reporting page."),
       { status: 409, headers: { "content-type": "text/plain; charset=utf-8" } },
     );
   }

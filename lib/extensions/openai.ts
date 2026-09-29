@@ -87,7 +87,7 @@ function explain(status: number, body: unknown, token?: string): string {
     token && token.length >= 8 ? raw.split(token).join("[key removed]") : raw;
 
   if (status === 401) {
-    return "OpenAI refused that key. It may have been revoked, or it may never have been valid. Note that a ChatGPT Plus subscription does not include API access - an API key is a separate thing, created at platform.openai.com. Nothing is wrong with the platform and nothing was lost.";
+    return "OpenAI refused that key. It may have been revoked, or it may never have been valid. Note that a ChatGPT Plus subscription does not include API access: an API key is a separate thing, created at platform.openai.com. Nothing is wrong with the platform and nothing was lost.";
   }
   if (status === 403) {
     return "OpenAI refused that key for this model. The account it belongs to may not have access to the model named in your settings.";
@@ -107,7 +107,7 @@ export const openAiProvider: AiProvider = {
   name: "openai",
   label: "OpenAI (API key)",
   description:
-    "Uses your own OpenAI API key, created at platform.openai.com. Not a ChatGPT Plus subscription — that is a separate product and does not include API access. Unlike Gemini there is no free tier, so calls are charged to the account the key belongs to.",
+    "Uses your own OpenAI API key, created at platform.openai.com. Not a ChatGPT Plus subscription: that is a separate product and does not include API access. Unlike Gemini there is no free tier, so calls are charged to the account the key belongs to.",
   writesFiles: false,
   credentialFormat: {
     word: "API key",
@@ -164,7 +164,7 @@ export const openAiProvider: AiProvider = {
       return {
         ok: false,
         error:
-          "No OpenAI API key is stored for you. Add one in Settings - it comes from platform.openai.com, and is not the same as a ChatGPT subscription.",
+          "No OpenAI API key is stored for you. Add one in Settings. It comes from platform.openai.com, and is not the same as a ChatGPT subscription.",
       };
     }
 
@@ -182,7 +182,7 @@ export const openAiProvider: AiProvider = {
     if (staged.truncated) {
       return {
         ok: false,
-        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead - the curriculum document alone is read directly, with no model involved.`,
+        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead: the curriculum document alone is read directly, with no model involved.`,
         durationMs: Date.now() - started,
       };
     }

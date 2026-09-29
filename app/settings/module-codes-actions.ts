@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   ModuleCodeError,
   setModuleCodeAliases,
@@ -28,7 +28,7 @@ export async function updateModuleCodesAction(
     const parsed: unknown = JSON.parse(String(formData.get("table") ?? "{}"));
 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { error: "That table could not be read. Reopen it and try again." };
+      return said({ error: "That table could not be read. Reopen it and try again." });
     }
 
     table = Object.fromEntries(
@@ -40,16 +40,16 @@ export async function updateModuleCodesAction(
       ),
     );
   } catch {
-    return { error: "That table could not be read. Reopen it and try again." };
+    return said({ error: "That table could not be read. Reopen it and try again." });
   }
 
   try {
     await setModuleCodeAliases(session, table);
   } catch (error) {
-    if (error instanceof ModuleCodeError) return { error: error.message };
+    if (error instanceof ModuleCodeError) return said({ error: error.message });
     throw error;
   }
 
   revalidatePath("/settings");
-  return { saved: true };
+  return said({ saved: true });
 }

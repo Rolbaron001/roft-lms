@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { LanguageError, setProviderLocale } from "@/lib/language";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -16,10 +16,10 @@ export async function setProviderLanguageAction(
   try {
     await setProviderLocale(session, String(formData.get("locale") ?? ""));
   } catch (error) {
-    if (error instanceof LanguageError) return { error: error.message };
-    if (error instanceof PermissionDeniedError) return { error: "Only a provider administrator may change this." };
+    if (error instanceof LanguageError) return said({ error: error.message });
+    if (error instanceof PermissionDeniedError) return said({ error: "Only a provider administrator may change this." });
     throw error;
   }
   revalidatePath("/", "layout");
-  return { notice: "Saved. People who have not chosen their own language now see this one." };
+  return said({ notice: "Saved. People who have not chosen their own language now see this one." });
 }

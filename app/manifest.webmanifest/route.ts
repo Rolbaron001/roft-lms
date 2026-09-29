@@ -1,4 +1,4 @@
-import { currentTenant } from "@/lib/request";
+import { currentTenant, said } from "@/lib/request";
 
 /**
  * The web app manifest, which is what makes the site installable.
@@ -16,7 +16,7 @@ export async function GET() {
   const tenant = await currentTenant();
 
   if (!tenant?.offlineEnabled) {
-    return new Response("Not found.", { status: 404 });
+    return new Response(await said("Not found."), { status: 404 });
   }
 
   const manifest = {

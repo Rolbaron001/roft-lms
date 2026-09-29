@@ -25,6 +25,8 @@ const {
   sweepAllTenants,
 } = await import("../lib/notifications");
 const { deliver, mailIsConfigured, verifyRelay } = await import("../lib/mail");
+const { sayer } = await import("../lib/i18n/said");
+const { localeFor } = await import("../lib/i18n/locales");
 const { sendToAllRecordStores } = await import("../lib/record-store");
 
 const mode = process.argv[2] ?? "both";
@@ -83,13 +85,17 @@ async function send() {
 
   for (const message of queued) {
     const base = process.env.AUTH_URL ?? "";
+    // Raised in English; sent in the recipient's language (D9 stage 5).
+    const locale = localeFor({ defaultLocale: message.providerLocale }, { locale: message.locale });
+    const say = sayer(locale);
 
     const result = await deliver({
       to: message.email,
       toName: message.firstName,
-      subject: message.subject,
-      body: message.body,
+      subject: say(message.subject),
+      body: say(message.body),
       linkUrl: message.linkPath ? `${base}${message.linkPath}` : null,
+      locale,
     });
 
     if (result.ok) {

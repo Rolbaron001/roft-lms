@@ -13,6 +13,7 @@ import type { Permission } from "./rbac";
 import { can, type Capability } from "./features";
 import { dateLocale, localeFor } from "./i18n/locales";
 import { translator, type Translate } from "./i18n";
+import { sayer, sayWithin, type Say } from "./i18n/said";
 
 /**
  * Request-scoped helpers. Everything a page or action needs to know about who
@@ -68,6 +69,28 @@ export async function currentLocale(): Promise<string> {
  */
 export async function pageT(): Promise<Translate> {
   return translator(await currentLocale());
+}
+
+/**
+ * Messages the server wrote, in the reader's language (D9 stage 5): for a page
+ * showing something lib/ produced, such as a reason a step is closed.
+ * `const say = await pageSay(); say(step.blockedBy)`.
+ */
+export async function pageSay(): Promise<Say> {
+  return sayer(await currentLocale());
+}
+
+/**
+ * A result with its messages in the reader's language (D9 stage 5).
+ *
+ * Every server action returns through this: `return said({ error: ... })`.
+ * A page showing what lib/ worked out passes it through too:
+ * `const view = await said(await readinessOf(...))`. A plain string works as
+ * well. Only fields with a message's name change (see `sayWithin`), at any depth.
+ */
+export async function said<T>(value: T): Promise<T> {
+  if (value === null || value === undefined) return value;
+  return sayWithin(value, sayer(await currentLocale()));
 }
 
 /** The reader's language and date format together, for a page that writes dates. */

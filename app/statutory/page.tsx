@@ -1,4 +1,4 @@
-import { pageT, requireCapability, requirePermission } from "@/lib/request";
+import { pageT, requireCapability, requirePermission, said } from "@/lib/request";
 import type { MessageKey } from "@/lib/i18n";
 import { buildNlrdDataset, buildWspAtr } from "@/lib/statutory";
 import { AppShell, Card } from "@/components/app-shell";
@@ -13,8 +13,10 @@ export default async function StatutoryPage() {
     buildWspAtr(session),
   ]);
 
-  const blocking = dataset.issues.filter((i) => i.severity === "blocking");
-  const warnings = dataset.issues.filter((i) => i.severity === "warning");
+  // Only the problems are read; the dataset itself goes to the regulator as it is.
+  const issues = await said(dataset.issues);
+  const blocking = issues.filter((i) => i.severity === "blocking");
+  const warnings = issues.filter((i) => i.severity === "warning");
 
   return (
     <AppShell tenant={tenant} session={session}>

@@ -1,4 +1,4 @@
-import { currentSession, requestContext } from "@/lib/request";
+import { currentSession, requestContext, said } from "@/lib/request";
 import { readLessonMedia, uploadLessonMedia, UploadError } from "@/lib/uploads";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -10,14 +10,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
 
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > ABSOLUTE_MAX_BYTES) {
     return Response.json(
-      { error: "That file is larger than this platform accepts." },
+      await said({ error: "That file is larger than this platform accepts." }),
       { status: 413 },
     );
   }
@@ -27,7 +27,7 @@ export async function POST(
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return Response.json({ error: "No file was sent." }, { status: 400 });
+      return Response.json(await said({ error: "No file was sent." }), { status: 400 });
     }
 
     const stored = await uploadLessonMedia(session, id, {
@@ -54,7 +54,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
   void requestContext;
@@ -108,9 +108,9 @@ export function fileResponse(
   });
 }
 
-export function errorResponse(error: unknown): Response {
+export async function errorResponse(error: unknown): Promise<Response> {
   if (error instanceof PermissionDeniedError) {
-    return Response.json({ error: "Not permitted." }, { status: 403 });
+    return Response.json(await said({ error: "Not permitted." }), { status: 403 });
   }
 
   if (error instanceof UploadError) {
@@ -124,12 +124,12 @@ export function errorResponse(error: unknown): Response {
             : error.code === "archived"
               ? 410
               : 400;
-    return Response.json({ error: error.message }, { status });
+    return Response.json(await said({ error: error.message }), { status });
   }
 
   console.error(error);
   return Response.json(
-    { error: "That could not be handled. Please try again." },
+    await said({ error: "That could not be handled. Please try again." }),
     { status: 500 },
   );
 }

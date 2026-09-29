@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { qualificationReadiness } from "@/lib/eisa";
 import {
@@ -40,7 +40,7 @@ export default async function LearnerReadinessPage({
 
   // The permission check lives in the engine: a learner may see their own,
   // anybody else needs enrolment:read_all.
-  const readiness = await qualificationReadiness(session, qualificationId, userId);
+  const readiness = await said(await qualificationReadiness(session, qualificationId, userId));
   const isSelf = readiness.learner.userId === session.userId;
 
   const statements = await listStatementsFor(session, userId);

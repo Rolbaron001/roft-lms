@@ -1,9 +1,9 @@
-import { currentSession, requestContext } from "@/lib/request";
+import { currentSession, requestContext, said } from "@/lib/request";
 import { submitAttempt, PaperError } from "@/lib/papers";
 
 export async function POST(request: Request) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   try {
     const body = await request.json();
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (error instanceof PaperError) {
       const status =
         error.code === "not_permitted" ? 403 : error.code === "not_found" ? 404 : 409;
-      return Response.json({ error: error.message }, { status });
+      return Response.json(await said({ error: error.message }), { status });
     }
     throw error;
   }

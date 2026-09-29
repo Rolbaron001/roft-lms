@@ -96,7 +96,7 @@ export async function proposalForQualification(
         modules: [],
         notes: [],
         blocked:
-          "The curriculum document is stored but no text could be read from it. If it is a scan, the platform cannot read it — upload a digital copy and this page will fill in.",
+          "The curriculum document is stored but no text could be read from it. If it is a scan, the platform cannot read it. Upload a digital copy and this page will fill in.",
       };
     }
 

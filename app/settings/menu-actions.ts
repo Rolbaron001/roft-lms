@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import { organisations } from "@/db/schema";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { requireTenant } from "@/lib/request";
 import { assertSessionCan } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
@@ -41,10 +41,10 @@ export async function saveMenuAction(
     assertSessionCan(session, "tenant:manage_branding");
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return {
+      return said({
         error:
           "Only an administrator can rearrange the menu, because it is the same menu for everybody at this provider.",
-      };
+      });
     }
     throw error;
   }
@@ -58,14 +58,14 @@ export async function saveMenuAction(
         JSON.parse(String(formData.get("arrangement") ?? "[]")),
       );
     } catch {
-      return { error: "That arrangement could not be read. Nothing changed." };
+      return said({ error: "That arrangement could not be read. Nothing changed." });
     }
 
     if (value.every((section) => section.items.length === 0)) {
-      return {
+      return said({
         error:
           "That would leave every heading empty, which is a menu with nothing in it. Nothing changed.",
-      };
+      });
     }
   }
 
@@ -93,9 +93,9 @@ export async function saveMenuAction(
   // The menu is in the shell of every page.
   revalidatePath("/", "layout");
 
-  return {
+  return said({
     notice: reset
       ? "Back to the standard menu."
       : "Saved. Everybody at this provider sees this arrangement.",
-  };
+  });
 }

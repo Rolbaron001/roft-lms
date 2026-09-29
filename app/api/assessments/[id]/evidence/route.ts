@@ -1,4 +1,4 @@
-import { currentSession, requestContext } from "@/lib/request";
+import { currentSession, requestContext, said } from "@/lib/request";
 import { submitEvidence } from "@/lib/assessment";
 import { detectMedia, SIZE_LIMITS } from "@/lib/media";
 import { errorResponse } from "@/app/api/lessons/[id]/media/route";
@@ -18,13 +18,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
 
   if (Number(request.headers.get("content-length") ?? 0) > ABSOLUTE_MAX_BYTES) {
     return Response.json(
-      { error: "That is larger than this platform accepts." },
+      await said({ error: "That is larger than this platform accepts." }),
       { status: 413 },
     );
   }
@@ -36,7 +36,7 @@ export async function POST(
       .filter((entry): entry is File => entry instanceof File);
 
     if (uploaded.length === 0) {
-      return Response.json({ error: "Choose at least one file." }, { status: 400 });
+      return Response.json(await said({ error: "Choose at least one file." }), { status: 400 });
     }
 
     const files = await Promise.all(
@@ -50,15 +50,15 @@ export async function POST(
       const detected = detectMedia(file.bytes, file.filename);
       if (!detected.ok) {
         return Response.json(
-          { error: `${file.filename}: ${detected.reason}` },
+          await said({ error: `${file.filename}: ${detected.reason}` }),
           { status: 400 },
         );
       }
       if (file.bytes.byteLength > SIZE_LIMITS[detected.kind]) {
         return Response.json(
-          {
+          await said({
             error: `${file.filename} is too large for a ${detected.label.toLowerCase()}.`,
-          },
+          }),
           { status: 413 },
         );
       }

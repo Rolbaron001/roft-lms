@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import {
   EnrolmentFormError,
   getEnrolmentForm,
@@ -40,7 +40,7 @@ export default async function EnrolmentFormPage({
 
   let view;
   try {
-    view = await getEnrolmentForm(session, learnerId);
+    view = await said(await getEnrolmentForm(session, learnerId));
   } catch (error) {
     if (error instanceof EnrolmentFormError) {
       if (error.reason === "not_permitted") redirect("/not-permitted");

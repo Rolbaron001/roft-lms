@@ -136,7 +136,7 @@ function explain(status: number, body: unknown, token?: string): string {
     token && token.length >= 8 ? raw.split(token).join("[key removed]") : raw;
 
   if (status === 400 && /api key not valid/i.test(message)) {
-    return "That Gemini API key is not valid. Check it was copied whole from Google AI Studio - it is not the same thing as a Gemini Advanced subscription, which does not include API access.";
+    return "That Gemini API key is not valid. Check it was copied whole from Google AI Studio. It is not the same thing as a Gemini Advanced subscription, which does not include API access.";
   }
   if (status === 401 || status === 403) {
     return "Google refused that key. It may have been revoked, or the Generative Language API may not be enabled on the project it belongs to. Nothing is wrong with the platform and nothing was lost.";
@@ -152,7 +152,7 @@ function explain(status: number, body: unknown, token?: string): string {
      * than Google having a bad minute, and telling somebody to try again is
      * how they spend an afternoon doing exactly that.
      */
-    return `Google reported a problem on their side (${status}). A small request is worth simply trying again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete - import it from its documents instead, which reads the curriculum directly with no model involved.`;
+    return `Google reported a problem on their side (${status}). A small request is worth simply trying again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete. Import it from its documents instead, which reads the curriculum directly with no model involved.`;
   }
   return message || `Gemini returned ${status}.`;
 }
@@ -161,7 +161,7 @@ export const geminiProvider: AiProvider = {
   name: "gemini",
   label: "Google Gemini (API key)",
   description:
-    "Uses your own Google AI Studio API key. Not a Gemini Advanced subscription — that is a separate product and does not include API access. The API has a free tier, so this can be used without buying anything, within its rate limits.",
+    "Uses your own Google AI Studio API key. Not a Gemini Advanced subscription: that is a separate product and does not include API access. The API has a free tier, so this can be used without buying anything, within its rate limits.",
   writesFiles: false,
   credentialFormat: {
     word: "API key",
@@ -253,7 +253,7 @@ export const geminiProvider: AiProvider = {
       return {
         ok: false,
         error:
-          "No Gemini API key is stored for you. Add one in Settings - it comes from Google AI Studio, and is not the same as a Gemini subscription.",
+          "No Gemini API key is stored for you. Add one in Settings. It comes from Google AI Studio, and is not the same as a Gemini subscription.",
       };
     }
 
@@ -275,7 +275,7 @@ export const geminiProvider: AiProvider = {
     if (staged.truncated) {
       return {
         ok: false,
-        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead - the curriculum document alone is read directly, with no model involved.`,
+        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead: the curriculum document alone is read directly, with no model involved.`,
         durationMs: Date.now() - started,
       };
     }
@@ -355,7 +355,7 @@ export const geminiProvider: AiProvider = {
         return {
           ok: false,
           error:
-            "Gemini ran out of room before it finished answering, so what came back is part of a curriculum rather than all of it - and a partial one looks exactly like a complete one. Nothing was kept. A whole qualification is a great deal to ask for in a single reply; import it from its documents instead, which reads the curriculum directly with no model involved and no limit of this kind.",
+            "Gemini ran out of room before it finished answering, so what came back is part of a curriculum rather than all of it, and a partial one looks exactly like a complete one. Nothing was kept. A whole qualification is a great deal to ask for in a single reply; import it from its documents instead, which reads the curriculum directly with no model involved and no limit of this kind.",
           durationMs: Date.now() - started,
         };
       }

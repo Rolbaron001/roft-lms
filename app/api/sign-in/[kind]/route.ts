@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { currentTenant } from "@/lib/request";
+import { currentTenant, said } from "@/lib/request";
 import { beginSignIn, packPending, SSO_KINDS, SsoError, type SsoKind } from "@/lib/single-sign-on";
 
 /**
@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ kin
   const { kind } = await params;
   const tenant = await currentTenant();
   if (!tenant || !SSO_KINDS.includes(kind as SsoKind)) {
-    return new Response("Not found.", { status: 404 });
+    return new Response(await said("Not found."), { status: 404 });
   }
 
   let url: string;

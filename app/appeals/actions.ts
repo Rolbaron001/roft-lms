@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requirePermission, requireTenant, said } from "@/lib/request";
 import {
   AppealError,
   acknowledgeAppeal,
@@ -99,7 +99,7 @@ export async function lodgeAppealAction(
     lateAcceptanceReason: field(formData, "lateAcceptanceReason"),
   };
 
-  return run(
+  return said(run(
     () =>
       lodgeAppeal(session, timezone, {
         learnerId: field(formData, "learnerId") || session.userId,
@@ -113,7 +113,7 @@ export async function lodgeAppealAction(
     "Appeal lodged. The clock on acknowledging it starts now.",
     ["/appeals"],
     { previous, values },
-  );
+  ));
 }
 
 export async function acknowledgeAppealAction(
@@ -123,11 +123,11 @@ export async function acknowledgeAppealAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () => acknowledgeAppeal(session, appealId),
     "Acknowledged.",
     ["/appeals", `/appeals/${appealId}`],
-  );
+  ));
 }
 
 export async function recordProgressAction(
@@ -137,7 +137,7 @@ export async function recordProgressAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () =>
       recordAppealProgress(session, {
         appealId,
@@ -146,7 +146,7 @@ export async function recordProgressAction(
       }),
     "Recorded.",
     ["/appeals", `/appeals/${appealId}`],
-  );
+  ));
 }
 
 export async function resolveAppealAction(
@@ -156,7 +156,7 @@ export async function resolveAppealAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () =>
       resolveAppeal(session, {
         appealId,
@@ -168,7 +168,7 @@ export async function resolveAppealAction(
       }),
     "Resolved. Tell the learner, then record that you have.",
     ["/appeals", `/appeals/${appealId}`],
-  );
+  ));
 }
 
 export async function learnerInformedAction(
@@ -178,11 +178,11 @@ export async function learnerInformedAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () => recordLearnerInformed(session, appealId),
     "Recorded.",
     ["/appeals", `/appeals/${appealId}`],
-  );
+  ));
 }
 
 export async function withdrawAppealAction(
@@ -192,11 +192,11 @@ export async function withdrawAppealAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () => withdrawAppeal(session, { appealId, reason: field(formData, "reason") }),
     "Withdrawn.",
     ["/appeals", `/appeals/${appealId}`],
-  );
+  ));
 }
 
 export async function addNoteAction(
@@ -206,7 +206,7 @@ export async function addNoteAction(
   const session = await requirePermission("appeal:manage");
   const appealId = field(formData, "appealId");
 
-  return run(
+  return said(run(
     () =>
       addAppealNote(session, {
         appealId,
@@ -215,5 +215,5 @@ export async function addNoteAction(
       }),
     "Noted.",
     [`/appeals/${appealId}`],
-  );
+  ));
 }

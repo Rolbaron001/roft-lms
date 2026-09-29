@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { sendFromMailbox, MailboxError } from "@/lib/mailbox";
 
 export type MailState = { error?: string; message?: string };
@@ -19,19 +19,19 @@ export async function sendMailAction(
     String(formData.get("inReplyToMessageId") ?? "").trim() || undefined;
 
   if (!to || !subject || !body) {
-    return { error: "Fill in the address, a subject and a message." };
+    return said({ error: "Fill in the address, a subject and a message." });
   }
 
   try {
     await sendFromMailbox(session, { to, subject, body, inReplyToMessageId });
     revalidatePath("/mail");
-    return { message: `Sent to ${to}.` };
+    return said({ message: `Sent to ${to}.` });
   } catch (error) {
     if (error instanceof MailboxError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     if (error instanceof Error && error.name === "ZodError") {
-      return { error: "That does not look like a valid email address." };
+      return said({ error: "That does not look like a valid email address." });
     }
     throw error;
   }

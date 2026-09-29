@@ -391,7 +391,7 @@ export async function addTopicElement(
       throw new CurriculumError(
         `${module.code} is a ${module.component} module, so it holds ${allowed
           .map((kind) => kind.replace(/_/g, " "))
-          .join(" or ")} — not ${input.kind.replace(/_/g, " ")}.`,
+          .join(" or ")}, not ${input.kind.replace(/_/g, " ")}.`,
         "invalid",
       );
     }

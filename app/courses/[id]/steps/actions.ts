@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { PermissionDeniedError } from "@/lib/rbac";
 import {
   SpineError,
@@ -43,7 +43,7 @@ export async function addStepAction(
   const guidance = String(formData.get("guidance") ?? "").trim();
 
   if (!targetId) {
-    return { error: "Choose what the step points at." };
+    return said({ error: "Choose what the step points at." });
   }
 
   try {
@@ -63,11 +63,11 @@ export async function addStepAction(
       optional: formData.get("optional") === "on",
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/steps`);
-  return { notice: "Added to the end of the list." };
+  return said({ notice: "Added to the end of the list." });
 }
 
 export async function removeStepAction(
@@ -80,11 +80,11 @@ export async function removeStepAction(
   try {
     await removeStep(session, String(formData.get("stepId") ?? ""));
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/steps`);
-  return { notice: "Taken off the list. What it pointed at is untouched." };
+  return said({ notice: "Taken off the list. What it pointed at is untouched." });
 }
 
 /**
@@ -109,7 +109,7 @@ export async function moveStepAction(
   const to = at + direction;
 
   if (at === -1 || to < 0 || to >= order.length) {
-    return { error: "That step cannot move any further." };
+    return said({ error: "That step cannot move any further." });
   }
 
   [order[at], order[to]] = [order[to], order[at]];
@@ -117,11 +117,11 @@ export async function moveStepAction(
   try {
     await reorderSteps(session, courseId, order);
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/steps`);
-  return { notice: "Moved." };
+  return said({ notice: "Moved." });
 }
 
 export async function addPrerequisiteAction(
@@ -132,7 +132,7 @@ export async function addPrerequisiteAction(
   const courseId = String(formData.get("courseId") ?? "");
   const requiredStepId = String(formData.get("requiredStepId") ?? "");
 
-  if (!requiredStepId) return { error: "Choose the step that comes first." };
+  if (!requiredStepId) return said({ error: "Choose the step that comes first." });
 
   try {
     await addPrerequisite(session, {
@@ -141,9 +141,9 @@ export async function addPrerequisiteAction(
       rule: String(formData.get("rule") ?? "opened") as PrerequisiteRule,
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}/steps`);
-  return { notice: "Added." };
+  return said({ notice: "Added." });
 }

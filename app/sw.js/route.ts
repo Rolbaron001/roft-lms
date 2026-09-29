@@ -1,4 +1,4 @@
-import { currentTenant } from "@/lib/request";
+import { currentTenant, said } from "@/lib/request";
 
 /**
  * The service worker, served only to a tenant with offline switched on.
@@ -22,7 +22,7 @@ export async function GET() {
   const tenant = await currentTenant();
 
   if (!tenant?.offlineEnabled) {
-    return new Response("Not found.", { status: 404 });
+    return new Response(await said("Not found."), { status: 404 });
   }
 
   const source = `

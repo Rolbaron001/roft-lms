@@ -881,7 +881,7 @@ export async function addPrerequisite(
 
         if (assessment?.purpose === "formative") {
           throw new SpineError(
-            `"${assessment.title}" is formative, so it never produces a competence decision — ` +
+            `"${assessment.title}" is formative, so it never produces a competence decision, so ` +
               `a gate waiting for one would never open. Wait for it to be handed in or marked instead.`,
             "invalid",
           );

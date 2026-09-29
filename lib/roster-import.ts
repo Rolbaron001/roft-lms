@@ -172,7 +172,7 @@ export async function proposeRoster(
 
   if (headerIndex > 0) {
     warnings.push(
-      `The column headings were taken from line ${headerIndex + 1}, not line 1 - everything above it looked like a title rather than headings.`,
+      `The column headings were taken from line ${headerIndex + 1}, not line 1: everything above it looked like a title rather than headings.`,
     );
   }
 

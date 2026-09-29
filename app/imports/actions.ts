@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { IngestError, discardIngest, ingestUpload } from "@/lib/folder-import";
 import { commitPlan } from "@/lib/folder-commit";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -66,7 +66,7 @@ export async function readFolderAction(
   );
 
   if (entries.length === 0) {
-    return { error: "Choose a folder." };
+    return said({ error: "Choose a folder." });
   }
 
   // Whatever it is being filed against decides the mode. Nothing named means
@@ -101,10 +101,10 @@ export async function readFolderAction(
   const paths = formData.getAll("paths").map(String);
 
   if (paths.length !== entries.length) {
-    return {
+    return said({
       error:
         "The files and their folder paths did not arrive together. Try again.",
-    };
+    });
   }
 
   const incoming = await Promise.all(
@@ -124,19 +124,19 @@ export async function readFolderAction(
       learningPathId: learningPathId || undefined,
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/imports");
 
   if (job.status !== "proposed") {
-    return { error: job.error ?? "That folder could not be read." };
+    return said({ error: job.error ?? "That folder could not be read." });
   }
 
-  return {
+  return said({
     notice: "Read. Check what it found before committing any of it.",
     jobId: job.id,
-  };
+  });
 }
 
 export async function commitPlanAction(
@@ -155,7 +155,7 @@ export async function commitPlanAction(
       learningPathId: field(formData, "learningPathId") || undefined,
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/imports/${jobId}`);
@@ -184,20 +184,20 @@ export async function commitPlanAction(
   // in place" look identical in a count of zero.
   const held =
     report.alreadyHeld.length > 0
-      ? ` ${report.alreadyHeld.slice(0, 8).join(" ")}${report.alreadyHeld.length > 8 ? ` And ${report.alreadyHeld.length - 8} more.` : ""}`
+      ? ` ${report.alreadyHeld.slice(0, 8).join(" ")}${report.alreadyHeld.length > 8 ? ` There are ${report.alreadyHeld.length - 8} more.` : ""}`
       : "";
 
   // Anything the ordinary guards turned away is said rather than swallowed.
   // A silent partial import is the one outcome nobody could act on.
   const refused =
     report.refused.length > 0
-      ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` And ${report.refused.length - 8} more.` : ""}`
+      ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` There are ${report.refused.length - 8} more.` : ""}`
       : "";
 
-  return {
+  return said({
     notice: `${made}Committed: ${built}.${held}${refused}`,
     committedTo: report.qualificationId || undefined,
-  };
+  });
 }
 
 export async function discardImportAction(
@@ -210,9 +210,9 @@ export async function discardImportAction(
   try {
     await discardIngest(session, jobId);
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/imports");
-  return { notice: "Discarded. The proposal is kept on the record." };
+  return said({ notice: "Discarded. The proposal is kept on the record." });
 }

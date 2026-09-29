@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   disconnect,
   driveProviderByName,
@@ -29,21 +29,21 @@ export async function disconnectDriveAction(
   const name = String(formData.get("provider") ?? "");
 
   const provider = driveProviderByName(name);
-  if (!provider) return { error: "That is not a drive the platform knows." };
+  if (!provider) return said({ error: "That is not a drive the platform knows." });
 
   try {
     await disconnect(session, name as DriveProviderName);
   } catch (error) {
-    if (error instanceof DriveError) return { error: error.message };
+    if (error instanceof DriveError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }
 
   revalidatePath("/settings");
 
-  return {
+  return said({
     done: `${provider.label} is disconnected here. To withdraw it completely, remove this platform from that account's own list of connected applications.`,
-  };
+  });
 }

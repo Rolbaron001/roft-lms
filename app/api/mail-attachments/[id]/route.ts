@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { readMailAttachment, MailboxError } from "@/lib/mailbox";
 
 /**
@@ -29,7 +29,7 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof MailboxError) {
-      return new Response("Not found", { status: 404 });
+      return new Response(await said("Not found"), { status: 404 });
     }
     throw error;
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import { previewQualification, PreviewError } from "@/lib/qualification-preview";
 import { vocabulary } from "@/lib/terms";
@@ -30,7 +30,7 @@ export default async function QualificationPreviewPage({
 
   let preview;
   try {
-    preview = await previewQualification(session, id);
+    preview = await said(await previewQualification(session, id));
   } catch (error) {
     if (error instanceof PreviewError) notFound();
     throw error;

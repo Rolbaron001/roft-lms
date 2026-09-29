@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { dateInZone } from "@/lib/timezone";
-import { pageT, requireCapability, requirePermission } from "@/lib/request";
+import { pageT, requireCapability, requirePermission, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import {
   listNotifications,
@@ -47,7 +47,7 @@ export default async function NotifyPage() {
   const gaps = await Promise.all(
     drafts.map(async (draft) => ({
       id: draft.id,
-      problems: (await buildLeisa(session, draft.id)).problems,
+      problems: (await said(await buildLeisa(session, draft.id))).problems,
     })),
   );
 

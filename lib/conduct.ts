@@ -880,7 +880,7 @@ export async function appointInvestigator(
 
     if (named && (named.includes(full) || named.includes(person.lastName.toLowerCase()))) {
       throw new ConductError(
-        `The grievance names ${person.firstName} ${person.lastName}. Somebody the complaint is about cannot investigate it - the procedure asks for a designated impartial person. Appoint somebody else.`,
+        `The grievance names ${person.firstName} ${person.lastName}. Somebody the complaint is about cannot investigate it: the procedure asks for a designated impartial person. Appoint somebody else.`,
         "not_impartial",
       );
     }

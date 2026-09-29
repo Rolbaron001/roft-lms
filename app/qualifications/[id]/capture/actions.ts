@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { captureFiledDocument } from "@/lib/capture-from-documents";
 import { CaptureError } from "@/lib/capture";
 import { NotReadyError } from "@/lib/programme-readiness";
@@ -39,9 +39,9 @@ export async function captureFiledAction(
     assessmentId = result.assessmentId;
   } catch (error) {
     if (error instanceof NotReadyError || error instanceof CaptureError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
-    if (error instanceof Error) return { error: error.message };
+    if (error instanceof Error) return said({ error: error.message });
     throw error;
   }
 

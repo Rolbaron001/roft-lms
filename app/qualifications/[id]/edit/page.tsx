@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import {
   curriculumForEditing,
   curriculumProblems,
@@ -46,8 +46,8 @@ export default async function EditCurriculumPage({
 
   const [problems, readiness, classification, everyQualification] =
     await Promise.all([
-      curriculumProblems(session, id),
-      programmeReadiness(session, id),
+      curriculumProblems(session, id).then(said),
+      programmeReadiness(session, id).then(said),
       planReclassification(session, id),
       listQualifications(session),
     ]);

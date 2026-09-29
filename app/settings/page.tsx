@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
-import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import type { MessageKey } from "@/lib/i18n";
 import { namingConventionFor } from "@/lib/capture";
 import { proposeModuleCodeTable } from "@/lib/module-code-settings";
@@ -121,7 +121,7 @@ export default async function SettingsPage({
   // anybody whose role includes model assistance rather than to administrators
   // alone.
   const mayUseExtension = extensionOffered() && mayUseExtensionRole;
-  const extension = mayUseExtension ? await extensionState(session) : null;
+  const extension = mayUseExtension ? await said(await extensionState(session)) : null;
 
   // What the editor starts from: this provider's arrangement if they have one,
   // otherwise the built-in one, with labels rather than hrefs alone.

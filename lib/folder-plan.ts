@@ -203,7 +203,7 @@ export function classifyDocument(
         studyUnitCode: null,
         title: cleanTitle(filename),
         version: null,
-        because: `Matched "${rule.match.source}" - it governs the provider rather than one qualification, so it goes to the document library.`,
+        because: `Matched "${rule.match.source}": it governs the provider rather than one qualification, so it goes to the document library.`,
       };
     }
   }
@@ -239,7 +239,7 @@ export function classifyDocument(
     title: cleanTitle(filename),
     version: null,
     because:
-      "Not recognised by name. Filed against the qualification as 'other' rather than guessed at - change it after it lands, or say what it is and the rule can be added.",
+      "Not recognised by name. Filed against the qualification as 'other' rather than guessed at. Change it after it lands, or say what it is and the rule can be added.",
   };
 }
 

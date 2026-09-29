@@ -37,7 +37,7 @@ describe("the revoked-token message", () => {
   it("says which machine to run the command on", () => {
     // The whole point. "Run claude setup-token", read from a browser looking
     // at a hosted platform, suggests it happens on the platform.
-    expect(provider).toMatch(/On your own computer - not on the server/);
+    expect(provider).toMatch(/On your own computer, not on the server/);
   });
 
   it("gives the Windows form, which is the next wall", () => {

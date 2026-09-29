@@ -620,7 +620,7 @@ export async function mayBeSat(
     if (instrument.status !== "approved" || !instrument.approvedAt) {
       return {
         allowed: false as const,
-        why: "This FISA has not been signed off by a moderator yet. A paper that has not been pre-moderated cannot be sat - that is what the moderation is for.",
+        why: "This FISA has not been signed off by a moderator yet. A paper that has not been pre-moderated cannot be sat: that is what the moderation is for.",
       };
     }
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { organisations } from "@/db/schema";
-import { requireSession, requireTenant } from "@/lib/request";
+import { requireSession, requireTenant, said } from "@/lib/request";
 import { assertSessionCan } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { clearTenantCache } from "@/lib/tenant";
@@ -39,17 +39,17 @@ export async function saveTerminologyAction(
     assertSessionCan(session, "tenant:manage_branding");
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return {
+      return said({
         error:
           "Only an administrator can change what things are called, because it is the same wording for everybody at this provider.",
-      };
+      });
     }
     throw error;
   }
 
   if (formData.get("intent") === "reset") {
     await write(tenant.id, session.userId, null, "tenant.terminology_reset");
-    return { notice: "Back to the standard wording." };
+    return said({ notice: "Back to the standard wording." });
   }
 
   const reserved = authorityTerms();
@@ -62,13 +62,13 @@ export async function saveTerminologyAction(
     if (!one && !many) continue;
 
     if (!one || !many) {
-      return {
+      return said({
         error: `Give both the singular and the plural for ${TERMS[key].one.toLowerCase()}, or leave both empty to keep the default.`,
-      };
+      });
     }
 
     if (one.length > 40 || many.length > 40) {
-      return { error: "Keep each word under 40 characters." };
+      return said({ error: "Keep each word under 40 characters." });
     }
 
     for (const word of [one, many]) {
@@ -76,9 +76,9 @@ export async function saveTerminologyAction(
         (term) => term.toLowerCase() === word.toLowerCase(),
       );
       if (clash) {
-        return {
+        return said({
           error: `"${word}" is defined by a regulator, so it cannot be used for something else. Renaming one of your own words to it would put a claim on a learner's screen that the record does not support.`,
-        };
+        });
       }
     }
 
@@ -96,12 +96,12 @@ export async function saveTerminologyAction(
     "tenant.terminology_changed",
   );
 
-  return {
+  return said({
     notice:
       Object.keys(overrides).length > 0
         ? "Saved. Everybody at this provider sees this wording."
         : "Nothing differs from the standard wording, so the defaults are back.",
-  };
+  });
 }
 
 async function write(

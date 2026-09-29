@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requirePermission, requireTenant, said } from "@/lib/request";
 import {
   ConductError,
   acknowledgeGrievance,
@@ -75,7 +75,7 @@ export async function openCaseAction(
     occurredOn: field(formData, "occurredOn"),
   };
 
-  return run(
+  return said(run(
     () =>
       openDisciplinaryCase(session, {
         learnerId,
@@ -86,7 +86,7 @@ export async function openCaseAction(
     "Case opened.",
     [`/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function issueWarningAction(
@@ -102,7 +102,7 @@ export async function issueWarningAction(
     terms: field(formData, "terms"),
   };
 
-  return run(
+  return said(run(
     () =>
       issueWarning(session, {
         caseId: field(formData, "caseId"),
@@ -113,7 +113,7 @@ export async function issueWarningAction(
     "Warning issued.",
     [`/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function acknowledgeWarningAction(
@@ -123,11 +123,11 @@ export async function acknowledgeWarningAction(
   const session = await requirePermission("conduct:manage");
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () => acknowledgeWarning(session, field(formData, "warningId")),
     "Receipt recorded.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 export async function convenehearingAction(
@@ -145,7 +145,7 @@ export async function convenehearingAction(
     sanctionsAdvised: field(formData, "sanctionsAdvised"),
   };
 
-  return run(
+  return said(run(
     () =>
       convenehearing(session, {
         caseId: field(formData, "caseId"),
@@ -159,7 +159,7 @@ export async function convenehearingAction(
     "Hearing convened. The notice period is met.",
     [`/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function recordFindingsAction(
@@ -170,7 +170,7 @@ export async function recordFindingsAction(
   const learnerId = field(formData, "learnerId");
   const values = { findings: field(formData, "findings") };
 
-  return run(
+  return said(run(
     () =>
       recordHearingOutcome(session, {
         hearingId: field(formData, "hearingId"),
@@ -180,7 +180,7 @@ export async function recordFindingsAction(
     "Findings recorded.",
     [`/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function closeCaseAction(
@@ -196,7 +196,7 @@ export async function closeCaseAction(
     outcomeReason: field(formData, "outcomeReason"),
   };
 
-  return run(
+  return said(run(
     () =>
       closeDisciplinaryCase(session, timezone, {
         caseId: field(formData, "caseId"),
@@ -213,7 +213,7 @@ export async function closeCaseAction(
     "Closed. Give the learner the outcome in writing, then record that you have.",
     [`/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function outcomeGivenAction(
@@ -224,11 +224,11 @@ export async function outcomeGivenAction(
   const { timezone } = await requireTenant();
   const learnerId = field(formData, "learnerId");
 
-  return run(
+  return said(run(
     () => recordOutcomeGiven(session, timezone, field(formData, "caseId")),
     "Recorded. The five working days to appeal run from today.",
     [`/people/${learnerId}`],
-  );
+  ));
 }
 
 // ---------------------------------------------------------------------------
@@ -250,7 +250,7 @@ export async function lodgeGrievanceAction(
     desiredOutcome: field(formData, "desiredOutcome"),
   };
 
-  return run(
+  return said(run(
     () =>
       lodgeGrievance(session, timezone, {
         learnerId,
@@ -263,7 +263,7 @@ export async function lodgeGrievanceAction(
     "Lodged. It will be acknowledged within two working days.",
     ["/conduct", `/people/${learnerId}`],
     { previous, values },
-  );
+  ));
 }
 
 export async function acknowledgeGrievanceAction(
@@ -272,11 +272,11 @@ export async function acknowledgeGrievanceAction(
 ): Promise<ConductActionState> {
   const session = await requirePermission("grievance:manage");
 
-  return run(
+  return said(run(
     () => acknowledgeGrievance(session, field(formData, "grievanceId")),
     "Acknowledged.",
     ["/conduct"],
-  );
+  ));
 }
 
 export async function appointInvestigatorAction(
@@ -285,7 +285,7 @@ export async function appointInvestigatorAction(
 ): Promise<ConductActionState> {
   const session = await requirePermission("grievance:manage");
 
-  return run(
+  return said(run(
     () =>
       appointInvestigator(session, {
         grievanceId: field(formData, "grievanceId"),
@@ -293,7 +293,7 @@ export async function appointInvestigatorAction(
       }),
     "Appointed.",
     ["/conduct"],
-  );
+  ));
 }
 
 export async function decideGrievanceAction(
@@ -307,7 +307,7 @@ export async function decideGrievanceAction(
     decision: field(formData, "decision"),
   };
 
-  return run(
+  return said(run(
     () =>
       decideGrievance(session, timezone, {
         grievanceId: field(formData, "grievanceId"),
@@ -317,5 +317,5 @@ export async function decideGrievanceAction(
     "Decided, and the learner has it in writing.",
     ["/conduct"],
     { previous, values },
-  );
+  ));
 }

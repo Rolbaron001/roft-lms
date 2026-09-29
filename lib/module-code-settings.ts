@@ -207,7 +207,7 @@ export async function setModuleCodeAliases(
       const already = claimedBy.get(alias);
       if (already && already !== canonical) {
         throw new ModuleCodeError(
-          `${alias} is listed under both ${already} and ${canonical}. A spelling can only mean one module — remove it from one of them.`,
+          `${alias} is listed under both ${already} and ${canonical}. A spelling can only mean one module: remove it from one of them.`,
         );
       }
 

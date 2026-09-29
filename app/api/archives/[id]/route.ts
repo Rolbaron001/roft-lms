@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import { ArchiveError, archiveForDownload } from "@/lib/cohort-archive";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 
 /**
  * Downloads a built cohort archive.
@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
 
@@ -33,11 +33,11 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return Response.json({ error: "Not permitted." }, { status: 403 });
+      return Response.json(await said({ error: "Not permitted." }), { status: 403 });
     }
     if (error instanceof ArchiveError) {
       return Response.json(
-        { error: error.message },
+        await said({ error: error.message }),
         { status: error.reason === "not_found" ? 404 : 409 },
       );
     }

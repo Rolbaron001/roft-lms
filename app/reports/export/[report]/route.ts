@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 import {
   capabilityCoverage,
   overdueTraining,
@@ -20,7 +20,7 @@ export async function GET(
 ) {
   const session = await currentSession();
   if (!session) {
-    return new Response("Sign in first.", { status: 401 });
+    return new Response(await said("Sign in first."), { status: 401 });
   }
 
   const { report } = await params;

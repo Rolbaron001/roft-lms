@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
@@ -32,7 +32,7 @@ export default async function CoursePage({
     : [];
 
   const canAuthorHere = session.permissions.includes("course:author");
-  const extension = await extensionState(session);
+  const extension = await said(await extensionState(session));
   const mayUseExtension = extension.registered ? extension : null;
 
   let detail;

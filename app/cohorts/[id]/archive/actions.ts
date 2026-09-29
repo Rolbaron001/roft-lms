@@ -11,7 +11,7 @@ import {
   startCohortArchive,
 } from "@/lib/cohort-archive";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type ArchiveActionState = { error?: string; notice?: string };
 
@@ -42,10 +42,10 @@ export async function startArchiveAction(
 ): Promise<ArchiveActionState> {
   const session = await requireSession();
   const cohortId = String(formData.get("cohortId") ?? "");
-  return attempt(cohortId, async () => {
+  return said(attempt(cohortId, async () => {
     await startCohortArchive(session, cohortId);
     return "The archive is being written. This page updates when it is ready to download.";
-  });
+  }));
 }
 
 /**
@@ -58,10 +58,10 @@ export async function confirmCopyAction(
   copy: { fingerprint: string; bytes: number },
 ): Promise<ArchiveActionState> {
   const session = await requireSession();
-  return attempt(cohortId, async () => {
+  return said(attempt(cohortId, async () => {
     await confirmArchiveCopy(session, archiveId, copy);
     return "Your copy matches the archive exactly. The files can now be removed from the platform.";
-  });
+  }));
 }
 
 export async function removeFilesAction(
@@ -71,10 +71,10 @@ export async function removeFilesAction(
   const session = await requireSession();
   const cohortId = String(formData.get("cohortId") ?? "");
   const archiveId = String(formData.get("archiveId") ?? "");
-  return attempt(cohortId, async () => {
+  return said(attempt(cohortId, async () => {
     await removeArchivedFiles(session, archiveId);
     return "The files have been removed from the platform. Every record of them remains, and says which archive holds them.";
-  });
+  }));
 }
 
 export async function abandonAction(
@@ -84,10 +84,10 @@ export async function abandonAction(
   const session = await requireSession();
   const cohortId = String(formData.get("cohortId") ?? "");
   const archiveId = String(formData.get("archiveId") ?? "");
-  return attempt(cohortId, async () => {
+  return said(attempt(cohortId, async () => {
     await abandonArchive(session, archiveId);
     return "Set aside. Nothing was removed, and its learners can be archived again.";
-  });
+  }));
 }
 
 export async function finishRestoreAction(
@@ -95,8 +95,8 @@ export async function finishRestoreAction(
   archiveId: string,
 ): Promise<ArchiveActionState> {
   const session = await requireSession();
-  return attempt(cohortId, async () => {
+  return said(attempt(cohortId, async () => {
     await finishRestore(session, archiveId);
     return "Restored. Every file matched its fingerprint and is back on the platform where it was.";
-  });
+  }));
 }

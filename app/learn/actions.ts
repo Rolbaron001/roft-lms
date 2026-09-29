@@ -2,7 +2,7 @@
 
 import { recordStepOpened, SpineError } from "@/lib/spine";
 import { revalidatePath } from "next/cache";
-import { requestContext, requireSession } from "@/lib/request";
+import { requestContext, requireSession, said } from "@/lib/request";
 import { EnrolmentError, markLessonComplete } from "@/lib/enrolment";
 import { AssessmentError, saveQuizDraft, submitQuiz } from "@/lib/assessment";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -81,23 +81,23 @@ export async function submitQuizAction(
 
     revalidatePath(`/learn/${formData.get("enrolmentId")}`);
 
-    return {
+    return said({
       result: {
         score: result.score,
         maxScore: result.maxScore,
         passed: result.passed,
         awaitingAssessor: result.awaitingAssessor,
       },
-    };
+    });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error instanceof AssessmentError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     console.error(error);
-    return { error: "That could not be submitted. Please try again." };
+    return said({ error: "That could not be submitted. Please try again." });
   }
 }
 
@@ -113,15 +113,15 @@ export async function markLessonCompleteAction(
     await markLessonComplete(session, enrolmentId, lessonId);
   } catch (error) {
     if (error instanceof EnrolmentError || error instanceof SpineError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return said({ error: "That could not be saved. Please try again." });
   }
 
   revalidatePath(`/learn/${enrolmentId}`);
   revalidatePath("/");
-  return {};
+  return said({});
 }
 
 /**
@@ -143,14 +143,14 @@ export async function openStepAction(
     await recordStepOpened(session, stepId);
   } catch (error) {
     if (error instanceof SpineError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     console.error(error);
-    return { error: "That could not be opened. Please try again." };
+    return said({ error: "That could not be opened. Please try again." });
   }
 
   revalidatePath(`/learn/${enrolmentId}`);
-  return {};
+  return said({});
 }
 
 /**
@@ -171,9 +171,9 @@ export async function saveQuizDraftAction(
       enrolmentId: String(formData.get("enrolmentId") ?? "") || null,
       responses: collectAnswers(formData),
     });
-    return { savedAt: saved.savedAt.toISOString() };
+    return said({ savedAt: saved.savedAt.toISOString() });
   } catch (error) {
-    if (error instanceof AssessmentError) return { error: error.message };
+    if (error instanceof AssessmentError) return said({ error: error.message });
     throw error;
   }
 }

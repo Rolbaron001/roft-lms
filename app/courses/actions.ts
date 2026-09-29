@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   addLesson,
   addSection,
@@ -53,7 +53,7 @@ export async function createCourseAction(
     });
     courseId = course.id;
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   redirect(`/courses/${courseId}`);
@@ -72,11 +72,11 @@ export async function addSectionAction(
       title: String(formData.get("title") ?? ""),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}`);
-  return { notice: "Section added." };
+  return said({ notice: "Section added." });
 }
 
 export async function addLessonAction(
@@ -102,11 +102,11 @@ export async function addLessonAction(
         .filter(Boolean),
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}`);
-  return { notice: "Lesson added." };
+  return said({ notice: "Lesson added." });
 }
 
 export async function tagCompetencyAction(
@@ -118,17 +118,17 @@ export async function tagCompetencyAction(
   const competencyId = String(formData.get("competencyId") ?? "");
 
   if (!competencyId) {
-    return { error: "Choose a competency first." };
+    return said({ error: "Choose a competency first." });
   }
 
   try {
     await tagCourseCompetency(session, courseId, competencyId);
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/courses/${courseId}`);
-  return { notice: "Competency tagged." };
+  return said({ notice: "Competency tagged." });
 }
 
 export async function untagCompetencyAction(formData: FormData): Promise<void> {
@@ -152,14 +152,14 @@ export async function publishCourseAction(
     revalidatePath(`/courses/${courseId}`);
 
     if (!result.ok) {
-      return {
+      return said({
         error: `Not ready to publish. ${result.reasons.join(" ")}`,
-      };
+      });
     }
 
-    return { notice: "Published." };
+    return said({ notice: "Published." });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -177,7 +177,7 @@ export async function newVersionAction(
     );
     draftId = draft.id;
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   redirect(`/courses/${draftId}`);

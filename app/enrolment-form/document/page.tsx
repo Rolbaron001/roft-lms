@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { pageT, requireSession, requireTenant } from "@/lib/request";
+import { pageT, requireSession, requireTenant, said } from "@/lib/request";
 import {
   documentValuesFor,
   EnrolmentFormError,
@@ -49,7 +49,7 @@ export default async function EnrolmentFormDocumentPage({
 
   let view;
   try {
-    view = await getEnrolmentForm(session, learnerId);
+    view = await said(await getEnrolmentForm(session, learnerId));
   } catch (error) {
     if (error instanceof EnrolmentFormError) {
       if (error.reason === "not_permitted") redirect("/not-permitted");

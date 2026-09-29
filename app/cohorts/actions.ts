@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { requirePermission, requireTenant, said } from "@/lib/request";
 import {
   addMember,
   CohortError,
@@ -100,7 +100,7 @@ export async function createCohortAction(
   // and set the schedule, and both are on that page.
   if (!state.error && created) redirect(`/cohorts/${created.id}`);
 
-  return state;
+  return said(state);
 }
 
 export async function rescheduleCohortAction(
@@ -110,11 +110,11 @@ export async function rescheduleCohortAction(
   const session = await requirePermission("enrolment:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () => rescheduleCohort(session, cohortId, field(formData, "startDate")),
     "Start date moved. Every date on the schedule moved with it.",
     [`/cohorts/${cohortId}`, "/cohorts"],
-  );
+  ));
 }
 
 export async function addMemberAction(
@@ -124,11 +124,11 @@ export async function addMemberAction(
   const session = await requirePermission("enrolment:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () => addMember(session, cohortId, field(formData, "userId")),
     "Added to the cohort and enrolled on its course.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function removeMemberAction(
@@ -138,11 +138,11 @@ export async function removeMemberAction(
   const session = await requirePermission("enrolment:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () => removeMember(session, cohortId, field(formData, "userId")),
     "Removed from the cohort.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 /**
@@ -176,11 +176,11 @@ export async function setScheduleAction(
         entry.closesAfterDays !== null,
     );
 
-  return run(
+  return said(run(
     () => setSchedule(session, cohortId, schedule),
     "Schedule saved.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 function dayValue(formData: FormData, name: string): number | null {
@@ -202,7 +202,7 @@ export async function scheduleSessionAction(
   const session = await requirePermission("session:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       scheduleSession(session, {
         cohortId,
@@ -220,7 +220,7 @@ export async function scheduleSessionAction(
       }),
     "Session added to the schedule.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function setSessionStatusAction(
@@ -236,11 +236,11 @@ export async function setSessionStatusAction(
     | "cancelled"
     | "postponed";
 
-  return run(
+  return said(run(
     () => setSessionStatus(session, sessionId, status, field(formData, "note")),
     "Session updated.",
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
-  );
+  ));
 }
 
 /**
@@ -279,11 +279,11 @@ export async function takeRegisterAction(
     });
   }
 
-  return run(
+  return said(run(
     () => takeRegister(session, sessionId, marks),
     `Register taken: ${marks.length} marked.`,
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
-  );
+  ));
 }
 
 // ---------------------------------------------------------------------------
@@ -297,7 +297,7 @@ export async function addCohortTaskAction(
   const session = await requirePermission("session:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       addCohortTask(session, {
         cohortId,
@@ -308,7 +308,7 @@ export async function addCohortTaskAction(
       }),
     "Task added.",
     [`/cohorts/${cohortId}`, "/tracker"],
-  );
+  ));
 }
 
 export async function setTaskStatusAction(
@@ -318,7 +318,7 @@ export async function setTaskStatusAction(
   const session = await requirePermission("session:manage");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       setTaskStatus(
         session,
@@ -327,7 +327,7 @@ export async function setTaskStatusAction(
       ),
     "Task updated.",
     [`/cohorts/${cohortId}`, "/tracker"],
-  );
+  ));
 }
 
 // ---------------------------------------------------------------------------
@@ -366,7 +366,7 @@ export async function createSittingAction(
   const cohortId = field(formData, "cohortId");
   const sessionId = field(formData, "sessionId");
 
-  return run(
+  return said(run(
     () =>
       createSitting(session, {
         sessionId,
@@ -383,7 +383,7 @@ export async function createSittingAction(
       }),
     "Sitting set up. It is scheduled until you open it.",
     [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 /**
@@ -408,11 +408,11 @@ export async function setSittingStatusAction(
     | "closed"
     | "cancelled";
 
-  return run(
+  return said(run(
     () => setSittingStatus(session, field(formData, "sittingId"), status),
     `Sitting ${status.replace("_", " ")}.`,
     [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function admitCandidateAction(
@@ -424,7 +424,7 @@ export async function admitCandidateAction(
   const sittingId = field(formData, "sittingId");
   const { timezone } = await requireTenant();
 
-  return run(
+  return said(run(
     () =>
       admitCandidate(session, {
         sittingId,
@@ -435,7 +435,7 @@ export async function admitCandidateAction(
       }),
     "Register updated.",
     [`/cohorts/${cohortId}/sessions/${field(formData, "sessionId") || ""}`, `/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function acceptDeclarationAction(
@@ -445,7 +445,7 @@ export async function acceptDeclarationAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       acceptSittingDeclaration(
         session,
@@ -454,7 +454,7 @@ export async function acceptDeclarationAction(
       ),
     "Declaration recorded.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function confirmCameraAction(
@@ -464,7 +464,7 @@ export async function confirmCameraAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       confirmCamera(
         session,
@@ -473,7 +473,7 @@ export async function confirmCameraAction(
       ),
     "Camera confirmed.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function recordDropOutAction(
@@ -483,7 +483,7 @@ export async function recordDropOutAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       recordDropOut(
         session,
@@ -493,7 +493,7 @@ export async function recordDropOutAction(
       ),
     "Drop-out recorded. They cannot be readmitted to this sitting.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function acknowledgeScriptAction(
@@ -503,7 +503,7 @@ export async function acknowledgeScriptAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       acknowledgeScript(
         session,
@@ -513,7 +513,7 @@ export async function acknowledgeScriptAction(
       ),
     "Script receipted.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }
 
 export async function recordIncidentAction(
@@ -523,7 +523,7 @@ export async function recordIncidentAction(
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
 
-  return run(
+  return said(run(
     () =>
       recordIncident(session, {
         sittingId: field(formData, "sittingId"),
@@ -533,5 +533,5 @@ export async function recordIncidentAction(
       }),
     "Incident filed.",
     [`/cohorts/${cohortId}`],
-  );
+  ));
 }

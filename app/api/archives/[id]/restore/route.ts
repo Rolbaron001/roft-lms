@@ -5,7 +5,7 @@ import {
   restoreProgress,
 } from "@/lib/cohort-archive";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 
 /**
  * Giving an archive back, one piece at a time.
@@ -16,13 +16,13 @@ import { currentSession } from "@/lib/request";
  * at the offset the server expects and refuses any other.
  */
 
-function failure(error: unknown): Response {
+async function failure(error: unknown): Promise<Response> {
   if (error instanceof PermissionDeniedError) {
-    return Response.json({ error: "Not permitted." }, { status: 403 });
+    return Response.json(await said({ error: "Not permitted." }), { status: 403 });
   }
   if (error instanceof ArchiveError) {
     return Response.json(
-      { error: error.message },
+      await said({ error: error.message }),
       { status: error.reason === "not_found" ? 404 : 409 },
     );
   }
@@ -34,7 +34,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
   const { id } = await params;
 
   try {
@@ -49,18 +49,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
   const { id } = await params;
 
   const offset = Number(new URL(request.url).searchParams.get("offset"));
   if (!Number.isSafeInteger(offset) || offset < 0) {
-    return Response.json({ error: "Say where this piece starts." }, { status: 400 });
+    return Response.json(await said({ error: "Say where this piece starts." }), { status: 400 });
   }
 
   const length = Number(request.headers.get("content-length") ?? "0");
   if (length > RESTORE_CHUNK_BYTES) {
     return Response.json(
-      { error: `Send the archive in pieces of at most ${RESTORE_CHUNK_BYTES} bytes.` },
+      await said({ error: `Send the archive in pieces of at most ${RESTORE_CHUNK_BYTES} bytes.` }),
       { status: 413 },
     );
   }
@@ -69,7 +69,7 @@ export async function POST(
     const bytes = new Uint8Array(await request.arrayBuffer());
     if (bytes.byteLength > RESTORE_CHUNK_BYTES) {
       return Response.json(
-        { error: `Send the archive in pieces of at most ${RESTORE_CHUNK_BYTES} bytes.` },
+        await said({ error: `Send the archive in pieces of at most ${RESTORE_CHUNK_BYTES} bytes.` }),
         { status: 413 },
       );
     }

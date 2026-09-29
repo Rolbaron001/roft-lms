@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { exportStatements } from "@/lib/xapi";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 
 /**
  * Every learning record of this provider, as a file of xAPI statements.
@@ -12,7 +12,7 @@ import { currentSession } from "@/lib/request";
  */
 export async function GET() {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const headerList = await headers();
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "";
@@ -30,7 +30,7 @@ export async function GET() {
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return Response.json({ error: "Only a provider administrator may export learning records." }, { status: 403 });
+      return Response.json(await said({ error: "Only a provider administrator may export learning records." }), { status: 403 });
     }
     throw error;
   }

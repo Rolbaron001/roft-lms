@@ -14,7 +14,7 @@ import {
 } from "@/lib/fisa";
 import type { ChecklistAnswer } from "@/lib/fisa-checklist";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type FisaState = { error?: string; notice?: string };
 
@@ -50,11 +50,11 @@ export async function createAction(
       practicalNote: String(formData.get("practicalNote") ?? "").trim(),
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/fisa");
-  return { notice: "Opened. Appoint an examiner and a moderator next." };
+  return said({ notice: "Opened. Appoint an examiner and a moderator next." });
 }
 
 export async function appointAction(
@@ -65,7 +65,7 @@ export async function appointAction(
   const role = String(formData.get("role") ?? "");
 
   if (role !== "examiner" && role !== "moderator") {
-    return { error: "Choose examiner or moderator." };
+    return said({ error: "Choose examiner or moderator." });
   }
 
   try {
@@ -79,13 +79,13 @@ export async function appointAction(
       mobile: String(formData.get("mobile") ?? "").trim(),
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return {
+  return said({
     notice: `Appointed. They cannot see the paper until the confidentiality agreement is signed.`,
-  };
+  });
 }
 
 export async function signConfidentialityAction(
@@ -100,11 +100,11 @@ export async function signConfidentialityAction(
       String(formData.get("appointmentId") ?? ""),
     );
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return { notice: "Agreement recorded. They may now work on the paper." };
+  return said({ notice: "Agreement recorded. They may now work on the paper." });
 }
 
 export async function answerAction(
@@ -116,10 +116,10 @@ export async function answerAction(
   const answer = String(formData.get("answer") ?? "");
 
   if (role !== "examiner" && role !== "moderator") {
-    return { error: "Unknown report." };
+    return said({ error: "Unknown report." });
   }
   if (answer !== "yes" && answer !== "no" && answer !== "na") {
-    return { error: "Answer yes or no." };
+    return said({ error: "Answer yes or no." });
   }
 
   try {
@@ -131,11 +131,11 @@ export async function answerAction(
       recommendation: String(formData.get("recommendation") ?? ""),
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return {};
+  return said({});
 }
 
 export async function coverageAction(
@@ -146,7 +146,7 @@ export async function coverageAction(
   const role = String(formData.get("role") ?? "");
 
   if (role !== "examiner" && role !== "moderator") {
-    return { error: "Unknown report." };
+    return said({ error: "Unknown report." });
   }
 
   const achieved = String(formData.get("standardAchieved") ?? "");
@@ -163,11 +163,11 @@ export async function coverageAction(
       standardAchieved: achieved === "" ? undefined : achieved === "yes",
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return { notice: "Recorded." };
+  return said({ notice: "Recorded." });
 }
 
 export async function sendToModerationAction(
@@ -179,11 +179,11 @@ export async function sendToModerationAction(
   try {
     await sendToModeration(session, String(formData.get("instrumentId") ?? ""));
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return { notice: "Sent to the moderator, and they have been told." };
+  return said({ notice: "Sent to the moderator, and they have been told." });
 }
 
 export async function signOffAction(
@@ -199,13 +199,13 @@ export async function signOffAction(
       comments: String(formData.get("comments") ?? ""),
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return {
+  return said({
     notice: "Signed off as fit for purpose. Candidates may now sit this paper.",
-  };
+  });
 }
 
 export async function newVersionAction(
@@ -217,12 +217,12 @@ export async function newVersionAction(
   try {
     await newVersion(session, String(formData.get("instrumentId") ?? ""));
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/fisa");
-  return {
+  return said({
     notice:
       "A new draft version is open. It needs its own examiner, moderator and moderation.",
-  };
+  });
 }

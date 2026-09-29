@@ -46,7 +46,7 @@ function looksLegacy(bytes: Uint8Array): boolean {
 function open(bytes: Uint8Array): Record<string, Uint8Array> {
   if (looksLegacy(bytes)) {
     throw new OfficeReadError(
-      "That is an older Word or Excel file - the format used before 2007, which is a different thing inside despite the similar name. Nothing is wrong with it. Open it and use Save As to make a .docx or .xlsx, and that will read.",
+      "That is an older Word or Excel file: the format used before 2007, which is a different thing inside despite the similar name. Nothing is wrong with it. Open it and use Save As to make a .docx or .xlsx, and that will read.",
     );
   }
 

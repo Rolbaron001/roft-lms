@@ -1,4 +1,4 @@
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 import { readScormFile, ScormError } from "@/lib/scorm";
 
 /**
@@ -17,7 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ lessonId: string; path: string[] }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { lessonId, path } = await params;
   try {

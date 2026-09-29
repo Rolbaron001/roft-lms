@@ -1597,7 +1597,7 @@ export async function recordAssessorDecision(
       if (unexplained.length > 0) {
         throw new AssessmentError(
           `You have changed ${unexplained.length === 1 ? "a criterion" : `${unexplained.length} criteria`} from what the marks proposed. ` +
-            `Say why — practical performance and workplace evidence do not reach the platform, and the reason has to.`,
+            `Say why: practical performance and workplace evidence do not reach the platform, and the reason has to.`,
           "invalid_state",
         );
       }

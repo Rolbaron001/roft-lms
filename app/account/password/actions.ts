@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { currentLocale, requireSessionForPasswordChange } from "@/lib/request";
+import { currentLocale, requireSessionForPasswordChange, said } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { LanguageError, setOwnLocale } from "@/lib/language";
 import { changeOwnPassword, PeopleError } from "@/lib/people";
@@ -24,14 +24,14 @@ export async function changePasswordAction(
   // form, not a rule about passwords, and nothing calling changeOwnPassword
   // from elsewhere should have to send the same value twice.
   if (newPassword !== confirmPassword) {
-    return { error: translator(session.locale ?? (await currentLocale()))("account.mismatch") };
+    return said({ error: translator(session.locale ?? (await currentLocale()))("account.mismatch") });
   }
 
   try {
     await changeOwnPassword(session, currentPassword, newPassword);
   } catch (error) {
     if (error instanceof WeakPasswordError || error instanceof PeopleError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
@@ -51,10 +51,10 @@ export async function chooseLanguageAction(
   try {
     await setOwnLocale(session, code);
   } catch (error) {
-    if (error instanceof LanguageError) return { error: error.message };
+    if (error instanceof LanguageError) return said({ error: error.message });
     throw error;
   }
   // The whole page, frame and all, now reads in the new language.
   revalidatePath("/", "layout");
-  return { notice: translator(code ?? (await currentLocale()))("account.languageSaved") };
+  return said({ notice: translator(code ?? (await currentLocale()))("account.languageSaved") });
 }

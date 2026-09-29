@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   uploadProgrammeDocument,
   ProgrammeDocumentError,
@@ -35,19 +35,19 @@ export async function confirmMatrixAdditionsAction(
   const keys = formData.getAll("add").map(String);
 
   if (keys.length === 0) {
-    return { error: "Tick at least one line to add, or leave the curriculum as it is." };
+    return said({ error: "Tick at least one line to add, or leave the curriculum as it is." });
   }
 
   try {
     const document = await readProgrammeDocument(session, documentId);
     const summary = await importAlignmentMatrix(session, qualificationId, document.bytes, keys);
     revalidatePath(`/qualifications/${qualificationId}`);
-    return {
+    return said({
       message: `${summary.added} ${summary.added === 1 ? "line" : "lines"} added to the curriculum, each marked as the provider's own with the reason the matrix gives. Their coverage is recorded.`,
-    };
+    });
   } catch (error) {
     if (error instanceof AlignmentMatrixError || error instanceof ProgrammeDocumentError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
@@ -99,7 +99,7 @@ export async function uploadDocumentAction(
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a file to upload." };
+    return said({ error: "Choose a file to upload." });
   }
 
   // attachTo carries "qualification", "unit:<id>" or "module:<id>", so the one
@@ -153,7 +153,7 @@ export async function uploadDocumentAction(
 
       if (result.reclassified) {
         detail.unshift(
-          "Filed as a curriculum alignment matrix rather than the kind chosen — it names study units and exit level outcomes, so it is one.",
+          "Filed as a curriculum alignment matrix rather than the kind chosen: it names study units and exit level outcomes, so it is one.",
         );
       }
 
@@ -163,10 +163,10 @@ export async function uploadDocumentAction(
         applied.studyUnitsCreated === 0 &&
         applied.studyUnitsUpdated === 0
       ) {
-        return {
+        return said({
           error:
             "That document was filed, but no study units came out of it. It reads as an alignment document, so either the modules it names are not in the curriculum under those codes, or the study units are already there. The detail is in the document library entry.",
-        };
+        });
       }
 
       /*
@@ -199,22 +199,22 @@ export async function uploadDocumentAction(
               },
             ];
 
-      return {
+      return said({
         message:
           applied.modulesLinked === 0
             ? "Alignment document read. Study units built, but no modules placed under them."
             : "Alignment document read. Study units built.",
         detail,
         links,
-      };
+      });
     }
 
     if (!result.matrix) {
-      return {
+      return said({
         message: `${title || file.name} uploaded.`,
         // Said plainly, because "uploaded" reads as though something happened.
         detail: [
-          `Filed as ${DOCUMENT_KIND_LABELS[result.kind]}. Nothing was read out of it — only an alignment document or an alignment matrix is read.`,
+          `Filed as ${DOCUMENT_KIND_LABELS[result.kind]}. Nothing was read out of it: only an alignment document or an alignment matrix is read.`,
         ],
         links: [
           {
@@ -222,7 +222,7 @@ export async function uploadDocumentAction(
             label: "Back to the qualification",
           },
         ],
-      };
+      });
     }
 
     const matrix = result.matrix;
@@ -246,7 +246,7 @@ export async function uploadDocumentAction(
       );
     }
 
-    return {
+    return said({
       message: "Alignment matrix uploaded and read.",
       detail,
       links: [
@@ -259,14 +259,14 @@ export async function uploadDocumentAction(
         matrix.proposedAdditions.length > 0
           ? { qualificationId, documentId: result.id, items: matrix.proposedAdditions }
           : undefined,
-    };
+    });
   } catch (error) {
     if (
       error instanceof ProgrammeDocumentError ||
       error instanceof AlignmentMatrixError ||
       error instanceof OfficeReadError
     ) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { localeFor, requireSession, requireTenant, said } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { listCourseAssessments } from "@/lib/assessment";
@@ -35,10 +35,9 @@ export default async function LearnPage({
   // all, and is listed the way it always was — gating is something a course
   // opts into by having a spine, not something imposed on every course that
   // existed before it.
-  const steps = await stepsForLearner(
-    session,
-    delivery.course.id,
-    delivery.enrolment.userId,
+  // What holds a step closed is written by lib/ in English (D9 stage 5).
+  const steps = await said(
+    await stepsForLearner(session, delivery.course.id, delivery.enrolment.userId),
   );
 
   // Only published assessments are offered; a draft is unfinished by

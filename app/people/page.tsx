@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { listPeople, possibleLineManagers } from "@/lib/people";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
@@ -20,7 +20,7 @@ export default async function PeoplePage({
 
   // Read only so the roster form can say what an extension would add. Creating
   // people from a spreadsheet needs no extension and is offered either way.
-  const extension = await extensionState(session);
+  const extension = await said(await extensionState(session));
   const mayUseExtension =
     extensionOffered() && session.permissions.includes("extension:use");
 

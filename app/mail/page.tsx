@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import { listMailbox, MailboxError } from "@/lib/mailbox";
 import { mailIsConfigured } from "@/lib/mail";
 import { AppShell, Card } from "@/components/app-shell";
@@ -41,11 +41,12 @@ export default async function MailPage() {
     mailbox = await listMailbox(session);
   } catch (error) {
     if (error instanceof MailboxError && error.code === "no_mailbox") {
+      const message = await said(error.message);
       return (
         <AppShell tenant={tenant} session={session}>
           <h1 className="mb-4 text-xl font-semibold">{t("mailbox.title")}</h1>
           <Card>
-            <p className="text-sm text-[var(--muted)]">{error.message}</p>
+            <p className="text-sm text-[var(--muted)]">{message}</p>
           </Card>
         </AppShell>
       );

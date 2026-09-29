@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
@@ -29,22 +29,22 @@ export async function updateBrandingAction(
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error && typeof error === "object" && "issues" in error) {
-      return {
+      return said({
         error: (error as { issues: { message: string }[] }).issues
           .map((issue) => issue.message)
           .join(" "),
-      };
+      });
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return said({ error: "That could not be saved. Please try again." });
   }
 
   // Branding shows in the header of every page, so refresh the whole tree.
   revalidatePath("/", "layout");
-  return { notice: "Saved. Everyone sees it from their next page." };
+  return said({ notice: "Saved. Everyone sees it from their next page." });
 }
 
 export type NamingState = { error?: string; done?: string };
@@ -80,17 +80,17 @@ export async function updateNamingAction(
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error instanceof CaptureError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
 
   revalidatePath("/settings");
   revalidatePath("/capture");
-  return { done: "Saved. Uploads from now on are read this way." };
+  return said({ done: "Saved. Uploads from now on are read this way." });
 }
 
 export type ClockState = { error?: string; notice?: string };
@@ -112,23 +112,23 @@ export async function updateClockAction(
     await setTenantTimeZone(session, String(formData.get("timezone") ?? ""));
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error && typeof error === "object" && "issues" in error) {
-      return {
+      return said({
         error: (error as { issues: { message: string }[] }).issues
           .map((issue) => issue.message)
           .join(" "),
-      };
+      });
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return said({ error: "That could not be saved. Please try again." });
   }
 
   // Times appear on the schedule, the register and the sitting, so refresh
   // the whole tree rather than guessing which pages show one.
   revalidatePath("/", "layout");
-  return { notice: "Saved. Timetabled times now mean this clock." };
+  return said({ notice: "Saved. Timetabled times now mean this clock." });
 }
 
 export type ExtensionState = { error?: string; notice?: string };
@@ -155,17 +155,17 @@ export async function listExtensionModelsAction(): Promise<ModelListState> {
 
   try {
     const { models, error } = await modelsAvailableTo(session);
-    return error ? { error } : { models };
+    return said(error ? { error } : { models });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not include model assistance." };
+      return said({ error: "Your role does not include model assistance." });
     }
-    return {
+    return said({
       error:
         error instanceof Error
           ? error.message
           : "The provider could not be asked for its models.",
-    };
+    });
   }
 }
 
@@ -191,29 +191,29 @@ export async function updateMyExtensionAction(
 
     if (forget) {
       revalidatePath("/settings");
-      return { notice: "Token discarded. Nothing of it is kept." };
+      return said({ notice: "Token discarded. Nothing of it is kept." });
     }
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return {
+      return said({
         error:
           "Your role does not include model assistance. It is held by the provider's own staff rather than by learners or by an employer's workplace coach.",
-      };
+      });
     }
     console.error(error);
-    return {
+    return said({
       error:
         error instanceof Error
           ? error.message
           : "That could not be saved. Please try again.",
-    };
+    });
   }
 
   // The extension changes what many pages offer, and which ones is not
   // knowable from here.
   revalidatePath("/", "layout");
-  return {
+  return said({
     notice:
-      "Saved. It is available but not switched on — use the AI switch at the top of any page when you want it for a job.",
-  };
+      "Saved. It is available but not switched on. Use the AI switch at the top of any page when you want it for a job.",
+  });
 }

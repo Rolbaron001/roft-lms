@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   driveProviderByName,
   recordConnection,
@@ -28,7 +28,7 @@ export async function GET(
 
   const session = await requirePermission("qualification:manage");
   const provider = driveProviderByName(name);
-  if (!provider) return new Response("No such drive.", { status: 404 });
+  if (!provider) return new Response(await said("No such drive."), { status: 404 });
 
   const url = new URL(request.url);
   const jar = await cookies();

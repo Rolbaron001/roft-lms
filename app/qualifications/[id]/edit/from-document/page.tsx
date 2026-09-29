@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { proposalForQualification } from "@/lib/curriculum-from-document";
 import { AppShell, Card } from "@/components/app-shell";
 import { AcceptModule } from "./accept-module";
@@ -23,7 +23,7 @@ export default async function FromDocumentPage({
   const session = await requirePermission("qualification:manage");
   const t = await pageT();
 
-  const proposal = await proposalForQualification(session, id);
+  const proposal = await said(await proposalForQualification(session, id));
 
   const waiting = proposal.modules.filter((module) => !module.present);
 

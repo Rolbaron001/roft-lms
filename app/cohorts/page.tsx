@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { listCohorts } from "@/lib/cohorts";
 import { listCourses } from "@/lib/authoring";
 import { maybe } from "@/lib/i18n/maybe";
@@ -27,7 +27,7 @@ export default async function CohortsPage() {
   // sits under People is offered here too - this is where somebody is when
   // they have one in front of them.
   const canInvite = session.permissions.includes("user:invite");
-  const extension = canInvite ? await extensionState(session) : null;
+  const extension = canInvite ? await said(await extensionState(session)) : null;
   const cohorts = await listCohorts(session);
 
   // Only fetched for somebody who can actually start one: listCourses asks for

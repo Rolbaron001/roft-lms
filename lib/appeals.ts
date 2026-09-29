@@ -127,7 +127,7 @@ export async function lodgeAppeal(
 
   if (!timing.inTime && !parsed.lateAcceptanceReason) {
     throw new AppealError(
-      `This is ${timing.lateByWorkingDays} working ${timing.lateByWorkingDays === 1 ? "day" : "days"} past the deadline of ${timing.deadline}. It can still be lodged, but say why it is being accepted out of time - that reason is part of the record.`,
+      `This is ${timing.lateByWorkingDays} working ${timing.lateByWorkingDays === 1 ? "day" : "days"} past the deadline of ${timing.deadline}. It can still be lodged, but say why it is being accepted out of time: that reason is part of the record.`,
       "out_of_time",
     );
   }

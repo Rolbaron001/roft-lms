@@ -526,7 +526,7 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
       qualification: parseQualificationDetails(lines),
       modules: [],
       notes: [
-        "No module headers were found. Either this is not a curriculum document, or its text could not be read — if it is a scan, the platform cannot read it.",
+        "No module headers were found. Either this is not a curriculum document, or its text could not be read. If it is a scan, the platform cannot read it.",
       ],
     };
   }
@@ -1090,7 +1090,7 @@ function review(modules: ParsedModule[]): string[] {
 
     if (weighted.length === entry.topics.length && total !== 100) {
       notes.push(
-        `${entry.code}: its topic percentages come to ${total}, not 100. This is what the document says — check it before accepting.`,
+        `${entry.code}: its topic percentages come to ${total}, not 100. This is what the document says: check it before accepting.`,
       );
     }
 
@@ -1113,7 +1113,7 @@ function review(modules: ParsedModule[]): string[] {
     for (const topic of entry.topics) {
       for (const code of repeats(topic.elements.map((e) => e.code))) {
         notes.push(
-          `${entry.code} / ${topic.code}: the document uses ${code} more than once. Only the first can be stored — the rest need their own codes.`,
+          `${entry.code} / ${topic.code}: the document uses ${code} more than once. Only the first can be stored; the rest need their own codes.`,
         );
       }
     }
@@ -1121,7 +1121,7 @@ function review(modules: ParsedModule[]): string[] {
     for (const topic of entry.topics) {
       for (const code of repeats(topic.criteria.map((c) => c.code))) {
         notes.push(
-          `${entry.code} / ${topic.code}: the document uses criterion ${code} more than once under this topic. Only the first can be stored — the rest need their own codes.`,
+          `${entry.code} / ${topic.code}: the document uses criterion ${code} more than once under this topic. Only the first can be stored; the rest need their own codes.`,
         );
       }
     }

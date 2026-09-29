@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   addCourseToPath,
   createLearningPath,
@@ -46,7 +46,7 @@ export async function createPathAction(
     });
     pathId = created.id;
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   redirect(`/paths/${pathId}`);
@@ -61,7 +61,7 @@ export async function addCourseAction(
   const courseId = String(formData.get("courseId") ?? "");
 
   if (!courseId) {
-    return { error: "Choose a course to add." };
+    return said({ error: "Choose a course to add." });
   }
 
   try {
@@ -72,11 +72,11 @@ export async function addCourseAction(
       formData.get("requiresPrevious") === "on",
     );
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/paths/${pathId}`);
-  return { notice: "Added." };
+  return said({ notice: "Added." });
 }
 
 export async function removeCourseAction(formData: FormData): Promise<void> {
@@ -118,12 +118,12 @@ export async function publishPathAction(
     revalidatePath(`/paths/${pathId}`);
 
     if (!result.ok) {
-      return { error: `Not ready to publish. ${result.reasons.join(" ")}` };
+      return said({ error: `Not ready to publish. ${result.reasons.join(" ")}` });
     }
 
-    return { notice: "Published. It can be assigned now." };
+    return said({ notice: "Published. It can be assigned now." });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -137,15 +137,15 @@ export async function enrolOnPathAction(
   const dueDate = String(formData.get("dueDate") ?? "");
 
   if (!userId) {
-    return { error: "Choose somebody to put on the programme." };
+    return said({ error: "Choose somebody to put on the programme." });
   }
 
   try {
     await enrolOnPath(session, userId, pathId, dueDate || undefined);
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/paths/${pathId}`);
-  return { notice: "Added to the programme. Their first course is open now." };
+  return said({ notice: "Added to the programme. Their first course is open now." });
 }

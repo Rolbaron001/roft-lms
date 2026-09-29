@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { PermissionDeniedError } from "@/lib/rbac";
 import { removeSsoProvider, saveSsoProvider, SsoError, type SsoKind } from "@/lib/single-sign-on";
 
@@ -29,10 +29,10 @@ export async function saveSsoAction(_previous: SsoState, formData: FormData): Pr
       enabled: formData.get("enabled") === "on",
     });
   } catch (error) {
-    return { error: problem(error) };
+    return said({ error: problem(error) });
   }
   revalidatePath("/settings");
-  return { notice: "Saved. Sign out and try it from the sign-in page." };
+  return said({ notice: "Saved. Sign out and try it from the sign-in page." });
 }
 
 export async function removeSsoAction(_previous: SsoState, formData: FormData): Promise<SsoState> {
@@ -40,8 +40,8 @@ export async function removeSsoAction(_previous: SsoState, formData: FormData): 
   try {
     await removeSsoProvider(session, String(formData.get("kind") ?? "") as SsoKind);
   } catch (error) {
-    return { error: problem(error) };
+    return said({ error: problem(error) });
   }
   revalidatePath("/settings");
-  return { notice: "Switched off, and its secret forgotten." };
+  return said({ notice: "Switched off, and its secret forgotten." });
 }

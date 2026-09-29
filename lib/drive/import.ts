@@ -68,7 +68,7 @@ export async function importFromDrive(
 
   if (listed.length === 0) {
     throw new DriveError(
-      "That folder has nothing in it the platform can read. Documents, spreadsheets and presentations are all read, including Google's own — so an empty result means the folder really is empty, or holds only things like Forms and shortcuts.",
+      "That folder has nothing in it the platform can read. Documents, spreadsheets and presentations are all read, including Google's own, so an empty result means the folder really is empty, or holds only things like Forms and shortcuts.",
     );
   }
 

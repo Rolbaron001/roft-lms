@@ -8,7 +8,7 @@ import {
 } from "@/lib/document-templates";
 import { DOCUMENT_KINDS, type DocumentKind } from "@/lib/document-fields";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type TemplateState = { error?: string; notice?: string };
 
@@ -43,15 +43,15 @@ export async function saveTemplateAction(
 
     revalidatePath("/settings");
 
-    return {
+    return said({
       notice: activate
         ? `Saved as version ${saved.version}, and now in use. Documents of this kind are produced from it from now on; ones already issued keep the version that produced them.`
         : `Saved as version ${saved.version}, as a draft. It is not in use until you put it in use.`,
-    };
+    });
   } catch (error) {
-    if (error instanceof DocumentTemplateError) return { error: error.message };
+    if (error instanceof DocumentTemplateError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }
@@ -69,15 +69,15 @@ export async function revertTemplateAction(
 
     revalidatePath("/settings");
 
-    return {
+    return said({
       notice: reverted
         ? "Back to the platform's own layout. Your template is kept, not deleted, so you can put it back."
         : "There was no template in use for that document.",
-    };
+    });
   } catch (error) {
-    if (error instanceof DocumentTemplateError) return { error: error.message };
+    if (error instanceof DocumentTemplateError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }

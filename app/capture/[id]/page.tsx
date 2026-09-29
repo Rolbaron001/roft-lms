@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
 import { withTenant } from "@/db/client";
 import { assessmentCriteria, assessments } from "@/db/schema";
 import {
@@ -41,7 +41,7 @@ export default async function ReviewCapturePage({
 
   let job;
   try {
-    job = await getCaptureJob(session, id);
+    job = await said(await getCaptureJob(session, id));
   } catch (error) {
     if (error instanceof CaptureError) notFound();
     throw error;

@@ -80,7 +80,7 @@ describe("parseCurriculumText", () => {
      */
     it("reports the document's own numbering faults, and nothing else", () => {
       expect(parsed.notes).toEqual([
-        "WM01 / WE0102: the document uses WA0201 more than once. Only the first can be stored — the rest need their own codes.",
+        "WM01 / WE0102: the document uses WA0201 more than once. Only the first can be stored; the rest need their own codes.",
       ]);
     });
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   moderateRplJudgement,
   openRplApplication,
@@ -65,11 +65,11 @@ export async function openApplicationAction(
   try {
     await openRplApplication(session, values as never);
   } catch (error) {
-    return fail(previous, error, values);
+    return said(fail(previous, error, values));
   }
 
   revalidatePath("/recognition");
-  return { notice: "Application opened. Advisory comes next." };
+  return said({ notice: "Application opened. Advisory comes next." });
 }
 
 export async function recordAdvisoryAction(
@@ -86,11 +86,11 @@ export async function recordAdvisoryAction(
   try {
     await recordAdvisory(session, values as never);
   } catch (error) {
-    return fail(previous, error, values);
+    return said(fail(previous, error, values));
   }
 
   revalidatePath("/recognition");
-  return { notice: "Advisory recorded." };
+  return said({ notice: "Advisory recorded." });
 }
 
 export async function recordJudgementAction(
@@ -112,13 +112,13 @@ export async function recordJudgementAction(
       competent: values.competent === "on",
     } as never);
   } catch (error) {
-    return fail(previous, error, values);
+    return said(fail(previous, error, values));
   }
 
   revalidatePath("/recognition");
-  return {
+  return said({
     notice: "Judgement recorded. It grants nothing until it is moderated.",
-  };
+  });
 }
 
 export async function moderateJudgementAction(
@@ -141,11 +141,11 @@ export async function moderateJudgementAction(
       agreed: values.agreed === "on",
     });
   } catch (error) {
-    return fail(previous, error, values);
+    return said(fail(previous, error, values));
   }
 
   revalidatePath("/recognition");
-  return { notice: "Moderated." };
+  return said({ notice: "Moderated." });
 }
 
 export async function recordTransferAction(
@@ -174,9 +174,9 @@ export async function recordTransferAction(
       awardedOn: values.awardedOn || undefined,
     } as never);
   } catch (error) {
-    return fail(previous, error, values);
+    return said(fail(previous, error, values));
   }
 
   revalidatePath("/recognition");
-  return { notice: "Credit transfer recorded." };
+  return said({ notice: "Credit transfer recorded." });
 }

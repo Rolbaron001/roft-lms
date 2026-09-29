@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import { listIngestJobs } from "@/lib/folder-import";
 import { extensionState } from "@/lib/extensions";
@@ -21,7 +21,7 @@ export default async function AiImportPage() {
   const session = await requirePermission("qualification:manage");
   const t = await pageT();
 
-  const extension = await extensionState(session);
+  const extension = await said(await extensionState(session));
   const jobs = await listIngestJobs(session);
 
   return (

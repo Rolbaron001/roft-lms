@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { RegistrationError, registrationList } from "@/lib/eisa-registration";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -29,7 +29,7 @@ export default async function EisaCohortPage({
 
   let list;
   try {
-    list = await registrationList(session, cohortId);
+    list = await said(await registrationList(session, cohortId));
   } catch (error) {
     if (error instanceof RegistrationError) notFound();
     throw error;

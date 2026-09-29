@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell, Card } from "@/components/app-shell";
 import { ArchiveError, cohortArchiveState } from "@/lib/cohort-archive";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n/maybe";
 import {
   Abandon,
@@ -44,7 +44,7 @@ export default async function CohortArchivePage({
 
   let state;
   try {
-    state = await cohortArchiveState(session, id);
+    state = await said(await cohortArchiveState(session, id));
   } catch (error) {
     if (error instanceof ArchiveError) notFound();
     throw error;

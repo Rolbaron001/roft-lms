@@ -1,5 +1,5 @@
 import { DocumentError, readEnrolmentDocument } from "@/lib/enrolment-documents";
-import { currentSession } from "@/lib/request";
+import { currentSession, said } from "@/lib/request";
 import { errorResponse, fileResponse } from "@/app/api/lessons/[id]/media/route";
 
 /**
@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await currentSession();
-  if (!session) return new Response("Sign in first.", { status: 401 });
+  if (!session) return new Response(await said("Sign in first."), { status: 401 });
 
   const { id } = await params;
 
@@ -24,7 +24,7 @@ export async function GET(
   } catch (error) {
     if (error instanceof DocumentError) {
       return Response.json(
-        { error: error.message },
+        await said({ error: error.message }),
         { status: error.code === "not_found" ? 404 : 400 },
       );
     }

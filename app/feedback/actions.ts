@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission, requireSession } from "@/lib/request";
+import { requirePermission, requireSession, said } from "@/lib/request";
 import {
   FeedbackError,
   activeQuestionnaire,
@@ -46,11 +46,11 @@ export async function requestFeedbackAction(
       assessmentId: field(formData, "assessmentId") || undefined,
     });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath(`/cohorts/${cohortId}`);
-  return { notice: "Asked. They have 48 hours." };
+  return said({ notice: "Asked. They have 48 hours." });
 }
 
 export async function submitFeedbackAction(
@@ -73,7 +73,7 @@ export async function submitFeedbackAction(
   try {
     await submitFeedback(session, { requestId, answers });
   } catch (error) {
-    return explain(error);
+    return said(explain(error));
   }
 
   revalidatePath("/");

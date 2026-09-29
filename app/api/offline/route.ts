@@ -1,4 +1,4 @@
-import { currentSession, currentTenant } from "@/lib/request";
+import { currentSession, currentTenant, said } from "@/lib/request";
 import { OfflineError, receiveSubmission } from "@/lib/offline";
 
 /**
@@ -18,13 +18,13 @@ export async function POST(request: Request) {
   // Offline is off for everybody who did not ask for it, and that includes
   // this endpoint: it is not reachable at all on an ordinary tenant.
   if (!tenant?.offlineEnabled) {
-    return new Response("Not found.", { status: 404 });
+    return new Response(await said("Not found."), { status: 404 });
   }
 
   const session = await currentSession();
   if (!session) {
     return Response.json(
-      { error: "Sign in first." },
+      await said({ error: "Sign in first." }),
       // 401 rather than a redirect: the caller is a script, and a login page
       // in a fetch response is not something it can do anything with.
       { status: 401 },
@@ -35,17 +35,17 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "That is not JSON." }, { status: 400 });
+    return Response.json(await said({ error: "That is not JSON." }), { status: 400 });
   }
 
   const items = Array.isArray(body) ? body : [body];
 
   if (items.length > 50) {
     return Response.json(
-      {
+      await said({
         error:
           "Too many at once. Send them in batches of fifty so a failure loses one batch rather than a fortnight.",
-      },
+      }),
       { status: 400 },
     );
   }
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         results.push({
           deviceKey,
           ok: false,
-          error: error.message,
+          error: await said(error.message),
           /**
            * Whether the device should keep it and try again.
            *
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       results.push({
         deviceKey,
         ok: false,
-        error: "The server could not take that one.",
+        error: await said("The server could not take that one."),
         retry: true,
       });
     }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission, requireSession } from "@/lib/request";
+import { requirePermission, requireSession, said } from "@/lib/request";
 import {
   anonymisePerson,
   invitePerson,
@@ -80,12 +80,12 @@ export async function invitePersonAction(
     });
 
     revalidatePath("/people");
-    return {
+    return said({
       notice: "Added.",
       password: initialPassword,
-    };
+    });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -102,12 +102,12 @@ export async function updatePersonAction(
       roles: [],
     });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/people/${userId}`);
   revalidatePath("/people");
-  return { notice: "Saved." };
+  return said({ notice: "Saved." });
 }
 
 export async function setRolesAction(
@@ -127,11 +127,11 @@ export async function setRolesAction(
   try {
     await setRoles(session, userId, roles, registrationNumbers);
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/people/${userId}`);
-  return { notice: "Roles updated. They take effect on the person's next page." };
+  return said({ notice: "Roles updated. They take effect on the person's next page." });
 }
 
 export async function setStatusAction(
@@ -145,17 +145,17 @@ export async function setStatusAction(
   try {
     await setPersonStatus(session, userId, status);
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath(`/people/${userId}`);
   revalidatePath("/people");
-  return {
+  return said({
     notice:
       status === "suspended"
         ? "Suspended. Any session they had open has ended."
         : "Reactivated.",
-  };
+  });
 }
 
 export async function resetPasswordAction(
@@ -169,9 +169,9 @@ export async function resetPasswordAction(
       session,
       String(formData.get("userId") ?? ""),
     );
-    return { notice: "New password set.", password };
+    return said({ notice: "New password set.", password });
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -186,18 +186,18 @@ export async function setMailboxAction(
   try {
     await setMailboxAddress(session, userId, address || null);
     revalidatePath(`/people/${userId}`);
-    return {
+    return said({
       notice: address
         ? `Mailbox set to ${address.toLowerCase()}.`
         : "Mailbox removed.",
-    };
+    });
   } catch (error) {
     // Addresses are unique across the whole platform, because an address is a
     // destination on the internet and two people cannot both own one.
     if (String((error as { cause?: unknown }).cause).includes("duplicate key")) {
-      return { error: "That address is already in use." };
+      return said({ error: "That address is already in use." });
     }
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 }
 
@@ -214,9 +214,9 @@ export async function anonymiseAction(
   const expected = String(formData.get("expectedConfirmation") ?? "").trim();
 
   if (confirmation.toLowerCase() !== expected.toLowerCase()) {
-    return {
+    return said({
       error: `Type "${expected}" to confirm. Anonymising cannot be undone.`,
-    };
+    });
   }
 
   try {
@@ -226,7 +226,7 @@ export async function anonymiseAction(
       String(formData.get("reason") ?? ""),
     );
   } catch (error) {
-    return { error: describe(error) };
+    return said({ error: describe(error) });
   }
 
   revalidatePath("/people");
@@ -262,7 +262,7 @@ export async function recordDocumentAction(
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a file." };
+    return said({ error: "Choose a file." });
   }
 
   try {
@@ -274,11 +274,11 @@ export async function recordDocumentAction(
       bytes: new Uint8Array(await file.arrayBuffer()),
     });
   } catch (error) {
-    return { error: describeDocument(error) };
+    return said({ error: describeDocument(error) });
   }
 
   revalidatePath(`/people/${userId}`);
-  return { done: "Document filed." };
+  return said({ done: "Document filed." });
 }
 
 export async function verifyDocumentAction(
@@ -296,9 +296,9 @@ export async function verifyDocumentAction(
       String(formData.get("reason") ?? "") || undefined,
     );
   } catch (error) {
-    return { error: describeDocument(error) };
+    return said({ error: describeDocument(error) });
   }
 
   revalidatePath(`/people/${userId}`);
-  return { done: "Checked." };
+  return said({ done: "Checked." });
 }

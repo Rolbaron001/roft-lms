@@ -689,6 +689,9 @@ export type PendingEmail = {
   body: string;
   linkPath: string | null;
   attempts: number;
+  /** The recipient's own language, and their provider's, for writing the email in (D9). */
+  locale: string | null;
+  providerLocale: string | null;
 };
 
 /** Email notifications waiting to go out, oldest first. */
@@ -706,9 +709,12 @@ export async function pendingEmails(limit = 100): Promise<PendingEmail[]> {
           body: notifications.body,
           linkPath: notifications.linkPath,
           attempts: notifications.attempts,
+          locale: users.locale,
+          providerLocale: organisations.defaultLocale,
         })
         .from(notifications)
         .innerJoin(users, eq(users.id, notifications.userId))
+        .innerJoin(organisations, eq(organisations.id, notifications.organisationId))
         .where(
           and(
             eq(notifications.channel, "email"),

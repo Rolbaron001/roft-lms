@@ -6,7 +6,7 @@ import {
   selectModules,
 } from "@/lib/part-qualifications";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import type { ActionState } from "../../actions";
 
 export type { ActionState };
@@ -30,22 +30,22 @@ export async function selectModulesAction(
     revalidatePath(`/qualifications/${qualificationId}`);
     revalidatePath("/qualifications");
 
-    return {
+    return said({
       notice:
         selected === 0
           ? "Cleared. This takes none of the parent's modules."
           : `Saved. This is assessed against ${selected} ${
               selected === 1 ? "module" : "modules"
             }.`,
-    };
+    });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     if (error instanceof PartQualificationError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return said({ error: "That could not be saved. Please try again." });
   }
 }

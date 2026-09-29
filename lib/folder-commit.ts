@@ -358,7 +358,7 @@ async function commitModule(
   // rather than an error anybody sees.
   if (!COMPONENTS.has(component)) {
     report.refused.push(
-      `${module.code}: no usable component - it says "${module.component ?? "nothing"}", and it has to be knowledge, practical or workplace.`,
+      `${module.code}: no usable component: it says "${module.component ?? "nothing"}", and it has to be knowledge, practical or workplace.`,
     );
     return;
   }

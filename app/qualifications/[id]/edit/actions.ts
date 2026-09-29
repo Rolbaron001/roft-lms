@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { AuthoringError, addAssessmentCriterion, addCurriculumModule } from "@/lib/authoring";
 import {
   addTopic,
@@ -68,7 +68,7 @@ export async function addModuleAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       addCurriculumModule(session, {
@@ -83,7 +83,7 @@ export async function addModuleAction(
         credits: optionalNumber(formData, "credits") ?? undefined,
       }),
     "Module added.",
-  );
+  ));
 }
 
 export async function updateModuleAction(
@@ -93,7 +93,7 @@ export async function updateModuleAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       updateModule(session, field(formData, "moduleId"), {
@@ -102,7 +102,7 @@ export async function updateModuleAction(
         credits: optionalNumber(formData, "credits"),
       }),
     "Module saved.",
-  );
+  ));
 }
 
 export async function removeModuleAction(
@@ -112,11 +112,11 @@ export async function removeModuleAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () => removeModule(session, field(formData, "moduleId")),
     "Module removed.",
-  );
+  ));
 }
 
 export async function addTopicAction(
@@ -126,7 +126,7 @@ export async function addTopicAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       addTopic(session, {
@@ -136,7 +136,7 @@ export async function addTopicAction(
         weightPercent: optionalNumber(formData, "weightPercent"),
       }),
     "Topic added.",
-  );
+  ));
 }
 
 export async function updateTopicAction(
@@ -146,7 +146,7 @@ export async function updateTopicAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       updateTopic(session, field(formData, "topicId"), {
@@ -155,7 +155,7 @@ export async function updateTopicAction(
         weightPercent: optionalNumber(formData, "weightPercent"),
       }),
     "Topic saved.",
-  );
+  ));
 }
 
 export async function removeTopicAction(
@@ -165,11 +165,11 @@ export async function removeTopicAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () => removeTopic(session, field(formData, "topicId")),
     "Topic removed.",
-  );
+  ));
 }
 
 export async function addElementAction(
@@ -179,7 +179,7 @@ export async function addElementAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       addTopicElement(session, {
@@ -189,7 +189,7 @@ export async function addElementAction(
         description: field(formData, "description"),
       }),
     "Added.",
-  );
+  ));
 }
 
 export async function updateElementAction(
@@ -199,7 +199,7 @@ export async function updateElementAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       updateTopicElement(session, field(formData, "elementId"), {
@@ -207,7 +207,7 @@ export async function updateElementAction(
         description: field(formData, "description"),
       }),
     "Saved.",
-  );
+  ));
 }
 
 export async function removeElementAction(
@@ -217,11 +217,11 @@ export async function removeElementAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () => removeTopicElement(session, field(formData, "elementId")),
     "Removed.",
-  );
+  ));
 }
 
 export async function addCriterionAction(
@@ -231,7 +231,7 @@ export async function addCriterionAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       addAssessmentCriterion(session, {
@@ -240,7 +240,7 @@ export async function addCriterionAction(
         description: field(formData, "description"),
       }),
     "Criterion added.",
-  );
+  ));
 }
 
 export async function updateCriterionAction(
@@ -250,7 +250,7 @@ export async function updateCriterionAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       updateCriterion(session, field(formData, "criterionId"), {
@@ -258,7 +258,7 @@ export async function updateCriterionAction(
         description: field(formData, "description"),
       }),
     "Criterion saved.",
-  );
+  ));
 }
 
 export async function removeCriterionAction(
@@ -268,11 +268,11 @@ export async function removeCriterionAction(
   const session = await requirePermission("qualification:manage");
   const qualificationId = field(formData, "qualificationId");
 
-  return run(
+  return said(run(
     qualificationId,
     () => removeCriterion(session, field(formData, "criterionId")),
     "Criterion removed.",
-  );
+  ));
 }
 
 /**
@@ -292,12 +292,12 @@ export async function reclassifyAction(
   const kind = field(formData, "kind");
 
   if (kind !== "full" && kind !== "part" && kind !== "skills_programme") {
-    return { error: "Choose what this qualification is." };
+    return said({ error: "Choose what this qualification is." });
   }
 
   const parentId = field(formData, "parentId");
 
-  return run(
+  return said(run(
     qualificationId,
     () =>
       reclassify(session, qualificationId, {
@@ -309,5 +309,5 @@ export async function reclassifyAction(
       : kind === "part"
         ? "Recorded as a part qualification of the one named."
         : "Recorded as a skills programme drawn from the one named.",
-  );
+  ));
 }

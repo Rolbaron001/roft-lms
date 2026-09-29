@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession, requestContext } from "@/lib/request";
+import { requireSession, requestContext, said } from "@/lib/request";
 import { setSessionAi } from "@/lib/session";
 import { extensionState } from "@/lib/extensions";
 
@@ -23,11 +23,11 @@ export async function setAiAction(on: boolean): Promise<{ error?: string }> {
   const state = await extensionState(session);
 
   if (on && !state.available) {
-    return {
+    return said({
       error: state.registered
         ? "Your AI extension is disabled on your account page."
         : "Set up an AI extension on your account page first.",
-    };
+    });
   }
 
   await setSessionAi(session, on, await requestContext());
@@ -35,5 +35,5 @@ export async function setAiAction(on: boolean): Promise<{ error?: string }> {
   // The switch changes what half the pages in the platform offer, and which
   // ones is not knowable from here.
   revalidatePath("/", "layout");
-  return {};
+  return said({});
 }

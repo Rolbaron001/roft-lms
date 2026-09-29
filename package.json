@@ -20,7 +20,8 @@
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "db:purge-test-tenants": "tsx scripts/purge-test-tenants.mts",
     "translations:export": "tsx scripts/translation-export.mts",
-    "translations:import": "tsx scripts/translation-import.mts"
+    "translations:import": "tsx scripts/translation-import.mts",
+    "translations:server": "tsx scripts/translations-server.mts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

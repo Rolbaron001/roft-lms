@@ -61,6 +61,7 @@ const AREAS: [RegExp, string][] = [
   [/^cert\./, "A certificate"],
   [/^work\./, "Work experience"],
   [/^scorm\./, "Course packages"],
+  [/^said\./, "Messages the platform writes: errors, confirmations, notifications"],
 ];
 
 export function areaOf(key: string): string {

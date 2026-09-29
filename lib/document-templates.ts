@@ -88,7 +88,7 @@ function check(input: SaveTemplateInput) {
   const unknown = unknownPlaceholders(input.kind, body);
   if (unknown.length > 0) {
     throw new DocumentTemplateError(
-      `This template uses ${unknown.length === 1 ? "a field" : "fields"} the platform cannot fill: ${unknown.join(", ")}. Check the spelling against the list of what is available - a field it does not recognise is left blank on the finished document rather than reported.`,
+      `This template uses ${unknown.length === 1 ? "a field" : "fields"} the platform cannot fill: ${unknown.join(", ")}. Check the spelling against the list of what is available: a field it does not recognise is left blank on the finished document rather than reported.`,
       "unknown_field",
     );
   }

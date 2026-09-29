@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { revokeStatementOfResults } from "@/lib/statement-of-results";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -33,18 +33,18 @@ export async function withdrawStatementAction(
     );
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return {
+      return said({
         error:
           "Your role does not include withdrawing a Statement of Results.",
-      };
+      });
     }
-    return {
+    return said({
       error:
         error instanceof Error ? error.message : "That could not be withdrawn.",
-    };
+    });
   }
 
   revalidatePath(`/statements/${id}`);
   revalidatePath("/readiness");
-  return { notice: "Withdrawn. The reference still resolves, and says so." };
+  return said({ notice: "Withdrawn. The reference still resolves, and says so." });
 }

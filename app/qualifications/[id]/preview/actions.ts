@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import { PermissionDeniedError } from "@/lib/rbac";
 import { courseForStudyUnit } from "@/lib/capture-from-documents";
 
@@ -35,7 +35,7 @@ export async function startStudyUnitAction(
     courseId = await courseForStudyUnit(session, studyUnitId);
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }

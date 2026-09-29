@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   authoriseReassessment,
   recordOralAssessment,
@@ -43,7 +43,7 @@ export async function authoriseAction(
 ): Promise<ReviewState> {
   const session = await requirePermission("enrolment:manage");
 
-  return run(
+  return said(run(
     () =>
       authoriseReassessment(session, {
         assessmentId: field(formData, "assessmentId"),
@@ -59,7 +59,7 @@ export async function authoriseAction(
         employerComments: field(formData, "employerComments") || undefined,
       }),
     "The review is recorded.",
-  );
+  ));
 }
 
 export async function startOralAction(
@@ -84,7 +84,7 @@ export async function startOralAction(
     redirect(`/reassessments/${submissionId}`);
   }
 
-  return state;
+  return said(state);
 }
 
 /**
@@ -117,10 +117,10 @@ export async function recordOralAction(
     .filter((row) => row.question.length > 0 && row.response.length > 0);
 
   if (exchanges.length === 0) {
-    return {
+    return said({
       error:
         "Write down at least one question and the answer given. An oral pass with no record of the exchange is not evidence.",
-    };
+    });
   }
 
   const state = await run(
@@ -135,5 +135,5 @@ export async function recordOralAction(
   );
 
   revalidatePath(`/reassessments/${submissionId}`);
-  return state;
+  return said(state);
 }

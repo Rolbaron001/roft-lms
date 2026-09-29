@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import { setTenantCapabilities } from "@/lib/provisioning";
 
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -34,12 +34,12 @@ export async function updateCapabilitiesAction(
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }
 
   revalidatePath("/settings");
   revalidatePath("/", "layout");
-  return { saved: true };
+  return said({ saved: true });
 }

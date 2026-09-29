@@ -3569,6 +3569,8 @@ export const staff = {
   "aiSwitch.onTitle": "Your AI extension is on for this sitting. It switches off when you sign out.",
   "aiSwitch.offTitle": "Switch your AI extension on for this sitting.",
   "banner.site": "{label} site. Nothing done here reaches the live platform, and the learners here are copies.",
+  "email.hello": "Hello {name},",
+  "email.why": "You are receiving this because you have a learning record on this system.",
   "printButton.default": "Print or save as PDF",
   "viewTabs.label": "Views of this page",
   "zoned.yourTime": "({time} your time)",

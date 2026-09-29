@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { DocumentError, recordCohortPayment } from "@/lib/enrolment-documents";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 
 export type PaymentState = { error?: string; notice?: string };
 
@@ -31,18 +31,18 @@ export async function recordPaymentAction(
       reference,
     });
   } catch (error) {
-    if (error instanceof DocumentError) return { error: error.message };
+    if (error instanceof DocumentError) return said({ error: error.message });
     if (error instanceof PermissionDeniedError) {
-      return { error: "Your role does not allow that." };
+      return said({ error: "Your role does not allow that." });
     }
     throw error;
   }
 
   revalidatePath(`/cohorts/${cohortId}`);
 
-  return {
+  return said({
     notice: receivedOn
       ? "Recorded. Everybody in this cohort now counts as paid for."
       : "Invoice recorded. Add the payment date when it comes in.",
-  };
+  });
 }

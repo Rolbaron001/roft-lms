@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/request";
+import { requireSession, said } from "@/lib/request";
 import {
   acceptLogbook,
   coachSignOff,
@@ -40,9 +40,9 @@ export async function tickEntryAction(
   try {
     await setEntryCompleted(session, entryId, completed, note || undefined);
     revalidatePath(`/workplace/${logbookId}`);
-    return {};
+    return said({});
   } catch (error) {
-    return describe(error) ?? { error: "That could not be saved." };
+    return said(describe(error) ?? { error: "That could not be saved." });
   }
 }
 
@@ -56,7 +56,7 @@ export async function uploadEvidenceAction(
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose a file." };
+    return said({ error: "Choose a file." });
   }
 
   try {
@@ -64,9 +64,9 @@ export async function uploadEvidenceAction(
       { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()) },
     ]);
     revalidatePath(`/workplace/${logbookId}`);
-    return { message: `${file.name} attached.` };
+    return said({ message: `${file.name} attached.` });
   } catch (error) {
-    return describe(error) ?? { error: "That file could not be attached." };
+    return said(describe(error) ?? { error: "That file could not be attached." });
   }
 }
 
@@ -81,9 +81,9 @@ export async function submitLogbookAction(
   try {
     await submitToCoach(session, logbookId, hours > 0 ? hours : undefined);
     revalidatePath(`/workplace/${logbookId}`);
-    return { message: "Sent to your workplace coach." };
+    return said({ message: "Sent to your workplace coach." });
   } catch (error) {
-    return describe(error) ?? { error: "That could not be submitted." };
+    return said(describe(error) ?? { error: "That could not be submitted." });
   }
 }
 
@@ -102,14 +102,14 @@ export async function signOffAction(
       comments: comments || undefined,
     });
     revalidatePath(`/workplace/${logbookId}`);
-    return {
+    return said({
       message:
         outcome === "signed"
           ? "Signed. It is now with the assessor."
           : "Sent back to the learner.",
-    };
+    });
   } catch (error) {
-    return describe(error) ?? { error: "That could not be recorded." };
+    return said(describe(error) ?? { error: "That could not be recorded." });
   }
 }
 
@@ -123,9 +123,9 @@ export async function acceptLogbookAction(
   try {
     await acceptLogbook(session, logbookId);
     revalidatePath(`/workplace/${logbookId}`);
-    return { message: "Logbook received." };
+    return said({ message: "Logbook received." });
   } catch (error) {
-    return describe(error) ?? { error: "That could not be accepted." };
+    return said(describe(error) ?? { error: "That could not be accepted." });
   }
 }
 
@@ -139,7 +139,7 @@ export async function createAgreementAction(
   const coachId = String(formData.get("coachId") ?? "");
 
   if (!learnerId || !coachId) {
-    return { error: "Choose both a learner and a workplace coach." };
+    return said({ error: "Choose both a learner and a workplace coach." });
   }
 
   try {
@@ -156,20 +156,20 @@ export async function createAgreementAction(
     });
 
     revalidatePath("/workplace/setup");
-    return {
+    return said({
       message: `Agreement created with ${agreement.coachName} at ${agreement.employerName}.`,
-    };
+    });
   } catch (error) {
     const described = describe(error);
-    if (described) return described;
+    if (described) return said(described);
 
     // The database trigger is the guarantee behind the application check, and
     // it speaks SQL. Translate rather than showing a stack trace.
     if (String((error as { cause?: unknown }).cause).includes("Segregation")) {
-      return { error: "A learner cannot be their own workplace coach." };
+      return said({ error: "A learner cannot be their own workplace coach." });
     }
     if (error instanceof Error && error.name === "ZodError") {
-      return { error: "Fill in the employer's name." };
+      return said({ error: "Fill in the employer's name." });
     }
     throw error;
   }
@@ -185,23 +185,23 @@ export async function openLogbookAction(
   const curriculumModuleId = String(formData.get("curriculumModuleId") ?? "");
 
   if (!agreementId || !curriculumModuleId) {
-    return { error: "Choose an agreement and a work experience module." };
+    return said({ error: "Choose an agreement and a work experience module." });
   }
 
   try {
     await openLogbook(session, agreementId, curriculumModuleId);
     revalidatePath("/workplace");
     revalidatePath("/workplace/setup");
-    return { message: "Logbook opened. The learner can start recording." };
+    return said({ message: "Logbook opened. The learner can start recording." });
   } catch (error) {
     const described = describe(error);
-    if (described) return described;
+    if (described) return said(described);
 
     // One logbook per learner per module, enforced by a unique index.
     if (String((error as { cause?: unknown }).cause).includes("duplicate key")) {
-      return {
+      return said({
         error: "That learner already has a logbook open for this module.",
-      };
+      });
     }
     throw error;
   }

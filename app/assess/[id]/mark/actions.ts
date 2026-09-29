@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/request";
+import { requirePermission, said } from "@/lib/request";
 import {
   commentOnSection,
   markItem,
@@ -38,13 +38,13 @@ export async function commentOnSectionAction(
     });
   } catch (error) {
     if (error instanceof MarkingError || error instanceof PermissionDeniedError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
 
   revalidatePath(`/assess/${submissionId}/mark`);
-  return { saved: sectionId };
+  return said({ saved: sectionId });
 }
 
 export async function markItemAction(
@@ -75,13 +75,13 @@ export async function markItemAction(
     });
   } catch (error) {
     if (error instanceof MarkingError || error instanceof PermissionDeniedError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
 
   revalidatePath(`/assess/${submissionId}/mark`);
-  return { marked: itemId };
+  return said({ marked: itemId });
 }
 
 export async function returnFeedbackAction(
@@ -102,12 +102,12 @@ export async function returnFeedbackAction(
     });
   } catch (error) {
     if (error instanceof MarkingError || error instanceof PermissionDeniedError) {
-      return { error: error.message };
+      return said({ error: error.message });
     }
     throw error;
   }
 
   revalidatePath(`/assess/${submissionId}/mark`);
   revalidatePath("/assess");
-  return {};
+  return said({});
 }
