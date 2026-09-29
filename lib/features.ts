@@ -83,7 +83,7 @@ export const AWARD_CHOICES: Choice<Award>[] = [
     covers:
       "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
     chooseWhen:
-      "You deliver one occupational qualification as one learning programme. This is Curiosa's shape.",
+      "You deliver one occupational qualification as one learning programme.",
   },
   {
     value: "qualification_and_programme",

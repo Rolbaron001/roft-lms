@@ -2235,7 +2235,7 @@ export const staff = {
   "shape.award.qualification_programme.covers":
     "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
   "shape.award.qualification_programme.when":
-    "You deliver one occupational qualification as one learning programme. This is Curiosa's shape.",
+    "You deliver one occupational qualification as one learning programme.",
   "shape.award.qualification_and_programme.label": "Qualification and Programme, separately",
   "shape.award.qualification_and_programme.covers":
     "Two different things. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
