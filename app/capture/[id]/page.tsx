@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { withTenant } from "@/db/client";
 import { assessmentCriteria, assessments } from "@/db/schema";
 import {
@@ -37,6 +37,7 @@ export default async function ReviewCapturePage({
   const suggested = (await searchParams).assessment ?? null;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
+  const { t, dates } = await pageLocale();
 
   let job;
   try {
@@ -92,21 +93,17 @@ export default async function ReviewCapturePage({
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{job.paperFilename}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {job.guideFilename
-            ? `Read with ${job.guideFilename}.`
-            : "No answer guide was uploaded."}{" "}
-          The original is kept and hashed, so a question in dispute is settled
-          against the document rather than against this reading of it.
+          {job.guideFilename ? t("capture.readWith", { file: job.guideFilename }) : t("capture.noGuide")}{" "}
+          {t("capture.original")}
         </p>
       </div>
 
       {job.committedAt ? (
         <Card>
           <p className="text-sm">
-            This was committed on{" "}
-            {job.committedAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.
-            An upload is committed once; upload the document again to make
-            another paper from it.
+            {t("capture.committedLong", {
+              date: job.committedAt.toLocaleDateString(dates, { dateStyle: "long" }),
+            })}
           </p>
         </Card>
       ) : (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { Rich } from "@/components/rich-text";
 import { IngestError, getIngestJob } from "@/lib/folder-import";
 import type { IngestionPlan } from "@/lib/folder-plan";
 import { withTenant } from "@/db/client";
@@ -18,6 +19,7 @@ export default async function ImportJobPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+  const t = await pageT();
 
   let job;
   try {
@@ -58,32 +60,29 @@ export default async function ImportJobPage({
         }
         className="text-sm text-[var(--muted)] hover:underline"
       >
-        ←{" "}
         {job.qualificationId || job.target?.qualificationId
-          ? "Back to the qualification"
-          : "Back to the folders that have been read"}
+          ? t("imports.backQualification")
+          : t("imports.backFolders")}
       </Link>
 
       <h1 className="mt-2 font-mono text-lg font-semibold break-all">
         {job.sourcePath}
       </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Read{" "}
-        <ZonedTime at={job.requestedAt} zone={tenant.timezone} withDate /> ·{" "}
-        {job.files.length} files
+        <Rich
+          text={t("imports.readAt", { count: job.files.length })}
+          parts={{ time: <ZonedTime at={job.requestedAt} zone={tenant.timezone} withDate /> }}
+        />
       </p>
 
       <div className="mt-6">
-        <Card
-          title="What was in the folder"
-          description="Everything found, and what was done with it. PDFs and Word documents are converted with the same extractor the rest of the platform uses, so the model reads exactly what Capture would."
-        >
+        <Card title={t("imports.contents")} description={t("imports.contentsNote")}>
           <ul className="space-y-1 text-sm">
             {job.files.map((file) => (
               <li key={file.name} className="flex flex-wrap gap-x-3">
                 <span className="font-mono text-xs">{file.name}</span>
                 <span className="text-[var(--muted)]">
-                  {Math.max(1, Math.round(file.bytes / 1024))} KB
+                  {t("imports.kb", { size: Math.max(1, Math.round(file.bytes / 1024)) })}
                 </span>
                 <span
                   className={
@@ -93,10 +92,10 @@ export default async function ImportJobPage({
                   }
                 >
                   {file.kind === "text"
-                    ? "read"
+                    ? t("imports.file.read")
                     : file.kind === "convert"
-                      ? "converted and read"
-                      : "not read"}
+                      ? t("imports.file.converted")
+                      : t("imports.file.notRead")}
                 </span>
               </li>
             ))}
@@ -106,7 +105,7 @@ export default async function ImportJobPage({
 
       {job.error ? (
         <div className="mt-6">
-          <Card title="It did not work" description="">
+          <Card title={t("imports.failed")} description="">
             <p className="text-sm">{job.error}</p>
           </Card>
         </div>
@@ -114,10 +113,7 @@ export default async function ImportJobPage({
 
       {plan ? (
         <div className="mt-6">
-          <Card
-            title="What it proposes"
-            description="Everything in one place. The warnings are the part that matters - read those before anything else."
-          >
+          <Card title={t("imports.proposes")} description={t("imports.proposesNote")}>
             <Proposal
               jobId={job.id}
               status={job.status}

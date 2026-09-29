@@ -7,23 +7,13 @@ import {
   discardImportAction,
   type ImportActionState,
 } from "../actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
 const buttonClass =
   "rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60";
-
-const COMPONENT_LABEL: Record<string, string> = {
-  knowledge: "Knowledge",
-  practical: "Practical",
-  workplace: "Work experience",
-};
-
-const TARGET_LABEL: Record<string, string> = {
-  qualification: "the qualification",
-  study_unit: "a study unit",
-  library: "the document library",
-};
 
 /**
  * The kinds withheld from anybody without the right to assess.
@@ -105,6 +95,7 @@ export function Proposal({
     learningPathId?: string;
   };
 }) {
+  const t = useT();
   const [state, action, committing] = useActionState<
     ImportActionState,
     FormData
@@ -168,7 +159,7 @@ export function Proposal({
                 className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
                 style={{ background: "var(--brand-primary)" }}
               >
-                Open the qualification →
+                {t("proposal.open")}
               </Link>
             </p>
           ) : null}
@@ -187,10 +178,10 @@ export function Proposal({
       */}
       <p className="text-sm text-[var(--muted)]">
         {plan.source === "blueprint"
-          ? "Read from the folder's own blueprint file. The structure below is exactly what that file says — nothing was inferred, and no model was asked."
+          ? t("proposal.fromBlueprint")
           : plan.source === "documents"
-            ? "Read from the documents by the model. Check it against the curriculum document before committing."
-            : "Filed by name. No blueprint and no model were involved: each document went where its filename says it belongs, and the curriculum is untouched."}
+            ? t("proposal.fromDocuments")
+            : t("proposal.byName")}
       </p>
 
       {/*
@@ -202,43 +193,48 @@ export function Proposal({
       */}
       {plan.source === "filing" ? (
         <p className="text-sm">
-          <span className="font-medium">
-            {plan.documents.length} documents
-          </span>{" "}
+          <span className="font-medium">{t("proposal.toFile", { count: plan.documents.length })}</span>{" "}
           <span className="text-[var(--muted)]">
-            to file, and{" "}
+            {t("proposal.toFileRest")}{" "}
             {plan.studyUnits.length > 0
-              ? `${plan.studyUnits.length} study units named by their filenames. `
+              ? `${t("proposal.unitsNamed", { count: plan.studyUnits.length })} `
               : ""}
-            No module, topic or criterion is added or changed by this.
+            {t("proposal.nothingChanged")}
           </span>
         </p>
       ) : (
       <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[10rem_1fr]">
-        <dt className="text-[var(--muted)]">Qualification</dt>
-        <dd className="font-medium">{plan.qualification.title || "Not stated"}</dd>
+        <dt className="text-[var(--muted)]">{t("proposal.qualification")}</dt>
+        <dd className="font-medium">{plan.qualification.title || t("proposal.notStated")}</dd>
         {plan.qualification.saqaId ? (
           <>
-            <dt className="text-[var(--muted)]">SAQA</dt>
+            <dt className="text-[var(--muted)]">{t("proposal.saqa")}</dt>
             <dd>{plan.qualification.saqaId}</dd>
           </>
         ) : null}
         {plan.qualification.curriculumCode ? (
           <>
-            <dt className="text-[var(--muted)]">Curriculum code</dt>
+            <dt className="text-[var(--muted)]">{t("proposal.curriculumCode")}</dt>
             <dd>{plan.qualification.curriculumCode}</dd>
           </>
         ) : null}
-        <dt className="text-[var(--muted)]">Level and credits</dt>
+        <dt className="text-[var(--muted)]">{t("proposal.levelCredits")}</dt>
         <dd>
-          NQF {plan.qualification.nqfLevel ?? "?"} ·{" "}
-          {plan.qualification.credits ?? "?"} credits
+          {t("proposal.nqfCredits", {
+            level: plan.qualification.nqfLevel ?? "?",
+            credits: plan.qualification.credits ?? "?",
+          })}
         </dd>
-        <dt className="text-[var(--muted)]">Will create</dt>
+        <dt className="text-[var(--muted)]">{t("proposal.willCreate")}</dt>
         <dd>
-          {plan.modules.length} modules, {totals.topics} topics,{" "}
-          {totals.elements} elements, {totals.criteria} criteria,{" "}
-          {plan.studyUnits.length} study units, {plan.documents.length} documents
+          {t("proposal.counts", {
+            modules: plan.modules.length,
+            topics: totals.topics,
+            elements: totals.elements,
+            criteria: totals.criteria,
+            units: plan.studyUnits.length,
+            documents: plan.documents.length,
+          })}
         </dd>
       </dl>
       )}
@@ -246,7 +242,7 @@ export function Proposal({
       {/* --- warnings, first and open ------------------------------------- */}
       {plan.warnings.length > 0 ? (
         <div>
-          {section("warnings", "Read this first", plan.warnings.length)}
+          {section("warnings", t("proposal.readFirst"), plan.warnings.length)}
           {open === "warnings" ? (
             <ul className="mt-2 space-y-2 text-sm">
               {plan.warnings.map((warning, index) => (
@@ -261,7 +257,7 @@ export function Proposal({
       {/* A filing run creates no curriculum, so "Curriculum 0" is another
           zero that reads as a failure over a successful import. */}
       <div hidden={plan.source === "filing"}>
-        {section("modules", "Curriculum", plan.modules.length)}
+        {section("modules", t("proposal.curriculum"), plan.modules.length)}
         {open === "modules" ? (
           <ul className="mt-2 space-y-2 text-sm">
             {plan.modules.map((module) => {
@@ -271,15 +267,13 @@ export function Proposal({
                   <span className="font-mono text-xs">{module.code}</span>
                   <span>{module.title}</span>
                   <span className="text-[var(--muted)]">
-                    {COMPONENT_LABEL[module.component ?? ""] ??
-                      `component not stated`}
+                    {maybe(t, `proposal.component.${module.component ?? ""}`) ??
+                      t("proposal.componentUnknown")}
                     {module.credits ? ` · ${module.credits}cr` : ""} ·{" "}
-                    {topics.length} topics ·{" "}
-                    {topics.reduce(
-                      (sum, topic) => sum + (topic.criteria?.length ?? 0),
-                      0,
-                    )}{" "}
-                    criteria
+                    {t("proposal.moduleCounts", {
+                      topics: topics.length,
+                      criteria: topics.reduce((sum, topic) => sum + (topic.criteria?.length ?? 0), 0),
+                    })}
                   </span>
                 </li>
               );
@@ -290,7 +284,7 @@ export function Proposal({
 
       {/* --- documents ---------------------------------------------------- */}
       <div>
-        {section("documents", "Documents", plan.documents.length)}
+        {section("documents", t("proposal.documents"), plan.documents.length)}
 
         {/*
           Who will be able to open these, said before the list rather than
@@ -322,21 +316,16 @@ export function Proposal({
               return (
                 <>
                   <span className="font-medium text-[var(--foreground)]">
-                    {withheld} withheld from learners, {visible} visible to them.
+                    {t("proposal.withheld", { withheld, visible })}
                   </span>{" "}
-                  Memoranda, answer guides and summative papers are withheld
-                  from anybody without the right to assess.
+                  {t("proposal.withheldNote")}
                   {unknown > 0 ? (
                     <>
                       {" "}
                       <span className="font-medium text-[var(--foreground)]">
-                        {unknown} could not be recognised from{" "}
-                        {unknown === 1 ? "its name" : "their names"} and{" "}
-                        {unknown === 1 ? "is" : "are"} filed as “other”, which
-                        is visible to everyone.
+                        {unknown === 1 ? t("proposal.unknownOne") : t("proposal.unknown", { count: unknown })}
                       </span>{" "}
-                      Worth a look below before committing: an answer guide
-                      named in a way these rules do not know would be here.
+                      {t("proposal.unknownNote")}
                     </>
                   ) : null}
                 </>
@@ -352,16 +341,18 @@ export function Proposal({
                 <p className="flex flex-wrap items-baseline gap-x-3">
                   <span className="font-mono text-xs">{document.path}</span>
                   <span className="text-[var(--muted)]">
-                    → {TARGET_LABEL[document.target] ?? document.target}
+                    → {maybe(t, `proposal.target.${document.target}`) ?? document.target}
                     {document.studyUnitCode ? ` (${document.studyUnitCode})` : ""}
-                    {document.kind ? ` as ${document.kind.replace(/_/g, " ")}` : ""}
-                    {document.category ? ` as ${document.category}` : ""}
+                    {document.kind
+                      ? ` ${t("proposal.as", { kind: maybe(t, `docKind.${document.kind}`) ?? document.kind.replace(/_/g, " ") })}`
+                      : ""}
+                    {document.category ? ` ${t("proposal.as", { kind: document.category })}` : ""}
                   </span>
                   {/* Marked on the line itself, so scanning the list answers
                       the question without counting. */}
                   {RESTRICTED_KINDS.has(document.kind ?? "") ? (
                     <span className="rounded bg-[var(--border)]/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--muted)]">
-                      withheld
+                      {t("proposal.withheldTag")}
                     </span>
                   ) : !document.kind || document.kind === "other" ? (
                     <span
@@ -371,7 +362,7 @@ export function Proposal({
                         color: "var(--danger)",
                       }}
                     >
-                      not recognised · visible to all
+                      {t("proposal.unknownTag")}
                     </span>
                   ) : null}
                 </p>
@@ -402,19 +393,17 @@ export function Proposal({
               folder route could read a whole qualification and not create one.
             */
             <label className="block text-sm">
-              <span className="text-[var(--muted)]">
-                Where this goes
-              </span>
+              <span className="text-[var(--muted)]">{t("proposal.where")}</span>
               <select
                 name="qualificationId"
                 className={`${inputClass} mt-1 block w-full max-w-md`}
                 defaultValue=""
               >
                 <option value="">
-                  Create it: {plan.qualification.title || "the qualification this folder describes"}
+                  {t("proposal.create", { title: plan.qualification.title || t("proposal.createDefault") })}
                 </option>
                 {qualifications.length > 0 ? (
-                  <optgroup label="Or add it to one already here">
+                  <optgroup label={t("proposal.orAdd")}>
                     {qualifications.map((qualification) => (
                       <option key={qualification.id} value={qualification.id}>
                         {qualification.title}
@@ -423,10 +412,7 @@ export function Proposal({
                   </optgroup>
                 ) : null}
               </select>
-              <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">
-                Adding it to one already here leaves everything that is there
-                untouched and puts in only what is missing.
-              </span>
+              <span className="mt-1 block max-w-2xl text-xs text-[var(--muted)]">{t("proposal.addNote")}</span>
             </label>
           ) : (
             // Already decided: this folder was read from the thing it belongs
@@ -453,32 +439,20 @@ export function Proposal({
                 // somebody reading a familiar list under a commit button will
                 // reasonably fear a second copy of it. Said before the button,
                 // not after.
-                <p className="max-w-2xl text-sm text-[var(--muted)]">
-                  Added to the qualification you started from. The list above is
-                  everything the folder holds, not everything that will be
-                  created: whatever is already here is left exactly as it is,
-                  and only what is missing is added. You are told afterwards
-                  which modules were already held.
-                </p>
+                <p className="max-w-2xl text-sm text-[var(--muted)]">{t("proposal.topUp")}</p>
               ) : (
                 <p className="text-sm text-[var(--muted)]">
-                  Filed against the{" "}
                   {target.mode === "course"
-                    ? "course"
+                    ? t("proposal.filedCourse")
                     : target.mode === "programme"
-                      ? "programme"
-                      : "qualification"}{" "}
-                  you started from.
+                      ? t("proposal.filedProgramme")
+                      : t("proposal.filedQualification")}
                 </p>
               )}
             </>
           )}
 
-          <p className="max-w-2xl text-xs text-[var(--muted)]">
-            Everything above goes in at once, through the same checks that apply
-            to anything built by hand. Whatever those checks turn away is
-            reported rather than skipped quietly.
-          </p>
+          <p className="max-w-2xl text-xs text-[var(--muted)]">{t("proposal.checks")}</p>
 
           <div className="flex flex-wrap gap-2">
             <button
@@ -486,7 +460,7 @@ export function Proposal({
               disabled={committing}
               className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {committing ? "Committing…" : "Commit all of it"}
+              {committing ? t("proposal.committing") : t("proposal.commit")}
             </button>
           </div>
         </form>
@@ -496,12 +470,9 @@ export function Proposal({
         <form action={discardAction}>
           <input type="hidden" name="jobId" value={jobId} />
           <button type="submit" className={buttonClass}>
-            Discard
+            {t("proposal.discard")}
           </button>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Kept on the record. What was proposed and rejected is how anybody
-            judges whether the extension is worth having.
-          </p>
+          <p className="mt-2 text-xs text-[var(--muted)]">{t("proposal.discardNote")}</p>
         </form>
       ) : null}
     </div>

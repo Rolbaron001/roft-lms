@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { commitCaptureAction, type CaptureState } from "../actions";
 import type { ParsedPaper, ParsedItem } from "@/lib/capture-parse";
 import type { Classified } from "@/lib/capture";
+import { useT } from "@/components/i18n";
 
 /**
  * Confirming — and correcting — what was read out of a Word document.
@@ -40,6 +41,7 @@ export function ReviewForm({
    */
   suggestedAssessmentId?: string | null;
 }) {
+  const t = useT();
   const [state, commit, committing] = useActionState<CaptureState, FormData>(
     commitCaptureAction,
     {},
@@ -79,9 +81,7 @@ export function ReviewForm({
   for (const section of paper.sections) {
     for (const item of section.items) {
       if (item.markedBy === "app" && item.correctIndex === null) {
-        outstanding.push(
-          `"${item.stem.slice(0, 50)}…" is marked by the App but has no correct answer.`,
-        );
+        outstanding.push(t("captureReview.noAnswer", { stem: item.stem.slice(0, 50) }));
       }
     }
     const sectionMarks = section.items.reduce(
@@ -90,7 +90,7 @@ export function ReviewForm({
     );
     if (section.markTotal !== null && section.markTotal !== sectionMarks) {
       outstanding.push(
-        `"${section.title}" is printed as ${section.markTotal} marks but its questions add up to ${sectionMarks}.`,
+        t("captureReview.addsUp", { section: section.title, printed: section.markTotal, sum: sectionMarks }),
       );
     }
   }
@@ -106,8 +106,7 @@ export function ReviewForm({
     <div className="space-y-6">
       {edited ? (
         <p className="rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">
-          You have made corrections. What gets committed is what is on this
-          screen now, not what was read out of the file.
+          {t("captureReview.edited")}
         </p>
       ) : null}
 
@@ -119,24 +118,20 @@ export function ReviewForm({
 
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="text-base font-semibold">The paper</h2>
+          <h2 className="text-base font-semibold">{t("captureReview.paper")}</h2>
           <span className="text-sm text-[var(--muted)]">
-            {allItems.length} questions · {marks} marks · {byApp.length} marked
-            by the App
+            {t("captureReview.summary", { questions: allItems.length, marks, app: byApp.length })}
           </span>
         </div>
 
         {classified ? (
           <p className="mt-1 text-xs text-[var(--muted)]">
-            From the filename:{" "}
-            {[
-              classified.provider,
-              classified.qualification,
-              classified.studyUnit,
-              classified.artefact,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "nothing recognised"}
+            {t("captureReview.fromFilename", {
+              parts:
+                [classified.provider, classified.qualification, classified.studyUnit, classified.artefact]
+                  .filter(Boolean)
+                  .join(" · ") || t("captureReview.nothingRecognised"),
+            })}
           </p>
         ) : null}
 
@@ -146,7 +141,7 @@ export function ReviewForm({
               <p className="text-sm font-medium">
                 {section.title}
                 <span className="ml-2 font-normal text-[var(--muted)]">
-                  printed {section.markTotal ?? "?"} marks
+                  {t("captureReview.printed", { marks: section.markTotal ?? "?" })}
                 </span>
               </p>
 
@@ -165,7 +160,7 @@ export function ReviewForm({
                       }
                       rows={2}
                       className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
-                      aria-label={`Question ${itemIndex + 1} wording`}
+                      aria-label={t("captureReview.wording", { number: itemIndex + 1 })}
                     />
 
                     {item.options.length > 0 ? (
@@ -182,7 +177,9 @@ export function ReviewForm({
                                 })
                               }
                               className="mt-1"
-                              aria-label={`Option ${String.fromCharCode(65 + optionIndex)} is correct`}
+                              aria-label={t("captureReview.optionCorrect", {
+                                letter: String.fromCharCode(65 + optionIndex),
+                              })}
                             />
                             <span className="text-[var(--muted)]">
                               {String.fromCharCode(65 + optionIndex)}.
@@ -196,7 +193,7 @@ export function ReviewForm({
                     <div className="mt-2 flex flex-wrap items-end gap-3 text-xs">
                       <label>
                         <span className="mb-0.5 block text-[var(--muted)]">
-                          Marks
+                          {t("captureReview.marks")}
                         </span>
                         <input
                           type="number"
@@ -217,7 +214,7 @@ export function ReviewForm({
 
                       <label>
                         <span className="mb-0.5 block text-[var(--muted)]">
-                          Marked by
+                          {t("captureReview.markedBy")}
                         </span>
                         <select
                           value={item.markedBy}
@@ -235,14 +232,14 @@ export function ReviewForm({
                           }
                           className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1"
                         >
-                          <option value="app">The App</option>
-                          <option value="assessor">An assessor</option>
+                          <option value="app">{t("captureReview.byApp")}</option>
+                          <option value="assessor">{t("captureReview.byAssessor")}</option>
                         </select>
                       </label>
 
                       <label className="flex-1">
                         <span className="mb-0.5 block text-[var(--muted)]">
-                          Criteria, comma separated
+                          {t("captureReview.criteria")}
                         </span>
                         <input
                           value={item.criterionCodes.join(", ")}
@@ -271,7 +268,7 @@ export function ReviewForm({
         action={commit}
         className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5"
       >
-        <h2 className="text-base font-semibold">Commit this as a paper</h2>
+        <h2 className="text-base font-semibold">{t("captureReview.commit")}</h2>
 
         {state.error ? (
           <p
@@ -287,24 +284,25 @@ export function ReviewForm({
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Which assessment</span>
+            <span className="mb-1 block font-medium">{t("captureReview.which")}</span>
             <select
               name="assessmentId"
               required
               defaultValue={suggestedAssessmentId ?? ""}
               className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             >
-              <option value="">Choose…</option>
+              <option value="">{t("capture.choose")}</option>
               {assessments.map((assessment) => (
                 <option key={assessment.id} value={assessment.id}>
-                  {assessment.title} ({assessment.purpose})
+                  {assessment.title} (
+                  {assessment.purpose === "summative" ? t("common.summative") : t("common.formative")})
                 </option>
               ))}
             </select>
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Paper code</span>
+            <span className="mb-1 block font-medium">{t("captureReview.code")}</span>
             <input
               name="paperCode"
               defaultValue="V1"
@@ -316,13 +314,9 @@ export function ReviewForm({
 
         {unknownCodes.length > 0 ? (
           <p className="mt-3 text-sm text-[var(--muted)]">
-            {unknownCodes.join(", ")}{" "}
             {unknownCodes.length === 1
-              ? "is not a criterion"
-              : "are not criteria"}{" "}
-            on this qualification, so{" "}
-            {unknownCodes.length === 1 ? "it" : "they"} will not be linked.
-            Correct the codes above if that is a typo.
+              ? t("captureReview.unknownOne", { codes: unknownCodes[0] })
+              : t("captureReview.unknown", { codes: unknownCodes.join(", ") })}
           </p>
         ) : null}
 
@@ -336,9 +330,9 @@ export function ReviewForm({
               className="mt-1"
             />
             <span>
-              I have read the {outstanding.length} outstanding{" "}
-              {outstanding.length === 1 ? "item" : "items"} above and want to
-              commit anyway. This is recorded against my name.
+              {outstanding.length === 1
+                ? t("captureReview.acknowledgeOne")
+                : t("captureReview.acknowledge", { count: outstanding.length })}
             </span>
           </label>
         ) : null}
@@ -349,13 +343,10 @@ export function ReviewForm({
           className="mt-4 rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           style={{ background: "var(--brand-primary)" }}
         >
-          {committing ? "Committing…" : "Confirm and commit"}
+          {committing ? t("captureReview.committing") : t("captureReview.confirm")}
         </button>
 
-        <p className="mt-2 text-xs text-[var(--muted)]">
-          Confirming accepts responsibility for every correct answer in this
-          paper. Your name stays on it.
-        </p>
+        <p className="mt-2 text-xs text-[var(--muted)]">{t("captureReview.responsibility")}</p>
       </form>
     </div>
   );
@@ -370,6 +361,7 @@ function Findings({
   original: string[];
   notes: string[];
 }) {
+  const t = useT();
   // Faults the parser found that are about the material rather than the parse
   // — a repeated correct answer, a duplicated question — stay listed even once
   // the mechanical ones are fixed, because only the author can decide them.
@@ -387,17 +379,14 @@ function Findings({
     return (
       <section className="rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/5 p-5">
         <h2 className="text-base font-semibold text-[var(--danger)]">
-          The paper and the guide look swapped
+          {t("captureReview.swapped")}
         </h2>
         <ul className="mt-3 space-y-1.5 text-sm">
           {swapped.map((problem, index) => (
             <li key={index}>· {problem}</li>
           ))}
         </ul>
-        <p className="mt-3 text-sm">
-          Nothing else is listed, because everything else follows from this. Start again with the learner&rsquo;s
-          paper as the paper and the assessor guide as the guide.
-        </p>
+        <p className="mt-3 text-sm">{t("captureReview.swappedNote")}</p>
       </section>
     );
   }
@@ -407,12 +396,11 @@ function Findings({
       {outstanding.length > 0 ? (
         <section className="rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/5 p-5">
           <h2 className="text-base font-semibold text-[var(--danger)]">
-            {outstanding.length}{" "}
-            {outstanding.length === 1 ? "thing needs" : "things need"} fixing
+            {outstanding.length === 1
+              ? t("captureReview.fixOne")
+              : t("captureReview.fix", { count: outstanding.length })}
           </h2>
-          <p className="mt-1 text-sm">
-            Correct these below, or read them and say you want to go on anyway.
-          </p>
+          <p className="mt-1 text-sm">{t("captureReview.fixNote")}</p>
           <ul className="mt-3 space-y-1.5 text-sm">
             {outstanding.map((problem, index) => (
               <li key={index}>· {problem}</li>
@@ -422,22 +410,16 @@ function Findings({
       ) : (
         <section className="rounded-lg border border-[var(--success)]/40 bg-[var(--success)]/5 p-5">
           <h2 className="text-base font-semibold text-[var(--success)]">
-            Nothing outstanding
+            {t("captureReview.clear")}
           </h2>
-          <p className="mt-1 text-sm">
-            Every question the App will mark has an answer, and every section
-            adds up to what it prints.
-          </p>
+          <p className="mt-1 text-sm">{t("captureReview.clearNote")}</p>
         </section>
       )}
 
       {material.length > 0 ? (
         <section className="rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 p-5">
-          <h2 className="text-base font-semibold">About the material itself</h2>
-          <p className="mt-1 text-sm">
-            The document was read correctly. These are things about the paper
-            that only its author can decide.
-          </p>
+          <h2 className="text-base font-semibold">{t("captureReview.material")}</h2>
+          <p className="mt-1 text-sm">{t("captureReview.materialNote")}</p>
           <ul className="mt-3 space-y-1.5 text-sm">
             {material.map((problem, index) => (
               <li key={index}>· {problem}</li>
@@ -449,7 +431,7 @@ function Findings({
       {notes.length > 0 ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Worth knowing
+            {t("captureReview.worthKnowing")}
           </h2>
           <ul className="mt-2 space-y-1.5 text-sm text-[var(--muted)]">
             {notes.map((note, index) => (

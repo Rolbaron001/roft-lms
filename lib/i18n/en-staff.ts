@@ -2529,6 +2529,184 @@ export const staff = {
   "tmpl.addedNote":
     "These are printed after your template. They are not yours to change because they are not yours: a regulator requires them, and a learner holding the document relies on them being true. You do not need to write them into your own version.",
 
+  // Capturing a paper
+  "capture.title": "Capture a paper",
+  "capture.intro":
+    "The App reads what it can, shows you what it made of it and what it could not work out, and waits. Nothing becomes an assessment until you confirm it.",
+  "capture.fromFolder":
+    "If the workbook came in with a folder, it is already here: {link} and capture it from what is filed. There is no second upload, and the answer guide is paired for you. Use the form below only for a paper the platform does not already hold.",
+  "capture.openQualification": "open the qualification",
+  "capture.naming": "How to name the file",
+  "capture.marks": "{marker} marks an answer guide.",
+  "capture.changeNaming": "Change how filenames are read",
+  "capture.uploaded": "Uploaded",
+  "capture.none": "Nothing captured yet",
+  "capture.noneNote":
+    "Open a qualification and capture the workbooks already filed against it, or upload one above. What the App reads is shown to you before any of it becomes an assessment.",
+  "capture.committedOn":
+    "Committed on {date}. An upload is committed once; upload the document again to make another paper from it.",
+  "capture.outstanding": "{count} outstanding",
+  "capture.preview": "Preview",
+  "capture.review": "Review",
+  "capture.which": "Which qualification is this material for?",
+  "capture.choose": "Choose…",
+  "capture.notReadyOption": "not ready",
+  "capture.learnerCopy": "The learner's copy",
+  "capture.guide": "The answer guide",
+  "capture.guideNote": "Without it, no correct answers, marks or criteria can be read.",
+  "capture.reading": "Reading…",
+  "capture.read": "Read these documents",
+  "capture.ready":
+    "Ready. {modules} modules and {criteria} assessment criteria are in, so questions can be linked to what they evidence.",
+  "capture.notReady": "This qualification is not ready for material yet.",
+  "capture.notReadyNote":
+    "Do these first, in this order. Until they are done a question cannot be tagged to what it evidences, and putting that right later means re-tagging every one of them by hand.",
+  "capture.whereDocuments": "Documents are uploaded on the qualification's own page.",
+  "capture.readWith": "Read with {file}.",
+  "capture.noGuide": "No answer guide was uploaded.",
+  "capture.original":
+    "The original is kept and hashed, so a question in dispute is settled against the document rather than against this reading of it.",
+  "capture.committedLong":
+    "This was committed on {date}. An upload is committed once; upload the document again to make another paper from it.",
+
+  // Reviewing what was read out of a paper
+  "captureReview.noAnswer": "“{stem}…” is marked by the App but has no correct answer.",
+  "captureReview.addsUp": "“{section}” is printed as {printed} marks but its questions add up to {sum}.",
+  "captureReview.edited":
+    "You have made corrections. What gets committed is what is on this screen now, not what was read out of the file.",
+  "captureReview.paper": "The paper",
+  "captureReview.summary": "{questions} questions · {marks} marks · {app} marked by the App",
+  "captureReview.fromFilename": "From the filename: {parts}",
+  "captureReview.nothingRecognised": "nothing recognised",
+  "captureReview.printed": "printed {marks} marks",
+  "captureReview.wording": "Question {number} wording",
+  "captureReview.optionCorrect": "Option {letter} is correct",
+  "captureReview.marks": "Marks",
+  "captureReview.markedBy": "Marked by",
+  "captureReview.byApp": "The App",
+  "captureReview.byAssessor": "An assessor",
+  "captureReview.criteria": "Criteria, comma separated",
+  "captureReview.commit": "Commit this as a paper",
+  "captureReview.which": "Which assessment",
+  "captureReview.code": "Paper code",
+  "captureReview.unknownOne":
+    "{codes} is not a criterion on this qualification, so it will not be linked. Correct the codes above if that is a typo.",
+  "captureReview.unknown":
+    "{codes} are not criteria on this qualification, so they will not be linked. Correct the codes above if that is a typo.",
+  "captureReview.acknowledgeOne":
+    "I have read the 1 outstanding item above and want to commit anyway. This is recorded against my name.",
+  "captureReview.acknowledge":
+    "I have read the {count} outstanding items above and want to commit anyway. This is recorded against my name.",
+  "captureReview.committing": "Committing…",
+  "captureReview.confirm": "Confirm and commit",
+  "captureReview.responsibility":
+    "Confirming accepts responsibility for every correct answer in this paper. Your name stays on it.",
+  "captureReview.swapped": "The paper and the guide look swapped",
+  "captureReview.swappedNote":
+    "Nothing else is listed, because everything else follows from this. Start again with the learner's paper as the paper and the assessor guide as the guide.",
+  "captureReview.fixOne": "1 thing needs fixing",
+  "captureReview.fix": "{count} things need fixing",
+  "captureReview.fixNote": "Correct these below, or read them and say you want to go on anyway.",
+  "captureReview.clear": "Nothing outstanding",
+  "captureReview.clearNote": "Every question the App will mark has an answer, and every section adds up to what it prints.",
+  "captureReview.material": "About the material itself",
+  "captureReview.materialNote":
+    "The document was read correctly. These are things about the paper that only its author can decide.",
+  "captureReview.worthKnowing": "Worth knowing",
+
+  // Folders that have been read
+  "imports.title": "Folders that have been read",
+  "imports.intro":
+    "Every folder that has been read, and what became of it. Reading a new one starts where the work is, on the qualification, course or material you are building, rather than here.",
+  "imports.noExtension": "You have not set up an AI extension",
+  "imports.noExtensionNote":
+    "It is optional and yours rather than the tenant's: every member of staff sets up their own, with their own subscription.",
+  "imports.switchOn": "Switch one on",
+  "imports.read": "What has been read",
+  "imports.readNote":
+    "Kept whether committed or discarded. What was proposed and then rejected is how anybody judges whether a reading is worth trusting.",
+  "imports.status.reading": "Reading",
+  "imports.status.proposed": "Waiting to be checked",
+  "imports.status.failed": "Failed",
+  "imports.status.committed": "Committed",
+  "imports.status.discarded": "Discarded",
+  "imports.byAi": "read by an AI extension",
+  "imports.byPlatform": "read by the platform, no AI involved",
+  "imports.backQualification": "← Back to the qualification",
+  "imports.backFolders": "← Back to the folders that have been read",
+  "imports.readAt": "Read {time} · {count} files",
+  "imports.contents": "What was in the folder",
+  "imports.contentsNote":
+    "Everything found, and what was done with it. PDFs and Word documents are converted with the same extractor the rest of the platform uses, so the model reads exactly what Capture would.",
+  "imports.kb": "{size} KB",
+  "imports.file.read": "read",
+  "imports.file.converted": "converted and read",
+  "imports.file.notRead": "not read",
+  "imports.failed": "It did not work",
+  "imports.proposes": "What it proposes",
+  "imports.proposesNote":
+    "Everything in one place. The warnings are the part that matters: read those before anything else.",
+
+  // What a folder reading proposes
+  "proposal.component.knowledge": "Knowledge",
+  "proposal.component.practical": "Practical",
+  "proposal.component.workplace": "Work experience",
+  "proposal.target.qualification": "the qualification",
+  "proposal.target.study_unit": "a study unit",
+  "proposal.target.library": "the document library",
+  "proposal.open": "Open the qualification →",
+  "proposal.fromBlueprint":
+    "Read from the folder's own blueprint file. The structure below is exactly what that file says: nothing was inferred, and no model was asked.",
+  "proposal.fromDocuments":
+    "Read from the documents by the model. Check it against the curriculum document before committing.",
+  "proposal.byName":
+    "Filed by name. No blueprint and no model were involved: each document went where its filename says it belongs, and the curriculum is untouched.",
+  "proposal.toFile": "{count} documents",
+  "proposal.toFileRest": "to file.",
+  "proposal.unitsNamed": "{count} study units are named by their filenames.",
+  "proposal.nothingChanged": "No module, topic or criterion is added or changed by this.",
+  "proposal.qualification": "Qualification",
+  "proposal.notStated": "Not stated",
+  "proposal.saqa": "SAQA",
+  "proposal.curriculumCode": "Curriculum code",
+  "proposal.levelCredits": "Level and credits",
+  "proposal.nqfCredits": "NQF {level} · {credits} credits",
+  "proposal.willCreate": "Will create",
+  "proposal.counts":
+    "{modules} modules, {topics} topics, {elements} elements, {criteria} criteria, {units} study units, {documents} documents",
+  "proposal.readFirst": "Read this first",
+  "proposal.curriculum": "Curriculum",
+  "proposal.componentUnknown": "component not stated",
+  "proposal.moduleCounts": "{topics} topics · {criteria} criteria",
+  "proposal.documents": "Documents",
+  "proposal.withheld": "{withheld} withheld from learners, {visible} visible to them.",
+  "proposal.withheldNote": "Memoranda, answer guides and summative papers are withheld from anybody without the right to assess.",
+  "proposal.unknownOne": "1 could not be recognised from its name and is filed as “other”, which is visible to everyone.",
+  "proposal.unknown":
+    "{count} could not be recognised from their names and are filed as “other”, which is visible to everyone.",
+  "proposal.unknownNote":
+    "Worth a look below before committing: an answer guide named in a way these rules do not know would be here.",
+  "proposal.as": "as {kind}",
+  "proposal.withheldTag": "withheld",
+  "proposal.unknownTag": "not recognised · visible to all",
+  "proposal.where": "Where this goes",
+  "proposal.create": "Create it: {title}",
+  "proposal.createDefault": "the qualification this folder describes",
+  "proposal.orAdd": "Or add it to one already here",
+  "proposal.addNote": "Adding it to one already here leaves everything that is there untouched and puts in only what is missing.",
+  "proposal.topUp":
+    "Added to the qualification you started from. The list above is everything the folder holds, not everything that will be created: whatever is already here is left exactly as it is, and only what is missing is added. You are told afterwards which modules were already held.",
+  "proposal.filedCourse": "Filed against the course you started from.",
+  "proposal.filedProgramme": "Filed against the programme you started from.",
+  "proposal.filedQualification": "Filed against the qualification you started from.",
+  "proposal.checks":
+    "Everything above goes in at once, through the same checks that apply to anything built by hand. Whatever those checks turn away is reported rather than skipped quietly.",
+  "proposal.committing": "Committing…",
+  "proposal.commit": "Commit all of it",
+  "proposal.discard": "Discard",
+  "proposal.discardNote":
+    "Kept on the record. What was proposed and rejected is how anybody judges whether the extension is worth having.",
+
   // A learner's record of one attempt, for the portfolio
   "record.print": "Print this page to keep it as a PDF for the portfolio of evidence.",
   "record.assessed": "assessed",

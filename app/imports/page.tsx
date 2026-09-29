@@ -1,18 +1,11 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
 import { listIngestJobs } from "@/lib/folder-import";
 import { extensionState } from "@/lib/extensions";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { ZonedTime } from "@/components/zoned-time";
-
-const STATUS_LABEL: Record<string, string> = {
-  reading: "Reading",
-  proposed: "Waiting to be checked",
-  failed: "Failed",
-  committed: "Committed",
-  discarded: "Discarded",
-};
 
 /**
  * Building a qualification from a folder of documents.
@@ -26,6 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function AiImportPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("qualification:manage");
+  const t = await pageT();
 
   const extension = await extensionState(session);
   const jobs = await listIngestJobs(session);
@@ -33,12 +27,8 @@ export default async function AiImportPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Folders that have been read</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Every folder that has been read, and what became of it. Reading a new
-          one starts where the work is — on the qualification, course or
-          material you are building — rather than here.
-        </p>
+        <h1 className="text-xl font-semibold">{t("imports.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("imports.intro")}</p>
         {/*
           Was headed "What the AI has read", which was not true of all of it.
           A folder carrying its own blueprint.json is read by this platform
@@ -53,22 +43,16 @@ export default async function AiImportPage() {
       </div>
 
       {!extension.registered ? (
-        <Card
-          title="You have not set up an AI extension"
-          description="It is optional and yours rather than the tenant's — every member of staff sets up their own, with their own subscription."
-        >
+        <Card title={t("imports.noExtension")} description={t("imports.noExtensionNote")}>
           <Link href="/settings" className="text-sm underline">
-            Switch one on
+            {t("imports.switchOn")}
           </Link>
         </Card>
       ) : null}
 
       {jobs.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="What has been read"
-            description="Kept whether committed or discarded. What was proposed and then rejected is how anybody judges whether a reading is worth trusting."
-          >
+          <Card title={t("imports.read")} description={t("imports.readNote")}>
             <ul className="space-y-2 text-sm">
               {jobs.map((job) => (
                 <li key={job.id} className="flex flex-wrap items-baseline gap-x-3">
@@ -86,7 +70,7 @@ export default async function AiImportPage() {
                       showViewer={false}
                     />
                   </span>
-                  <span>{STATUS_LABEL[job.status] ?? job.status}</span>
+                  <span>{maybe(t, `imports.status.${job.status}`) ?? job.status}</span>
                   {/*
                     Whether a model saw these documents. Read from the proposal
                     the reader wrote, rather than inferred from the job, so it
@@ -100,9 +84,7 @@ export default async function AiImportPage() {
 
                     return (
                       <span className="text-xs text-[var(--muted)]">
-                        {source === "documents"
-                          ? "read by an AI extension"
-                          : "read by the platform, no AI involved"}
+                        {source === "documents" ? t("imports.byAi") : t("imports.byPlatform")}
                       </span>
                     );
                   })()}

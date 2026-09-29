@@ -36,6 +36,8 @@ const MOVED = [
   "app/qualifications",
   "app/courses",
   "app/settings",
+  "app/capture",
+  "app/imports",
 ];
 
 /**

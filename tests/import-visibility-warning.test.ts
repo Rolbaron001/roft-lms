@@ -25,12 +25,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
 const root = process.cwd();
-const proposal = readFileSync(
+// With each catalogue phrase back in English (job sheet D9, stage 4).
+const proposal = withPhrases(readFileSync(
   join(root, "app/imports/[id]/proposal.tsx"),
   "utf8",
-);
+));
 const documents = readFileSync(
   join(root, "lib/programme-documents.ts"),
   "utf8",

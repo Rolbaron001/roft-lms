@@ -20,8 +20,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 
-const page = readFileSync(join(process.cwd(), "app/imports/page.tsx"), "utf8");
+// With each catalogue phrase back in English (job sheet D9, stage 4).
+const page = withPhrases(readFileSync(join(process.cwd(), "app/imports/page.tsx"), "utf8"));
 
 describe("the import history", () => {
   it("does not claim a model read everything on it", () => {

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
+import { Rich } from "@/components/rich-text";
 import { listCaptureJobs, namingConventionFor } from "@/lib/capture";
 import { dateInZone } from "@/lib/timezone";
 import { listProgrammeReadiness } from "@/lib/programme-readiness";
@@ -10,6 +12,7 @@ import { UploadForm } from "./upload-form";
 export default async function CapturePage() {
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
+  const t = await pageT();
   const [jobs, programmes, convention] = await Promise.all([
     listCaptureJobs(session),
     listProgrammeReadiness(session),
@@ -19,12 +22,8 @@ export default async function CapturePage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Capture a paper</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The App reads what it can, shows you what it made of it and what it
-          could not work out, and waits. Nothing becomes an assessment until
-          you confirm it.
-        </p>
+        <h1 className="text-xl font-semibold">{t("capture.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("capture.intro")}</p>
 
         {/*
           Said here because this screen never mentioned it.
@@ -39,16 +38,16 @@ export default async function CapturePage() {
           for a paper that never came in with a folder.
         */}
         <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-          If the workbook came in with a folder, it is already here:{" "}
-          <Link
-            href="/qualifications"
-            className="underline underline-offset-2"
-          >
-            open the qualification
-          </Link>{" "}
-          and capture it from what is filed &mdash; no second upload, and the
-          answer guide is paired for you. Use the form below only for a paper
-          the platform does not already hold.
+          <Rich
+            text={t("capture.fromFolder")}
+            parts={{
+              link: (
+                <Link href="/qualifications" className="underline underline-offset-2">
+                  {t("capture.openQualification")}
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
 
@@ -57,22 +56,25 @@ export default async function CapturePage() {
           retyping what the document already says. */}
       <div className="mb-4 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-          How to name the file
+          {t("capture.naming")}
         </p>
         <p className="mt-1 font-mono text-sm">{convention.pattern}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
           {Object.entries(convention.artefactCodes)
-            .map(([code, meaning]) => `${code} = ${meaning.replace(/_/g, " ")}`)
+            .map(
+              ([code, meaning]) =>
+                `${code} = ${maybe(t, `naming.meaning.${meaning}`) ?? meaning.replace(/_/g, " ")}`,
+            )
             .join(" · ")}
           {" · "}
-          {convention.memorandumMarker} marks an answer guide.
+          {t("capture.marks", { marker: convention.memorandumMarker })}
         </p>
         {session.permissions.includes("tenant:manage_settings") ? (
           <Link
             href="/settings"
             className="mt-2 inline-block text-xs underline underline-offset-2"
           >
-            Change how filenames are read
+            {t("capture.changeNaming")}
           </Link>
         ) : null}
       </div>
@@ -81,14 +83,10 @@ export default async function CapturePage() {
 
       <div className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Uploaded
+          {t("capture.uploaded")}
         </h2>
         {jobs.length === 0 ? (
-          <EmptyState title="Nothing captured yet">
-            Open a qualification and capture the workbooks already filed
-            against it, or upload one above. What the App reads is shown to you
-            before any of it becomes an assessment.
-          </EmptyState>
+          <EmptyState title={t("capture.none")}>{t("capture.noneNote")}</EmptyState>
         ) : (
           <ul className="space-y-2">
             {jobs.map((job) => (
@@ -110,8 +108,8 @@ export default async function CapturePage() {
                   <span className="font-medium">{job.paperFilename}</span>
                   <span className="block text-xs text-[var(--muted)]">
                     {job.committedAt
-                      ? `Committed on ${dateInZone(job.committedAt, tenant.timezone)}. An upload is committed once; upload the document again to make another paper from it.`
-                      : `${(job.problems ?? []).length} outstanding`}
+                      ? t("capture.committedOn", { date: dateInZone(job.committedAt, tenant.timezone) })
+                      : t("capture.outstanding", { count: (job.problems ?? []).length })}
                   </span>
                 </span>
                 {/*
@@ -126,7 +124,7 @@ export default async function CapturePage() {
                       href={`/papers/${job.paperId}/preview`}
                       className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
                     >
-                      Preview
+                      {t("capture.preview")}
                     </Link>
                   ) : null
                 ) : (
@@ -134,7 +132,7 @@ export default async function CapturePage() {
                     href={`/capture/${job.id}`}
                     className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
                   >
-                    Review
+                    {t("capture.review")}
                   </Link>
                 )}
               </li>

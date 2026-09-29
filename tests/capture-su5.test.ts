@@ -14,6 +14,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { withPhrases } from "./helpers/phrases";
 import { readDocxText } from "@/lib/office";
 import { mergeMemorandum, parseMemorandum, parseWorkbook } from "@/lib/capture-parse";
 import { chooseGuide, versionOf } from "@/lib/capture-from-documents";
@@ -105,7 +106,7 @@ describe("a paper and its guide with each other's names", () => {
   });
 
   it("is the only thing the review screen shows", () => {
-    const screen = readFileSync(join(process.cwd(), "app/capture/[id]/review-form.tsx"), "utf8");
+    const screen = withPhrases(readFileSync(join(process.cwd(), "app/capture/[id]/review-form.tsx"), "utf8"));
     expect(screen).toMatch(/The paper and the guide look swapped/);
   });
 });
