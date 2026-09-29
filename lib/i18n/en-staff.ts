@@ -2111,6 +2111,424 @@ export const staff = {
     "Paste email addresses, one per line. A column copied straight out of a spreadsheet works.",
   "courseEnrol.enrolAll": "Enrol everyone listed",
 
+  // The list of sections at the top of a long page
+  "pageNav.label": "On this page",
+  "pageNav.settings": "Settings sections",
+
+  // Settings
+  "settings.title": "Settings",
+  "settings.intro":
+    "How {name} looks to your people, and how the App reads the documents they upload. Changes apply everywhere immediately: there is nothing to rebuild or redeploy.",
+  "settings.section.branding": "Branding",
+  "settings.section.clock": "Clock",
+  "settings.section.language": "Language",
+  "settings.section.mail": "Outbound mail",
+  "settings.section.signingIn": "Signing in",
+  "settings.section.terminology": "What you call things",
+  "settings.section.templates": "Templates",
+  "settings.section.menu": "The menu",
+  "settings.section.drives": "File stores",
+  "settings.section.extension": "AI extension",
+  "settings.section.capabilities": "What this platform is",
+  "settings.section.moduleCodes": "Module codes",
+  "settings.section.filenames": "How filenames are read",
+  "settings.drive.connected": "Connected. A folder can now be read straight from it.",
+  "settings.drive.cancelled": "Nothing was connected: the consent was cancelled.",
+  "settings.drive.refused": "That account refused the connection.",
+  "settings.drive.state":
+    "That consent did not match the one this browser started, so nothing was connected. Start again from this page.",
+  "settings.drive.nocode": "The provider sent nothing back to connect with. Try again.",
+  "settings.drive.failed":
+    "The connection could not be completed. Nothing was stored. Trying again is worth doing before anything else.",
+  "settings.mail": "Outbound mail",
+  "settings.mailNote":
+    "Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived.",
+  "settings.sso": "Signing in with Google or Microsoft",
+  "settings.ssoNote":
+    "Lets your people sign in with their organisation's Google or Microsoft account instead of a password here, which keeps working beside it. It only signs in people who already have an account on this platform, matched by email address the first time; it never creates one.",
+  "settings.terminology": "What you call things",
+  "settings.terminologyNote":
+    "Use your own vocabulary. A provider outside South Africa may not say programme, and a provider inside it may not say course; the platform should not insist.",
+  "settings.templates": "Your own documents",
+  "settings.templatesNote": "How each document this provider issues reads and looks.",
+  "settings.templatesLink": "Templates",
+  "settings.templatesMoved":
+    "now under Management, with every document the platform produces and who receives each one.",
+  "settings.menu": "The menu",
+  "settings.menuNote":
+    "Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. The same for everybody at this provider, because staff tell each other where things are.",
+  "settings.drives": "Your file stores",
+  "settings.drivesNote":
+    "Read a folder straight from Google Drive or OneDrive, instead of downloading it and uploading it again. Yours rather than this provider's: every member of staff connects their own.",
+  "settings.extension": "Your AI extension",
+  "settings.extensionNote":
+    "Against your own profile. Optional, off by default, and what it lets you do is bounded by your role exactly as everything else is.",
+
+  // The provider's default language
+  "providerLang.title": "Language",
+  "providerLang.note":
+    "The language your people read the platform in, unless they choose their own under their name at the top of the page. Screens not yet translated stay in English, and your own names for things (Settings, Terminology) are kept as you wrote them in every language.",
+  "providerLang.label": "Default language",
+
+  // Branding
+  "brand.yourOrganisation": "Your organisation",
+  "brand.system": "Learning Management System",
+  "brand.name": "Organisation name",
+  "brand.main": "Main colour",
+  "brand.mainNote": "Headers, buttons and certificates.",
+  "brand.accent": "Accent colour",
+  "brand.accentNote": "Highlights, progress bars and certificate borders.",
+  "brand.logo": "Logo",
+  "brand.logoNote":
+    "Appears in the header, on the sign-in page and on every certificate. A PNG with a transparent background sits best on the header colour. Under 2 MB.",
+  "brand.uploading": "Uploading…",
+  "brand.choose": "Choose an image",
+  "brand.notAccepted": "That image was not accepted.",
+  "brand.unfinished": "The upload did not finish. Check the connection and try again.",
+  "brand.removeLogo": "Remove, and show the name instead",
+  "brand.logoAddress": "Or an address, if the image is already hosted elsewhere",
+  "brand.signIn": "The sign-in page",
+  "brand.signInNote":
+    "Optional. With nothing here the page shows your name on your own colour, which is tidy but plain. A graphic that says something true about what you do is worth more than a decorative one.",
+  "brand.graphic": "Graphic address",
+  "brand.character": "Your character",
+  "brand.characterHint": "https://… or /your-graphic.png",
+  "brand.characterNote":
+    "Appears on a screen with nothing on it yet, beside the sentence explaining what would be there, and beside a button somebody has to press next, where it is there to be noticed. Small, upright, and friendlier than it is decorative. Leave it empty to use this platform's own, or nothing at all.",
+  "brand.strapline": "A line under it",
+  "brand.straplineHint": "Lifelong curiosity",
+  "brand.save": "Save appearance",
+
+  // What this platform is
+  "shape.title": "What this platform is",
+  "shape.intro":
+    "Two questions decide the shape of your platform and what its parts are called. Everything you do not choose goes away: its screens, its menu entries and its addresses.",
+  "shape.nothingDeleted": "Nothing is deleted.",
+  "shape.nothingDeletedNote":
+    "Changing this hides things. Whatever has already been recorded stays where it is, and choosing it again brings the screens back with the records intact.",
+  "shape.saved": "Saved. The menu and the wording have changed to match.",
+  "shape.top": "What sits at the top",
+  "shape.chooseWhen": "Choose this when:",
+  "shape.works": "What a learner works through",
+  "shape.unavailable":
+    "Not available with the choice above. A study unit sits inside a qualification, and this platform has none.",
+  "shape.standalone": "Three things that stand on their own",
+  "shape.switchOffWhen": "Switch it off when:",
+  "shape.switchOnWhen": "Switch it on when:",
+  "shape.statutory": "Statutory reporting",
+  "shape.statutoryCovers": "NLRD and Edu.Dex exports, WSP and ATR returns, and the statutory register behind them.",
+  "shape.statutoryWhen": "you are outside South Africa, or somebody else files on your behalf.",
+  "shape.workplace": "Workplace experience",
+  "shape.workplaceCovers":
+    "Workplace agreements, coach guides, sign off sheets and the hours a learner logs against a host employer.",
+  "shape.workplaceWhen": "nothing you deliver is assessed in a workplace.",
+  "shape.offline": "Working without a signal",
+  "shape.offlineCovers":
+    "Learners install the platform on their phone, download their study material before they go out, read it with no signal, and record their work to send back when they next have one.",
+  "shape.offlineWhen":
+    "learners spend days away from a signal, such as in the field. Summatives stay online unless a programme is deliberately set otherwise.",
+  "shape.gives": "What that gives you",
+  "shape.rename": "You can rename any of these under {link}. Only the words this shape actually uses are offered there.",
+  "shape.renameLink": "What you call things",
+  "shape.save": "Save what this platform is",
+  "shape.award.qualification_programme.label": "Qualification / Programme",
+  "shape.award.qualification_programme.covers":
+    "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
+  "shape.award.qualification_programme.when":
+    "You deliver one occupational qualification as one learning programme. This is Curiosa's shape.",
+  "shape.award.qualification_and_programme.label": "Qualification and Programme, separately",
+  "shape.award.qualification_and_programme.covers":
+    "Two different things. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
+  "shape.award.qualification_and_programme.when":
+    "You run accredited qualifications and also bundle deliverables into sequences that are not one qualification each.",
+  "shape.award.programmes_only.label": "Programmes only",
+  "shape.award.programmes_only.covers":
+    "Programmes bundle what a learner works through. No accreditation record, no curriculum, no statements of results.",
+  "shape.award.programmes_only.when":
+    "Nothing you deliver answers to a registered qualification: induction, compliance refreshers, internal skills programmes.",
+  "shape.award.standalone.label": "Neither",
+  "shape.award.standalone.covers": "Everything stands on its own. Nothing bundles it and nothing accredits it.",
+  "shape.award.standalone.when": "Every piece of training you run is taken on its own, one at a time.",
+  "shape.delivery.courses.label": "Courses",
+  "shape.delivery.courses.covers":
+    "A course is what a learner is put onto and works through: its lessons, its workbooks, its assessments. It may sit under a programme, and it need answer to no qualification.",
+  "shape.delivery.courses.when": "Your people say course, or you build training that no qualification governs.",
+  "shape.delivery.study_units.label": "Study units",
+  "shape.delivery.study_units.covers":
+    "A study unit is what a learner works through, and it replaces the course entirely. It sits inside a qualification, bundling the knowledge, practical and workplace modules that serve one exit level outcome.",
+  "shape.delivery.study_units.when":
+    "Your people say study unit rather than course. The curriculum publishes modules and leaves the grouping to you, so this is your own structure. Requires a qualification at the top.",
+  "shape.layer.qualificationProgramme": "Qualification / Programme",
+  "shape.layer.qualification": "Qualification",
+  "shape.note.qualificationProgramme":
+    "One thing. A learner is put onto the qualification, and that is the programme they work through.",
+  "shape.note.qualification": "The accreditation record: its curriculum, criteria and exit level outcomes.",
+  "shape.note.programmeWithQualification": "An ordered sequence, which may answer to a qualification or to none.",
+  "shape.note.programmeOnly": "An ordered sequence, answering to no registered qualification.",
+  "shape.note.bottom": "What a learner works through. There is nothing below it.",
+
+  // The provider's clock
+  "clock.title": "Your clock",
+  "clock.note":
+    "Every timetabled time in the App means this clock. A lecture at 18:30 is 18:30 here, and an admission cut-off for an invigilated sitting is judged against it.",
+  "clock.zone": "Time zone",
+  "clock.now": "It is {time} there now.",
+  "clock.yours": "You are reading this at {time}.",
+  "clock.both":
+    "Learners in other countries see both: your time, which is the one the record keeps, and their own alongside it, so nobody works out the difference themselves and gets it wrong. Recorded times are always yours.",
+
+  // Testing outbound mail
+  "mailTest.intro":
+    "Opens a connection to the mail server and signs in, to check that learner sign-in details and notifications can actually be delivered.",
+  "mailTest.nothingSent": "No email is sent to anybody.",
+  "mailTest.testing": "Testing…",
+  "mailTest.test": "Test the mail connection",
+  "mailTest.working": "Working",
+  "mailTest.notWorking": "Not working",
+  "mailTest.notYours":
+    "Nothing here is something you can change on this page: the mail server belongs to the deployment. Pass the line above to whoever maintains it.",
+  "mailTest.unconfigured":
+    "No mail server is set up on this deployment yet, so this will report that rather than a fault with your account.",
+
+  // Signing in with Google or Microsoft
+  "sso.on": "· on",
+  "sso.off": "· switched off",
+  "sso.notSetUp": "· not set up",
+  "sso.register":
+    "Register this platform with your organisation's {provider} account and give it this address to send people back to, exactly as written: {address}",
+  "sso.clientId": "Client ID",
+  "sso.secret": "Client secret",
+  "sso.secretHeld": "(held, ending {hint}; blank keeps it)",
+  "sso.directory": "Directory (tenant) ID",
+  "sso.directoryHint": "From the app's Overview page in Microsoft Entra",
+  "sso.domains": "Only these email domains",
+  "sso.domainsNote": "(optional, separated by commas)",
+  "sso.offer": "Offer “Sign in with {provider}” on the sign-in page",
+  "sso.saveChanges": "Save changes",
+  "sso.setUp": "Set up {provider}",
+  "sso.removing": "Removing…",
+  "sso.remove": "Remove {provider} and forget its secret",
+
+  // What a provider calls things
+  "termsForm.standard": "Standard word",
+  "termsForm.one": "You call one",
+  "termsForm.many": "You call several",
+  "termsForm.why.platform": "the platform's word",
+  "termsForm.why.practice": "used across the sector, owned by nobody",
+  "termsForm.oneLabel": "What you call one {word}",
+  "termsForm.manyLabel": "What you call several {words}",
+  "termsForm.missing": "Some words are not on this list, and that is deliberate.",
+  "termsForm.missingNote":
+    "Qualification, curriculum module, exit level outcome, NQF level and the rest are defined by the QCTO or SAQA rather than by you. Renaming one would put wording on a learner's screen and on a submission that the regulator does not recognise, so the platform keeps them fixed. You can read who defines what in the {link}.",
+  "termsForm.dictionary": "dictionary",
+  "termsForm.save": "Save this wording",
+  "termsForm.reset": "Back to the standard wording",
+  "termsForm.note.course": "A single body of learning a person is enrolled onto.",
+  "termsForm.note.programme": "A sequence of courses taken in order.",
+  "termsForm.note.cohort": "A group of people moving through a course together.",
+  "termsForm.note.lesson": "One step inside a course.",
+  "termsForm.note.studyUnit": "How a curriculum's modules are grouped for delivery.",
+  "termsForm.note.enrolment": "A person's place on a course or programme.",
+  "termsForm.note.learner": "The person doing the learning. Some providers say student, or candidate.",
+  "termsForm.note.facilitator": "The person delivering. Some providers say trainer, tutor, or instructor.",
+  "termsForm.note.assessor": "The person judging evidence against the criteria.",
+  "termsForm.note.moderator": "The person checking a sample of those judgements.",
+  "termsForm.note.workplaceRecord":
+    "The record of work a learner did, that a coach signs and an assessor accepts.",
+
+  // Rearranging the menu
+  "menuEdit.newHeading": "New heading",
+  "menuEdit.noHeadingHint": "No heading: shown as direct links",
+  "menuEdit.left": "Move this heading left",
+  "menuEdit.right": "Move this heading right",
+  "menuEdit.empty": "Empty. A heading with nothing under it is not shown.",
+  "menuEdit.up": "Move {page} up",
+  "menuEdit.down": "Move {page} down",
+  "menuEdit.under": "Which heading {page} sits under",
+  "menuEdit.noHeading": "No heading",
+  "menuEdit.add": "Add a heading",
+  "menuEdit.reset": "Back to the standard menu",
+  "menuEdit.note":
+    "Pages cannot be hidden here. What each person sees is already decided by their role, and a second way to make something unreachable would leave nobody able to say why a page is missing. A page added to the platform later appears under its usual heading rather than disappearing because this arrangement predates it.",
+  "menuEdit.save": "Save this arrangement",
+
+  // Connected file stores
+  "drives.none":
+    "No file store is set up on this deployment. Reading a folder straight from Google Drive or OneDrive needs an application registered with them by whoever maintains the platform; until then, a folder is chosen from your own computer, which works and needs nothing.",
+  "drives.connectedAt": "Connected {date}",
+  "drives.lastUsed": ", last used {date}",
+  "drives.notUsed": ", not used yet",
+  "drives.disconnect": "Disconnect",
+  "drives.connect": "Connect {provider}",
+  "drives.keeps": "What the platform keeps.",
+  "drives.keepsNote":
+    "A sealed token that can read, and only read, the drive of the account you connect, until you disconnect it here or withdraw it from that account's own settings. It is used when you ask for a folder to be read and at no other time, it is never shown back to you, and it is never written to a log. It is yours, not this provider's: a colleague cannot read your files through it, and you cannot read theirs through their connection.",
+
+  // Your own AI extension
+  "ext.cred.token": "token",
+  "ext.cred.apiKey": "API key",
+  "ext.stored": "A token is stored",
+  "ext.ending": "Ending {hint}.",
+  "ext.endingSaved": "Ending {hint}, saved {date}.",
+  "ext.encrypted": "It is encrypted and is never shown again, here or anywhere else.",
+  "ext.discard": "Discard it",
+  "ext.which": "Which one",
+  "ext.cannotRunHere": "cannot run on this platform",
+  "ext.cannotRun":
+    "This one cannot run on this platform, so setting it up here will not make the AI features work.",
+  "ext.needsProgram": "It needs a program installed on the machine the platform runs on.",
+  "ext.chooseKey":
+    "Choose one of the API-key providers instead: those call the provider over the internet and work wherever the platform is installed.",
+  "ext.replace": "Replace it with a new {credential}; leave empty to keep the stored one",
+  "ext.yours": "Your {credential}",
+  "ext.geminiHint": "your key from Google AI Studio",
+  "ext.available": "Make it available to switch on",
+  "ext.model": "Model: leave empty for the provider's own default",
+  "ext.asking": "Asking…",
+  "ext.showModels": "Show the models this {credential} can use",
+  "ext.modelsAvailable":
+    "{count} available to you today. Choosing one fills the box above; it is saved when you press Save.",
+  "ext.notReady": "Not ready yet",
+  "ext.keeps": "What the platform keeps.",
+  "ext.keepsNote":
+    "Your {credential}, encrypted, until you discard it. It is used only for work you ask for, only while you have the switch on, and it is never shown back to you or written to any log. Available is not the same as on: every sitting starts with it off, you switch it on for a job, and signing out switches it off for you if you forget.",
+  "ext.keptUnused":
+    "Your token is kept but cannot be used. Nothing in the platform will offer AI assistance until you make it available again.",
+  "ext.offNote":
+    "With this off, the platform behaves exactly as it does without an extension: the affordances are absent rather than offered and failing.",
+  "ext.tokenFrom": "Where the token comes from",
+  "ext.tokenFromNote":
+    "This part happens on your own computer, not here, which is the point: your subscription is authorised by you, on your machine, and only the token it produces ever reaches this platform.",
+  "ext.step1": "1. Install Claude Code",
+  "ext.step1Rest": "if you have not already: {link}. You need a Claude subscription of your own.",
+  "ext.installGuide": "the install guide",
+  "ext.step2": "2. Run this",
+  "ext.windows": "Windows",
+  "ext.unix": "Mac or Linux",
+  "ext.copied": "Copied",
+  "ext.copy": "Copy",
+  "ext.noteCmd": "Note the {cmd}.",
+  "ext.cmdNote":
+    "Plain {plain} in PowerShell usually fails with “running scripts is disabled on this system”. That is a Windows default rather than anything wrong with your installation, and the {cmd} form avoids it without changing any security setting.",
+  "ext.step3": "3. Sign in when it opens your browser",
+  "ext.step3Rest": ", then copy the token it prints (it begins {prefix}) and paste it above.",
+  "ext.notApiKey":
+    "It is not an API key and there is no per-token cost: it draws on the Claude subscription you already pay for. Never give anybody your Anthropic password: this platform has no field for one and would not accept it here.",
+  "ext.keyFrom": "Where the key comes from",
+  "ext.notSubscription": "A subscription is not an API key.",
+  "ext.geminiSeparate":
+    "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it.",
+  "ext.openaiSeparate":
+    "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it.",
+  "ext.openaiCreate": "Create a key at {site}, under {menu}, and paste it above. It begins {prefix}.",
+  "ext.apiKeys": "API keys",
+  "ext.noFreeTier": "There is no free tier:",
+  "ext.noFreeTierNote":
+    "unlike Gemini, every call is charged to the account the key belongs to, so expect a bill, however small.",
+  "ext.geminiCreate":
+    "Sign in at {site}, choose {menu}, create one, and paste it above. Google has issued keys in more than one format, so paste whatever it gives you: this platform does not second-guess it.",
+  "ext.getApiKey": "Get API key",
+  "ext.geminiFree":
+    "The Gemini API has a free tier, so this costs nothing to try. It limits how many requests you may make in a minute rather than charging for them; reading a large folder can hit that, and the platform will say so plainly if it does.",
+  "ext.keyYours":
+    "It is yours, not the tenant's. It is encrypted, used only for work you ask for while your switch is on, never shown back to you, and never written to a log.",
+
+  // The spellings of a module code
+  "codes.title": "Module codes",
+  "codes.intro":
+    "One module is written down differently in different documents: {long} in the curriculum, {short} in the alignment table, {shortest} in a summary. The long identifier, the punctuation and the capitals are handled by rule. This is where the App is told about the rest, so an upload links the module instead of reporting it missing.",
+  "codes.saved": "Saved. Uploads will use these from now on.",
+  "codes.none":
+    "No curriculum has been loaded yet, so there are no standards to infer. Load a qualification and this fills itself in from its module codes.",
+  "codes.inUse": "{total} alternative spellings across {modules} modules, in use.",
+  "codes.proposed": "{total} spellings proposed across {modules} modules.",
+  "codes.notInUse": "Not in use until you have looked at them and confirmed.",
+  "codes.view": "View and edit them",
+  "codes.review": "Review and confirm",
+  "codes.dialogNote":
+    "The code on the left is your standard. The spellings beside it are what a document may use instead. Remove any that do not belong, add your own, then confirm.",
+  "codes.fullId":
+    "A full QCTO identifier, {example}, is read as its module code by rule, and needs no row here. So are hyphens, spaces and capitals.",
+  "codes.module": "Module",
+  "codes.alsoRead": "Also read as",
+  "codes.stopReading": "Stop reading {alias} as {code}",
+  "codes.onlyItself": "Only {code} itself.",
+  "codes.addHint": "add",
+  "codes.another": "Another spelling of {code}",
+  "codes.notOffered": "{alias} was not offered: {because}",
+  "codes.addStandard": "Add a standard code",
+  "codes.add": "Add",
+  "codes.worked": "Its variations are worked out for you.",
+  "codes.putBack": "Put back everything the App proposed",
+  "codes.close": "Close",
+  "codes.closeUnsaved": "Close without saving",
+  "codes.confirm": "Confirm these",
+
+  // How filenames are read
+  "naming.title": "How filenames are read",
+  "naming.intro":
+    "When somebody uploads a workbook or an assessment, the App reads the filename to work out what it is. Get this right and an upload arrives already filled in. Get it wrong and nothing breaks: it arrives as a blank form for somebody to complete by hand.",
+  "naming.rule": "The house rule, as your team should follow it",
+  "naming.ruleNote":
+    "Shown on the upload screen. Guidance for people, not something the App matches on: it finds the codes below wherever they appear.",
+  "naming.codes": "Artefact codes",
+  "naming.codesNote": "The part of a filename that says what kind of document it is. These are what the App actually matches on.",
+  "naming.code": "Artefact code",
+  "naming.means": "means",
+  "naming.meaning": "What this code means",
+  "naming.meaning.workbook": "Workbook (developmental)",
+  "naming.meaning.summative_assessment": "Summative assessment",
+  "naming.meaning.workplace_signoff": "Workplace sign-off",
+  "naming.remove": "Remove",
+  "naming.another": "+ Another code",
+  "naming.marker": "What marks an answer guide",
+  "naming.markerNote": "The token that says a file is the memorandum rather than the learner's copy.",
+  "naming.try": "Try a filename",
+  "naming.sample": "Sample filename",
+  "naming.provider": "Provider",
+  "naming.qualification": "Qualification",
+  "naming.studyUnit": "Study unit",
+  "naming.kind": "Kind of document",
+  "naming.number": "Number",
+  "naming.guide": "Answer guide",
+  "naming.yes": "yes",
+  "naming.no": "no",
+  "naming.unread": "Not read from this name: {parts}. Whoever uploads it fills those in by hand.",
+  "naming.allRead": "Everything was read. An upload named like this arrives already filled in.",
+
+  // Your own document templates
+  "tmpl.kind.statement_of_results": "Statement of Results",
+  "tmpl.kind.certificate": "Certificate",
+  "tmpl.kind.workplace_statement": "Statement of Work Experience",
+  "tmpl.kind.enrolment_form": "Learner Enrolment Form",
+  "tmpl.note.statement_of_results":
+    "Carried to the assessment centre with the learner's identity document. The layout is yours to set; the QCTO's own template shows what one carries.",
+  "tmpl.note.certificate":
+    "What the provider issues for its own programmes. A qualification certificate comes from the QCTO, not from here.",
+  "tmpl.note.workplace_statement": "What a workplace coach signs to confirm the experience a learner completed.",
+  "tmpl.note.enrolment_form":
+    "The completed enrolment form, as a document. A QCTO monitor may ask for it on a visit, so it has to exist on paper, not only as a screen somebody filled in.",
+  "tmpl.which": "Which document",
+  "tmpl.inUse": "In use now",
+  "tmpl.yours": "Your own: “{name}”, version {version}.",
+  "tmpl.platform": "The platform's own layout. Nothing you do here changes a document already issued.",
+  "tmpl.name": "What you call this version",
+  "tmpl.nameHint": "Our Statement of Results, 2026",
+  "tmpl.document": "The document",
+  "tmpl.documentNote":
+    "Write it as you want it to read. Anything in double braces is replaced with the learner's own details when the document is produced, and your spacing is kept exactly as you type it.",
+  "tmpl.starterNote": "This is the platform's own wording, for you to cut down into yours.",
+  "tmpl.saveUse": "Save and use this",
+  "tmpl.saveDraft": "Save as a draft",
+  "tmpl.goingBack": "Going back…",
+  "tmpl.goBack": "Go back to the platform's own layout",
+  "tmpl.fields": "What you can put in it",
+  "tmpl.table": "A table.",
+  "tmpl.example": "For example: {example}",
+  "tmpl.added": "What the platform adds, whatever your template says",
+  "tmpl.addedNote":
+    "These are printed after your template. They are not yours to change because they are not yours: a regulator requires them, and a learner holding the document relies on them being true. You do not need to write them into your own version.",
+
   // A learner's record of one attempt, for the portfolio
   "record.print": "Print this page to keep it as a PDF for the portfolio of evidence.",
   "record.assessed": "assessed",

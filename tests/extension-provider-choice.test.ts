@@ -22,11 +22,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { knownProviders } from "@/lib/extensions";
+import { withPhrases } from "./helpers/phrases";
 
-const form = readFileSync(
+// With each catalogue phrase back in English (job sheet D9, stage 4).
+const form = withPhrases(readFileSync(
   join(process.cwd(), "app/settings/extension-form.tsx"),
   "utf8",
-);
+));
 const page = readFileSync(
   join(process.cwd(), "app/settings/page.tsx"),
   "utf8",

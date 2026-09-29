@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n";
 
 /**
  * What is on this page, and where you are in it, kept in view.
@@ -23,9 +24,9 @@ import { useEffect, useState } from "react";
  * later. Mark a section with `data-page-section="Its name"` and it appears.
  */
 export function PageNav({
-  label = "On this page",
+  label,
   attribute = "data-page-section",
-  ariaLabel = "On this page",
+  ariaLabel,
 }: {
   /** The heading above the list. */
   label?: string;
@@ -33,6 +34,7 @@ export function PageNav({
   attribute?: string;
   ariaLabel?: string;
 }) {
+  const t = useT();
   const [sections, setSections] = useState<{ id: string; label: string }[]>([]);
   const [here, setHere] = useState<string | null>(null);
 
@@ -99,7 +101,7 @@ export function PageNav({
 
   return (
     <nav
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? t("pageNav.label")}
       /*
        * Sticky rather than fixed. Fixed would float over the page from the
        * first pixel and cover the heading somebody just arrived at; sticky
@@ -114,7 +116,7 @@ export function PageNav({
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-          {label}
+          {label ?? t("pageNav.label")}
         </span>
         <ul className="flex flex-wrap gap-x-1 gap-y-1.5 text-sm">
           {sections.map((section) => (

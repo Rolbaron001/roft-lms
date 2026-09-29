@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { removeSsoAction, saveSsoAction, type SsoState } from "./sso-actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -45,6 +47,7 @@ export function SsoForm({
   callback: string;
   current: Current;
 }) {
+  const t = useT();
   const [saved, save, saving] = useActionState<SsoState, FormData>(saveSsoAction, {});
   const [removed, remove, removing] = useActionState<SsoState, FormData>(removeSsoAction, {});
 
@@ -53,46 +56,50 @@ export function SsoForm({
       <h3 className="text-sm font-semibold">
         {label}{" "}
         <span className="font-normal text-[var(--muted)]">
-          {current ? (current.enabled ? "· on" : "· switched off") : "· not set up"}
+          {current ? (current.enabled ? t("sso.on") : t("sso.off")) : t("sso.notSetUp")}
         </span>
       </h3>
       <p className="text-xs text-[var(--muted)]">
-        Register this platform with your organisation&rsquo;s {label} account and give it this address to send people back
-        to, exactly as written:{" "}
-        <span className="break-all font-mono text-[var(--foreground,inherit)]">{callback}</span>
+        <Rich
+          text={t("sso.register")}
+          parts={{
+            provider: label,
+            address: <span className="break-all font-mono text-[var(--foreground,inherit)]">{callback}</span>,
+          }}
+        />
       </p>
 
       <form action={save} className="grid gap-3 sm:grid-cols-2">
         <input type="hidden" name="kind" value={kind} />
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Client ID</span>
+          <span className="block text-sm font-medium">{t("sso.clientId")}</span>
           <input name="clientId" required defaultValue={current?.clientId ?? ""} autoComplete="off" className={inputClass} />
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">
-            Client secret{" "}
+            {t("sso.secret")}{" "}
             {current?.secretHint ? (
-              <span className="font-normal text-[var(--muted)]">(held, ending {current.secretHint}; blank keeps it)</span>
+              <span className="font-normal text-[var(--muted)]">{t("sso.secretHeld", { hint: current.secretHint })}</span>
             ) : null}
           </span>
           <input name="clientSecret" type="password" required={!current} autoComplete="new-password" className={inputClass} />
         </label>
         {kind === "microsoft" ? (
           <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">Directory (tenant) ID</span>
+            <span className="block text-sm font-medium">{t("sso.directory")}</span>
             <input
               name="directoryId"
               required
               defaultValue={current?.directoryId ?? ""}
-              placeholder="From the app's Overview page in Microsoft Entra"
+              placeholder={t("sso.directoryHint")}
               className={inputClass}
             />
           </label>
         ) : null}
         <label className="block space-y-1.5 sm:col-span-2">
           <span className="block text-sm font-medium">
-            Only these email domains{" "}
-            <span className="font-normal text-[var(--muted)]">(optional, separated by commas)</span>
+            {t("sso.domains")}{" "}
+            <span className="font-normal text-[var(--muted)]">{t("sso.domainsNote")}</span>
           </span>
           <input
             name="allowedDomains"
@@ -103,7 +110,7 @@ export function SsoForm({
         </label>
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <input name="enabled" type="checkbox" defaultChecked={current?.enabled ?? true} />
-          Offer &ldquo;Sign in with {label}&rdquo; on the sign-in page
+          {t("sso.offer", { provider: label })}
         </label>
         <div className="space-y-2 sm:col-span-2">
           <Message state={saved} />
@@ -112,7 +119,7 @@ export function SsoForm({
             disabled={saving}
             className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {saving ? "Saving…" : current ? "Save changes" : `Set up ${label}`}
+            {saving ? t("common.saving") : current ? t("sso.saveChanges") : t("sso.setUp", { provider: label })}
           </button>
         </div>
       </form>
@@ -125,7 +132,7 @@ export function SsoForm({
             disabled={removing}
             className="rounded-md border border-[var(--danger)]/40 px-3 py-1.5 text-sm text-[var(--danger)] disabled:opacity-60"
           >
-            {removing ? "Removing…" : `Remove ${label} and forget its secret`}
+            {removing ? t("sso.removing") : t("sso.remove", { provider: label })}
           </button>
           <Message state={removed} />
         </form>

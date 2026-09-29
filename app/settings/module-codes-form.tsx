@@ -10,6 +10,8 @@ import {
   updateModuleCodesAction,
   type ModuleCodesState,
 } from "./module-codes-actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const field =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -39,6 +41,7 @@ export function ModuleCodesForm({
   rows: AliasRow[];
   confirmed: boolean;
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<ModuleCodesState, FormData>(
     updateModuleCodesAction,
     {},
@@ -150,20 +153,21 @@ export function ModuleCodesForm({
   return (
     <section
       id="module-codes"
-      data-settings-section="Module codes"
+      data-settings-section={t("settings.section.moduleCodes")}
       className="scroll-mt-24 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
     >
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        Module codes
+        {t("codes.title")}
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-        One module is written down differently in different documents &mdash;
-        <span className="font-mono"> 242303-001-00-KM-01 </span> in the
-        curriculum, <span className="font-mono">KM-01</span> in the alignment
-        table, <span className="font-mono">KM1</span> in a summary. The long
-        identifier, the punctuation and the capitals are handled by rule. This
-        is where the App is told about the rest, so an upload links the module
-        instead of reporting it missing.
+        <Rich
+          text={t("codes.intro")}
+          parts={{
+            long: <span className="font-mono">242303-001-00-KM-01</span>,
+            short: <span className="font-mono">KM-01</span>,
+            shortest: <span className="font-mono">KM1</span>,
+          }}
+        />
       </p>
 
       {state.error ? (
@@ -180,29 +184,25 @@ export function ModuleCodesForm({
           className="mt-3 rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm"
           style={{ color: "var(--success)" }}
         >
-          Saved. Uploads will use these from now on.
+          {t("codes.saved")}
         </p>
       ) : null}
 
       <p className="mt-3 text-sm">
         {rows.length === 0 ? (
-          <span className="text-[var(--muted)]">
-            No curriculum has been loaded yet, so there are no standards to
-            infer. Load a qualification and this fills itself in from its
-            module codes.
-          </span>
+          <span className="text-[var(--muted)]">{t("codes.none")}</span>
         ) : confirmed ? (
-          <>
-            <strong>{total}</strong> alternative spellings across{" "}
-            <strong>{rows.length}</strong> modules, in use.
-          </>
+          <Rich
+            text={t("codes.inUse")}
+            parts={{ total: <strong>{total}</strong>, modules: <strong>{rows.length}</strong> }}
+          />
         ) : (
           <>
-            <strong>{total}</strong> spellings proposed across{" "}
-            <strong>{rows.length}</strong> modules.{" "}
-            <span style={{ color: "var(--danger)" }}>
-              Not in use until you have looked at them and confirmed.
-            </span>
+            <Rich
+              text={t("codes.proposed")}
+              parts={{ total: <strong>{total}</strong>, modules: <strong>{rows.length}</strong> }}
+            />{" "}
+            <span style={{ color: "var(--danger)" }}>{t("codes.notInUse")}</span>
           </>
         )}
       </p>
@@ -214,7 +214,7 @@ export function ModuleCodesForm({
           className="mt-3 rounded-md px-3 py-1.5 text-sm font-medium text-white"
           style={{ background: "var(--brand-primary)" }}
         >
-          {confirmed ? "View and edit them" : "Review and confirm"} &rarr;
+          {confirmed ? t("codes.view") : t("codes.review")} &rarr;
         </button>
       ) : null}
 
@@ -225,17 +225,13 @@ export function ModuleCodesForm({
       >
         <form action={act}>
           <div className="border-b border-[var(--border)] px-6 py-4">
-            <h3 className="text-base font-semibold">Module codes</h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              The code on the left is your standard. The spellings beside it
-              are what a document may use instead. Remove any that do not
-              belong, add your own, then confirm.
-            </p>
+            <h3 className="text-base font-semibold">{t("codes.title")}</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">{t("codes.dialogNote")}</p>
             <p className="mt-2 text-xs text-[var(--muted)]">
-              A full QCTO identifier &mdash;{" "}
-              <span className="font-mono">242303-001-00-KM-01</span> &mdash; is
-              read as its module code by rule, and needs no row here. So are
-              hyphens, spaces and capitals.
+              <Rich
+                text={t("codes.fullId")}
+                parts={{ example: <span className="font-mono">242303-001-00-KM-01</span> }}
+              />
             </p>
           </div>
 
@@ -243,8 +239,8 @@ export function ModuleCodesForm({
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                  <th className="pb-2 pr-4 font-medium">Module</th>
-                  <th className="pb-2 font-medium">Also read as</th>
+                  <th className="pb-2 pr-4 font-medium">{t("codes.module")}</th>
+                  <th className="pb-2 font-medium">{t("codes.alsoRead")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,7 +263,7 @@ export function ModuleCodesForm({
                             <button
                               type="button"
                               onClick={() => removeAlias(row.canonical, alias)}
-                              aria-label={`Stop reading ${alias} as ${row.canonical}`}
+                              aria-label={t("codes.stopReading", { alias, code: row.canonical })}
                               className="text-[var(--muted)] hover:text-[var(--danger)]"
                             >
                               &times;
@@ -277,7 +273,7 @@ export function ModuleCodesForm({
 
                         {row.aliases.length === 0 ? (
                           <span className="text-xs text-[var(--muted)]">
-                            Only {row.canonical} itself.
+                            {t("codes.onlyItself", { code: row.canonical })}
                           </span>
                         ) : null}
 
@@ -297,8 +293,8 @@ export function ModuleCodesForm({
                               addAlias(row.canonical);
                             }
                           }}
-                          placeholder="add"
-                          aria-label={`Another spelling of ${row.canonical}`}
+                          placeholder={t("codes.addHint")}
+                          aria-label={t("codes.another", { code: row.canonical })}
                           className={`${field} w-24 font-mono text-xs`}
                         />
                       </div>
@@ -313,8 +309,13 @@ export function ModuleCodesForm({
                         <ul className="mt-1.5 space-y-0.5 text-xs text-[var(--muted)]">
                           {row.rejected.map((one) => (
                             <li key={one.alias}>
-                              <span className="font-mono">{one.alias}</span> was
-                              not offered &mdash; {one.because}
+                              <Rich
+                                text={t("codes.notOffered")}
+                                parts={{
+                                  alias: <span className="font-mono">{one.alias}</span>,
+                                  because: one.because,
+                                }}
+                              />
                             </li>
                           ))}
                         </ul>
@@ -332,7 +333,7 @@ export function ModuleCodesForm({
             */}
             <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
               <label htmlFor="new-standard" className="text-sm">
-                Add a standard code
+                {t("codes.addStandard")}
               </label>
               <input
                 id="new-standard"
@@ -352,11 +353,9 @@ export function ModuleCodesForm({
                 onClick={addStandard}
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
               >
-                Add
+                {t("codes.add")}
               </button>
-              <span className="text-xs text-[var(--muted)]">
-                Its variations are worked out for you.
-              </span>
+              <span className="text-xs text-[var(--muted)]">{t("codes.worked")}</span>
             </div>
           </div>
 
@@ -386,7 +385,7 @@ export function ModuleCodesForm({
               className="mx-6 mb-2 rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm"
               style={{ color: "var(--success)" }}
             >
-              Saved. Uploads will use these from now on.
+              {t("codes.saved")}
             </p>
           ) : null}
 
@@ -396,7 +395,7 @@ export function ModuleCodesForm({
               onClick={restoreProposed}
               className="text-sm underline underline-offset-2"
             >
-              Put back everything the App proposed
+              {t("codes.putBack")}
             </button>
 
             <div className="flex gap-2">
@@ -405,7 +404,7 @@ export function ModuleCodesForm({
                 onClick={() => setOpen(false)}
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
               >
-                {state.saved ? "Close" : "Close without saving"}
+                {state.saved ? t("codes.close") : t("codes.closeUnsaved")}
               </button>
               <button
                 type="submit"
@@ -413,7 +412,7 @@ export function ModuleCodesForm({
                 className="rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
                 style={{ background: "var(--brand-primary)" }}
               >
-                {pending ? "Saving…" : "Confirm these"}
+                {pending ? t("common.saving") : t("codes.confirm")}
               </button>
             </div>
           </div>

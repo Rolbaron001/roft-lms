@@ -4,8 +4,6 @@ import { useActionState, useState } from "react";
 import {
   DOCUMENT_FIELDS,
   DOCUMENT_KINDS,
-  DOCUMENT_KIND_LABELS,
-  DOCUMENT_KIND_NOTES,
   STARTER_TEMPLATES,
   STATUTORY_BLOCKS,
   type DocumentKind,
@@ -15,6 +13,7 @@ import {
   saveTemplateAction,
   type TemplateState,
 } from "./template-actions";
+import { useT } from "@/components/i18n";
 
 export type TemplateRow = {
   id: string;
@@ -39,6 +38,7 @@ const inputClass =
  * finished document says everything twice.
  */
 export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
+  const t = useT();
   const [state, save, saving] = useActionState<TemplateState, FormData>(
     saveTemplateAction,
     {},
@@ -62,7 +62,7 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Which document</span>
+          <span className="block text-sm font-medium">{t("tmpl.which")}</span>
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as DocumentKind)}
@@ -70,21 +70,17 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
           >
             {DOCUMENT_KINDS.map((value) => (
               <option key={value} value={value}>
-                {DOCUMENT_KIND_LABELS[value]}
+                {t(`tmpl.kind.${value}`)}
               </option>
             ))}
           </select>
-          <span className="block text-xs text-[var(--muted)]">
-            {DOCUMENT_KIND_NOTES[kind]}
-          </span>
+          <span className="block text-xs text-[var(--muted)]">{t(`tmpl.note.${kind}`)}</span>
         </label>
 
         <div className="text-sm">
-          <span className="block font-medium">In use now</span>
+          <span className="block font-medium">{t("tmpl.inUse")}</span>
           <span className="mt-1.5 block text-[var(--muted)]">
-            {active
-              ? `Your own: “${active.name}”, version ${active.version}.`
-              : "The platform's own layout. Nothing you do here changes a document already issued."}
+            {active ? t("tmpl.yours", { name: active.name, version: active.version }) : t("tmpl.platform")}
           </span>
         </div>
       </div>
@@ -93,20 +89,18 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
         <input type="hidden" name="kind" value={kind} />
 
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">
-            What you call this version
-          </span>
+          <span className="block text-sm font-medium">{t("tmpl.name")}</span>
           <input
             name="name"
             defaultValue={showing?.name ?? ""}
-            placeholder="Our Statement of Results, 2026"
+            placeholder={t("tmpl.nameHint")}
             maxLength={120}
             className={inputClass}
           />
         </label>
 
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">The document</span>
+          <span className="block text-sm font-medium">{t("tmpl.document")}</span>
           {/*
             A provider with no template of their own starts from the platform's
             own wording rather than an empty box. An empty textarea beside a
@@ -122,12 +116,8 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
             key={showing?.id ?? kind}
           />
           <span className="block text-xs text-[var(--muted)]">
-            Write it as you want it to read. Anything in double braces is
-            replaced with the learner&rsquo;s own details when the document is
-            produced, and your spacing is kept exactly as you type it.
-            {showing
-              ? null
-              : " This is the platform's own wording, for you to cut down into yours."}
+            {t("tmpl.documentNote")}
+            {showing ? null : ` ${t("tmpl.starterNote")}`}
           </span>
         </label>
 
@@ -154,7 +144,7 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
             className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             style={{ background: "var(--brand-primary)" }}
           >
-            {saving ? "Saving…" : "Save and use this"}
+            {saving ? t("common.saving") : t("tmpl.saveUse")}
           </button>
           <button
             type="submit"
@@ -163,7 +153,7 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
             disabled={saving}
             className="rounded-md border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60"
           >
-            Save as a draft
+            {t("tmpl.saveDraft")}
           </button>
         </div>
       </form>
@@ -176,16 +166,14 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
             disabled={reverting}
             className="text-sm text-[var(--muted)] underline underline-offset-2 disabled:opacity-60"
           >
-            {reverting
-              ? "Going back…"
-              : "Go back to the platform's own layout"}
+            {reverting ? t("tmpl.goingBack") : t("tmpl.goBack")}
           </button>
         </form>
       ) : null}
 
       <details className="rounded-md border border-[var(--border)] px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium">
-          What you can put in it
+          {t("tmpl.fields")}
         </summary>
         <ul className="mt-3 space-y-1.5">
           {DOCUMENT_FIELDS[kind].map((field) => (
@@ -195,8 +183,8 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
               </code>{" "}
               {field.label}
               <span className="block text-xs text-[var(--muted)]">
-                {field.repeating ? "A table. " : ""}
-                For example: {field.example}
+                {field.repeating ? `${t("tmpl.table")} ` : ""}
+                {t("tmpl.example", { example: field.example })}
               </span>
             </li>
           ))}
@@ -205,14 +193,9 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
 
       <details className="rounded-md border border-[var(--border)] px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium">
-          What the platform adds, whatever your template says
+          {t("tmpl.added")}
         </summary>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          These are printed after your template. They are not yours to change
-          because they are not yours: a regulator requires them, and a learner
-          holding the document relies on them being true. You do not need to
-          write them into your own version.
-        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">{t("tmpl.addedNote")}</p>
         <ul className="mt-3 space-y-2">
           {STATUTORY_BLOCKS[kind].map((block) => (
             <li

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { disconnectDriveAction, type DriveState } from "./drive-actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The drives this person has connected, and connecting another.
@@ -32,20 +33,14 @@ export function DriveConnections({
   offered: { name: string; label: string; description: string }[];
   notice: string | null;
 }) {
+  const t = useT();
   const [state, act, working] = useActionState<DriveState, FormData>(
     disconnectDriveAction,
     {},
   );
 
   if (offered.length === 0) {
-    return (
-      <p className="max-w-2xl text-xs text-[var(--muted)]">
-        No file store is set up on this deployment. Reading a folder straight
-        from Google Drive or OneDrive needs an application registered with them
-        by whoever maintains the platform — until then, a folder is chosen from
-        your own computer, which works and needs nothing.
-      </p>
-    );
+    return <p className="max-w-2xl text-xs text-[var(--muted)]">{t("drives.none")}</p>;
   }
 
   return (
@@ -53,7 +48,7 @@ export function DriveConnections({
       {notice ? (
         <p
           className={`rounded-md border px-3 py-2 text-sm ${
-            notice.startsWith("Connected")
+            notice === t("settings.drive.connected")
               ? "border-[var(--success)]/30 bg-[var(--success)]/5 text-[var(--success)]"
               : "border-[var(--border)] text-[var(--muted)]"
           }`}
@@ -72,14 +67,11 @@ export function DriveConnections({
               <span>
                 <span className="font-medium">{one.label}</span>
                 {one.accountLabel ? (
-                  <span className="text-[var(--muted)]">
-                    {" "}
-                    — {one.accountLabel}
-                  </span>
+                  <span className="text-[var(--muted)]"> · {one.accountLabel}</span>
                 ) : null}
                 <span className="block text-xs text-[var(--muted)]">
-                  Connected {one.connectedAt}
-                  {one.lastUsedAt ? `, last used ${one.lastUsedAt}` : ", not used yet"}
+                  {t("drives.connectedAt", { date: one.connectedAt })}
+                  {one.lastUsedAt ? t("drives.lastUsed", { date: one.lastUsedAt }) : t("drives.notUsed")}
                 </span>
               </span>
 
@@ -90,7 +82,7 @@ export function DriveConnections({
                   disabled={working}
                   className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs disabled:opacity-60"
                 >
-                  Disconnect
+                  {t("drives.disconnect")}
                 </button>
               </form>
             </li>
@@ -107,7 +99,7 @@ export function DriveConnections({
                 href={`/api/drive/${one.name}/connect`}
                 className="inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
               >
-                Connect {one.label}
+                {t("drives.connect", { provider: one.label })}
               </a>
               <p className="max-w-2xl text-xs text-[var(--muted)]">
                 {one.description}
@@ -131,14 +123,7 @@ export function DriveConnections({
         know what they are agreeing to.
       */}
       <p className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-        <span className="font-medium">What the platform keeps.</span> A sealed
-        token that can read — and only read — the drive of the account you
-        connect, until you disconnect it here or withdraw it from that
-        account&rsquo;s own settings. It is used when you ask for a folder to be
-        read and at no other time, it is never shown back to you, and it is
-        never written to a log. It is yours, not this provider&rsquo;s: a
-        colleague cannot read your files through it, and you cannot read theirs
-        through their connection.
+        <span className="font-medium">{t("drives.keeps")}</span> {t("drives.keepsNote")}
       </p>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { PageNav } from "@/components/page-nav";
+import { useT } from "@/components/i18n";
 
 /**
  * What is on the settings page, and how to get to it.
@@ -22,10 +23,6 @@ import { PageNav } from "@/components/page-nav";
  * and this names the attribute the settings sections already carry.
  */
 export function SettingsNav() {
-  return (
-    <PageNav
-      attribute="data-settings-section"
-      ariaLabel="Settings sections"
-    />
-  );
+  const t = useT();
+  return <PageNav attribute="data-settings-section" ariaLabel={t("pageNav.settings")} />;
 }

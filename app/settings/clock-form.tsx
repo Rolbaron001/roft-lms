@@ -9,6 +9,7 @@ import {
   zoneLabel,
 } from "@/lib/timezone";
 import { updateClockAction, type ClockState } from "./actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The provider's own clock.
@@ -27,6 +28,7 @@ export function ClockForm({ current }: { current: string }) {
 }
 
 function ClockFields({ current }: { current: string }) {
+  const t = useT();
   const [state, action, saving] = useActionState<ClockState, FormData>(
     updateClockAction,
     {},
@@ -47,14 +49,11 @@ function ClockFields({ current }: { current: string }) {
   }
 
   return (
-    <Card
-      title="Your clock"
-      description="Every timetabled time in the App means this clock. A lecture at 18:30 is 18:30 here, and an admission cut-off for an invigilated sitting is judged against it."
-    >
+    <Card title={t("clock.title")} description={t("clock.note")}>
       <form action={action} className="space-y-4">
         <div>
           <label htmlFor="timezone" className="block text-sm font-medium">
-            Time zone
+            {t("clock.zone")}
           </label>
           <select
             id="timezone"
@@ -72,24 +71,15 @@ function ClockFields({ current }: { current: string }) {
 
           {preview ? (
             <p className="mt-2 text-sm text-[var(--muted)] tabular-nums">
-              It is {preview} there now.
-              {viewer && viewer !== chosen ? (
-                <>
-                  {" "}
-                  You are reading this at {clockInZone(now, viewer)}{" "}
-                  {zoneLabel(viewer, now)}.
-                </>
-              ) : null}
+              {t("clock.now", { time: preview })}
+              {viewer && viewer !== chosen
+                ? ` ${t("clock.yours", { time: `${clockInZone(now, viewer)} ${zoneLabel(viewer, now)}` })}`
+                : null}
             </p>
           ) : null}
         </div>
 
-        <p className="max-w-2xl text-xs text-[var(--muted)]">
-          Learners in other countries see both: your time, which is the one the
-          record keeps, and their own alongside it, so nobody works out the
-          difference themselves and gets it wrong. Recorded times are always
-          yours.
-        </p>
+        <p className="max-w-2xl text-xs text-[var(--muted)]">{t("clock.both")}</p>
 
         {state.error ? (
           <p className="text-sm text-[var(--danger,#b00020)]">{state.error}</p>
@@ -103,7 +93,7 @@ function ClockFields({ current }: { current: string }) {
           disabled={saving}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? t("common.saving") : t("common.save")}
         </button>
       </form>
     </Card>

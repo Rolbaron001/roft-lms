@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { saveMenuAction, type MenuState } from "./menu-actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -26,6 +27,7 @@ export type MenuSection = { label: string | null; items: MenuPage[] };
  * bar rather than sitting inside a menu, which is how Home and Mail work.
  */
 export function MenuEditor({ current }: { current: MenuSection[] }) {
+  const t = useT();
   const [state, action, saving] = useActionState<MenuState, FormData>(
     saveMenuAction,
     {},
@@ -80,7 +82,7 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
   }
 
   function addSection() {
-    setSections((rows) => [...rows, { label: "New heading", items: [] }]);
+    setSections((rows) => [...rows, { label: t("menuEdit.newHeading"), items: [] }]);
   }
 
   return (
@@ -108,14 +110,14 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
               <input
                 value={section.label ?? ""}
                 onChange={(event) => rename(index, event.target.value)}
-                placeholder="No heading — shown as direct links"
+                placeholder={t("menuEdit.noHeadingHint")}
                 className={`${inputClass} flex-1`}
               />
               <button
                 type="button"
                 onClick={() => moveSection(index, -1)}
                 className="rounded border border-[var(--border)] px-2 py-1 text-xs"
-                aria-label="Move this heading left"
+                aria-label={t("menuEdit.left")}
               >
                 ←
               </button>
@@ -123,16 +125,14 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
                 type="button"
                 onClick={() => moveSection(index, 1)}
                 className="rounded border border-[var(--border)] px-2 py-1 text-xs"
-                aria-label="Move this heading right"
+                aria-label={t("menuEdit.right")}
               >
                 →
               </button>
             </div>
 
             {section.items.length === 0 ? (
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                Empty. A heading with nothing under it is not shown.
-              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">{t("menuEdit.empty")}</p>
             ) : (
               <ul className="mt-2 space-y-1">
                 {section.items.map((item) => (
@@ -151,7 +151,7 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
                       type="button"
                       onClick={() => movePageWithin(index, item.href, -1)}
                       className="rounded border border-[var(--border)] px-2 py-0.5 text-xs"
-                      aria-label={`Move ${item.label} up`}
+                      aria-label={t("menuEdit.up", { page: item.label })}
                     >
                       ↑
                     </button>
@@ -159,7 +159,7 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
                       type="button"
                       onClick={() => movePageWithin(index, item.href, 1)}
                       className="rounded border border-[var(--border)] px-2 py-0.5 text-xs"
-                      aria-label={`Move ${item.label} down`}
+                      aria-label={t("menuEdit.down", { page: item.label })}
                     >
                       ↓
                     </button>
@@ -169,12 +169,12 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
                       onChange={(event) =>
                         movePage(index, item.href, Number(event.target.value))
                       }
-                      aria-label={`Which heading ${item.label} sits under`}
+                      aria-label={t("menuEdit.under", { page: item.label })}
                       className={`${inputClass} py-0.5 text-xs`}
                     >
                       {sections.map((option, at) => (
                         <option key={at} value={at}>
-                          {option.label?.trim() || "No heading"}
+                          {option.label?.trim() || t("menuEdit.noHeading")}
                         </option>
                       ))}
                     </select>
@@ -192,7 +192,7 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
           onClick={addSection}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
         >
-          Add a heading
+          {t("menuEdit.add")}
         </button>
         <button
           type="submit"
@@ -201,7 +201,7 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
           disabled={saving}
           className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--muted)] disabled:opacity-60"
         >
-          Back to the standard menu
+          {t("menuEdit.reset")}
         </button>
       </div>
 
@@ -212,20 +212,14 @@ export function MenuEditor({ current }: { current: MenuSection[] }) {
         <p className="text-sm text-[var(--muted)]">{state.notice}</p>
       ) : null}
 
-      <p className="max-w-2xl text-xs text-[var(--muted)]">
-        Pages cannot be hidden here. What each person sees is already decided by
-        their role, and a second way to make something unreachable would leave
-        nobody able to say why a page is missing. A page added to the platform
-        later appears under its usual heading rather than disappearing because
-        this arrangement predates it.
-      </p>
+      <p className="max-w-2xl text-xs text-[var(--muted)]">{t("menuEdit.note")}</p>
 
       <button
         type="submit"
         disabled={saving}
         className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {saving ? "Saving…" : "Save this arrangement"}
+        {saving ? t("common.saving") : t("menuEdit.save")}
       </button>
     </form>
   );

@@ -276,7 +276,7 @@ describe("the Settings list leaves nothing out", () => {
 
   it("names the filename rules, which were the ones missing", () => {
     expect(source("app/settings/naming-form.tsx")).toMatch(
-      /data-settings-section="How filenames are read"/,
+      /data-settings-section=\W?How filenames are read/,
     );
   });
 });

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { TenantLogo } from "@/components/tenant-logo";
 import { updateBrandingAction, type BrandingState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -20,6 +21,7 @@ export function BrandingForm({
     strapline: string | null;
   };
 }) {
+  const t = useT();
   const [state, action, pending] = useActionState<BrandingState, FormData>(
     updateBrandingAction,
     {},
@@ -65,9 +67,9 @@ export function BrandingForm({
           ) : null}
           <div>
             <p className="text-base font-semibold">
-              {name || "Your organisation"}
+              {name || t("brand.yourOrganisation")}
             </p>
-            <p className="text-xs opacity-75">Learning Management System</p>
+            <p className="text-xs opacity-75">{t("brand.system")}</p>
           </div>
         </div>
         {/*
@@ -90,7 +92,7 @@ export function BrandingForm({
 
       <form action={action} className="space-y-4">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Organisation name</span>
+          <span className="block text-sm font-medium">{t("brand.name")}</span>
           <input
             name="displayName"
             required
@@ -102,14 +104,14 @@ export function BrandingForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Main colour</span>
+            <span className="block text-sm font-medium">{t("brand.main")}</span>
             <div className="flex gap-2">
               <input
                 type="color"
                 value={primary}
                 onChange={(event) => setPrimary(event.target.value)}
                 className="h-9 w-12 rounded border border-[var(--border)]"
-                aria-label="Main colour"
+                aria-label={t("brand.main")}
               />
               <input
                 name="primaryColour"
@@ -118,20 +120,18 @@ export function BrandingForm({
                 className={`${inputClass} font-mono`}
               />
             </div>
-            <span className="block text-xs text-[var(--muted)]">
-              Headers, buttons and certificates.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("brand.mainNote")}</span>
           </label>
 
           <label className="block space-y-1.5">
-            <span className="block text-sm font-medium">Accent colour</span>
+            <span className="block text-sm font-medium">{t("brand.accent")}</span>
             <div className="flex gap-2">
               <input
                 type="color"
                 value={accent}
                 onChange={(event) => setAccent(event.target.value)}
                 className="h-9 w-12 rounded border border-[var(--border)]"
-                aria-label="Accent colour"
+                aria-label={t("brand.accent")}
               />
               <input
                 name="accentColour"
@@ -140,23 +140,17 @@ export function BrandingForm({
                 className={`${inputClass} font-mono`}
               />
             </div>
-            <span className="block text-xs text-[var(--muted)]">
-              Highlights, progress bars and certificate borders.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("brand.accentNote")}</span>
           </label>
         </div>
 
         <div className="space-y-2 rounded-md border border-[var(--border)] p-4">
-          <span className="block text-sm font-medium">Logo</span>
-          <p className="text-xs text-[var(--muted)]">
-            Appears in the header, on the sign-in page and on every certificate.
-            A PNG with a transparent background sits best on the header colour.
-            Under 2 MB.
-          </p>
+          <span className="block text-sm font-medium">{t("brand.logo")}</span>
+          <p className="text-xs text-[var(--muted)]">{t("brand.logoNote")}</p>
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <label className="cursor-pointer rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--brand-accent)]/10">
-              {uploading ? "Uploading…" : "Choose an image"}
+              {uploading ? t("brand.uploading") : t("brand.choose")}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/gif,image/webp"
@@ -178,7 +172,7 @@ export function BrandingForm({
                     });
                     const result = await response.json();
                     if (!response.ok) {
-                      setLogoError(result.error ?? "That image was not accepted.");
+                      setLogoError(result.error ?? t("brand.notAccepted"));
                       return;
                     }
                     // Saved already — the upload writes it. Reflecting it in the
@@ -186,9 +180,7 @@ export function BrandingForm({
                     // than overwriting it with what was there before.
                     setLogo(result.logoUrl);
                   } catch {
-                    setLogoError(
-                      "The upload did not finish. Check the connection and try again.",
-                    );
+                    setLogoError(t("brand.unfinished"));
                   } finally {
                     setUploading(false);
                   }
@@ -202,7 +194,7 @@ export function BrandingForm({
                 onClick={() => setLogo("")}
                 className="text-xs underline underline-offset-2 text-[var(--muted)]"
               >
-                Remove, and show the name instead
+                {t("brand.removeLogo")}
               </button>
             ) : null}
           </div>
@@ -215,7 +207,7 @@ export function BrandingForm({
 
           <label className="block space-y-1.5 pt-2">
             <span className="block text-xs font-medium text-[var(--muted)]">
-              Or an address, if the image is already hosted elsewhere
+              {t("brand.logoAddress")}
             </span>
             <input
               name="logoUrl"
@@ -228,16 +220,12 @@ export function BrandingForm({
         </div>
 
         <div className="space-y-3 rounded-md border border-[var(--border)] p-4">
-          <span className="block text-sm font-medium">The sign-in page</span>
-          <p className="text-xs text-[var(--muted)]">
-            Optional. With nothing here the page shows your name on your own
-            colour, which is tidy but plain. A graphic that says something true
-            about what you do is worth more than a decorative one.
-          </p>
+          <span className="block text-sm font-medium">{t("brand.signIn")}</span>
+          <p className="text-xs text-[var(--muted)]">{t("brand.signInNote")}</p>
 
           <label className="block space-y-1.5">
             <span className="block text-xs font-medium text-[var(--muted)]">
-              Graphic address
+              {t("brand.graphic")}
             </span>
             <input
               name="signInGraphicUrl"
@@ -259,34 +247,28 @@ export function BrandingForm({
           */}
           <label className="block space-y-1.5">
             <span className="block text-xs font-medium text-[var(--muted)]">
-              Your character
+              {t("brand.character")}
             </span>
             <input
               name="illustrationUrl"
               value={illustration}
               onChange={(event) => setIllustration(event.target.value)}
-              placeholder="https://… or /your-graphic.png"
+              placeholder={t("brand.characterHint")}
               className={inputClass}
             />
-            <span className="block text-xs text-[var(--muted)]">
-              Appears on a screen with nothing on it yet, beside the sentence
-              explaining what would be there — and beside a button somebody has
-              to press next, where it is there to be noticed. Small, upright,
-              and friendlier than it is decorative. Leave it empty to use this
-              platform&rsquo;s own, or nothing at all.
-            </span>
+            <span className="block text-xs text-[var(--muted)]">{t("brand.characterNote")}</span>
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-xs font-medium text-[var(--muted)]">
-              A line under it
+              {t("brand.strapline")}
             </span>
             <input
               name="strapline"
               value={strapline}
               onChange={(event) => setStrapline(event.target.value)}
               maxLength={120}
-              placeholder="Lifelong curiosity"
+              placeholder={t("brand.straplineHint")}
               className={inputClass}
             />
           </label>
@@ -298,7 +280,7 @@ export function BrandingForm({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Saving…" : "Save appearance"}
+          {pending ? t("common.saving") : t("brand.save")}
         </button>
       </form>
     </section>

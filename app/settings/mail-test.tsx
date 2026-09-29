@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { testMailAction, type MailTestState } from "./mail-actions";
+import { useT } from "@/components/i18n";
 
 /**
  * The mail test, on the settings page.
@@ -16,6 +17,7 @@ import { testMailAction, type MailTestState } from "./mail-actions";
  * exist.
  */
 export function MailTest({ configured }: { configured: boolean }) {
+  const t = useT();
   const [state, setState] = useState<MailTestState | null>(null);
   const [pending, start] = useTransition();
 
@@ -27,12 +29,8 @@ export function MailTest({ configured }: { configured: boolean }) {
   return (
     <div className="space-y-3">
       <p className="max-w-2xl text-sm text-[var(--muted)]">
-        Opens a connection to the mail server and signs in, to check that
-        learner sign-in details and notifications can actually be delivered.
-        <span className="font-medium text-[var(--foreground)]">
-          {" "}
-          No email is sent to anybody.
-        </span>
+        {t("mailTest.intro")}
+        <span className="font-medium text-[var(--foreground)]"> {t("mailTest.nothingSent")}</span>
       </p>
 
       <button
@@ -41,7 +39,7 @@ export function MailTest({ configured }: { configured: boolean }) {
         disabled={pending}
         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm transition hover:border-[var(--brand-accent)] disabled:opacity-60"
       >
-        {pending ? "Testing…" : "Test the mail connection"}
+        {pending ? t("mailTest.testing") : t("mailTest.test")}
       </button>
 
       {state?.error ? (
@@ -59,7 +57,7 @@ export function MailTest({ configured }: { configured: boolean }) {
             className="font-medium"
             style={{ color: state.ok ? "var(--success)" : "var(--danger)" }}
           >
-            {state.ok ? "Working" : "Not working"}
+            {state.ok ? t("mailTest.working") : t("mailTest.notWorking")}
           </p>
           <p className="mt-1">{state.message}</p>
 
@@ -73,20 +71,13 @@ export function MailTest({ configured }: { configured: boolean }) {
           ) : null}
 
           {!state.ok ? (
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Nothing here is something you can change on this page — the mail
-              server belongs to the deployment. Pass the line above to whoever
-              maintains it.
-            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{t("mailTest.notYours")}</p>
           ) : null}
         </div>
       ) : null}
 
       {!configured && !state ? (
-        <p className="text-xs text-[var(--muted)]">
-          No mail server is set up on this deployment yet, so this will report
-          that rather than a fault with your account.
-        </p>
+        <p className="text-xs text-[var(--muted)]">{t("mailTest.unconfigured")}</p>
       ) : null}
     </div>
   );

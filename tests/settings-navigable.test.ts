@@ -23,16 +23,21 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { en } from "@/lib/i18n/en";
 
 const page = readFileSync(
   join(process.cwd(), "app/settings/page.tsx"),
   "utf8",
 );
 
-/** Each marked section, in the order the page renders them. */
+/**
+ * Each marked section, in the order the page renders them, by its English name.
+ * The names come from the catalogue since job sheet D9, stage 4.
+ */
 function marked(): string[] {
-  return Array.from(page.matchAll(/data-settings-section="([^"]+)"/g)).map(
-    (match) => match[1],
+  const english = en as Record<string, string>;
+  return Array.from(page.matchAll(/data-settings-section=\{t\("([\w.]+)"\)\}/g)).map(
+    (match) => english[match[1]] ?? match[1],
   );
 }
 
@@ -67,7 +72,7 @@ describe("the Settings page", () => {
      */
     const flat = page.replace(/\s+/g, " ");
     const anchored = Array.from(
-      flat.matchAll(/id="[a-z-]+" data-settings-section="/g),
+      flat.matchAll(/id="[a-z-]+" data-settings-section=\{t\(/g),
     );
 
     expect(anchored.length).toBe(marked().length);
@@ -78,7 +83,7 @@ describe("the Settings page", () => {
    * looking at the middle of the section they asked for.
    */
   it("leaves room for the header when jumping", () => {
-    const jumped = Array.from(page.matchAll(/data-settings-section="[^"]+"/g));
+    const jumped = Array.from(page.matchAll(/data-settings-section=\{t\(/g));
     const withRoom = Array.from(page.matchAll(/scroll-mt-24/g));
 
     expect(withRoom.length).toBe(jumped.length);

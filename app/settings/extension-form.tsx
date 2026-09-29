@@ -14,6 +14,8 @@ import {
   type ExtensionState,
   type ModelListState,
 } from "./actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -73,6 +75,7 @@ export type ExtensionView = {
  * every time somebody signs in.
  */
 export function ExtensionForm({ current }: { current: ExtensionView }) {
+  const t = useT();
   const [state, action, saving] = useActionState<ExtensionState, FormData>(
     updateMyExtensionAction,
     {},
@@ -130,18 +133,21 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
    * subscription-backed one anybody adds next, which would be asked for an
    * API key it does not have.
    */
-  const credentialWord = chosen?.credentialWord ?? "token";
-  const isKeyProvider = credentialWord !== "token";
+  const credentialKind = chosen?.credentialWord ?? "token";
+  const isKeyProvider = credentialKind !== "token";
+  // The provider names its credential in English; the reader gets their own word.
+  const credentialWord = isKeyProvider ? t("ext.cred.apiKey") : t("ext.cred.token");
 
   return (
     <form action={action} className="space-y-4">
       {current.registered ? (
         <div className="rounded-md border border-[var(--border)] p-3 text-sm">
-          <p className="font-medium">A token is stored</p>
+          <p className="font-medium">{t("ext.stored")}</p>
           <p className="mt-1 text-[var(--muted)]">
-            Ending {current.tokenHint}
-            {current.tokenAddedAt ? `, saved ${current.tokenAddedAt}` : ""}. It
-            is encrypted and is never shown again, here or anywhere else.
+            {current.tokenAddedAt
+              ? t("ext.endingSaved", { hint: current.tokenHint ?? "", date: current.tokenAddedAt })
+              : t("ext.ending", { hint: current.tokenHint ?? "" })}{" "}
+            {t("ext.encrypted")}
           </p>
           <button
             type="submit"
@@ -150,7 +156,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             disabled={saving}
             className="mt-2 rounded-md border border-[var(--danger)] px-3 py-1 text-xs text-[var(--danger)] disabled:opacity-60"
           >
-            Discard it
+            {t("ext.discard")}
           </button>
         </div>
       ) : null}
@@ -193,7 +199,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
 
       {current.providers.length > 1 ? (
         <label className="block text-sm">
-          <span className="font-medium">Which one</span>
+          <span className="font-medium">{t("ext.which")}</span>
           <select
             ref={providerSelect}
             value={provider}
@@ -203,7 +209,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             {current.providers.map((row) => (
               <option key={row.name} value={row.name}>
                 {row.label}
-                {row.runsHere ? "" : " — cannot run on this platform"}
+                {row.runsHere ? "" : ` · ${t("ext.cannotRunHere")}`}
               </option>
             ))}
           </select>
@@ -216,15 +222,8 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               What it must not do is let them finish and assume it will work.
             */
             <span className="mt-2 block max-w-2xl rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-2 text-xs">
-              <span className="font-medium">
-                This one cannot run on this platform, so setting it up here will
-                not make the AI features work.
-              </span>{" "}
-              {chosen.reason ??
-                "It needs a program installed on the machine the platform runs on."}{" "}
-              Choose one of the API-key providers instead — those call the
-              provider over the internet and work wherever the platform is
-              installed.
+              <span className="font-medium">{t("ext.cannotRun")}</span>{" "}
+              {chosen.reason ?? t("ext.needsProgram")} {t("ext.chooseKey")}
             </span>
           ) : null}
           {chosen ? (
@@ -246,8 +245,8 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
       <label className="block text-sm">
         <span className="text-[var(--muted)]">
           {current.registered
-            ? `Replace it with a new ${credentialWord} — leave empty to keep the stored one`
-            : `Your ${credentialWord}`}
+            ? t("ext.replace", { credential: credentialWord })
+            : t("ext.yours", { credential: credentialWord })}
         </span>
         <input
           name="token"
@@ -260,7 +259,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               half the people holding a valid key that theirs is wrong.
             */
             provider === "gemini"
-              ? "your key from Google AI Studio"
+              ? t("ext.geminiHint")
               : provider === "openai"
                 ? "sk-proj-…"
                 : "sk-ant-oat…"
@@ -278,15 +277,13 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
           checked={available}
           onChange={(event) => setAvailable(event.target.checked)}
         />
-        Make it available to switch on
+        {t("ext.available")}
       </label>
 
       {available ? (
         <>
           <label className="block text-sm">
-            <span className="text-[var(--muted)]">
-              Model — leave empty for the provider&rsquo;s own default
-            </span>
+            <span className="text-[var(--muted)]">{t("ext.model")}</span>
             <input
               name="model"
               value={model}
@@ -324,9 +321,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
                 }
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60"
               >
-                {asking
-                  ? "Asking…"
-                  : `Show the models this ${credentialWord} can use`}
+                {asking ? t("ext.asking") : t("ext.showModels", { credential: credentialWord })}
               </button>
 
               {models.error ? (
@@ -336,8 +331,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               {models.models && models.models.length > 0 ? (
                 <div className="max-h-48 overflow-y-auto rounded-md border border-[var(--border)] p-2">
                   <p className="mb-1 text-xs text-[var(--muted)]">
-                    {models.models.length} available to you today. Choosing one
-                    fills the box above; it is saved when you press Save.
+                    {t("ext.modelsAvailable", { count: models.models.length })}
                   </p>
                   <ul className="flex flex-wrap gap-1">
                     {models.models.map((name) => (
@@ -363,7 +357,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
 
           {current.availability && !current.availability.available ? (
             <div className="rounded-md border border-[var(--border)] p-3 text-sm">
-              <p className="font-medium">Not ready yet</p>
+              <p className="font-medium">{t("ext.notReady")}</p>
               <p className="mt-1 text-[var(--muted)]">
                 {current.availability.reason}
               </p>
@@ -381,19 +375,13 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
             they are agreeing to it.
           */}
           <p className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-            <span className="font-medium">What the platform keeps.</span> Your{" "}
-            {credentialWord}, encrypted, until you discard it. It is used only for work you
-            ask for, only while you have the switch on, and it is never shown
-            back to you or written to any log. Available is not the same as on:
-            every sitting starts with it off, you switch it on for a job, and
-            signing out switches it off for you if you forget.
+            <span className="font-medium">{t("ext.keeps")}</span>{" "}
+            {t("ext.keepsNote", { credential: credentialWord })}
           </p>
         </>
       ) : (
         <p className="max-w-2xl text-xs text-[var(--muted)]">
-          {current.registered
-            ? "Your token is kept but cannot be used. Nothing in the platform will offer AI assistance until you make it available again."
-            : "With this off, the platform behaves exactly as it does without an extension — the affordances are absent rather than offered and failing."}
+          {current.registered ? t("ext.keptUnused") : t("ext.offNote")}
         </p>
       )}
 
@@ -409,7 +397,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
         disabled={saving}
         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60"
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? t("common.saving") : t("common.save")}
       </button>
     </form>
   );
@@ -431,6 +419,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
  * readers by default.
  */
 function SetupGuide() {
+  const t = useT();
   // Read through useSyncExternalStore rather than an effect. The server has no
   // navigator and must render something, and setting state in an effect to
   // correct it afterwards is both a cascading render and a visible flicker.
@@ -468,37 +457,32 @@ function SetupGuide() {
 
   return (
     <div className="max-w-2xl rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-      <p className="text-sm font-medium text-[var(--foreground)]">
-        Where the token comes from
-      </p>
-      <p className="mt-1">
-        This part happens on your own computer, not here — which is the point:
-        your subscription is authorised by you, on your machine, and only the
-        token it produces ever reaches this platform.
-      </p>
+      <p className="text-sm font-medium text-[var(--foreground)]">{t("ext.tokenFrom")}</p>
+      <p className="mt-1">{t("ext.tokenFromNote")}</p>
 
       <ol className="mt-3 space-y-3">
         <li>
-          <span className="font-medium text-[var(--foreground)]">
-            1. Install Claude Code
-          </span>{" "}
-          if you have not already —{" "}
-          <a
-            href="https://code.claude.com/docs/en/setup"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            the install guide
-          </a>
-          . You need a Claude subscription of your own.
+          <span className="font-medium text-[var(--foreground)]">{t("ext.step1")}</span>{" "}
+          <Rich
+            text={t("ext.step1Rest")}
+            parts={{
+              link: (
+                <a
+                  href="https://code.claude.com/docs/en/setup"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {t("ext.installGuide")}
+                </a>
+              ),
+            }}
+          />
         </li>
 
         <li>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-[var(--foreground)]">
-              2. Run this
-            </span>
+            <span className="font-medium text-[var(--foreground)]">{t("ext.step2")}</span>
             <span className="inline-flex overflow-hidden rounded border border-[var(--border)]">
               {(["windows", "unix"] as const).map((option) => (
                 <button
@@ -512,7 +496,7 @@ function SetupGuide() {
                       : "text-[var(--muted)]",
                   ].join(" ")}
                 >
-                  {option === "windows" ? "Windows" : "Mac or Linux"}
+                  {option === "windows" ? t("ext.windows") : t("ext.unix")}
                 </button>
               ))}
             </span>
@@ -527,40 +511,33 @@ function SetupGuide() {
               onClick={copy}
               className="shrink-0 rounded border border-[var(--border)] px-2 py-1 text-[11px]"
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("ext.copied") : t("ext.copy")}
             </button>
           </div>
 
           {system === "windows" ? (
             <p className="mt-1">
               <span className="font-medium text-[var(--foreground)]">
-                Note the <span className="font-mono">.cmd</span>.
+                <Rich text={t("ext.noteCmd")} parts={{ cmd: <span className="font-mono">.cmd</span> }} />
               </span>{" "}
-              Plain <span className="font-mono">claude setup-token</span> in
-              PowerShell usually fails with &ldquo;running scripts is disabled
-              on this system&rdquo;. That is a Windows default rather than
-              anything wrong with your installation, and the{" "}
-              <span className="font-mono">.cmd</span> form avoids it without
-              changing any security setting.
+              <Rich
+                text={t("ext.cmdNote")}
+                parts={{
+                  plain: <span className="font-mono">claude setup-token</span>,
+                  cmd: <span className="font-mono">.cmd</span>,
+                }}
+              />
             </p>
           ) : null}
         </li>
 
         <li>
-          <span className="font-medium text-[var(--foreground)]">
-            3. Sign in when it opens your browser
-          </span>
-          , then copy the token it prints — it begins{" "}
-          <span className="font-mono">sk-ant-oat</span> — and paste it above.
+          <span className="font-medium text-[var(--foreground)]">{t("ext.step3")}</span>
+          <Rich text={t("ext.step3Rest")} parts={{ prefix: <span className="font-mono">sk-ant-oat</span> }} />
         </li>
       </ol>
 
-      <p className="mt-3">
-        It is not an API key and there is no per-token cost: it draws on the
-        Claude subscription you already pay for. Never give anybody your
-        Anthropic password — this platform has no field for one and would not
-        accept it here.
-      </p>
+      <p className="mt-3">{t("ext.notApiKey")}</p>
     </div>
   );
 }
@@ -593,62 +570,46 @@ function detectSystem(): "windows" | "unix" {
  * seems to contradict them.
  */
 function ApiKeyGuide({ provider }: { provider: string }) {
+  const t = useT();
   const gemini = provider === "gemini";
+  const strong = (text: string) => <span className="font-medium text-[var(--foreground)]">{text}</span>;
 
   return (
     <div className="max-w-2xl space-y-2 rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
-      <p className="text-sm font-medium text-[var(--foreground)]">
-        Where the key comes from
-      </p>
+      <p className="text-sm font-medium text-[var(--foreground)]">{t("ext.keyFrom")}</p>
 
       <p>
-        <span className="font-medium text-[var(--foreground)]">
-          A subscription is not an API key.
-        </span>{" "}
-        {gemini
-          ? "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it."
-          : "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it."}
+        {strong(t("ext.notSubscription"))} {gemini ? t("ext.geminiSeparate") : t("ext.openaiSeparate")}
       </p>
 
       {!gemini ? (
         <p>
-          Create a key at{" "}
-          <span className="font-mono">platform.openai.com</span>, under{" "}
-          <span className="font-medium text-[var(--foreground)]">API keys</span>
-          , and paste it above. It begins{" "}
-          <span className="font-mono">sk-</span>.{" "}
-          <span className="font-medium text-[var(--foreground)]">
-            There is no free tier
-          </span>{" "}
-          — unlike Gemini, every call is charged to the account the key belongs
-          to, so expect a bill, however small.
+          <Rich
+            text={t("ext.openaiCreate")}
+            parts={{
+              site: <span className="font-mono">platform.openai.com</span>,
+              menu: strong(t("ext.apiKeys")),
+              prefix: <span className="font-mono">sk-</span>,
+            }}
+          />{" "}
+          {strong(t("ext.noFreeTier"))} {t("ext.noFreeTierNote")}
         </p>
       ) : (
         <>
           <p>
-            Sign in at{" "}
-            <span className="font-mono">aistudio.google.com</span>, choose{" "}
-            <span className="font-medium text-[var(--foreground)]">
-              Get API key
-            </span>
-            , create one, and paste it above. Google has issued keys in more
-            than one format, so paste whatever it gives you — this platform
-            does not second-guess it.
+            <Rich
+              text={t("ext.geminiCreate")}
+              parts={{
+                site: <span className="font-mono">aistudio.google.com</span>,
+                menu: strong(t("ext.getApiKey")),
+              }}
+            />
           </p>
-          <p>
-            The Gemini API has a free tier, so this costs nothing to try. It
-            limits how many requests you may make in a minute rather than
-            charging for them — reading a large folder can hit that, and the
-            platform will say so plainly if it does.
-          </p>
+          <p>{t("ext.geminiFree")}</p>
         </>
       )}
 
-      <p>
-        It is yours, not the tenant&rsquo;s. It is encrypted, used only for work
-        you ask for while your switch is on, never shown back to you, and never
-        written to a log.
-      </p>
+      <p>{t("ext.keyYours")}</p>
     </div>
   );
 }

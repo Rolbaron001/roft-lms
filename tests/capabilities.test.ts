@@ -35,9 +35,11 @@ import {
   structureOf,
 } from "@/lib/features";
 import { NAV } from "@/lib/navigation";
+import { withPhrases } from "./helpers/phrases";
 
+/** With each catalogue phrase back in English (job sheet D9, stage 4). */
 function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+  return withPhrases(readFileSync(join(process.cwd(), path), "utf8"));
 }
 
 describe("a tenant that has never been configured", () => {

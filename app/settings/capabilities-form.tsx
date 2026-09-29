@@ -15,6 +15,9 @@ import {
   updateCapabilitiesAction,
   type CapabilitiesState,
 } from "./capabilities-actions";
+import { useT } from "@/components/i18n";
+import { maybe } from "@/lib/i18n/maybe";
+import { Rich } from "@/components/rich-text";
 
 /**
  * What this provider's platform is, and what its people call the parts.
@@ -45,10 +48,15 @@ export function CapabilitiesForm({
   /** This provider's own word for each layer, so the diagram reads as theirs. */
   words: { programme: string; studyUnit: string; course: string };
 }) {
+  const t = useT();
   const [state, act, pending] = useActionState<CapabilitiesState, FormData>(
     updateCapabilitiesAction,
     {},
   );
+
+  /** A choice's wording in the reader's language, or the library's English. */
+  const said = (group: "award" | "delivery", value: string, part: "label" | "covers" | "when", english: string) =>
+    maybe(t, `shape.${group}.${value}.${part}`) ?? english;
 
   const [award, setAward] = useState<Award>(current.award);
   const [delivery, setDelivery] = useState<Delivery>(current.delivery);
@@ -73,28 +81,37 @@ export function CapabilitiesForm({
           ? words.studyUnit
           : layer.name === "Course"
             ? words.course
-            : layer.name,
-    note: layer.note,
+            : layer.name === "Qualification / Programme"
+              ? t("shape.layer.qualificationProgramme")
+              : layer.name === "Qualification"
+                ? t("shape.layer.qualification")
+                : layer.name,
+    note:
+      layer.name === "Qualification / Programme"
+        ? t("shape.note.qualificationProgramme")
+        : layer.name === "Qualification"
+          ? t("shape.note.qualification")
+          : layer.name === "Programme"
+            ? award === "programmes_only"
+              ? t("shape.note.programmeOnly")
+              : t("shape.note.programmeWithQualification")
+            : layer.note
+              ? t("shape.note.bottom")
+              : undefined,
   }));
 
   return (
     <section
       id="capabilities"
-      data-settings-section="What this platform is"
+      data-settings-section={t("settings.section.capabilities")}
       className="scroll-mt-24 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
     >
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        What this platform is
+        {t("shape.title")}
       </h2>
+      <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">{t("shape.intro")}</p>
       <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-        Two questions decide the shape of your platform and what its parts are
-        called. Everything you do not choose goes away: its screens, its menu
-        entries and its addresses.
-      </p>
-      <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-        <strong>Nothing is deleted.</strong> Changing this hides things.
-        Whatever has already been recorded stays where it is, and choosing it
-        again brings the screens back with the records intact.
+        <strong>{t("shape.nothingDeleted")}</strong> {t("shape.nothingDeletedNote")}
       </p>
 
       {state.error ? (
@@ -111,15 +128,13 @@ export function CapabilitiesForm({
           className="mt-3 rounded-md border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 text-sm"
           style={{ color: "var(--success)" }}
         >
-          Saved. The menu and the wording have changed to match.
+          {t("shape.saved")}
         </p>
       ) : null}
 
       <form action={act} className="mt-5 space-y-6">
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">
-            What sits at the top
-          </legend>
+          <legend className="text-sm font-medium">{t("shape.top")}</legend>
           {AWARD_CHOICES.map((choice) => (
             <label key={choice.value} className="flex items-start gap-2 text-sm">
               <input
@@ -131,12 +146,12 @@ export function CapabilitiesForm({
                 className="mt-1"
               />
               <span>
-                <span className="font-medium">{choice.label}</span>
+                <span className="font-medium">{said("award", choice.value, "label", choice.label)}</span>
                 <span className="block text-xs text-[var(--muted)]">
-                  {choice.covers}
+                  {said("award", choice.value, "covers", choice.covers)}
                 </span>
                 <span className="block text-xs text-[var(--muted)]">
-                  <strong>Choose this when:</strong> {choice.chooseWhen}
+                  <strong>{t("shape.chooseWhen")}</strong> {said("award", choice.value, "when", choice.chooseWhen)}
                 </span>
               </span>
             </label>
@@ -144,9 +159,7 @@ export function CapabilitiesForm({
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">
-            What a learner works through
-          </legend>
+          <legend className="text-sm font-medium">{t("shape.works")}</legend>
           {DELIVERY_CHOICES.map((choice) => {
             const possible = deliveryAvailable(award, choice.value);
 
@@ -167,13 +180,14 @@ export function CapabilitiesForm({
                   className="mt-1"
                 />
                 <span>
-                  <span className="font-medium">{choice.label}</span>
+                  <span className="font-medium">{said("delivery", choice.value, "label", choice.label)}</span>
                   <span className="block text-xs text-[var(--muted)]">
-                    {choice.covers}
+                    {said("delivery", choice.value, "covers", choice.covers)}
                   </span>
                   {possible ? (
                     <span className="block text-xs text-[var(--muted)]">
-                      <strong>Choose this when:</strong> {choice.chooseWhen}
+                      <strong>{t("shape.chooseWhen")}</strong>{" "}
+                      {said("delivery", choice.value, "when", choice.chooseWhen)}
                     </span>
                   ) : (
                     /*
@@ -185,8 +199,7 @@ export function CapabilitiesForm({
                       className="block text-xs"
                       style={{ color: "var(--danger)" }}
                     >
-                      Not available with the choice above. A study unit sits
-                      inside a qualification, and this platform has none.
+                      {t("shape.unavailable")}
                     </span>
                   )}
                 </span>
@@ -196,9 +209,7 @@ export function CapabilitiesForm({
         </fieldset>
 
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">
-            Three things that stand on their own
-          </legend>
+          <legend className="text-sm font-medium">{t("shape.standalone")}</legend>
 
           <label className="flex items-start gap-2 text-sm">
             <input
@@ -208,14 +219,10 @@ export function CapabilitiesForm({
               className="mt-1"
             />
             <span>
-              <span className="font-medium">Statutory reporting</span>
+              <span className="font-medium">{t("shape.statutory")}</span>
+              <span className="block text-xs text-[var(--muted)]">{t("shape.statutoryCovers")}</span>
               <span className="block text-xs text-[var(--muted)]">
-                NLRD and Edu.Dex exports, WSP and ATR returns, and the
-                statutory register behind them.
-              </span>
-              <span className="block text-xs text-[var(--muted)]">
-                <strong>Switch it off when:</strong> you are outside South
-                Africa, or somebody else files on your behalf.
+                <strong>{t("shape.switchOffWhen")}</strong> {t("shape.statutoryWhen")}
               </span>
             </span>
           </label>
@@ -228,14 +235,10 @@ export function CapabilitiesForm({
               className="mt-1"
             />
             <span>
-              <span className="font-medium">Workplace experience</span>
+              <span className="font-medium">{t("shape.workplace")}</span>
+              <span className="block text-xs text-[var(--muted)]">{t("shape.workplaceCovers")}</span>
               <span className="block text-xs text-[var(--muted)]">
-                Workplace agreements, coach guides, sign off sheets and the
-                hours a learner logs against a host employer.
-              </span>
-              <span className="block text-xs text-[var(--muted)]">
-                <strong>Switch it off when:</strong> nothing you deliver is
-                assessed in a workplace.
+                <strong>{t("shape.switchOffWhen")}</strong> {t("shape.workplaceWhen")}
               </span>
             </span>
           </label>
@@ -248,16 +251,10 @@ export function CapabilitiesForm({
               className="mt-1"
             />
             <span>
-              <span className="font-medium">Working without a signal</span>
+              <span className="font-medium">{t("shape.offline")}</span>
+              <span className="block text-xs text-[var(--muted)]">{t("shape.offlineCovers")}</span>
               <span className="block text-xs text-[var(--muted)]">
-                Learners install the platform on their phone, download their
-                study material before they go out, read it with no signal, and
-                record their work to send back when they next have one.
-              </span>
-              <span className="block text-xs text-[var(--muted)]">
-                <strong>Switch it on when:</strong> learners spend days away
-                from a signal, such as in the field. Summatives stay online
-                unless a programme is deliberately set otherwise.
+                <strong>{t("shape.switchOnWhen")}</strong> {t("shape.offlineWhen")}
               </span>
             </span>
           </label>
@@ -273,7 +270,7 @@ export function CapabilitiesForm({
         */}
         <div className="rounded-md border border-[var(--border)] bg-[var(--bg)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            What that gives you
+            {t("shape.gives")}
           </p>
           <ol className="mt-2 space-y-1.5">
             {shape.map((layer, index) => (
@@ -298,11 +295,16 @@ export function CapabilitiesForm({
             ))}
           </ol>
           <p className="mt-3 text-xs text-[var(--muted)]">
-            You can rename any of these under{" "}
-            <a href="#terminology" className="underline underline-offset-2">
-              What you call things
-            </a>
-            . Only the words this shape actually uses are offered there.
+            <Rich
+              text={t("shape.rename")}
+              parts={{
+                link: (
+                  <a href="#terminology" className="underline underline-offset-2">
+                    {t("shape.renameLink")}
+                  </a>
+                ),
+              }}
+            />
           </p>
         </div>
 
@@ -312,7 +314,7 @@ export function CapabilitiesForm({
           className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Saving…" : "Save what this platform is"}
+          {pending ? t("common.saving") : t("shape.save")}
         </button>
       </form>
     </section>

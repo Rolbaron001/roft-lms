@@ -5,6 +5,8 @@ import {
   saveTerminologyAction,
   type TerminologyState,
 } from "./terminology-actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -17,11 +19,6 @@ export type TermRow = {
   definedBy: "platform" | "practice";
   currentOne: string;
   currentMany: string;
-};
-
-const WHY: Record<string, string> = {
-  platform: "the platform's word",
-  practice: "used across the sector, owned by nobody",
 };
 
 /**
@@ -40,6 +37,7 @@ const WHY: Record<string, string> = {
  * wonder why they cannot find "qualification".
  */
 export function TerminologyForm({ terms }: { terms: TermRow[] }) {
+  const t = useT();
   const [state, action, saving] = useActionState<TerminologyState, FormData>(
     saveTerminologyAction,
     {},
@@ -51,9 +49,9 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-              <th className="pb-2 pr-3 font-medium">Standard word</th>
-              <th className="pb-2 pr-3 font-medium">You call one</th>
-              <th className="pb-2 font-medium">You call several</th>
+              <th className="pb-2 pr-3 font-medium">{t("termsForm.standard")}</th>
+              <th className="pb-2 pr-3 font-medium">{t("termsForm.one")}</th>
+              <th className="pb-2 font-medium">{t("termsForm.many")}</th>
             </tr>
           </thead>
           <tbody>
@@ -65,7 +63,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
                     {term.note}
                   </span>
                   <span className="block text-xs text-[var(--muted)]">
-                    {WHY[term.definedBy]}
+                    {t(`termsForm.why.${term.definedBy}`)}
                   </span>
                 </td>
                 <td className="py-2 pr-3 align-top">
@@ -75,7 +73,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
                     placeholder={term.defaultOne}
                     maxLength={40}
                     className={`${inputClass} w-full`}
-                    aria-label={`What you call one ${term.defaultOne.toLowerCase()}`}
+                    aria-label={t("termsForm.oneLabel", { word: term.defaultOne.toLowerCase() })}
                   />
                 </td>
                 <td className="py-2 align-top">
@@ -85,7 +83,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
                     placeholder={term.defaultMany}
                     maxLength={40}
                     className={`${inputClass} w-full`}
-                    aria-label={`What you call several ${term.defaultMany.toLowerCase()}`}
+                    aria-label={t("termsForm.manyLabel", { words: term.defaultMany.toLowerCase() })}
                   />
                 </td>
               </tr>
@@ -102,18 +100,17 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
       ) : null}
 
       <p className="max-w-2xl text-xs text-[var(--muted)]">
-        <span className="font-medium text-[var(--foreground)]">
-          Some words are not on this list, and that is deliberate.
-        </span>{" "}
-        Qualification, curriculum module, exit level outcome, NQF level and the
-        rest are defined by the QCTO or SAQA rather than by you. Renaming one
-        would put wording on a learner&rsquo;s screen and on a submission that
-        the regulator does not recognise, so the platform keeps them fixed. You
-        can read who defines what in the{" "}
-        <a href="/dictionary" className="underline">
-          dictionary
-        </a>
-        .
+        <span className="font-medium text-[var(--foreground)]">{t("termsForm.missing")}</span>{" "}
+        <Rich
+          text={t("termsForm.missingNote")}
+          parts={{
+            link: (
+              <a href="/dictionary" className="underline">
+                {t("termsForm.dictionary")}
+              </a>
+            ),
+          }}
+        />
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -122,7 +119,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
           disabled={saving}
           className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save this wording"}
+          {saving ? t("common.saving") : t("termsForm.save")}
         </button>
         <button
           type="submit"
@@ -131,7 +128,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
           disabled={saving}
           className="rounded-md border border-[var(--border)] px-4 py-2 text-sm text-[var(--muted)] disabled:opacity-60"
         >
-          Back to the standard wording
+          {t("termsForm.reset")}
         </button>
       </div>
     </form>

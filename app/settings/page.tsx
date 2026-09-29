@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import type { MessageKey } from "@/lib/i18n";
 import { namingConventionFor } from "@/lib/capture";
 import { proposeModuleCodeTable } from "@/lib/module-code-settings";
 import { settledTerms, structureOf } from "@/lib/features";
@@ -34,15 +35,13 @@ import {
 } from "@/lib/extensions";
 
 /** What came back from a drive consent, said in a sentence. */
-const DRIVE_NOTICES: Record<string, string> = {
-  connected: "Connected. A folder can now be read straight from it.",
-  cancelled: "Nothing was connected — the consent was cancelled.",
-  refused: "That account refused the connection.",
-  state:
-    "That consent did not match the one this browser started, so nothing was connected. Start again from this page.",
-  nocode: "The provider sent nothing back to connect with. Try again.",
-  failed:
-    "The connection could not be completed. Nothing was stored. Trying again is worth doing before anything else.",
+const DRIVE_NOTICES: Record<string, MessageKey> = {
+  connected: "settings.drive.connected",
+  cancelled: "settings.drive.cancelled",
+  refused: "settings.drive.refused",
+  state: "settings.drive.state",
+  nocode: "settings.drive.nocode",
+  failed: "settings.drive.failed",
 };
 
 export default async function SettingsPage({
@@ -52,6 +51,7 @@ export default async function SettingsPage({
 }) {
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, locale } = await pageLocale();
 
   /*
    * Connecting a file store belongs with getting material into a
@@ -64,8 +64,8 @@ export default async function SettingsPage({
   const driveConnected = canManageQualifications
     ? await connectionsFor(session)
     : [];
-  const driveNotice =
-    DRIVE_NOTICES[(await searchParams).drive ?? ""] ?? null;
+  const driveKey = DRIVE_NOTICES[(await searchParams).drive ?? ""];
+  const driveNotice = driveKey ? t(driveKey) : null;
 
   // Reachable by anybody with something on this page, which is not the same as
   // anybody who can brand the tenant.
@@ -104,7 +104,7 @@ export default async function SettingsPage({
    * reading it in the wrong order.
    */
   const structure = canManageSettings ? structureOf(tenant.featureFlags) : null;
-  const words = vocabulary(tenant.terminology);
+  const words = vocabulary(tenant.terminology, undefined, locale);
 
   /*
    * Words the shape has already settled, which nobody should be asked to set
@@ -136,11 +136,9 @@ export default async function SettingsPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Settings</h1>
+        <h1 className="text-xl font-semibold">{t("settings.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          How {tenant.displayName} looks to your people, and how the App reads
-          the documents they upload. Changes apply everywhere immediately —
-          there is nothing to rebuild or redeploy.
+          {t("settings.intro", { name: tenant.displayName })}
         </p>
       </div>
 
@@ -155,7 +153,7 @@ export default async function SettingsPage({
       */}
       <SettingsNav />
 
-      <div id="branding" data-settings-section="Branding" className="scroll-mt-24">
+      <div id="branding" data-settings-section={t("settings.section.branding")} className="scroll-mt-24">
       <BrandingForm
         defaults={{
           displayName: tenant.displayName,
@@ -186,7 +184,7 @@ export default async function SettingsPage({
       {canManageSettings ? (
         <div
           id="clock"
-          data-settings-section="Clock"
+          data-settings-section={t("settings.section.clock")}
           className="mt-6 scroll-mt-24"
         >
           <ClockForm current={tenant.timezone} />
@@ -196,7 +194,7 @@ export default async function SettingsPage({
       {canManageSettings ? (
         <div
           id="language"
-          data-settings-section="Language"
+          data-settings-section={t("settings.section.language")}
           className="mt-6 scroll-mt-24"
         >
           <ProviderLanguageForm current={tenant.defaultLocale} />
@@ -206,13 +204,10 @@ export default async function SettingsPage({
       {canManageSettings ? (
         <div
           id="mail"
-          data-settings-section="Outbound mail"
+          data-settings-section={t("settings.section.mail")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="Outbound mail"
-            description="Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived."
-          >
+          <Card title={t("settings.mail")} description={t("settings.mailNote")}>
             <MailTest configured={mailIsConfigured()} />
           </Card>
         </div>
@@ -221,13 +216,10 @@ export default async function SettingsPage({
       {canManageSettings ? (
         <div
           id="signing-in"
-          data-settings-section="Signing in"
+          data-settings-section={t("settings.section.signingIn")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="Signing in with Google or Microsoft"
-            description="Lets your people sign in with their organisation's Google or Microsoft account instead of a password here, which keeps working beside it. It only signs in people who already have an account on this platform, matched by email address the first time; it never creates one."
-          >
+          <Card title={t("settings.sso")} description={t("settings.ssoNote")}>
             <div className="space-y-8">
               {SSO_KINDS.map((kind, index) => (
                 <SsoForm
@@ -246,19 +238,16 @@ export default async function SettingsPage({
       {canBrand ? (
         <div
           id="terminology"
-          data-settings-section="What you call things"
+          data-settings-section={t("settings.section.terminology")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="What you call things"
-            description="Use your own vocabulary. A provider outside South Africa may not say programme, and a provider inside it may not say course — the platform should not insist."
-          >
+          <Card title={t("settings.terminology")} description={t("settings.terminologyNote")}>
             <TerminologyForm
               terms={TERM_KEYS.filter((key) => !settled.has(key)).map((key) => ({
                 key,
-                defaultOne: TERMS[key].one,
-                defaultMany: TERMS[key].many,
-                note: TERMS[key].note,
+                defaultOne: t(`term.${key}.one`),
+                defaultMany: t(`term.${key}.many`),
+                note: t(`termsForm.note.${key}`),
                 definedBy: TERMS[key].definedBy,
                 currentOne: tenant.terminology?.[key]?.one ?? "",
                 currentMany: tenant.terminology?.[key]?.many ?? "",
@@ -277,22 +266,15 @@ export default async function SettingsPage({
       {canManageSettings ? (
         <div
           id="templates"
-          data-settings-section="Templates"
+          data-settings-section={t("settings.section.templates")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="Your own documents"
-            description="How each document this provider issues reads and looks."
-          >
+          <Card title={t("settings.templates")} description={t("settings.templatesNote")}>
             <p className="text-sm">
               <Link href="/templates" className="underline underline-offset-2">
-                Templates
+                {t("settings.templatesLink")}
               </Link>
-              <span className="text-[var(--muted)]">
-                {" "}
-                — now under Management, with every document the platform
-                produces and who receives each one.
-              </span>
+              <span className="text-[var(--muted)]">: {t("settings.templatesMoved")}</span>
             </p>
           </Card>
         </div>
@@ -301,13 +283,10 @@ export default async function SettingsPage({
       {canBrand ? (
         <div
           id="menu"
-          data-settings-section="The menu"
+          data-settings-section={t("settings.section.menu")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="The menu"
-            description="Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. The same for everybody at this provider, because staff tell each other where things are."
-          >
+          <Card title={t("settings.menu")} description={t("settings.menuNote")}>
             <MenuEditor current={menu} />
           </Card>
         </div>
@@ -316,13 +295,10 @@ export default async function SettingsPage({
       {canManageQualifications ? (
         <div
           id="drives"
-          data-settings-section="File stores"
+          data-settings-section={t("settings.section.drives")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="Your file stores"
-            description="Read a folder straight from Google Drive or OneDrive, instead of downloading it and uploading it again. Yours rather than this provider's: every member of staff connects their own."
-          >
+          <Card title={t("settings.drives")} description={t("settings.drivesNote")}>
             <DriveConnections
               connected={driveConnected.map((one) => ({
                 provider: one.provider,
@@ -347,13 +323,10 @@ export default async function SettingsPage({
       {extension ? (
         <div
           id="extension"
-          data-settings-section="AI extension"
+          data-settings-section={t("settings.section.extension")}
           className="mt-6 scroll-mt-24"
         >
-          <Card
-            title="Your AI extension"
-            description="Against your own profile. Optional, off by default, and what it lets you do is bounded by your role exactly as everything else is."
-          >
+          <Card title={t("settings.extension")} description={t("settings.extensionNote")}>
             <ExtensionForm
               current={{
                 registered: extension.registered,

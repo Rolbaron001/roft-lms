@@ -35,6 +35,7 @@ const MOVED = [
   "app/cohorts",
   "app/qualifications",
   "app/courses",
+  "app/settings",
 ];
 
 /**
@@ -69,7 +70,9 @@ export function englishIn(source: string): string[] {
   const withoutComments = source
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+    .replace(/^\s*\/\/.*$/gm, "")
+    // Monospace is code: a command, a module code, a web address. Not wording.
+    .replace(/(<span className="font-mono">)[^<]*(<\/span>)/g, "$1$2");
   const lines = withoutComments.split("\n");
 
   for (const line of lines) {
@@ -80,6 +83,8 @@ export function englishIn(source: string): string[] {
     for (const match of line.matchAll(/(?<!=)>([^<>{}]*[A-Za-z]{2,}[^<>{}]*)</g)) {
       const text = match[1];
       if (/^\s*\w*_\w*\s*$/.test(text)) continue;
+      // The name of a slot in a sentence: parts={{ total: <b/>, modules: <b/> }}.
+      if (/^[\s,]*\w+:\s*$/.test(text)) continue;
       if (/[A-Za-z]{2,}/.test(text) && !/^\s*[-=|&]/.test(text)) found.push(trimmed);
     }
     // A line that is nothing but words, as JSX text wrapped over lines.
