@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { Rich } from "@/components/rich-text";
 import { listQualifications } from "@/lib/authoring";
 import {
   criterionCoverage,
@@ -26,6 +27,7 @@ export default async function ProgrammeReportsPage({
   const { qualification, assessment } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("report:tenant");
+  const t = await pageT();
 
   const [qualifications, assessments] = await Promise.all([
     listQualifications(session),
@@ -57,27 +59,21 @@ export default async function ProgrammeReportsPage({
           href="/reports"
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← Reports
+          {t("progReport.back")}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">The programme itself</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Two questions that look like they are about learners and are not: what
-          nothing assesses, and which questions are not working.
-        </p>
+        <h1 className="mt-2 text-xl font-semibold">{t("progReport.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("progReport.intro")}</p>
       </div>
 
       {/* --- criterion coverage --- */}
-      <Card
-        title="What nothing tests"
-        description="A criterion no summative question assesses cannot be achieved by anybody, however well they do. It holds up every learner on the qualification, and nothing else in the platform says so."
-      >
+      <Card title={t("progReport.untested")} description={t("progReport.untestedNote")}>
         {qualifications.length > 1 ? (
           <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
             {chosenAssessment ? (
               <input type="hidden" name="assessment" value={chosenAssessment} />
             ) : null}
             <label className="text-xs text-[var(--muted)]">
-              Qualification
+              {t("progReport.qualification")}
               <select
                 name="qualification"
                 defaultValue={chosenQualification}
@@ -94,43 +90,41 @@ export default async function ProgrammeReportsPage({
               type="submit"
               className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
             >
-              Show
+              {t("progReport.show")}
             </button>
           </form>
         ) : null}
 
         {coverage.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">
-            This qualification has no assessment criteria captured yet.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("progReport.noCriteria")}</p>
         ) : untested.length === 0 ? (
-          <p className="text-sm">
-            Every one of the {coverage.length} criteria is tested by at least one
-            summative question.
-          </p>
+          <p className="text-sm">{t("progReport.allTested", { count: coverage.length })}</p>
         ) : (
           <>
             <p className="mb-3 text-sm">
-              <strong>{untested.length}</strong> of {coverage.length} criteria
-              are not tested by any summative question
+              <Rich
+                text={t("progReport.someUntested", { count: coverage.length })}
+                parts={{ untested: <strong>{untested.length}</strong> }}
+              />
               {misleading.length > 0 ? (
                 <>
                   {" "}
-                  — and <strong>{misleading.length}</strong> of those appear in a
-                  workbook, which is developmental and evidences nothing
+                  <Rich
+                    text={t("progReport.misleading")}
+                    parts={{ count: <strong>{misleading.length}</strong> }}
+                  />
                 </>
               ) : null}
-              .
             </p>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">Criterion</th>
-                    <th className="pb-2">Module</th>
-                    <th className="pb-2">Taught by</th>
-                    <th className="pb-2">Tested by</th>
+                    <th className="pb-2">{t("progReport.criterion")}</th>
+                    <th className="pb-2">{t("progReport.module")}</th>
+                    <th className="pb-2">{t("progReport.taughtBy")}</th>
+                    <th className="pb-2">{t("progReport.testedBy")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,19 +143,21 @@ export default async function ProgrammeReportsPage({
                       <td className="py-2 pr-3">
                         {row.taughtBy === 0 ? (
                           <span className="text-[var(--danger)]">
-                            no lesson
+                            {t("progReport.noLesson")}
                           </span>
+                        ) : row.taughtBy === 1 ? (
+                          t("progReport.lessonOne")
                         ) : (
-                          `${row.taughtBy} ${row.taughtBy === 1 ? "lesson" : "lessons"}`
+                          t("progReport.lessons", { count: row.taughtBy })
                         )}
                       </td>
                       <td className="py-2">
                         {row.onlyFormative ? (
                           <span className="text-[var(--danger)]">
-                            workbook only — evidences nothing
+                            {t("progReport.workbookOnly")}
                           </span>
                         ) : (
-                          <span className="text-[var(--danger)]">nothing</span>
+                          <span className="text-[var(--danger)]">{t("progReport.nothing")}</span>
                         )}
                       </td>
                     </tr>
@@ -176,13 +172,11 @@ export default async function ProgrammeReportsPage({
       {/* --- question performance --- */}
       <div className="mt-6">
         <Card
-          title="Which questions are not working"
-          description={`First attempts only, because a re-sit measures something else. Nothing is flagged below ${MINIMUM_ATTEMPTS_TO_JUDGE} attempts — a question two people have answered tells you about those two people.`}
+          title={t("progReport.questions")}
+          description={t("progReport.questionsNote", { minimum: MINIMUM_ATTEMPTS_TO_JUDGE })}
         >
           {assessments.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              No published assessments yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("progReport.noAssessments")}</p>
           ) : (
             <>
               <form method="get" className="mb-4 flex flex-wrap items-end gap-2">
@@ -194,7 +188,7 @@ export default async function ProgrammeReportsPage({
                   />
                 ) : null}
                 <label className="text-xs text-[var(--muted)]">
-                  Assessment
+                  {t("progReport.assessment")}
                   <select
                     name="assessment"
                     defaultValue={chosenAssessment}
@@ -203,7 +197,7 @@ export default async function ProgrammeReportsPage({
                     {assessments.map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.title}
-                        {row.purpose === "formative" ? " (workbook)" : ""}
+                        {row.purpose === "formative" ? ` ${t("progReport.workbook")}` : ""}
                       </option>
                     ))}
                   </select>
@@ -212,24 +206,22 @@ export default async function ProgrammeReportsPage({
                   type="submit"
                   className="rounded-md border border-[var(--border)] px-3 py-2 text-sm"
                 >
-                  Show
+                  {t("progReport.show")}
                 </button>
               </form>
 
               {questions.length === 0 ? (
-                <p className="text-sm text-[var(--muted)]">
-                  That assessment has no questions yet.
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t("progReport.noQuestions")}</p>
               ) : (
                 <>
                   {flagged.length === 0 ? (
-                    <p className="mb-3 text-sm">
-                      Nothing stands out across {questions.length} questions.
-                    </p>
+                    <p className="mb-3 text-sm">{t("progReport.nothingStands", { count: questions.length })}</p>
                   ) : (
                     <p className="mb-3 text-sm">
-                      <strong>{flagged.length}</strong> of {questions.length}{" "}
-                      questions are worth a look.
+                      <Rich
+                        text={t("progReport.worthLook", { count: questions.length })}
+                        parts={{ flagged: <strong>{flagged.length}</strong> }}
+                      />
                     </p>
                   )}
 
@@ -237,10 +229,10 @@ export default async function ProgrammeReportsPage({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                          <th className="pb-2">Question</th>
-                          <th className="pb-2">First attempts</th>
-                          <th className="pb-2">Mean</th>
-                          <th className="pb-2">Full / zero</th>
+                          <th className="pb-2">{t("progReport.question")}</th>
+                          <th className="pb-2">{t("progReport.firstAttempts")}</th>
+                          <th className="pb-2">{t("progReport.mean")}</th>
+                          <th className="pb-2">{t("progReport.fullZero")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -256,15 +248,12 @@ export default async function ProgrammeReportsPage({
                               <span className="block">{row.stem}</span>
                               {row.nobodyGetsIt ? (
                                 <span className="mt-1 block text-xs text-[var(--danger)]">
-                                  Almost nobody can answer this. Either the
-                                  question is unclear or what it tests was never
-                                  taught.
+                                  {t("progReport.nobody")}
                                 </span>
                               ) : null}
                               {row.everybodyGetsIt ? (
                                 <span className="mt-1 block text-xs text-[var(--muted)]">
-                                  Everybody gets full marks, so it distinguishes
-                                  nothing.
+                                  {t("progReport.everybody")}
                                 </span>
                               ) : null}
                             </td>

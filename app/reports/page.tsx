@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import {
   capabilityCoverage,
   courseCompletion,
@@ -46,6 +46,7 @@ export default async function ReportsPage({
   const { team, site } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("report:own");
+  const t = await pageT();
 
   const filters = { team: team || undefined, site: site || undefined };
 
@@ -70,13 +71,13 @@ export default async function ReportsPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Reporting</h1>
+        <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
           {scope.kind === "tenant"
-            ? "Across the whole organisation."
+            ? t("reports.scope.tenant")
             : scope.kind === "team"
-              ? "Your direct reports."
-              : "Your own record."}
+              ? t("reports.scope.team")
+              : t("reports.scope.self")}
         </p>
 
         {scope.kind === "tenant" ? (
@@ -84,8 +85,7 @@ export default async function ReportsPage({
             href="/reports/programme"
             className="mt-3 inline-block rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
           >
-            The programme itself — what nothing tests, which questions are not
-            working
+            {t("reports.programme")}
           </Link>
         ) : null}
       </div>
@@ -94,13 +94,13 @@ export default async function ReportsPage({
         <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
           {options.teams.length > 0 ? (
             <label className="space-y-1.5">
-              <span className="block text-sm font-medium">Team</span>
+              <span className="block text-sm font-medium">{t("reports.team")}</span>
               <select
                 name="team"
                 defaultValue={filters.team ?? ""}
                 className="rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
               >
-                <option value="">All teams</option>
+                <option value="">{t("reports.allTeams")}</option>
                 {options.teams.map((value) => (
                   <option key={value} value={value}>
                     {value}
@@ -112,13 +112,13 @@ export default async function ReportsPage({
 
           {options.sites.length > 0 ? (
             <label className="space-y-1.5">
-              <span className="block text-sm font-medium">Site</span>
+              <span className="block text-sm font-medium">{t("reports.site")}</span>
               <select
                 name="site"
                 defaultValue={filters.site ?? ""}
                 className="rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
               >
-                <option value="">All sites</option>
+                <option value="">{t("reports.allSites")}</option>
                 {options.sites.map((value) => (
                   <option key={value} value={value}>
                     {value}
@@ -133,7 +133,7 @@ export default async function ReportsPage({
             className="rounded-md px-4 py-2 text-sm font-semibold text-white"
             style={{ background: "var(--brand-primary)" }}
           >
-            Apply
+            {t("reports.apply")}
           </button>
 
           {filters.team || filters.site ? (
@@ -141,22 +141,22 @@ export default async function ReportsPage({
               href="/reports"
               className="px-2 py-2 text-sm text-[var(--muted)] hover:underline"
             >
-              Clear
+              {t("reports.clear")}
             </Link>
           ) : null}
         </form>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="People" value={headline.people} />
-        <Stat label="Courses assigned" value={headline.enrolments} />
+        <Stat label={t("reports.people")} value={headline.people} />
+        <Stat label={t("reports.assigned")} value={headline.enrolments} />
         <Stat
-          label="Completion rate"
+          label={t("reports.rate")}
           value={`${headline.completionRate}%`}
           tone={headline.completionRate >= 80 ? "success" : undefined}
         />
         <Stat
-          label="Overdue"
+          label={t("reports.overdue")}
           value={headline.overdue}
           tone={headline.overdue > 0 ? "danger" : undefined}
         />
@@ -168,27 +168,20 @@ export default async function ReportsPage({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-                Capability coverage
+                {t("reports.coverage")}
               </h2>
-              <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">
-                Counted from certificates, not course completions. A completion
-                means somebody reached the end of the material; a certificate
-                means a judgement was made and, where required, independently
-                moderated.
-              </p>
+              <p className="mt-1 max-w-xl text-sm text-[var(--muted)]">{t("reports.coverageNote")}</p>
             </div>
             <a
               href={`/reports/export/capability${exportQuery ? `?${exportQuery}` : ""}`}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
             >
-              Export CSV
+              {t("reports.export")}
             </a>
           </div>
 
           {capability.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              No competencies defined yet.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("reports.noCompetencies")}</p>
           ) : (
             <>
               {singlePoints.length > 0 || gaps.length > 0 ? (
@@ -196,25 +189,21 @@ export default async function ReportsPage({
                   {singlePoints.length > 0 ? (
                     <div className="rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-4 py-3">
                       <p className="text-sm font-medium text-[var(--danger)]">
-                        {singlePoints.length} single{" "}
-                        {singlePoints.length === 1 ? "point" : "points"} of
-                        failure
+                        {singlePoints.length === 1
+                          ? t("reports.singleOne")
+                          : t("reports.single", { count: singlePoints.length })}
                       </p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        Held by one person only:{" "}
-                        {singlePoints.map((row) => row.code).join(", ")}. If
-                        that person leaves, the capability goes with them.
+                        {t("reports.singleNote", { codes: singlePoints.map((row) => row.code).join(", ") })}
                       </p>
                     </div>
                   ) : null}
 
                   {gaps.length > 0 ? (
                     <div className="rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3">
-                      <p className="text-sm font-medium">
-                        {gaps.length} with no coverage
-                      </p>
+                      <p className="text-sm font-medium">{t("reports.gaps", { count: gaps.length })}</p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        Nobody holds {gaps.map((row) => row.code).join(", ")}.
+                        {t("reports.gapsNote", { codes: gaps.map((row) => row.code).join(", ") })}
                       </p>
                     </div>
                   ) : null}
@@ -225,10 +214,10 @@ export default async function ReportsPage({
                 <table className="w-full min-w-lg text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                      <th className="pb-2 pr-4 font-medium">Competency</th>
-                      <th className="pb-2 pr-4 font-medium">Holders</th>
-                      <th className="pb-2 pr-4 font-medium">Coverage</th>
-                      <th className="pb-2 font-medium">Risk</th>
+                      <th className="pb-2 pr-4 font-medium">{t("reports.competency")}</th>
+                      <th className="pb-2 pr-4 font-medium">{t("reports.holders")}</th>
+                      <th className="pb-2 pr-4 font-medium">{t("reports.coverageCol")}</th>
+                      <th className="pb-2 font-medium">{t("reports.risk")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -242,7 +231,7 @@ export default async function ReportsPage({
                           {row.name}
                         </td>
                         <td className="py-2.5 pr-4 whitespace-nowrap">
-                          {row.holders} of {row.population}
+                          {t("reports.holdersOf", { holders: row.holders, population: row.population })}
                         </td>
                         <td className="py-2.5 pr-4">
                           <div className="flex items-center gap-2">
@@ -266,11 +255,11 @@ export default async function ReportsPage({
                         <td className="py-2.5 text-xs">
                           {row.noCoverage ? (
                             <span className="font-medium text-[var(--danger)]">
-                              No coverage
+                              {t("reports.noCoverage")}
                             </span>
                           ) : row.singlePointOfFailure ? (
                             <span className="font-medium text-[var(--danger)]">
-                              Single point of failure
+                              {t("reports.singlePoint")}
                             </span>
                           ) : (
                             <span className="text-[var(--muted)]">—</span>
@@ -285,21 +274,19 @@ export default async function ReportsPage({
           )}
         </section>
 
-        <Card title="Completion by course">
+        <Card title={t("reports.byCourse")}>
           {completion.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Nobody is enrolled on anything yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("reports.nobodyEnrolled")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-lg text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2 pr-4 font-medium">Course</th>
-                    <th className="pb-2 pr-4 font-medium">Enrolled</th>
-                    <th className="pb-2 pr-4 font-medium">Completed</th>
-                    <th className="pb-2 pr-4 font-medium">Overdue</th>
-                    <th className="pb-2 font-medium">Rate</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.course")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.enrolled")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.completed")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.overdue")}</th>
+                    <th className="pb-2 font-medium">{t("reports.rateCol")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -332,30 +319,28 @@ export default async function ReportsPage({
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Overdue training
+              {t("reports.overdueTraining")}
             </h2>
             {overdue.length > 0 ? (
               <a
                 href={`/reports/export/overdue${exportQuery ? `?${exportQuery}` : ""}`}
                 className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium"
               >
-                Export CSV
+                {t("reports.export")}
               </a>
             ) : null}
           </div>
 
           {overdue.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              Nothing is overdue.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("reports.nothingOverdue")}</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-lg text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2 pr-4 font-medium">Person</th>
-                    <th className="pb-2 pr-4 font-medium">Course</th>
-                    <th className="pb-2 font-medium">Overdue by</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.person")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("reports.course")}</th>
+                    <th className="pb-2 font-medium">{t("reports.overdueBy")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,8 +357,9 @@ export default async function ReportsPage({
                       </td>
                       <td className="py-2.5 pr-4">{row.courseTitle}</td>
                       <td className="py-2.5 whitespace-nowrap text-[var(--danger)]">
-                        {row.daysOverdue}{" "}
-                        {row.daysOverdue === 1 ? "day" : "days"}
+                        {row.daysOverdue === 1
+                          ? t("reports.dayOne")
+                          : t("reports.days", { count: row.daysOverdue })}
                       </td>
                     </tr>
                   ))}

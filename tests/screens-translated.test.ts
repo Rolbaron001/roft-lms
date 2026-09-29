@@ -38,6 +38,8 @@ const MOVED = [
   "app/settings",
   "app/capture",
   "app/imports",
+  "app/reports",
+  "app/statutory",
 ];
 
 /**

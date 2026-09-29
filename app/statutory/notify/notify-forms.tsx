@@ -8,6 +8,7 @@ import {
   submitAction,
   type NotifyState,
 } from "./actions";
+import { useT } from "@/components/i18n";
 
 const input =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -55,6 +56,7 @@ export type DueRow = {
  * exactly the mistake this screen exists to stop.
  */
 export function DraftForm({ rows }: { rows: DueRow[] }) {
+  const t = useT();
   const [state, act, working] = useActionState<NotifyState, FormData>(
     draftAction,
     {},
@@ -83,10 +85,7 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
 
   if (outstanding.length === 0) {
     return (
-      <p className="text-sm text-[var(--muted)]">
-        Nobody is outstanding. Every learner with an induction date has been
-        notified about.
-      </p>
+      <p className="text-sm text-[var(--muted)]">{t("enrolNotify.nobodyOutstanding")}</p>
     );
   }
 
@@ -94,15 +93,15 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
     <form action={act} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">What to call it</span>
+          <span className="block text-sm font-medium">{t("enrolNotify.name")}</span>
           <input
             name="title"
-            defaultValue="Enrolment notification"
+            defaultValue={t("enrolNotify.nameDefault")}
             className={`${input} w-full`}
           />
         </label>
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Induction date</span>
+          <span className="block text-sm font-medium">{t("enrolNotify.inductionDate")}</span>
           <input
             name="inductionOn"
             type="date"
@@ -110,18 +109,14 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
             onChange={(e) => setInductionOn(e.target.value)}
             className={`${input} w-full`}
           />
-          <span className="block text-xs text-[var(--muted)]">
-            The clock runs from this day.
-          </span>
+          <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.clockFrom")}</span>
         </label>
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">What they are on</span>
+          <span className="block text-sm font-medium">{t("enrolNotify.whatOn")}</span>
           <select name="kind" defaultValue="full" className={`${input} w-full`}>
-            <option value="full">Full qualification — 21 working days</option>
-            <option value="part">Part qualification — 21 working days</option>
-            <option value="skills_programme">
-              Skills programme — 5 working days
-            </option>
+            <option value="full">{t("enrolNotify.kind.full")}</option>
+            <option value="part">{t("enrolNotify.kind.part")}</option>
+            <option value="skills_programme">{t("enrolNotify.kind.skills_programme")}</option>
           </select>
         </label>
       </div>
@@ -134,17 +129,14 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
 
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium">
-          Who this covers
+          {t("enrolNotify.covers")}
           <span className="ml-2 font-normal text-[var(--muted)]">
-            {eligible.length} inducted on that day
+            {t("enrolNotify.inductedThatDay", { count: eligible.length })}
           </span>
         </legend>
 
         {eligible.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">
-            Nobody outstanding was inducted on that date. Change the date, or
-            give a late joiner their own induction below.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("enrolNotify.noneThatDay")}</p>
         ) : (
           <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-[var(--border)] p-3">
             {eligible.map((row) => (
@@ -162,7 +154,7 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
                   {row.firstName} {row.lastName}
                 </span>
                 <span className="text-xs text-[var(--muted)]">
-                  {row.cohortName} · due {row.dueOn}
+                  {row.cohortName} · {t("enrolNotify.due", { date: row.dueOn ?? "" })}
                 </span>
               </label>
             ))}
@@ -176,7 +168,7 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
         className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--brand-primary)" }}
       >
-        {working ? "Drafting…" : "Draft the submission"}
+        {working ? t("enrolNotify.drafting") : t("enrolNotify.draftIt")}
       </button>
 
       <Message state={state} />
@@ -186,6 +178,7 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
 
 /** Records that the workbook went to the QCTO. */
 export function SubmitForm({ notificationId }: { notificationId: string }) {
+  const t = useT();
   const [state, act, working] = useActionState<NotifyState, FormData>(
     submitAction,
     {},
@@ -199,7 +192,7 @@ export function SubmitForm({ notificationId }: { notificationId: string }) {
         disabled={working}
         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm disabled:opacity-60"
       >
-        {working ? "Recording…" : "Record as sent"}
+        {working ? t("enrolNotify.recording") : t("enrolNotify.recordSent")}
       </button>
       <Message state={state} />
     </form>
@@ -212,6 +205,7 @@ export function AcknowledgeForm({
 }: {
   notificationId: string;
 }) {
+  const t = useT();
   const [state, act, working] = useActionState<NotifyState, FormData>(
     acknowledgeAction,
     {},
@@ -221,13 +215,11 @@ export function AcknowledgeForm({
     <form action={act} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="notificationId" value={notificationId} />
       <label className="space-y-1">
-        <span className="block text-xs text-[var(--muted)]">
-          Their reference
-        </span>
+        <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.reference")}</span>
         <input name="reference" className={input} placeholder="QCTO-ACK-…" />
       </label>
       <label className="space-y-1">
-        <span className="block text-xs text-[var(--muted)]">On</span>
+        <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.on")}</span>
         <input name="acknowledgedOn" type="date" className={input} />
       </label>
       <button
@@ -235,7 +227,7 @@ export function AcknowledgeForm({
         disabled={working}
         className="rounded-md border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
       >
-        {working ? "Saving…" : "Record acknowledgement"}
+        {working ? t("common.saving") : t("enrolNotify.recordAck")}
       </button>
       <Message state={state} />
     </form>
@@ -250,6 +242,7 @@ export function AcknowledgeForm({
  * first of those is recorded, and the other two follow from it.
  */
 export function OwnInductionForm({ rows }: { rows: DueRow[] }) {
+  const t = useT();
   const [state, act, working] = useActionState<NotifyState, FormData>(
     ownInductionAction,
     {},
@@ -259,29 +252,25 @@ export function OwnInductionForm({ rows }: { rows: DueRow[] }) {
 
   if (candidates.length === 0) {
     return (
-      <p className="text-sm text-[var(--muted)]">
-        Nobody is waiting on an induction date.
-      </p>
+      <p className="text-sm text-[var(--muted)]">{t("enrolNotify.nobodyWaiting")}</p>
     );
   }
 
   return (
     <form action={act} className="flex flex-wrap items-end gap-2">
       <label className="space-y-1">
-        <span className="block text-xs text-[var(--muted)]">Who</span>
+        <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.who")}</span>
         <select name="userId" className={input}>
           {candidates.map((row) => (
             <option key={row.userId} value={row.userId}>
-              {row.firstName} {row.lastName} — {row.cohortName}
+              {row.firstName} {row.lastName} · {row.cohortName}
             </option>
           ))}
         </select>
       </label>
       <input type="hidden" name="cohortId" value={candidates[0].cohortId ?? ""} />
       <label className="space-y-1">
-        <span className="block text-xs text-[var(--muted)]">
-          Their own induction
-        </span>
+        <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.theirOwn")}</span>
         <input name="inductionOn" type="date" className={input} />
       </label>
       <button
@@ -289,7 +278,7 @@ export function OwnInductionForm({ rows }: { rows: DueRow[] }) {
         disabled={working}
         className="rounded-md border border-[var(--border)] px-3 py-2 text-sm disabled:opacity-60"
       >
-        {working ? "Saving…" : "Set it"}
+        {working ? t("common.saving") : t("enrolNotify.setIt")}
       </button>
       <Message state={state} />
     </form>

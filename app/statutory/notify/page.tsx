@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { dateInZone } from "@/lib/timezone";
-import { requireCapability, requirePermission } from "@/lib/request";
+import { pageT, requireCapability, requirePermission } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
 import {
   listNotifications,
   notificationDue,
@@ -28,6 +29,7 @@ import {
 export default async function NotifyPage() {
   const tenant = await requireCapability("statutory_reporting");
   const session = await requirePermission("report:statutory");
+  const t = await pageT();
 
   const today = dateInZone(new Date(), tenant.timezone);
   const [due, notifications] = await Promise.all([
@@ -52,21 +54,13 @@ export default async function NotifyPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Enrolment notification</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          The QCTO has to be told that these learners were enrolled, within
-          twenty-one working days of induction for a qualification and five for
-          a skills programme. Public holidays do not count, and the clock runs
-          from the induction date rather than from enrolment or payment.
-        </p>
+        <h1 className="text-xl font-semibold">{t("enrolNotify.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("enrolNotify.intro")}</p>
       </div>
 
       {overdue.length > 0 ? (
         <div className="mb-6">
-          <Card
-            title={`${overdue.length} past the deadline`}
-            description="Still submit these. A late notification with an explanation is a different problem to one nobody made."
-          >
+          <Card title={t("enrolNotify.overdue", { count: overdue.length })} description={t("enrolNotify.overdueNote")}>
             <ul className="space-y-1">
               {overdue.map((row) => (
                 <li key={row.userId} className="text-sm">
@@ -75,9 +69,9 @@ export default async function NotifyPage() {
                   </span>
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.cohortName} · was due {row.dueOn}
+                    · {row.cohortName} · {t("enrolNotify.wasDue", { date: row.dueOn ?? "" })}
                     {row.workingDaysLeft !== null
-                      ? ` · ${Math.abs(row.workingDaysLeft)} working days ago`
+                      ? ` · ${t("enrolNotify.daysAgo", { count: Math.abs(row.workingDaysLeft) })}`
                       : ""}
                   </span>
                 </li>
@@ -89,10 +83,7 @@ export default async function NotifyPage() {
 
       {soon.length > 0 ? (
         <div className="mb-6">
-          <Card
-            title={`${soon.length} due within a week`}
-            description="Five working days or fewer remaining."
-          >
+          <Card title={t("enrolNotify.soon", { count: soon.length })} description={t("enrolNotify.soonNote")}>
             <ul className="space-y-1">
               {soon.map((row) => (
                 <li key={row.userId} className="text-sm">
@@ -101,8 +92,8 @@ export default async function NotifyPage() {
                   </span>
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.cohortName} · due {row.dueOn} ·{" "}
-                    {row.workingDaysLeft} working days left
+                    · {row.cohortName} · {t("enrolNotify.due", { date: row.dueOn ?? "" })} ·{" "}
+                    {t("enrolNotify.daysLeft", { count: row.workingDaysLeft ?? 0 })}
                   </span>
                 </li>
               ))}
@@ -114,8 +105,8 @@ export default async function NotifyPage() {
       {noInduction.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${noInduction.length} have no induction date`}
-            description="Their clock has not started, so there is no deadline to report. Date the cohort's induction session, or give them their own below."
+            title={t("enrolNotify.noInduction", { count: noInduction.length })}
+            description={t("enrolNotify.noInductionNote")}
           >
             <ul className="space-y-1">
               {noInduction.map((row) => (
@@ -130,32 +121,21 @@ export default async function NotifyPage() {
       ) : null}
 
       <div className="mb-6">
-        <Card
-          title="Draft a submission"
-          description="Everybody inducted on the same day goes together. A late joiner needs their own."
-        >
+        <Card title={t("enrolNotify.draft")} description={t("enrolNotify.draftNote")}>
           <DraftForm rows={due} />
         </Card>
       </div>
 
       <div className="mb-6">
-        <Card
-          title="A late joiner's own induction"
-          description="Somebody who joined after the cohort started has their own induction, their own enrolment form and their own submission."
-        >
+        <Card title={t("enrolNotify.ownInduction")} description={t("enrolNotify.ownInductionNote")}>
           <OwnInductionForm rows={due} />
         </Card>
       </div>
 
       <div className="mb-6">
-        <Card
-          title="Submissions"
-          description={`${notified.length} learners have been notified about.`}
-        >
+        <Card title={t("enrolNotify.submissions")} description={t("enrolNotify.notified", { count: notified.length })}>
           {notifications.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Nothing drafted yet.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("enrolNotify.nothingDrafted")}</p>
           ) : (
             <ul className="space-y-4">
               {notifications.map((row) => {
@@ -171,20 +151,20 @@ export default async function NotifyPage() {
                       <p className="text-sm font-medium">
                         {row.title}
                         <span className="ml-2 font-normal text-[var(--muted)]">
-                          {row.cohortName ?? "Individual"} · {row.learners}{" "}
-                          {row.learners === 1 ? "learner" : "learners"} · due{" "}
-                          {row.dueOn}
+                          {row.cohortName ?? t("enrolNotify.individual")} ·{" "}
+                          {row.learners === 1 ? t("enrolNotify.learnerOne") : t("enrolNotify.learners", { count: row.learners })}{" "}
+                          · {t("enrolNotify.due", { date: row.dueOn ?? "" })}
                         </span>
                       </p>
                       <span className="text-xs uppercase tracking-wide text-[var(--muted)]">
-                        {row.status}
+                        {maybe(t, `enrolNotify.status.${row.status}`) ?? row.status}
                       </span>
                     </div>
 
                     {problems.length > 0 ? (
                       <div className="mt-3 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3 py-2">
                         <p className="text-sm font-medium text-[var(--danger)]">
-                          {problems.length} would be rejected
+                          {t("enrolNotify.rejected", { count: problems.length })}
                         </p>
                         <ul className="mt-1 space-y-0.5">
                           {problems.slice(0, 8).map((problem, index) => (
@@ -192,13 +172,13 @@ export default async function NotifyPage() {
                               key={`${problem.learner}-${problem.field}-${index}`}
                               className="text-xs text-[var(--danger)]"
                             >
-                              {problem.learner}: {problem.field} — {problem.why}
+                              {problem.learner}: {problem.field}: {problem.why}
                             </li>
                           ))}
                         </ul>
                         {problems.length > 8 ? (
                           <p className="mt-1 text-xs text-[var(--muted)]">
-                            and {problems.length - 8} more.
+                            {t("statutory.more", { count: problems.length - 8 })}
                           </p>
                         ) : null}
                       </div>
@@ -213,7 +193,7 @@ export default async function NotifyPage() {
                     <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--surface-2,transparent)] px-3 py-2">
                       {recipientsFor(row.kinds).map((recipient) => (
                         <p key={recipient.address} className="text-sm">
-                          <span className="text-[var(--muted)]">Send to </span>
+                          <span className="text-[var(--muted)]">{t("enrolNotify.sendTo")} </span>
                           <span className="font-mono">{recipient.address}</span>
                           {recipient.enclose ? (
                             <span className="block text-xs text-[var(--muted)]">
@@ -227,15 +207,10 @@ export default async function NotifyPage() {
                           className="mt-1 text-xs"
                           style={{ color: "var(--danger)" }}
                         >
-                          This submission covers both a skills programme and a
-                          qualification. They go to different addresses, so it
-                          has to be split and sent twice.
+                          {t("enrolNotify.split")}
                         </p>
                       ) : null}
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        Ask for an acknowledgement, and record it here when it
-                        comes back.
-                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">{t("enrolNotify.askAck")}</p>
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -243,7 +218,7 @@ export default async function NotifyPage() {
                         href={`/statutory/leisa/${row.id}`}
                         className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
                       >
-                        Download the workbook
+                        {t("enrolNotify.download")}
                       </Link>
 
                       {row.status === "draft" ? (
@@ -256,7 +231,7 @@ export default async function NotifyPage() {
 
                       {row.acknowledgementReference ? (
                         <span className="text-sm text-[var(--muted)]">
-                          Acknowledged · {row.acknowledgementReference}
+                          {t("enrolNotify.acknowledged", { reference: row.acknowledgementReference })}
                         </span>
                       ) : null}
                     </div>
