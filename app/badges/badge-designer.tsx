@@ -2,12 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { BadgeMedal } from "@/components/badge-medal";
-import {
-  BADGE_SHAPES,
-  SHAPE_LABEL,
-  type BadgeShape,
-} from "@/lib/badge-shapes";
+import { BADGE_SHAPES, type BadgeShape } from "@/lib/badge-shapes";
 import { defineBadgeAction, type BadgeFormState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -29,6 +26,7 @@ export type BadgeTarget = { value: string; label: string; group: string };
  * "default" at the bottom of a list of courses.
  */
 export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
+  const t = useT();
   const [state, action, saving] = useActionState<BadgeFormState, FormData>(
     defineBadgeAction,
     {},
@@ -57,32 +55,32 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
             ink={ink}
             size={96}
           />
-          <span className="text-xs text-[var(--muted)]">As it will appear</span>
+          <span className="text-xs text-[var(--muted)]">{t("badges.appear")}</span>
         </div>
 
         <div className="min-w-[16rem] flex-1 space-y-3">
           <label className="block text-sm">
-            <span className="text-[var(--muted)]">What it is called</span>
+            <span className="text-[var(--muted)]">{t("badges.name")}</span>
             <input
               name="name"
               required
               minLength={2}
               maxLength={120}
               defaultValue={kept.name}
-              placeholder="Safe Working at Heights"
+              placeholder={t("badges.nameHint")}
               className={`${inputClass} mt-1 block w-full`}
             />
           </label>
 
           <label className="block text-sm">
-            <span className="text-[var(--muted)]">What earns it</span>
+            <span className="text-[var(--muted)]">{t("badges.earns")}</span>
             <select
               name="target"
               required
               defaultValue={kept.target}
               className={`${inputClass} mt-1 block w-full`}
             >
-              <option value="">Choose one</option>
+              <option value="">{t("badges.chooseOne")}</option>
               {groups.map((group) => (
                 <optgroup key={group} label={group}>
                   {targets
@@ -101,7 +99,7 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
 
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Symbol</span>
+          <span className="text-[var(--muted)]">{t("badges.symbol")}</span>
           <input
             name="glyph"
             value={glyph}
@@ -112,7 +110,7 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Shape</span>
+          <span className="text-[var(--muted)]">{t("badges.shape")}</span>
           <select
             name="shape"
             value={shape}
@@ -121,14 +119,14 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
           >
             {BADGE_SHAPES.map((option) => (
               <option key={option} value={option}>
-                {SHAPE_LABEL[option]}
+                {t(`badges.shape.${option}`)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Background</span>
+          <span className="text-[var(--muted)]">{t("badges.background")}</span>
           <input
             name="background"
             type="color"
@@ -139,7 +137,7 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
         </label>
 
         <label className="block text-sm">
-          <span className="text-[var(--muted)]">Symbol colour</span>
+          <span className="text-[var(--muted)]">{t("badges.ink")}</span>
           <input
             name="ink"
             type="color"
@@ -151,15 +149,13 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
       </div>
 
       <label className="block text-sm">
-        <span className="text-[var(--muted)]">
-          What it says, for the learner and anybody they show it to — optional
-        </span>
+        <span className="text-[var(--muted)]">{t("badges.says")}</span>
         <textarea
           name="description"
           rows={2}
           maxLength={500}
           defaultValue={kept.description}
-          placeholder="Completed the practical module on working at heights, assessed against the curriculum criteria."
+          placeholder={t("badges.saysHint")}
           className={`${inputClass} mt-1 block w-full`}
         />
       </label>
@@ -176,7 +172,7 @@ export function BadgeDesigner({ targets }: { targets: BadgeTarget[] }) {
         disabled={saving}
         className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {saving ? "Saving…" : "Create this badge"}
+        {saving ? t("common.saving") : t("badges.create")}
       </button>
     </form>
   );

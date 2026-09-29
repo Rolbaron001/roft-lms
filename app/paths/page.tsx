@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireCapability, requirePermission } from "@/lib/request";
+import { pageLocale, requireCapability, requirePermission } from "@/lib/request";
 import { listLearningPaths } from "@/lib/learning-paths";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
@@ -25,8 +25,15 @@ export default async function PathsPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const tenant = await requireCapability("programmes");
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("course:read");
+  const named = {
+    course: words.lowerOne("course"),
+    courses: words.lowerMany("course"),
+    programme: words.lowerOne("programme"),
+    programmes: words.lowerMany("programme"),
+  };
   const paths = await listLearningPaths(session);
 
   const canAuthor = session.permissions.includes("course:author");
@@ -36,11 +43,7 @@ export default async function PathsPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{words.many("programme")}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Several courses chained into a sequence — a new starter programme, or
-          a full competency framework roll-out. A learner is given the next
-          course automatically as they finish the one before it.
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("paths.intro", named)}</p>
       </div>
 
       {canAuthor ? (
@@ -49,30 +52,18 @@ export default async function PathsPage({
           current={view}
           tabs={[
             { id: "list", label: words.many("programme"), count: paths.length },
-            { id: "add", label: `New ${words.one("programme").toLowerCase()}` },
+            { id: "add", label: t("paths.new", named) },
           ]}
         />
       ) : null}
 
       {view === "add" && canAuthor ? (
-        <NewPathForm />
+        <NewPathForm heading={t("paths.new", named)} />
       ) : (
         <>
           {paths.length === 0 ? (
-            <EmptyState title={`No ${words.many("programme").toLowerCase()} yet`}>
-              {canAuthor ? (
-                <p>
-                  A programme chains courses into an order, so a learner is
-                  given the next one as they finish the one before. Build the
-                  courses first — a programme is a sequence of them.
-                </p>
-              ) : (
-                <p>
-                  None has been built yet. When one has been, the courses you
-                  work through in order will be here. Building one is an
-                  author&rsquo;s job.
-                </p>
-              )}
+            <EmptyState title={t("paths.none", named)}>
+              {canAuthor ? <p>{t("paths.noneAuthor", named)}</p> : <p>{t("paths.noneReader", named)}</p>}
             </EmptyState>
           ) : (
             <div className="space-y-3">
@@ -117,8 +108,7 @@ export default async function PathsPage({
                       the screen somebody is on when they could fix it.
                     */
                     <p className="mt-3 text-xs" style={{ color: "var(--danger)" }}>
-                      No courses in it yet — a learner given this programme
-                      would receive nothing. Open it to add some.
+                      {t("paths.empty", named)}
                     </p>
                   )}
                 </Link>

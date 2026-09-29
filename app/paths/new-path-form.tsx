@@ -2,11 +2,14 @@
 
 import { useActionState } from "react";
 import { createPathAction, type PathState } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
 
-export function NewPathForm() {
+/** `heading` is "New programme" in the provider's own word for a programme. */
+export function NewPathForm({ heading }: { heading: string }) {
+  const t = useT();
   const [state, action, pending] = useActionState<PathState, FormData>(
     createPathAction,
     {},
@@ -14,9 +17,7 @@ export function NewPathForm() {
 
   return (
     <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] p-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        New programme
-      </h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{heading}</h2>
 
       {state.error ? (
         <p
@@ -29,18 +30,18 @@ export function NewPathForm() {
 
       <form action={action} className="mt-4 space-y-3">
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Title</span>
+          <span className="block text-sm font-medium">{t("paths.newTitle")}</span>
           <input
             name="title"
             required
             minLength={3}
-            placeholder="New Starter Programme"
+            placeholder={t("paths.newTitleHint")}
             className={inputClass}
           />
         </label>
 
         <label className="block space-y-1.5">
-          <span className="block text-sm font-medium">Description</span>
+          <span className="block text-sm font-medium">{t("paths.description")}</span>
           <textarea name="description" rows={2} className={inputClass} />
         </label>
 
@@ -50,7 +51,7 @@ export function NewPathForm() {
           className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-primary)" }}
         >
-          {pending ? "Creating…" : "Create programme"}
+          {pending ? t("paths.creating") : t("paths.create")}
         </button>
       </form>
     </section>

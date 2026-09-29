@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
@@ -22,6 +23,8 @@ export default async function PathPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   // Drive and OneDrive are offered wherever a folder is, so a provider
   // who keeps their material there never has to download it first.
   const drives = session.permissions.includes("qualification:manage")
@@ -59,14 +62,13 @@ export default async function PathPage({
           href="/paths"
           className="text-sm text-[var(--muted)] hover:underline"
         >
-          ← All programmes
+          {t("paths.all", { programmes: words.lowerMany("programme") })}
         </Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{detail.path.title}</h1>
           <div className="flex items-center gap-3">
             <span className="text-xs text-[var(--muted)]">
-              {detail.enrolled}{" "}
-              {detail.enrolled === 1 ? "person on it" : "people on it"}
+              {detail.enrolled === 1 ? t("paths.onItOne") : t("paths.onIt", { count: detail.enrolled })}
             </span>
             <StatusBadge status={detail.path.status} />
           </div>
@@ -90,7 +92,7 @@ export default async function PathPage({
         addableCourses={addable}
         people={people.map((person) => ({
           id: person.id,
-          label: `${person.firstName} ${person.lastName} — ${person.email}`,
+          label: `${person.firstName} ${person.lastName} · ${person.email}`,
         }))}
         canAuthor={canAuthor}
         canPublish={session.permissions.includes("course:publish")}
@@ -98,13 +100,10 @@ export default async function PathPage({
       />
       {canAuthorHere ? (
         <div className="mb-6">
-          <Card
-            title="Add documents from a folder"
-            description="Choose the folder this programme's material lives in and everything in it — including its subfolders — is read, filed and indexed. You see what it would file before anything is written."
-          >
+          <Card title={t("paths.folder")} description={t("paths.folderNote")}>
             <FolderPicker
               learningPathId={id}
-              label="The programme's folder, from your own computer"
+              label={t("paths.folderLabel")}
               extension={
                 mayUseExtension
                   ? {
@@ -117,11 +116,9 @@ export default async function PathPage({
               }
               hint={
                 <>
-                  Guides, workbooks, policies and templates are filed against
-                  this programme and their text indexed so they can be searched.
+                  {t("paths.folderHint")}
                   <br />
-                  Structure is not created from here: the programme&rsquo;s own
-                  shape is built by adding courses to it below. This files what it holds.
+                  {t("paths.folderHint2", { courses: words.lowerMany("course") })}
                 </>
               }
             />
@@ -131,10 +128,7 @@ export default async function PathPage({
 
       {drives.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Or from a drive you have connected"
-            description="The same folder, read where it already lives. It ends in the same place — a proposal to check before anything is written."
-          >
+          <Card title={t("paths.drive")} description={t("paths.driveNote")}>
             <DrivePicker
               drives={drives.map((one) => ({
                 provider: one.provider,

@@ -1,17 +1,10 @@
 import Link from "next/link";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { activeProgrammes } from "@/lib/tracker";
 import { Card } from "@/components/ui";
 import { vocabulary } from "@/lib/terms";
+import { maybe } from "@/lib/i18n";
 import { AppShell } from "@/components/app-shell";
-
-const VISIT_LABEL: Record<string, string> = {
-  not_scheduled: "Not scheduled",
-  scheduled: "Scheduled",
-  conducted: "Conducted",
-  findings_outstanding: "Findings outstanding",
-  closed: "Closed",
-};
 
 /**
  * Every programme that is running, and the dates it turns on.
@@ -30,7 +23,8 @@ export default async function TrackerPage({
 }) {
   const { all } = await searchParams;
   const tenant = await requireTenant();
-  const words = vocabulary(tenant.terminology, tenant.featureFlags);
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("enrolment:read_all");
 
   const includeFinished = all === "1";
@@ -40,43 +34,35 @@ export default async function TrackerPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
-      <h1 className="text-xl font-semibold">Tracker</h1>
+      <h1 className="text-xl font-semibold">{t("tracker.title")}</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {includeFinished
-          ? "Every cohort, including those finished and cancelled."
-          : "Every cohort still running."}{" "}
+        {includeFinished ? t("tracker.all") : t("tracker.running")}{" "}
         <Link
           href={includeFinished ? "/tracker" : "/tracker?all=1"}
           className="underline"
         >
-          {includeFinished ? "Show only what is running" : "Show all of them"}
+          {includeFinished ? t("tracker.showRunning") : t("tracker.showAll")}
         </Link>
       </p>
 
       <div className="mt-6">
-        <Card
-          title={words.many("programme")}
-          description="Read from the records rather than kept by hand, so it cannot disagree with the platform it reports on."
-        >
+        <Card title={words.many("programme")} description={t("tracker.note")}>
           {programmes.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              No cohorts yet. A cohort is what a schedule, a register and a
-              statutory return all hang from.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("tracker.none")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">Cohort</th>
-                    <th className="pb-2">Qualification</th>
-                    <th className="pb-2">Learners</th>
-                    <th className="pb-2">Training</th>
-                    <th className="pb-2">Sessions</th>
-                    <th className="pb-2">Tasks</th>
-                    <th className="pb-2">EISA registration</th>
-                    <th className="pb-2">EISA</th>
-                    <th className="pb-2">Monitoring visit</th>
+                    <th className="pb-2">{t("tracker.cohort")}</th>
+                    <th className="pb-2">{t("tracker.qualification")}</th>
+                    <th className="pb-2">{t("tracker.learners")}</th>
+                    <th className="pb-2">{t("tracker.training")}</th>
+                    <th className="pb-2">{t("tracker.sessions")}</th>
+                    <th className="pb-2">{t("tracker.tasks")}</th>
+                    <th className="pb-2">{t("tracker.eisaRegistration")}</th>
+                    <th className="pb-2">{t("tracker.eisa")}</th>
+                    <th className="pb-2">{t("tracker.visit")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -101,7 +87,7 @@ export default async function TrackerPage({
                             {row.cohortName}
                           </Link>
                           <span className="ml-2 text-xs text-[var(--muted)]">
-                            {row.status}
+                            {maybe(t, `tracker.status.${row.status}`) ?? row.status}
                           </span>
                         </td>
                         <td className="py-2 pr-3 text-[var(--muted)]">
@@ -132,7 +118,7 @@ export default async function TrackerPage({
                           )}
                           {registrationPassed ? (
                             <span className="ml-2 text-xs text-[var(--muted)]">
-                              closed
+                              {t("tracker.closed")}
                             </span>
                           ) : null}
                         </td>
@@ -140,7 +126,7 @@ export default async function TrackerPage({
                           {row.eisaDate ?? "—"}
                         </td>
                         <td className="py-2 text-[var(--muted)]">
-                          {VISIT_LABEL[row.monitoringVisitStatus] ??
+                          {maybe(t, `tracker.visit.${row.monitoringVisitStatus}`) ??
                             row.monitoringVisitStatus}
                           {row.monitoringVisitDate
                             ? ` · ${row.monitoringVisitDate}`

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { retireBadgeAction, type BadgeFormState } from "./actions";
+import { useT } from "@/components/i18n";
 
 /**
  * Retiring a badge.
@@ -18,6 +19,7 @@ export function RetireBadge({
   badgeId: string;
   name: string;
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<BadgeFormState, FormData>(
     retireBadgeAction,
     {},
@@ -29,10 +31,10 @@ export function RetireBadge({
       <button
         type="submit"
         disabled={saving}
-        title={`Stop awarding ${name}. Everybody who has it keeps it.`}
+        title={t("badges.retireTitle", { name })}
         className="rounded-md border border-[var(--border)] px-3 py-1 text-xs text-[var(--muted)] transition hover:border-[var(--danger)] hover:text-[var(--danger)] disabled:opacity-60"
       >
-        {saving ? "Retiring…" : "Retire"}
+        {saving ? t("badges.retiring") : t("badges.retire")}
       </button>
       {state.error ? (
         <p className="mt-1 text-xs text-[var(--danger)]">{state.error}</p>

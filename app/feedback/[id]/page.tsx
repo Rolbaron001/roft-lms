@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { vocabulary } from "@/lib/terms";
+import { Rich } from "@/components/rich-text";
 import { FeedbackError, feedbackOwedBy, feedbackSummary } from "@/lib/feedback";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
@@ -22,6 +24,8 @@ export default async function FeedbackPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   // Owing a form comes first. Somebody who can also read the report is far more
   // likely to have arrived here to answer than to analyse.
@@ -32,19 +36,20 @@ export default async function FeedbackPage({
     return (
       <AppShell tenant={tenant} session={session}>
         <h1 className="text-xl font-semibold">
-          {mine.assessmentTitle ?? "The programme"}
+          {mine.assessmentTitle ?? t("feedbackForm.programme", { programme: words.lowerOne("programme") })}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          {mine.cohortName}. Answers are reported together with everybody
-          else&rsquo;s, not one by one. It takes about two minutes, and it is
-          the only thing that changes how the next cohort is run.
+          {t("feedbackForm.intro", { cohort: mine.cohortName })}
         </p>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Asked for by <ZonedTime at={mine.dueAt} zone={tenant.timezone} withDate />.
+          <Rich
+            text={t("feedbackForm.askedBy")}
+            parts={{ time: <ZonedTime at={mine.dueAt} zone={tenant.timezone} withDate /> }}
+          />
         </p>
 
         <div className="mt-6">
-          <Card title="Your answers" description="">
+          <Card title={t("feedbackForm.yours")} description="">
             <AnswerForm requestId={id} questions={mine.questions} />
           </Card>
         </div>
@@ -73,26 +78,31 @@ export default async function FeedbackPage({
         href={`/cohorts/${summary.cohortId}`}
         className="text-sm text-[var(--muted)] hover:underline"
       >
-        ← Back to the cohort
+        {t("feedbackReport.back")}
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold">
-        {summary.assessmentTitle ?? "Programme feedback"}
+        {summary.assessmentTitle ?? t("feedbackReport.title", { programme: words.one("programme") })}
       </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {summary.cohortName} · asked{" "}
-        <ZonedTime at={summary.sentAt} zone={tenant.timezone} withDate showViewer={false} />{" "}
-        · {summary.answered} of {summary.invited} answered ({rate}%)
-        {summary.late > 0 ? ` · ${summary.late} after the 48 hours` : ""}
+        <Rich
+          text={t("feedbackReport.asked", {
+            cohort: summary.cohortName,
+            answered: summary.answered,
+            invited: summary.invited,
+            rate,
+          })}
+          parts={{
+            time: <ZonedTime at={summary.sentAt} zone={tenant.timezone} withDate showViewer={false} />,
+          }}
+        />
+        {summary.late > 0 ? ` · ${t("feedbackReport.late", { count: summary.late })}` : ""}
       </p>
 
       <div className="mt-6">
-        <Card
-          title="Ratings"
-          description="Mean of 1 (strongly disagree) to 5 (strongly agree). A mean over few answers is a mood, not a measurement, so the count is beside it."
-        >
+        <Card title={t("feedbackReport.ratings")} description={t("feedbackReport.ratingsNote")}>
           {summary.ratings.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Nothing rated yet.</p>
+            <p className="text-sm text-[var(--muted)]">{t("feedbackReport.noRatings")}</p>
           ) : (
             <ul className="space-y-3">
               {summary.ratings.map((rating) => (
@@ -102,8 +112,9 @@ export default async function FeedbackPage({
                     <span className="tabular-nums whitespace-nowrap">
                       {rating.count === 0 ? "—" : rating.mean.toFixed(1)}
                       <span className="ml-2 text-xs text-[var(--muted)]">
-                        {rating.count}{" "}
-                        {rating.count === 1 ? "answer" : "answers"}
+                        {rating.count === 1
+                          ? t("feedbackReport.answerOne")
+                          : t("feedbackReport.answers", { count: rating.count })}
                       </span>
                     </span>
                   </div>
@@ -121,12 +132,9 @@ export default async function FeedbackPage({
       </div>
 
       <div className="mt-6">
-        <Card
-          title="What they said"
-          description="Shown together and without names. Feedback about a facilitator is only honest if the learner believes it will not be read back to them one by one."
-        >
+        <Card title={t("feedbackReport.said")} description={t("feedbackReport.saidNote")}>
           {summary.comments.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">Nothing written yet.</p>
+            <p className="text-sm text-[var(--muted)]">{t("feedbackReport.noComments")}</p>
           ) : (
             <ul className="space-y-3 text-sm">
               {summary.comments.map((comment, index) => (
@@ -144,10 +152,7 @@ export default async function FeedbackPage({
 
       {summary.outstanding.length > 0 ? (
         <div className="mt-6">
-          <Card
-            title="Still to answer"
-            description="The one place a name appears. Chasing needs them; the answers above do not."
-          >
+          <Card title={t("feedbackReport.outstanding")} description={t("feedbackReport.outstandingNote")}>
             <p className="text-sm">
               {summary.outstanding.map((person) => person.name).join(", ")}
             </p>

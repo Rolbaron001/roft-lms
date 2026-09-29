@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
 import {
   DAYS_TO_ACKNOWLEDGE_GRIEVANCE,
   openGrievances,
@@ -14,15 +15,6 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { Grievances } from "./grievances";
 
-const STATUS_LABEL: Record<string, string> = {
-  lodged: "Lodged",
-  acknowledged: "Acknowledged",
-  under_investigation: "Under investigation",
-  decided: "Decided",
-  appealed: "Appealed",
-  closed: "Closed",
-};
-
 /**
  * Grievances and possible abscondment.
  *
@@ -33,6 +25,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function ConductPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("grievance:manage");
+  const t = await pageT();
 
   const today = dateInZone(new Date(), tenant.timezone);
   const grievances = await openGrievances(session);
@@ -79,19 +72,15 @@ export default async function ConductPage() {
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Conduct</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Grievances raised by learners, and anybody the register says has
-          stopped turning up. Disciplinary matters sit on the learner&rsquo;s
-          own page, where the rest of their record is.
-        </p>
+        <h1 className="text-xl font-semibold">{t("conductPage.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("conductPage.intro")}</p>
       </div>
 
       {overdue.length > 0 ? (
         <div className="mb-6">
           <Card
-            title={`${overdue.length} not acknowledged in time`}
-            description={`A grievance is acknowledged within ${DAYS_TO_ACKNOWLEDGE_GRIEVANCE} working days. These are past that.`}
+            title={t("conductPage.overdue", { count: overdue.length })}
+            description={t("conductPage.overdueNote", { days: DAYS_TO_ACKNOWLEDGE_GRIEVANCE })}
           >
             <ul className="space-y-1 text-sm">
               {overdue.map((row) => (
@@ -103,7 +92,7 @@ export default async function ConductPage() {
                     {row.firstName} {row.lastName}
                   </Link>
                   <span className="ml-2 text-[var(--danger)]">
-                    due {row.acknowledgeBy}
+                    {t("conductPage.due", { date: row.acknowledgeBy })}
                   </span>
                 </li>
               ))}
@@ -112,10 +101,7 @@ export default async function ConductPage() {
         </div>
       ) : null}
 
-      <Card
-        title="Grievances"
-        description="Raised by a learner about treatment, conditions, or anything else affecting them. Kept apart from appeals, which are about a result and go to the moderator."
-      >
+      <Card title={t("conductPage.grievances")} description={t("conductPage.grievancesNote")}>
         <Grievances
           rows={grievances.map((row) => ({
             id: row.id,
@@ -125,7 +111,7 @@ export default async function ConductPage() {
             lodgedOn: row.lodgedOn,
             acknowledgeBy: row.acknowledgeBy,
             acknowledged: row.acknowledgedAt !== null,
-            status: STATUS_LABEL[row.status] ?? row.status,
+            status: maybe(t, `grievance.status.${row.status}`) ?? row.status,
             rawStatus: row.status,
             decisionDueBy: row.decisionDueBy,
           }))}
@@ -136,15 +122,9 @@ export default async function ConductPage() {
 
       {canReadConduct ? (
         <div className="mt-6">
-          <Card
-            title="Possibly absconded"
-            description="Two or more consecutive training days absent with no word. Read off the register rather than stored, so correcting a mark changes the answer at once. An absence recorded as excused is communication, and breaks the run."
-          >
+          <Card title={t("conductPage.absconded")} description={t("conductPage.abscondedNote")}>
             {absconding.length === 0 ? (
-              <p className="text-sm text-[var(--muted)]">
-                Nobody. Everybody is either turning up or has told somebody why
-                not.
-              </p>
+              <p className="text-sm text-[var(--muted)]">{t("conductPage.nobody")}</p>
             ) : (
               <ul className="space-y-3 text-sm">
                 {absconding.map((cohort) => (
@@ -160,8 +140,7 @@ export default async function ConductPage() {
                             {learner.name}
                           </Link>
                           <span className="ml-2 text-[var(--muted)]">
-                            {learner.consecutive} consecutive, since{" "}
-                            {learner.since}
+                            {t("conductPage.consecutive", { count: learner.consecutive, date: learner.since })}
                           </span>
                         </li>
                       ))}
@@ -170,11 +149,7 @@ export default async function ConductPage() {
                 ))}
               </ul>
             )}
-            <p className="mt-4 text-xs text-[var(--muted)]">
-              A list to act on, never a decision. Contacting the learner,
-              writing to the sponsor and issuing a notice of intention to
-              terminate are all things a person does.
-            </p>
+            <p className="mt-4 text-xs text-[var(--muted)]">{t("conductPage.actOn")}</p>
           </Card>
         </div>
       ) : null}

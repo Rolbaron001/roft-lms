@@ -1,10 +1,13 @@
-import { requirePermission, requireTenant } from "@/lib/request";
+import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
+import { maybe } from "@/lib/i18n";
+import { vocabulary } from "@/lib/terms";
 import { definedBadges, defaultBadge } from "@/lib/badges";
 import { listCourses, listQualifications } from "@/lib/authoring";
 import { listLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card } from "@/components/app-shell";
 import { BadgeMedal } from "@/components/badge-medal";
 import { BADGE_KIND_LABEL, type BadgeShape } from "@/lib/badge-shapes";
+
 import { BadgeDesigner, type BadgeTarget } from "./badge-designer";
 import { RetireBadge } from "./retire";
 
@@ -23,6 +26,8 @@ import { RetireBadge } from "./retire";
 export default async function BadgesPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
+  const { t, locale } = await pageLocale();
+  const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   const canAuthor = session.permissions.includes("course:author");
 
@@ -56,8 +61,8 @@ export default async function BadgesPage() {
       : [
           {
             value: "default",
-            label: "Anything, when nothing more specific is set",
-            group: "The provider's own badge",
+            label: t("badges.target.default"),
+            group: t("badges.group.provider"),
           },
         ]),
     ...qualifications
@@ -65,54 +70,42 @@ export default async function BadgesPage() {
       .map((row) => ({
         value: `qualification:${row.id}`,
         label: row.title,
-        group: "Qualifications",
+        group: t("badges.group.qualifications"),
       })),
     ...paths
       .filter((row) => !spoken.has(`path:${row.title}`))
       .map((row) => ({
         value: `learning_path:${row.id}`,
         label: row.title,
-        group: "Programmes",
+        group: words.many("programme"),
       })),
     ...courses
       .filter((row) => !spoken.has(`course:${row.title}`))
       .map((row) => ({
         value: `course:${row.id}`,
         label: row.title,
-        group: "Courses",
+        group: words.many("course"),
       })),
   ];
 
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Badges</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Recognition that arrives on the day the work is finished, rather than
-          months later when the external certificate comes through. A badge is
-          not a qualification and the platform never lets it look like one: no
-          SAQA identifier, no credits, and a verification page that says plainly
-          what it is and what it is not.
-        </p>
+        <h1 className="text-xl font-semibold">{t("badges.title")}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("badges.intro")}</p>
       </div>
 
       {!fallback && defined.filter((row) => row.active).length === 0 ? (
         <div className="mb-6">
-          <Card
-            title="Nothing is earned yet"
-            description="No badge has been designed, so finishing a course or a qualification currently awards nothing. Designing one below is enough — start with the provider's own badge if you do not want a different one for each thing."
-          >
-            <p className="text-sm text-[var(--muted)]">
-              This is a legitimate choice rather than a fault. The platform will
-              not invent one.
-            </p>
+          <Card title={t("badges.nothing")} description={t("badges.nothingNote")}>
+            <p className="text-sm text-[var(--muted)]">{t("badges.legitimate")}</p>
           </Card>
         </div>
       ) : null}
 
       {defined.length > 0 ? (
         <div className="mb-6">
-          <Card title="Designed">
+          <Card title={t("badges.designed")}>
             <ul className="space-y-3">
               {defined.map((badge) => (
                 <li
@@ -132,7 +125,7 @@ export default async function BadgesPage() {
                       {badge.name}
                       {!badge.active ? (
                         <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                          retired
+                          {t("badges.retired")}
                         </span>
                       ) : null}
                     </p>
@@ -142,13 +135,11 @@ export default async function BadgesPage() {
                         badge.courseTitle ??
                         (badge.moduleTitle
                           ? `${badge.moduleCode ?? ""} ${badge.moduleTitle}`.trim()
-                          : BADGE_KIND_LABEL[badge.kind] ?? badge.kind)}
+                          : (maybe(t, `badges.kind.${badge.kind}`) ?? BADGE_KIND_LABEL[badge.kind] ?? badge.kind))}
                     </p>
                   </div>
                   <span className="text-xs text-[var(--muted)]">
-                    {badge.held === 1
-                      ? "1 learner"
-                      : `${badge.held} learners`}
+                    {badge.held === 1 ? t("badges.heldOne") : t("badges.held", { count: badge.held })}
                   </span>
                   {canAuthor && badge.active ? (
                     <RetireBadge badgeId={badge.id} name={badge.name} />
@@ -161,15 +152,9 @@ export default async function BadgesPage() {
       ) : null}
 
       {canAuthor ? (
-        <Card
-          title="Design a badge"
-          description="A shape, two colours and a symbol. Nothing to upload and nobody to brief."
-        >
+        <Card title={t("badges.design")} description={t("badges.designNote")}>
           {targets.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Everything already has a badge. Retire one to design a different
-              badge for the same thing.
-            </p>
+            <p className="text-sm text-[var(--muted)]">{t("badges.allHave")}</p>
           ) : (
             <BadgeDesigner targets={targets} />
           )}

@@ -9,6 +9,7 @@ import {
   removeCourseAction,
   type PathState,
 } from "../actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -58,6 +59,7 @@ export function PathEditor({
   canPublish: boolean;
   canEnrol: boolean;
 }) {
+  const t = useT();
   const editable = canAuthor && status === "draft";
 
   const [addState, addAction, addPending] = useActionState<PathState, FormData>(
@@ -78,13 +80,11 @@ export function PathEditor({
       <div className="space-y-6">
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-            The sequence
+            {t("paths.sequence")}
           </h2>
 
           {steps.length === 0 ? (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              No courses yet. Add them in the order learners should take them.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("paths.noSteps")}</p>
           ) : (
             <ol className="mt-4 space-y-2">
               {steps.map((step, index) => (
@@ -104,13 +104,13 @@ export function PathEditor({
                     </p>
                     <p className="mt-1 pl-8 text-xs text-[var(--muted)]">
                       {index === 0
-                        ? "Opens as soon as somebody joins the programme."
+                        ? t("paths.opensFirst")
                         : step.requiresPrevious
-                          ? "Opens when the step before it is finished."
-                          : "Opens straight away, alongside the others."}
+                          ? t("paths.opensAfter")
+                          : t("paths.opensNow")}
                       {step.status !== "published" ? (
                         <span className="ml-1 font-medium text-[var(--danger)]">
-                          This course is not published.
+                          {t("paths.notPublished")}
                         </span>
                       ) : null}
                     </p>
@@ -129,7 +129,7 @@ export function PathEditor({
                         <button
                           type="submit"
                           disabled={index === 0}
-                          aria-label={`Move ${step.title} earlier`}
+                          aria-label={t("paths.earlier", { title: step.title })}
                           className="rounded border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-30"
                         >
                           ↑
@@ -146,7 +146,7 @@ export function PathEditor({
                         <button
                           type="submit"
                           disabled={index === steps.length - 1}
-                          aria-label={`Move ${step.title} later`}
+                          aria-label={t("paths.later", { title: step.title })}
                           className="rounded border border-[var(--border)] px-2 py-1 text-xs disabled:opacity-30"
                         >
                           ↓
@@ -163,7 +163,7 @@ export function PathEditor({
                           type="submit"
                           className="ml-1 text-xs text-[var(--danger)] hover:underline"
                         >
-                          Remove
+                          {t("paths.remove")}
                         </button>
                       </form>
                     </div>
@@ -180,7 +180,7 @@ export function PathEditor({
               <input type="hidden" name="pathId" value={pathId} />
               <div className="flex gap-2">
                 <select name="courseId" defaultValue="" className={inputClass}>
-                  <option value="">Add a course…</option>
+                  <option value="">{t("paths.addCourse")}</option>
                   {addableCourses.map((course) => (
                     <option key={course.id} value={course.id}>
                       {course.title}
@@ -192,7 +192,7 @@ export function PathEditor({
                   disabled={addPending || addableCourses.length === 0}
                   className="whitespace-nowrap rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium disabled:opacity-60"
                 >
-                  {addPending ? "Adding…" : "Add"}
+                  {addPending ? t("paths.adding") : t("paths.add")}
                 </button>
               </div>
 
@@ -204,28 +204,19 @@ export function PathEditor({
                   className="mt-1"
                 />
                 <span>
-                  Locked until the step before it is finished
-                  <span className="block text-xs text-[var(--muted)]">
-                    Untick for a course that can be taken at any point in the
-                    programme.
-                  </span>
+                  {t("paths.locked")}
+                  <span className="block text-xs text-[var(--muted)]">{t("paths.lockedNote")}</span>
                 </span>
               </label>
 
               {addableCourses.length === 0 ? (
-                <p className="text-xs text-[var(--muted)]">
-                  Every published course is already in this programme.
-                </p>
+                <p className="text-xs text-[var(--muted)]">{t("paths.allIn")}</p>
               ) : null}
             </form>
           ) : null}
 
           {status === "published" && canAuthor ? (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              This programme is published and people are working through it, so
-              its steps are fixed. Changing the order underneath somebody would
-              alter what they had already been told to do.
-            </p>
+            <p className="mt-4 text-sm text-[var(--muted)]">{t("paths.published")}</p>
           ) : null}
         </section>
       </div>
@@ -242,19 +233,17 @@ export function PathEditor({
                 className="w-full rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 style={{ background: "var(--brand-primary)" }}
               >
-                {publishPending ? "Checking…" : "Publish programme"}
+                {publishPending ? t("paths.checking") : t("paths.publish")}
               </button>
             </form>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Every course in it has to be published first.
-            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{t("paths.publishNote")}</p>
           </section>
         ) : null}
 
         {canEnrol && status === "published" ? (
           <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-              Put somebody on it
+              {t("paths.putOn")}
             </h2>
             <Message state={enrolState} />
 
@@ -262,7 +251,7 @@ export function PathEditor({
               <input type="hidden" name="pathId" value={pathId} />
 
               <select name="userId" defaultValue="" className={inputClass}>
-                <option value="">Choose someone…</option>
+                <option value="">{t("paths.choose")}</option>
                 {people.map((person) => (
                   <option key={person.id} value={person.id}>
                     {person.label}
@@ -272,10 +261,8 @@ export function PathEditor({
 
               <label className="block space-y-1.5">
                 <span className="block text-sm font-medium">
-                  Due date{" "}
-                  <span className="font-normal text-[var(--muted)]">
-                    (optional)
-                  </span>
+                  {t("paths.dueDate")}{" "}
+                  <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
                 </span>
                 <input type="date" name="dueDate" className={inputClass} />
               </label>
@@ -286,13 +273,11 @@ export function PathEditor({
                 className="w-full rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 style={{ background: "var(--brand-primary)" }}
               >
-                {enrolPending ? "Adding…" : "Add to programme"}
+                {enrolPending ? t("paths.adding") : t("paths.addPerson")}
               </button>
             </form>
 
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              Only the first course opens. The rest arrive as each is finished.
-            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{t("paths.firstOnly")}</p>
           </section>
         ) : null}
       </aside>

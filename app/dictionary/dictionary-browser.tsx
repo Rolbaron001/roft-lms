@@ -3,12 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui";
 import type { DefinedBy, DictionaryEntry } from "@/lib/dictionary";
-
-const SOURCE_LABEL: Record<DefinedBy, string> = {
-  authority: "Set by an authority",
-  platform: "This platform's term",
-  practice: "Common practice",
-};
+import { useT } from "@/components/i18n";
 
 const SOURCE_TONE: Record<DefinedBy, string> = {
   authority:
@@ -32,6 +27,7 @@ export function DictionaryBrowser({
   categories: Record<string, string>;
   meanings: Record<DefinedBy, string>;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("");
   const [source, setSource] = useState<DefinedBy | "">("");
@@ -55,24 +51,24 @@ export function DictionaryBrowser({
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex-1 min-w-56 text-sm">
-            <span className="mb-1 block font-medium">Search</span>
+            <span className="mb-1 block font-medium">{t("dictionary.search")}</span>
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="A term, an abbreviation, or a word in a definition"
+              placeholder={t("dictionary.searchHint")}
               className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Area</span>
+            <span className="mb-1 block font-medium">{t("dictionary.area")}</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
               className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             >
-              <option value="">All areas</option>
+              <option value="">{t("dictionary.allAreas")}</option>
               {Object.entries(categories).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
@@ -82,7 +78,7 @@ export function DictionaryBrowser({
           </label>
 
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Who defines it</span>
+            <span className="mb-1 block font-medium">{t("dictionary.who")}</span>
             <select
               value={source}
               onChange={(event) =>
@@ -90,26 +86,23 @@ export function DictionaryBrowser({
               }
               className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             >
-              <option value="">Anyone</option>
-              <option value="authority">Set by an authority</option>
-              <option value="platform">This platform&rsquo;s term</option>
-              <option value="practice">Common practice</option>
+              <option value="">{t("dictionary.anyone")}</option>
+              <option value="authority">{t("dictionary.source.authority")}</option>
+              <option value="platform">{t("dictionary.source.platform")}</option>
+              <option value="practice">{t("dictionary.source.practice")}</option>
             </select>
           </label>
         </div>
 
         <p className="mt-3 text-xs text-[var(--muted)]">
-          {visible.length} of {entries.length} terms
-          {source ? ` — ${meanings[source]}` : ""}
+          {t("dictionary.shown", { shown: visible.length, count: entries.length })}
+          {source ? ` · ${meanings[source]}` : ""}
         </p>
       </Card>
 
       {visible.length === 0 ? (
         <Card>
-          <p className="text-sm text-[var(--muted)]">
-            Nothing matches. If a term is missing and it is one we use, it
-            belongs here — say so and it will be added in the next release.
-          </p>
+          <p className="text-sm text-[var(--muted)]">{t("dictionary.none")}</p>
         </Card>
       ) : null}
 
@@ -135,7 +128,7 @@ export function DictionaryBrowser({
               >
                 {entry.definedBy === "authority" && entry.authority
                   ? entry.authority
-                  : SOURCE_LABEL[entry.definedBy]}
+                  : t(`dictionary.source.${entry.definedBy}`)}
               </span>
             </div>
 
@@ -145,7 +138,7 @@ export function DictionaryBrowser({
               <span>{categories[entry.category] ?? entry.category}</span>
               {entry.seeAlso.length > 0 ? (
                 <span>
-                  See also:{" "}
+                  {t("dictionary.seeAlso")}{" "}
                   {entry.seeAlso.map((reference, index) => (
                     <span key={reference}>
                       {index > 0 ? ", " : ""}

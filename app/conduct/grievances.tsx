@@ -8,6 +8,7 @@ import {
   decideGrievanceAction,
   type ConductActionState,
 } from "./actions";
+import { useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -42,6 +43,7 @@ export function Grievances({
   staff: { id: string; name: string }[];
   today: string;
 }) {
+  const t = useT();
   const [ackState, ackAction] = useActionState<ConductActionState, FormData>(
     acknowledgeGrievanceAction,
     {},
@@ -59,7 +61,7 @@ export function Grievances({
   const error = ackState.error ?? appointState.error ?? decideState.error;
 
   if (rows.length === 0) {
-    return <p className="text-sm text-[var(--muted)]">Nothing open.</p>;
+    return <p className="text-sm text-[var(--muted)]">{t("grievance.nothing")}</p>;
   }
 
   return (
@@ -80,7 +82,7 @@ export function Grievances({
                 {row.learnerName}
               </Link>
               <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                lodged {row.lodgedOn} · {row.status}
+                {t("grievance.lodged", { date: row.lodgedOn, status: row.status })}
               </span>
             </p>
 
@@ -94,13 +96,13 @@ export function Grievances({
                     : "mt-1 text-xs text-[var(--muted)]"
                 }
               >
-                Acknowledge by {row.acknowledgeBy}
+                {t("grievance.ackBy", { date: row.acknowledgeBy })}
               </p>
             ) : null}
 
             {row.decisionDueBy ? (
               <p className="mt-1 text-xs text-[var(--muted)]">
-                Decision due by {row.decisionDueBy}
+                {t("grievance.decisionBy", { date: row.decisionDueBy })}
               </p>
             ) : null}
 
@@ -109,7 +111,7 @@ export function Grievances({
                 <form action={ackAction}>
                   <input type="hidden" name="grievanceId" value={row.id} />
                   <button type="submit" className={buttonClass}>
-                    Acknowledge
+                    {t("grievance.acknowledge")}
                   </button>
                 </form>
               ) : null}
@@ -118,7 +120,7 @@ export function Grievances({
                 <form action={appointAction} className="flex flex-wrap gap-2">
                   <input type="hidden" name="grievanceId" value={row.id} />
                   <select name="investigatorId" className={inputClass} required>
-                    <option value="">Choose somebody</option>
+                    <option value="">{t("grievance.choose")}</option>
                     {staff.map((person) => (
                       <option key={person.id} value={person.id}>
                         {person.name}
@@ -126,14 +128,14 @@ export function Grievances({
                     ))}
                   </select>
                   <button type="submit" className={buttonClass}>
-                    Appoint
+                    {t("grievance.appoint")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setActing(null)}
                     className={buttonClass}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </form>
               ) : acting === `decide:${row.id}` ? (
@@ -141,7 +143,7 @@ export function Grievances({
                   <input type="hidden" name="grievanceId" value={row.id} />
                   <label className="block text-sm">
                     <span className="mr-2 text-[var(--muted)]">
-                      Meeting held
+                      {t("grievance.meeting")}
                     </span>
                     <input
                       type="date"
@@ -155,7 +157,7 @@ export function Grievances({
                     name="decision"
                     rows={3}
                     defaultValue={decideState.values?.decision}
-                    placeholder="What was found and what will be done. This goes to the learner in writing."
+                    placeholder={t("grievance.decisionHint")}
                     className={`${inputClass} block w-full`}
                   />
                   <div className="flex gap-2">
@@ -164,14 +166,14 @@ export function Grievances({
                       disabled={deciding}
                       className={buttonClass}
                     >
-                      {deciding ? "Saving…" : "Record the decision"}
+                      {deciding ? t("common.saving") : t("grievance.record")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setActing(null)}
                       className={buttonClass}
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </form>
@@ -183,7 +185,7 @@ export function Grievances({
                       onClick={() => setActing(`appoint:${row.id}`)}
                       className={buttonClass}
                     >
-                      Appoint an investigator
+                      {t("grievance.appointInvestigator")}
                     </button>
                   ) : null}
                   {row.rawStatus === "under_investigation" ? (
@@ -192,7 +194,7 @@ export function Grievances({
                       onClick={() => setActing(`decide:${row.id}`)}
                       className={buttonClass}
                     >
-                      Record the decision
+                      {t("grievance.record")}
                     </button>
                   ) : null}
                 </>
@@ -202,12 +204,7 @@ export function Grievances({
         ))}
       </ul>
 
-      <p className="text-xs text-[var(--muted)]">
-        The investigator must be somebody the grievance is not about. Naming one
-        the learner has complained about is refused, because &ldquo;a designated
-        impartial person&rdquo; is what the procedure promises and a short-staffed
-        week is exactly when it gets broken.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{t("grievance.impartial")}</p>
     </div>
   );
 }

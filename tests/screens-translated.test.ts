@@ -40,6 +40,16 @@ const MOVED = [
   "app/imports",
   "app/reports",
   "app/statutory",
+  "app/paths",
+  "app/badges",
+  "app/templates",
+  "app/tracker",
+  "app/dictionary",
+  "app/feedback",
+  "app/conduct",
+  "app/not-permitted",
+  "app/unknown-tenant",
+  "app/workplace/setup",
 ];
 
 /**

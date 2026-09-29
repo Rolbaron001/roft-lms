@@ -6,14 +6,9 @@ import {
   type FeedbackActionState,
 } from "@/app/feedback/actions";
 import type { FeedbackQuestion } from "@/lib/feedback";
+import { useT } from "@/components/i18n";
 
-const SCALE = [
-  { value: 1, label: "Strongly disagree" },
-  { value: 2, label: "Disagree" },
-  { value: 3, label: "Neither" },
-  { value: 4, label: "Agree" },
-  { value: 5, label: "Strongly agree" },
-];
+const SCALE = [1, 2, 3, 4, 5] as const;
 
 /**
  * The form a learner fills in.
@@ -29,6 +24,7 @@ export function AnswerForm({
   requestId: string;
   questions: FeedbackQuestion[];
 }) {
+  const t = useT();
   const [state, action, saving] = useActionState<FeedbackActionState, FormData>(
     submitFeedbackAction,
     {},
@@ -44,7 +40,7 @@ export function AnswerForm({
             {question.prompt}
             {question.required ? null : (
               <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                optional
+                {t("feedbackForm.optional")}
               </span>
             )}
           </legend>
@@ -53,16 +49,16 @@ export function AnswerForm({
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               {SCALE.map((point) => (
                 <label
-                  key={point.value}
+                  key={point}
                   className="flex items-center gap-2 text-sm"
                 >
                   <input
                     type="radio"
                     name={question.key}
-                    value={point.value}
+                    value={point}
                     required={question.required}
                   />
-                  {point.label}
+                  {t(`feedbackForm.scale.${point}`)}
                 </label>
               ))}
             </div>
@@ -85,7 +81,7 @@ export function AnswerForm({
         disabled={saving}
         className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {saving ? "Sending…" : "Send my answers"}
+        {saving ? t("feedbackForm.sending") : t("feedbackForm.send")}
       </button>
     </form>
   );

@@ -7,6 +7,8 @@ import {
   openLogbookAction,
   type WorkplaceState,
 } from "../actions";
+import { useT } from "@/components/i18n";
+import { Rich } from "@/components/rich-text";
 
 const FIELD =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -80,6 +82,7 @@ export function AgreementForm({
   learners: Person[];
   coaches: Person[];
 }) {
+  const t = useT();
   const [state, formAction] = useActionState<WorkplaceState, FormData>(
     createAgreementAction,
     {},
@@ -88,10 +91,7 @@ export function AgreementForm({
   if (coaches.length === 0) {
     return (
       <p className="text-sm text-[var(--muted)]">
-        Nobody holds the Workplace Coach role yet. Add the learner&rsquo;s
-        supervisor through <strong>People</strong> first — they work for the
-        employer, not for you, and they will only ever see the learners named on
-        their own agreements.
+        <Rich text={t("wpSetup.noCoaches")} parts={{ people: <strong>{t("wpSetup.people")}</strong> }} />
       </p>
     );
   }
@@ -103,13 +103,13 @@ export function AgreementForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="learnerId" className="block text-sm font-medium">
-            Learner
+            {t("wpSetup.learner")}
           </label>
           <select id="learnerId" name="learnerId" required className={FIELD}>
-            <option value="">Choose a learner</option>
+            <option value="">{t("wpSetup.chooseLearner")}</option>
             {learners.map((person) => (
               <option key={person.id} value={person.id}>
-                {person.firstName} {person.lastName} — {person.email}
+                {person.firstName} {person.lastName} · {person.email}
               </option>
             ))}
           </select>
@@ -117,24 +117,22 @@ export function AgreementForm({
 
         <div className="space-y-1.5">
           <label htmlFor="coachId" className="block text-sm font-medium">
-            Workplace coach
+            {t("wpSetup.workplaceCoach")}
           </label>
           <select id="coachId" name="coachId" required className={FIELD}>
-            <option value="">Choose a coach</option>
+            <option value="">{t("wpSetup.chooseCoach")}</option>
             {coaches.map((person) => (
               <option key={person.id} value={person.id}>
-                {person.firstName} {person.lastName} — {person.email}
+                {person.firstName} {person.lastName} · {person.email}
               </option>
             ))}
           </select>
-          <p className="text-xs text-[var(--muted)]">
-            The learner cannot be their own coach; the database refuses it.
-          </p>
+          <p className="text-xs text-[var(--muted)]">{t("wpSetup.ownCoach")}</p>
         </div>
 
         <div className="space-y-1.5">
           <label htmlFor="employerName" className="block text-sm font-medium">
-            Employer
+            {t("wpSetup.employer")}
           </label>
           <input
             id="employerName"
@@ -150,19 +148,16 @@ export function AgreementForm({
             htmlFor="coachDesignation"
             className="block text-sm font-medium"
           >
-            Coach&rsquo;s designation
+            {t("wpSetup.designation")}
           </label>
           <input
             id="coachDesignation"
             name="coachDesignation"
             type="text"
-            placeholder="HR Manager"
+            placeholder={t("wpSetup.designationHint")}
             className={FIELD}
           />
-          <p className="text-xs text-[var(--muted)]">
-            Recorded on the agreement as it stands today, so the sign-off keeps
-            saying who signed and in what capacity.
-          </p>
+          <p className="text-xs text-[var(--muted)]">{t("wpSetup.designationNote")}</p>
         </div>
 
         <div className="space-y-1.5 sm:col-span-2">
@@ -170,7 +165,7 @@ export function AgreementForm({
             htmlFor="employerAddress"
             className="block text-sm font-medium"
           >
-            Employer address
+            {t("wpSetup.address")}
           </label>
           <input
             id="employerAddress"
@@ -182,20 +177,20 @@ export function AgreementForm({
 
         <div className="space-y-1.5">
           <label htmlFor="startDate" className="block text-sm font-medium">
-            Starts
+            {t("wpSetup.starts")}
           </label>
           <input id="startDate" name="startDate" type="date" className={FIELD} />
         </div>
 
         <div className="space-y-1.5">
           <label htmlFor="endDate" className="block text-sm font-medium">
-            Ends
+            {t("wpSetup.ends")}
           </label>
           <input id="endDate" name="endDate" type="date" className={FIELD} />
         </div>
       </div>
 
-      <Submit label="Create agreement" busy="Creating…" />
+      <Submit label={t("wpSetup.create")} busy={t("wpSetup.creating")} />
     </form>
   );
 }
@@ -207,6 +202,7 @@ export function LogbookForm({
   agreements: Agreement[];
   modules: Module[];
 }) {
+  const t = useT();
   const [state, formAction] = useActionState<WorkplaceState, FormData>(
     openLogbookAction,
     {},
@@ -216,13 +212,7 @@ export function LogbookForm({
   const chosen = agreements.find((agreement) => agreement.id === agreementId);
 
   if (agreements.length === 0) {
-    return (
-      <p className="text-sm text-[var(--muted)]">
-        No workplace agreements yet. Create one above first — a logbook records
-        work done at a named employer under a named coach, so it cannot exist
-        without one.
-      </p>
-    );
+    return <p className="text-sm text-[var(--muted)]">{t("wpSetup.noAgreements")}</p>;
   }
 
   return (
@@ -232,7 +222,7 @@ export function LogbookForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="agreementId" className="block text-sm font-medium">
-            Agreement
+            {t("wpSetup.agreementLabel")}
           </label>
           <select
             id="agreementId"
@@ -242,11 +232,14 @@ export function LogbookForm({
             value={agreementId}
             onChange={(event) => setAgreementId(event.target.value)}
           >
-            <option value="">Choose an agreement</option>
+            <option value="">{t("wpSetup.chooseAgreement")}</option>
             {agreements.map((agreement) => (
               <option key={agreement.id} value={agreement.id}>
-                {agreement.learnerFirst} {agreement.learnerLast} at{" "}
-                {agreement.employerName} (coach: {agreement.coachName})
+                {t("wpSetup.agreementOption", {
+                  learner: `${agreement.learnerFirst} ${agreement.learnerLast}`,
+                  employer: agreement.employerName,
+                  coach: agreement.coachName,
+                })}
               </option>
             ))}
           </select>
@@ -257,7 +250,7 @@ export function LogbookForm({
             htmlFor="curriculumModuleId"
             className="block text-sm font-medium"
           >
-            Work experience module
+            {t("wpSetup.module")}
           </label>
           <select
             id="curriculumModuleId"
@@ -265,7 +258,7 @@ export function LogbookForm({
             required
             className={FIELD}
           >
-            <option value="">Choose a module</option>
+            <option value="">{t("wpSetup.chooseModule")}</option>
             {modules.map((entry) => {
               // A module with no work activities would produce a logbook that
               // attests to nothing, and one already open would be a duplicate.
@@ -278,12 +271,12 @@ export function LogbookForm({
                   value={entry.id}
                   disabled={empty || alreadyOpen}
                 >
-                  {entry.code} — {entry.title}
+                  {entry.code}: {entry.title}{" "}
                   {empty
-                    ? " (curriculum not transcribed)"
+                    ? t("wpSetup.notTranscribed")
                     : alreadyOpen
-                      ? " (already open)"
-                      : ` (${entry.elementCount} requirements)`}
+                      ? t("wpSetup.alreadyOpen")
+                      : t("wpSetup.requirements", { count: entry.elementCount })}
                 </option>
               );
             })}
@@ -291,13 +284,9 @@ export function LogbookForm({
         </div>
       </div>
 
-      <p className="text-xs text-[var(--muted)]">
-        The logbook is generated from the curriculum&rsquo;s own work
-        activities, workplace knowledge and supporting evidence, so it cannot
-        omit a requirement.
-      </p>
+      <p className="text-xs text-[var(--muted)]">{t("wpSetup.generated")}</p>
 
-      <Submit label="Open logbook" busy="Opening…" />
+      <Submit label={t("wpSetup.open")} busy={t("wpSetup.opening")} />
     </form>
   );
 }
