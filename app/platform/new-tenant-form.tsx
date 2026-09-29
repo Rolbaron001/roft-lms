@@ -15,7 +15,12 @@ import { maybe } from "@/lib/i18n/maybe";
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
 
-export function NewTenantForm() {
+/**
+ * `platformHost` is the address of the deployment this form runs on. A client
+ * is reached at a subdomain of it, so the address shown is the one that will
+ * really work there, whichever operator's deployment that is.
+ */
+export function NewTenantForm({ platformHost }: { platformHost: string }) {
   const t = useT();
   const said = (group: "award" | "delivery", value: string, part: "label" | "when", english: string) =>
     maybe(t, `shape.${group}.${value}.${part}`) ?? english;
@@ -39,7 +44,7 @@ export function NewTenantForm() {
         <div className="mt-4 rounded-md border-2 border-[var(--success)]/40 bg-[var(--success)]/5 p-4">
           <p className="text-sm font-medium">{state.notice}</p>
           <p className="mt-2 text-sm">
-            {t("newTenant.address")} <span className="font-mono">{state.tenantUrl}.…</span>
+            {t("newTenant.address")} <span className="font-mono">{`${state.tenantUrl}.${platformHost}`}</span>
           </p>
           <p className="mt-3 text-sm">{t("newTenant.password")}</p>
           <p className="mt-1 font-mono text-lg font-semibold">
@@ -84,7 +89,7 @@ export function NewTenantForm() {
               className={`${inputClass} font-mono`}
             />
             <span className="block text-xs text-[var(--muted)]">
-              {slug ? `${slug}.lms.roftbusiness.org` : "name.lms.roftbusiness.org"}
+              {`${slug || "name"}.${platformHost}`}
             </span>
           </label>
 

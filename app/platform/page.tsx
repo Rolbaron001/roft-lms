@@ -97,7 +97,9 @@ export default async function PlatformPage() {
       </div>
 
       <div className="mt-6">
-        <NewTenantForm />
+        {/* This deployment's own address: lms.curiosa.academy on live,
+            lms.roftbusiness.org on development. Never written in here. */}
+        <NewTenantForm platformHost={process.env.PLATFORM_HOST ?? "localhost:3000"} />
       </div>
     </AppShell>
   );
