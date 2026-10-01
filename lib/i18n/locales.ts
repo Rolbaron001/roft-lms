@@ -33,20 +33,23 @@ export type Locale = {
 export const LOCALES: Locale[] = [
   { code: "en", english: "English", native: "English", state: "complete" },
   { code: "af", english: "Afrikaans", native: "Afrikaans", state: "draft" },
-  { code: "zu", english: "isiZulu", native: "isiZulu", state: "planned" },
-  { code: "xh", english: "isiXhosa", native: "isiXhosa", state: "planned" },
-  { code: "nr", english: "isiNdebele", native: "isiNdebele", state: "planned" },
-  { code: "nso", english: "Sepedi", native: "Sepedi", state: "planned" },
-  { code: "st", english: "Sesotho", native: "Sesotho", state: "planned" },
-  { code: "tn", english: "Setswana", native: "Setswana", state: "planned" },
-  { code: "ss", english: "siSwati", native: "siSwati", state: "planned" },
+  // Machine translations through the numbered document, read in on 1 October
+  // 2026; draft until somebody who knows the language and the field checks
+  // them. Tshivenda has no machine translation and waits for a person.
+  { code: "zu", english: "isiZulu", native: "isiZulu", state: "draft" },
+  { code: "xh", english: "isiXhosa", native: "isiXhosa", state: "draft" },
+  { code: "nr", english: "isiNdebele", native: "isiNdebele", state: "draft" },
+  { code: "nso", english: "Sepedi", native: "Sepedi", state: "draft" },
+  { code: "st", english: "Sesotho", native: "Sesotho", state: "draft" },
+  { code: "tn", english: "Setswana", native: "Setswana", state: "draft" },
+  { code: "ss", english: "siSwati", native: "siSwati", state: "draft" },
   { code: "ve", english: "Tshivenda", native: "Tshivenḓa", state: "planned" },
-  { code: "ts", english: "Xitsonga", native: "Xitsonga", state: "planned" },
-  { code: "es", english: "Spanish", native: "Español", state: "planned" },
-  { code: "fr", english: "French", native: "Français", state: "planned" },
-  { code: "it", english: "Italian", native: "Italiano", state: "planned" },
-  { code: "de", english: "German", native: "Deutsch", state: "planned" },
-  { code: "pt", english: "Portuguese", native: "Português", state: "planned" },
+  { code: "ts", english: "Xitsonga", native: "Xitsonga", state: "draft" },
+  { code: "es", english: "Spanish", native: "Español", state: "draft" },
+  { code: "fr", english: "French", native: "Français", state: "draft" },
+  { code: "it", english: "Italian", native: "Italiano", state: "draft" },
+  { code: "de", english: "German", native: "Deutsch", state: "draft" },
+  { code: "pt", english: "Portuguese", native: "Português", state: "draft" },
 ];
 
 export const DEFAULT_LOCALE = "en";

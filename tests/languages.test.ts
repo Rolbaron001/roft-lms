@@ -20,7 +20,9 @@ describe("the languages offered", () => {
   it("say honestly how far each has got", () => {
     expect(localeOf("en").state).toBe("complete");
     expect(localeOf("af").state).toBe("draft");
-    expect(localeOf("zu").state).toBe("planned");
+    expect(localeOf("zu").state).toBe("draft");
+    // No machine translation exists for Tshivenda; it waits for a person.
+    expect(localeOf("ve").state).toBe("planned");
   });
 });
 
@@ -29,8 +31,10 @@ describe("putting a phrase into a language", () => {
     const t = translator("af");
     expect(t("shell.signOut")).toBe("Teken uit");
     expect(t("learn.lessonsDone", { done: 2, total: 5 })).toBe("2 van 5 klaar");
-    // isiZulu is planned, not started: English, never a blank or a key.
-    expect(translator("zu")("shell.signOut")).toBe("Sign out");
+    // Tshivenda is planned, not started: English, never a blank or a key.
+    expect(translator("ve")("shell.signOut")).toBe("Sign out");
+    // isiZulu came through the numbered document on 1 October.
+    expect(translator("zu")("shell.signOut")).not.toBe("Sign out");
     expect(translator("xx")("shell.signOut")).toBe("Sign out");
   });
 
