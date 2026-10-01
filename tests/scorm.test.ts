@@ -19,7 +19,8 @@ import {
   userRoles,
   users,
 } from "@/db/schema";
-import { installScormApi } from "@/components/scorm-player";
+import { installScorm2004Api, installScormApi } from "@/components/scorm-player";
+import { evaluateCompletion, evaluateSuccess, interval, secondsInInterval, summaryStatus } from "@/lib/scorm-2004";
 import { normalise, readManifest, readScormFile, saveScormReport, scormLaunch } from "@/lib/scorm";
 import { uploadLessonMedia } from "@/lib/uploads";
 import { permissionsFor, type Role } from "@/lib/rbac";
@@ -42,6 +43,46 @@ function manifest(options: { version?: string; mastery?: string; href?: string }
   <resources>
     <resource identifier="r1" type="webcontent" adlcp:scormtype="sco" href="${options.href ?? "shared/index.html"}">
       <file href="shared/index.html"/>
+    </resource>
+  </resources>
+</manifest>`;
+}
+
+/**
+ * A SCORM 2004 manifest. `edition` 3 writes the completion threshold as the
+ * element's text, as the 3rd Edition does; 4 writes it as attributes.
+ */
+function manifest2004(options: { edition?: 3 | 4; passing?: string | "default"; threshold?: string } = {}) {
+  const edition = options.edition ?? 3;
+  const threshold =
+    options.threshold === undefined
+      ? ""
+      : edition === 3
+        ? `<adlcp:completionThreshold>${options.threshold}</adlcp:completionThreshold>`
+        : `<adlcp:completionThreshold completedByMeasure="true" minProgressMeasure="${options.threshold}"/>`;
+  const sequencing =
+    options.passing === undefined
+      ? ""
+      : `<imsss:sequencing><imsss:objectives><imsss:primaryObjective objectiveID="pass" satisfiedByMeasure="true">${
+          options.passing === "default" ? "" : `<imsss:minNormalizedMeasure>${options.passing}</imsss:minNormalizedMeasure>`
+        }</imsss:primaryObjective></imsss:objectives></imsss:sequencing>`;
+  return `<?xml version="1.0"?>
+<manifest identifier="demo2004" xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3" xmlns:imsss="http://www.imsglobal.org/xsd/imsss">
+  <metadata><schema>ADL SCORM</schema><schemaversion>2004 ${edition === 3 ? "3rd" : "4th"} Edition</schemaversion></metadata>
+  <organizations default="org1">
+    <organization identifier="org1">
+      <title>Working at heights</title>
+      <item identifier="i1" identifierref="r1">
+        <title>Working at heights</title>
+        ${threshold}
+        <adlcp:dataFromLMS>unit=2</adlcp:dataFromLMS>
+        ${sequencing}
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="r1" type="webcontent" adlcp:scormType="sco" href="course/start.html">
+      <file href="course/start.html"/>
     </resource>
   </resources>
 </manifest>`;
@@ -130,11 +171,33 @@ describe("reading a manifest", () => {
       scoCount: 1,
       launchData: "unit=1",
       masteryScore: 80,
+      scaledPassingScore: null,
+      completionThreshold: null,
     });
   });
 
-  it("refuses SCORM 2004 with the reason", () => {
-    expect(() => readManifest(manifest({ version: "2004 4th Edition" }))).toThrow(/SCORM 2004/);
+  it("reads a SCORM 2004 manifest, with its pass mark and completion threshold", () => {
+    expect(readManifest(manifest2004({ passing: "0.8", threshold: "0.75" }))).toEqual({
+      version: "2004",
+      title: "Working at heights",
+      launchPath: "course/start.html",
+      scoCount: 1,
+      launchData: "unit=2",
+      masteryScore: null,
+      scaledPassingScore: 0.8,
+      completionThreshold: 0.75,
+    });
+    // The 4th Edition writes the threshold as attributes.
+    expect(readManifest(manifest2004({ edition: 4, threshold: "0.5" })).completionThreshold).toBe(0.5);
+    // Satisfied by measure with no measure given means 1.0 (RTE 4.2.19).
+    expect(readManifest(manifest2004({ passing: "default" })).scaledPassingScore).toBe(1);
+    // Neither set: the package's own statuses stand.
+    expect(readManifest(manifest2004()).scaledPassingScore).toBeNull();
+    expect(readManifest(manifest2004()).completionThreshold).toBeNull();
+  });
+
+  it("refuses a version it does not know, with the reason", () => {
+    expect(() => readManifest(manifest({ version: "AICC 4.0" }))).toThrow(/neither SCORM 1\.2 nor SCORM 2004/);
   });
 
   it("keeps every path inside the package", () => {
@@ -148,7 +211,7 @@ describe("uploading a package", () => {
   it("unpacks it and makes the lesson a SCORM lesson", async () => {
     ids.lesson = await newLesson("Fire safety");
     const stored = await uploadLessonMedia(people.author, ids.lesson, { filename: "fire-safety.zip", bytes: packageZip({ mastery: "80" }) });
-    expect(stored.scorm).toEqual({ title: "Fire safety basics", files: 3, parts: 1 });
+    expect(stored.scorm).toEqual({ title: "Fire safety basics", files: 3, parts: 1, version: "1.2" });
     const [lesson] = await withPlatformScope("scorm test reads the lesson", (tx) =>
       tx.select({ contentType: lessons.contentType }).from(lessons).where(eq(lessons.id, ids.lesson)),
     );
@@ -164,11 +227,11 @@ describe("uploading a package", () => {
     expect(lesson.contentType).toBe("document");
   });
 
-  it("refuses a SCORM 2004 package, and one whose starting file is missing", async () => {
+  it("refuses a cmi5 package with the reason, and one whose starting file is missing", async () => {
     const lessonId = await newLesson("Refused");
     await expect(
-      uploadLessonMedia(people.author, lessonId, { filename: "new.zip", bytes: packageZip({ version: "2004 3rd Edition" }) }),
-    ).rejects.toThrow(/SCORM 2004/);
+      uploadLessonMedia(people.author, lessonId, { filename: "cmi5.zip", bytes: zipSync({ "cmi5.xml": strToU8("<courseStructure/>") }) }),
+    ).rejects.toThrow(/cmi5 package/);
     await expect(
       uploadLessonMedia(people.author, lessonId, { filename: "broken.zip", bytes: packageZip({ href: "missing.html" }) }),
     ).rejects.toThrow(/not in the zip/);
@@ -229,6 +292,177 @@ describe("playing it", () => {
     await expect(
       saveScormReport(people.stranger, ids.lesson, ids.enrolment, { lessonStatus: "completed" }),
     ).rejects.toThrow();
+  });
+});
+
+describe("a SCORM 2004 package", () => {
+  it("uploads, and says which version it is", async () => {
+    ids.lesson2004 = await newLesson("Working at heights");
+    const bytes = zipSync({
+      "imsmanifest.xml": strToU8(manifest2004({ passing: "0.8", threshold: "0.75" })),
+      "course/start.html": strToU8("<html><body>heights</body></html>"),
+    });
+    const stored = await uploadLessonMedia(people.author, ids.lesson2004, { filename: "heights.zip", bytes });
+    expect(stored.scorm).toEqual({ title: "Working at heights", files: 2, parts: 1, version: "2004" });
+  });
+
+  it("starts with what SCORM 2004 calls things, and the manifest's pass mark and threshold", async () => {
+    const launch = await scormLaunch(people.learner, ids.lesson2004, ids.enrolment);
+    expect(launch.version).toBe("2004");
+    expect(launch.initial2004).toMatchObject({ entry: "ab_initio", completionStatus: "not attempted", successStatus: "unknown", totalTime: "PT0S" });
+    expect(Number(launch.initial2004!.scaledPassingScore)).toBe(0.8);
+    expect(Number(launch.initial2004!.completionThreshold)).toBe(0.75);
+  });
+
+  it("decides completion by the threshold, not by what the package claims, and resumes", async () => {
+    const result = await saveScormReport(people.learner, ids.lesson2004, ids.enrolment, {
+      completionStatus: "completed",
+      progressMeasure: "0.5",
+      lessonLocation: "page-3",
+      exit: "suspend",
+      sessionTime: "PT10M",
+      finished: true,
+    });
+    expect(result).toEqual({ lessonStatus: "incomplete", completed: false });
+    const launch = await scormLaunch(people.learner, ids.lesson2004, ids.enrolment);
+    expect(launch.initial2004).toMatchObject({ entry: "resume", completionStatus: "incomplete", totalTime: "PT10M" });
+    expect(launch.initial.lessonLocation).toBe("page-3");
+  });
+
+  it("decides passing by the pass mark, and completes the lesson only on a pass", async () => {
+    expect(await saveScormReport(people.learner, ids.lesson2004, ids.enrolment, { scoreScaled: "0.6", progressMeasure: "1" })).toEqual({
+      lessonStatus: "failed",
+      completed: false,
+    });
+    expect(await saveScormReport(people.learner, ids.lesson2004, ids.enrolment, { scoreScaled: "0.85", successStatus: "failed" })).toEqual({
+      lessonStatus: "passed",
+      completed: true,
+    });
+    const [progress] = await withPlatformScope("scorm 2004 test reads progress", (tx) =>
+      tx
+        .select({ state: progressRecords.state })
+        .from(progressRecords)
+        .where(and(eq(progressRecords.enrolmentId, ids.enrolment), eq(progressRecords.lessonId, ids.lesson2004))),
+    );
+    expect(progress.state).toBe("completed");
+  });
+});
+
+describe("the SCORM 2004 connection the package talks to", () => {
+  const launch = {
+    launchUrl: "/x",
+    records: false,
+    version: "2004" as const,
+    initial: {
+      studentId: "u1",
+      studentName: "Tester, learner",
+      lessonStatus: "not attempted",
+      lessonLocation: "",
+      suspendData: "",
+      scoreRaw: "",
+      entry: "ab-initio",
+      credit: "no-credit",
+      launchData: "",
+      totalTime: "0000:00:00.00",
+    },
+    initial2004: {
+      completionStatus: "not attempted",
+      successStatus: "unknown",
+      scoreScaled: "",
+      scoreMin: "",
+      scoreMax: "",
+      progressMeasure: "",
+      scaledPassingScore: "0.8",
+      completionThreshold: "",
+      entry: "ab_initio",
+      totalTime: "PT0S",
+    },
+  };
+
+  it("answers as the SCORM 2004 Run-Time Environment says", () => {
+    const host: { API_1484_11?: Record<string, (...args: string[]) => string> } = {};
+    const remove = installScorm2004Api(launch, "lesson", null, () => undefined, host);
+    const api = host.API_1484_11!;
+
+    // The order of calls, and what each out-of-order call is told.
+    expect(api.GetValue("cmi.learner_name")).toBe("");
+    expect(api.GetLastError()).toBe("122");
+    expect(api.Commit("")).toBe("false");
+    expect(api.GetLastError()).toBe("142");
+    expect(api.Initialize("")).toBe("true");
+    expect(api.Initialize("")).toBe("false");
+    expect(api.GetLastError()).toBe("103");
+
+    expect(api.GetValue("cmi._version")).toBe("1.0");
+    expect(api.GetValue("cmi.learner_name")).toBe("Tester, learner");
+    expect(api.GetValue("cmi.entry")).toBe("ab_initio");
+    expect(api.GetValue("cmi.mode")).toBe("browse");
+    // Read only, write only, never set, not defined at all.
+    expect(api.SetValue("cmi.learner_name", "Somebody")).toBe("false");
+    expect(api.GetLastError()).toBe("404");
+    expect(api.GetValue("cmi.session_time")).toBe("");
+    expect(api.GetLastError()).toBe("405");
+    expect(api.GetValue("cmi.score.raw")).toBe("");
+    expect(api.GetLastError()).toBe("403");
+    expect(api.GetValue("cmi.nonsense")).toBe("");
+    expect(api.GetLastError()).toBe("401");
+
+    // Type and range.
+    expect(api.SetValue("cmi.completion_status", "done")).toBe("false");
+    expect(api.GetLastError()).toBe("406");
+    expect(api.SetValue("cmi.score.scaled", "1.5")).toBe("false");
+    expect(api.GetLastError()).toBe("407");
+    expect(api.SetValue("cmi.session_time", "00:10:00")).toBe("false");
+    expect(api.GetLastError()).toBe("406");
+    expect(api.SetValue("cmi.session_time", "PT10M30.5S")).toBe("true");
+
+    // The pass mark decides once a scaled score is in, whatever the package said.
+    expect(api.GetValue("cmi.success_status")).toBe("unknown");
+    expect(api.SetValue("cmi.success_status", "passed")).toBe("true");
+    expect(api.SetValue("cmi.score.scaled", "0.5")).toBe("true");
+    expect(api.GetValue("cmi.success_status")).toBe("failed");
+    expect(api.SetValue("cmi.score.scaled", "0.9")).toBe("true");
+    expect(api.GetValue("cmi.success_status")).toBe("passed");
+
+    // Nothing further to move to; a request is accepted.
+    expect(api.GetValue("adl.nav.request_valid.continue")).toBe("false");
+    expect(api.SetValue("adl.nav.request", "continue")).toBe("true");
+    expect(api.SetValue("cmi.interactions.0.id", "q1")).toBe("true");
+
+    expect(api.GetErrorString("403")).toBe("Data Model Element Value Not Initialized");
+    expect(api.Terminate("")).toBe("true");
+    expect(api.GetValue("cmi.learner_name")).toBe("");
+    expect(api.GetLastError()).toBe("123");
+    expect(api.Terminate("")).toBe("false");
+    expect(api.GetLastError()).toBe("113");
+
+    remove();
+    expect(host.API_1484_11).toBeUndefined();
+  });
+});
+
+describe("SCORM 2004's time and status rules", () => {
+  it("reads and writes timeintervals as the specification gives them", () => {
+    expect(secondsInInterval("PT1H5M3S")).toBe(3903);
+    expect(secondsInInterval("PT05H")).toBe(5 * 3600);
+    expect(secondsInInterval("PT34.45S")).toBe(34);
+    expect(secondsInInterval("P1DT1S")).toBe(86401);
+    expect(secondsInInterval("PT")).toBe(0);
+    expect(secondsInInterval("PT1.234S")).toBe(0);
+    expect(interval(0)).toBe("PT0S");
+    expect(interval(3903)).toBe("PT1H5M3S");
+    expect(interval(600)).toBe("PT10M");
+  });
+
+  it("summarises the two statuses into the one the platform reads", () => {
+    expect(evaluateCompletion("completed", 0.4, 0.75)).toBe("incomplete");
+    expect(evaluateCompletion(null, null, 0.75)).toBe("unknown");
+    expect(evaluateCompletion("completed", null, null)).toBe("completed");
+    expect(evaluateSuccess("passed", null, 0.8)).toBe("unknown");
+    expect(summaryStatus("completed", "failed")).toBe("failed");
+    expect(summaryStatus("incomplete", "passed")).toBe("passed");
+    expect(summaryStatus("completed", "unknown")).toBe("completed");
+    expect(summaryStatus("unknown", "unknown")).toBe("incomplete");
   });
 });
 

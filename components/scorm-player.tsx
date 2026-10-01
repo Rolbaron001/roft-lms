@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "./i18n";
+import { TIMEINTERVAL, evaluateCompletion, evaluateSuccess } from "@/lib/scorm-2004";
 
 /**
- * Plays a lesson's SCORM 1.2 package (job sheet D8).
+ * Plays a lesson's SCORM 1.2 or SCORM 2004 package (job sheet D8). The 1.2
+ * connection is below; the 2004 one is `installScorm2004Api`, further down.
  *
  * The package runs in the frame and looks for an object called `API` on the
  * windows above it; this page provides one. It keeps the learner's data here,
@@ -21,6 +23,19 @@ import { useT } from "./i18n";
 type Launch = {
   launchUrl: string;
   records: boolean;
+  version?: "1.2" | "2004";
+  initial2004?: {
+    completionStatus: string;
+    successStatus: string;
+    scoreScaled: string;
+    scoreMin: string;
+    scoreMax: string;
+    progressMeasure: string;
+    scaledPassingScore: string;
+    completionThreshold: string;
+    entry: string;
+    totalTime: string;
+  };
   initial: {
     studentId: string;
     studentName: string;
@@ -210,6 +225,256 @@ export function installScormApi(
   };
 }
 
+/*
+ * SCORM 2004: the error conditions of the ADL's 3rd Edition Run-Time
+ * Environment, 3.1.7, with their names as the specification gives them.
+ */
+const ERRORS_2004: Record<string, string> = {
+  "0": "No Error",
+  "101": "General Exception",
+  "102": "General Initialization Failure",
+  "103": "Already Initialized",
+  "104": "Content Instance Terminated",
+  "111": "General Termination Failure",
+  "112": "Termination Before Initialization",
+  "113": "Termination After Termination",
+  "122": "Retrieve Data Before Initialization",
+  "123": "Retrieve Data After Termination",
+  "132": "Store Data Before Initialization",
+  "133": "Store Data After Termination",
+  "142": "Commit Before Initialization",
+  "143": "Commit After Termination",
+  "201": "General Argument Error",
+  "301": "General Get Failure",
+  "351": "General Set Failure",
+  "391": "General Commit Failure",
+  "401": "Undefined Data Model Element",
+  "402": "Unimplemented Data Model Element",
+  "403": "Data Model Element Value Not Initialized",
+  "404": "Data Model Element Is Read Only",
+  "405": "Data Model Element Is Write Only",
+  "406": "Data Model Element Type Mismatch",
+  "407": "Data Model Element Value Out Of Range",
+  "408": "Data Model Dependency Not Established",
+};
+
+const REAL = /^-?\d+(\.\d+)?$/;
+const EXITS_2004 = ["timeout", "suspend", "logout", "normal", ""];
+const NAV_REQUESTS = /^(continue|previous|exit|exitAll|abandon|abandonAll|suspendAll|_none_|\{target=[^}]+\}choice)$/;
+
+/**
+ * Puts the SCORM 2004 connection (`API_1484_11`) on this window for one
+ * package, and returns what takes it away again.
+ *
+ * Checked against the ADL's SCORM 2004 3rd Edition Run-Time Environment,
+ * not recalled: the eight calls and the order they may come in, each data
+ * model element's access (read only, write only, read and write), the error
+ * conditions, and the evaluation of completion and success against the
+ * manifest's threshold and pass mark (lib/scorm-2004.ts, which the platform
+ * applies again when it records them).
+ *
+ * Sequencing, the part of SCORM 2004 that moves a learner between several
+ * parts of one package, is not provided: the first part is played, as with
+ * SCORM 1.2. A navigation request is accepted, and the package told that no
+ * other part is available. Objectives, interactions and comments are accepted
+ * and not kept, as for 1.2.
+ */
+export function installScorm2004Api(
+  launch: Launch,
+  lessonId: string,
+  enrolmentId: string | null,
+  onCompleted: () => void,
+  host: { API_1484_11?: Api } = window as unknown as { API_1484_11?: Api },
+): () => void {
+  const start = launch.initial2004!;
+  const number = (value: string) => (value === "" ? null : Number(value));
+  const data = {
+    learnerId: launch.initial.studentId,
+    learnerName: launch.initial.studentName,
+    credit: launch.initial.credit,
+    location: launch.initial.lessonLocation,
+    suspendData: launch.initial.suspendData,
+    launchData: launch.initial.launchData,
+    scoreRaw: launch.initial.scoreRaw,
+    ...start,
+  };
+  const written: Record<string, string> = {};
+  let state: "new" | "running" | "terminated" = "new";
+  let lastError = "0";
+
+  const send = (finished: boolean) => {
+    if (!launch.records || !enrolmentId) return;
+    fetch(`/api/scorm/${lessonId}/runtime`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enrolmentId, report: { ...written, finished } }),
+      keepalive: true,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((saved) => {
+        if (saved?.completed) onCompleted();
+      })
+      .catch(() => undefined);
+  };
+
+  const ok = (value = "true") => {
+    lastError = "0";
+    return value;
+  };
+  const fail = (code: string, value = "false") => {
+    lastError = code;
+    return value;
+  };
+  /** A value the package may read but has not been given: 403, as 4.2 asks. */
+  const set = (value: string) => (value === "" ? fail("403", "") : ok(value));
+
+  const read: Record<string, () => string> = {
+    "cmi._version": () => ok("1.0"),
+    "cmi.learner_id": () => ok(data.learnerId),
+    "cmi.learner_name": () => ok(data.learnerName),
+    "cmi.credit": () => ok(data.credit),
+    "cmi.mode": () => ok(launch.records ? "normal" : "browse"),
+    "cmi.entry": () => ok(data.entry),
+    "cmi.location": () => ok(data.location),
+    "cmi.suspend_data": () => ok(data.suspendData),
+    "cmi.launch_data": () => set(data.launchData),
+    "cmi.total_time": () => ok(data.totalTime),
+    "cmi.completion_status": () =>
+      ok(evaluateCompletion(data.completionStatus, number(data.progressMeasure), number(data.completionThreshold))),
+    "cmi.success_status": () =>
+      ok(evaluateSuccess(data.successStatus, number(data.scoreScaled), number(data.scaledPassingScore))),
+    "cmi.completion_threshold": () => set(data.completionThreshold),
+    "cmi.scaled_passing_score": () => set(data.scaledPassingScore),
+    "cmi.progress_measure": () => set(data.progressMeasure),
+    "cmi.score._children": () => ok("scaled,raw,min,max"),
+    "cmi.score.scaled": () => set(data.scoreScaled),
+    "cmi.score.raw": () => set(data.scoreRaw),
+    "cmi.score.min": () => set(data.scoreMin),
+    "cmi.score.max": () => set(data.scoreMax),
+    "cmi.max_time_allowed": () => set(""),
+    "cmi.time_limit_action": () => ok("continue,no message"),
+    "cmi.objectives._count": () => ok("0"),
+    "cmi.interactions._count": () => ok("0"),
+    "cmi.comments_from_learner._count": () => ok("0"),
+    "cmi.comments_from_lms._count": () => ok("0"),
+    "adl.nav.request": () => ok("_none_"),
+  };
+  const WRITE_ONLY = ["cmi.exit", "cmi.session_time"];
+
+  const api: Api = {
+    Initialize: (param = "") => {
+      if (param !== "") return fail("201");
+      if (state === "running") return fail("103");
+      if (state === "terminated") return fail("104");
+      state = "running";
+      return ok();
+    },
+    Terminate: (param = "") => {
+      if (param !== "") return fail("201");
+      if (state === "new") return fail("112");
+      if (state === "terminated") return fail("113");
+      state = "terminated";
+      send(true);
+      return ok();
+    },
+    Commit: (param = "") => {
+      if (param !== "") return fail("201");
+      if (state === "new") return fail("142");
+      if (state === "terminated") return fail("143");
+      send(false);
+      return ok();
+    },
+    GetValue: (element = "") => {
+      if (state === "new") return fail("122", "");
+      if (state === "terminated") return fail("123", "");
+      if (element === "") return fail("301", "");
+      if (WRITE_ONLY.includes(element)) return fail("405", "");
+      const getter = read[element];
+      if (getter) return getter();
+      // Whether a later part of the package can be reached: there is none.
+      if (/^adl\.nav\.request_valid\.(continue|previous)$/.test(element)) return ok("false");
+      if (/^adl\.nav\.request_valid\.choice\./.test(element)) return ok("false");
+      if (/^cmi\.(objectives|interactions|comments_from_learner|comments_from_lms|learner_preference)\./.test(element)) {
+        return fail("402", "");
+      }
+      return fail("401", "");
+    },
+    SetValue: (element = "", value = "") => {
+      if (state === "new") return fail("132");
+      if (state === "terminated") return fail("133");
+      if (element === "") return fail("351");
+      const v = String(value);
+      const real = (key: string, min: number | null, max: number | null) => {
+        if (!REAL.test(v)) return fail("406");
+        const n = Number(v);
+        if ((min !== null && n < min) || (max !== null && n > max)) return fail("407");
+        (data as Record<string, string>)[key] = written[key] = v;
+        return ok();
+      };
+      switch (element) {
+        case "cmi.location":
+          if (v.length > 1000) return fail("351");
+          data.location = written.lessonLocation = v;
+          return ok();
+        case "cmi.suspend_data":
+          if (v.length > 64_000) return fail("351");
+          data.suspendData = written.suspendData = v;
+          return ok();
+        case "cmi.completion_status":
+          if (!["completed", "incomplete", "not attempted", "unknown"].includes(v)) return fail("406");
+          data.completionStatus = written.completionStatus = v;
+          return ok();
+        case "cmi.success_status":
+          if (!["passed", "failed", "unknown"].includes(v)) return fail("406");
+          data.successStatus = written.successStatus = v;
+          return ok();
+        case "cmi.score.scaled":
+          return real("scoreScaled", -1, 1);
+        case "cmi.score.raw":
+          return real("scoreRaw", null, null);
+        case "cmi.score.min":
+          return real("scoreMin", null, null);
+        case "cmi.score.max":
+          return real("scoreMax", null, null);
+        case "cmi.progress_measure":
+          return real("progressMeasure", 0, 1);
+        case "cmi.exit":
+          if (!EXITS_2004.includes(v)) return fail("406");
+          written.exit = v;
+          return ok();
+        case "cmi.session_time":
+          if (!TIMEINTERVAL.test(v)) return fail("406");
+          written.sessionTime = v;
+          return ok();
+        case "adl.nav.request":
+          if (!NAV_REQUESTS.test(v)) return fail("406");
+          return ok();
+      }
+      if (/^cmi\.(objectives|interactions|comments_from_learner)\./.test(element)) return ok();
+      if (read[element] || element.endsWith("._children") || element.endsWith("._count") || element.endsWith("._version")) {
+        return fail("404");
+      }
+      if (/^cmi\.(comments_from_lms|learner_preference)\./.test(element)) return fail("402");
+      return fail("401");
+    },
+    GetLastError: () => lastError,
+    GetErrorString: (code = "") => ERRORS_2004[String(code)] ?? "",
+    GetDiagnostic: (code = "") => ERRORS_2004[String(code || lastError)] ?? "",
+  };
+
+  host.API_1484_11 = api;
+  const leaving = () => {
+    if (state === "running") send(false);
+  };
+  if (typeof window !== "undefined") window.addEventListener("pagehide", leaving);
+
+  return () => {
+    leaving();
+    if (typeof window !== "undefined") window.removeEventListener("pagehide", leaving);
+    if (host.API_1484_11 === api) delete host.API_1484_11;
+  };
+}
+
 export function ScormPlayer({
   lessonId,
   enrolmentId,
@@ -241,7 +506,8 @@ export function ScormPlayer({
         }
         // The connection first, then the frame: a package that looks for API
         // as it loads must find it there.
-        remove = installScormApi(body as Launch, lessonId, enrolmentId, () => onCompletedRef.current?.());
+        const install = (body as Launch).version === "2004" ? installScorm2004Api : installScormApi;
+        remove = install(body as Launch, lessonId, enrolmentId, () => onCompletedRef.current?.());
         setLaunch(body as Launch);
       })
       .catch(() => live && setProblem("failed"));

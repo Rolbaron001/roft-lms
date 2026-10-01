@@ -232,7 +232,7 @@ export async function uploadLessonMedia(
   return {
     ...stored,
     textExtracted: extracted !== null,
-    scorm: scorm ? { title: scorm.title, files: scorm.fileCount, parts: scorm.scoCount } : null,
+    scorm: scorm ? { title: scorm.title, files: scorm.fileCount, parts: scorm.scoCount, version: scorm.version } : null,
   };
 }
 

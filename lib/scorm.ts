@@ -15,6 +15,7 @@ import { markLessonComplete } from "./enrolment";
 import { can } from "./rbac";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { getObject, putObject } from "./storage";
+import { evaluateCompletion, evaluateSuccess, interval, secondsInInterval, summaryStatus } from "./scorm-2004";
 
 /**
  * SCORM content: a course package made in another authoring tool, played in a
@@ -33,6 +34,16 @@ import { getObject, putObject } from "./storage";
  * Checked against the published run-time reference on 27 September, not
  * recalled: the eight API calls, the cmi.core elements and their values, and
  * the error codes (components/scorm-player.tsx).
+ *
+ * SCORM 2004 since 1 October, checked against the ADL's 3rd Edition Run-Time
+ * Environment. The same package, unpacked and served the same way; the frame
+ * is offered `API_1484_11` instead of `API`; and a manifest may set a scaled
+ * pass mark and a completion threshold, which then decide passed or failed,
+ * and complete or not, rather than the package (lib/scorm-2004.ts). The two
+ * statuses are kept, and summarised into the one status the rest of the
+ * platform reads. Sequencing between several parts of one package is not
+ * provided: the first part is played, as with 1.2. cmi5 is refused, since it
+ * reports to a learning record store rather than through a frame.
  *
  * A package's own scripts run on the platform's address with the learner's
  * access, as they do in any learning system that plays SCORM. Only people who
@@ -56,13 +67,55 @@ const MAX_FILES = 10_000;
 // ---------------------------------------------------------------------------
 
 export type Manifest = {
-  version: "1.2";
+  version: "1.2" | "2004";
   title: string | null;
   launchPath: string;
   scoCount: number;
   launchData: string | null;
+  /** SCORM 1.2's pass mark, on the package's own scale. */
   masteryScore: number | null;
+  /** SCORM 2004's pass mark, scaled -1 to 1, and its completion threshold, 0 to 1. */
+  scaledPassingScore: number | null;
+  completionThreshold: number | null;
 };
+
+/** A number, or null for anything that is not one. */
+function numberOr(value: string | null | undefined): number | null {
+  if (value === null || value === undefined || value.trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * SCORM 2004's pass mark for the item a package starts from.
+ *
+ * In the item's sequencing, the primary objective: where it is satisfied by
+ * measure, `<imsss:minNormalizedMeasure>` is the pass mark, and 1.0 when that
+ * is left out (SCORM 2004 3rd Edition RTE, 4.2.19). Sequencing kept in a
+ * shared collection and referred to by name is not followed: such a package
+ * reports its own pass or fail, which the platform keeps.
+ */
+function scaledPassingScoreOf(item: string): number | null {
+  const objective = tags(item, "primaryObjective")[0];
+  if (!objective || attributes(objective.tag).satisfiedbymeasure !== "true") return null;
+  const measure = numberOr(textOf(objective.inner, "minNormalizedMeasure"));
+  return measure ?? 1;
+}
+
+/**
+ * SCORM 2004's completion threshold for that item. The 3rd Edition writes it
+ * as the element's text; the 4th as `minProgressMeasure`, which applies only
+ * when `completedByMeasure` is true.
+ */
+function completionThresholdOf(item: string): number | null {
+  const element = tags(item, "completionThreshold")[0];
+  if (!element) return null;
+  const attrs = attributes(element.tag);
+  if ("completedbymeasure" in attrs) {
+    return attrs.completedbymeasure === "true" ? (numberOr(attrs.minprogressmeasure) ?? 1) : null;
+  }
+  return numberOr(element.inner.replace(/<[^>]+>/g, ""));
+}
 
 /** Attributes of one tag, whatever namespace prefix it carries. */
 function attributes(tag: string): Record<string, string> {
@@ -93,12 +146,11 @@ function textOf(xml: string, name: string): string | null {
  * refuses with the reason rather than playing something wrong.
  */
 export function readManifest(xml: string): Manifest {
-  const version = (textOf(xml, "schemaversion") ?? "").toLowerCase();
-  if (/2004|cam 1\.3|1\.3/.test(version)) {
-    throw new ScormError("This is a SCORM 2004 package. The platform plays SCORM 1.2 packages so far; 2004 is next. Most authoring tools can publish as SCORM 1.2 instead.");
-  }
-  if (version && !version.startsWith("1.2")) {
-    throw new ScormError(`The manifest says it is "${version}", which is not SCORM 1.2.`);
+  const declared = (textOf(xml, "schemaversion") ?? "").toLowerCase();
+  // "2004 3rd Edition", "2004 4th Edition", or the 2nd Edition's "CAM 1.3".
+  const is2004 = /2004|cam 1\.3|^1\.3/.test(declared);
+  if (declared && !is2004 && !declared.startsWith("1.2")) {
+    throw new ScormError(`The manifest says it is "${declared}", which is neither SCORM 1.2 nor SCORM 2004.`);
   }
 
   const resources = new Map(
@@ -129,14 +181,15 @@ export function readManifest(xml: string): Manifest {
   const launchPath = normalise(path + (first?.attrs.parameters ?? ""));
   if (!launchPath) throw new ScormError("The manifest's starting file is not inside the package.");
 
-  const mastery = first ? textOf(first.inner, "masteryscore") : null;
   return {
-    version: "1.2",
+    version: is2004 ? "2004" : "1.2",
     title: textOf(organization?.inner ?? "", "title"),
     launchPath: query ? `${launchPath}?${query}` : launchPath,
     scoCount: Math.max(1, scos.length),
     launchData: first ? textOf(first.inner, "datafromlms") : null,
-    masteryScore: mastery !== null && Number.isFinite(Number(mastery)) ? Number(mastery) : null,
+    masteryScore: !is2004 && first ? numberOr(textOf(first.inner, "masteryscore")) : null,
+    scaledPassingScore: is2004 && first ? scaledPassingScoreOf(first.inner) : null,
+    completionThreshold: is2004 && first ? completionThresholdOf(first.inner) : null,
   };
 }
 
@@ -191,7 +244,7 @@ export async function installScormPackage(
   const manifestName = Object.keys(entries).find((name) => name.toLowerCase() === "imsmanifest.xml");
   if (!manifestName) {
     if (Object.keys(entries).some((name) => name.toLowerCase().endsWith("cmi5.xml"))) {
-      throw new ScormError("This is a cmi5 package. The platform plays SCORM 1.2 packages so far; cmi5 comes after SCORM 2004.");
+      throw new ScormError("This is a cmi5 package. The platform plays SCORM 1.2 and SCORM 2004 packages; most authoring tools can publish as either.");
     }
     return null;
   }
@@ -226,6 +279,8 @@ export async function installScormPackage(
       scoCount: manifest.scoCount,
       launchData: manifest.launchData,
       masteryScore: manifest.masteryScore !== null ? String(manifest.masteryScore) : null,
+      scaledPassingScore: manifest.scaledPassingScore !== null ? String(manifest.scaledPassingScore) : null,
+      completionThreshold: manifest.completionThreshold !== null ? String(manifest.completionThreshold) : null,
     });
   });
 
@@ -312,6 +367,21 @@ export async function readScormFile(session: AuthenticatedSession, lessonId: str
 /** What the player starts from: the package, and the learner's saved progress. */
 export type ScormLaunch = {
   launchUrl: string;
+  /** Which connection the package looks for: `API` (1.2) or `API_1484_11` (2004). */
+  version: "1.2" | "2004";
+  /** SCORM 2004's own starting values, alongside the 1.2 ones below. */
+  initial2004?: {
+    completionStatus: string;
+    successStatus: string;
+    scoreScaled: string;
+    scoreMin: string;
+    scoreMax: string;
+    progressMeasure: string;
+    scaledPassingScore: string;
+    completionThreshold: string;
+    entry: "ab_initio" | "resume" | "";
+    totalTime: string;
+  };
   initial: {
     studentId: string;
     studentName: string;
@@ -364,9 +434,25 @@ export async function scormLaunch(
       .from(users)
       .where(eq(users.id, session.userId));
 
+    const is2004 = pkg.version === "2004";
     return {
       launchUrl: `/api/scorm/${lessonId}/content/${pkg.launchPath}`,
+      version: is2004 ? "2004" : "1.2",
       records,
+      initial2004: is2004
+        ? {
+            completionStatus: attempt?.completionStatus ?? "not attempted",
+            successStatus: attempt?.successStatus ?? "unknown",
+            scoreScaled: attempt?.scoreScaled ?? "",
+            scoreMin: attempt?.scoreMin ?? "",
+            scoreMax: attempt?.scoreMax ?? "",
+            progressMeasure: attempt?.progressMeasure ?? "",
+            scaledPassingScore: pkg.scaledPassingScore ?? "",
+            completionThreshold: pkg.completionThreshold ?? "",
+            entry: !attempt ? "ab_initio" : attempt.exitMode === "suspend" ? "resume" : "",
+            totalTime: interval(attempt?.totalSeconds ?? 0),
+          }
+        : undefined,
       initial: {
         studentId: session.userId,
         // SCORM 1.2 asks for "last, first".
@@ -395,9 +481,30 @@ export type ScormReport = {
   suspendData?: string;
   exit?: string;
   sessionTime?: string;
-  /** True when the package called LMSFinish; its session time is then added. */
+  /** SCORM 2004's own: its two statuses, its scaled score and its progress. */
+  completionStatus?: string;
+  successStatus?: string;
+  scoreScaled?: string;
+  progressMeasure?: string;
+  /** True when the package called LMSFinish (Terminate in 2004); its session time is then added. */
   finished?: boolean;
 };
+
+/** The keys a package's report may carry, as strings. */
+export const SCORM_REPORT_KEYS = [
+  "lessonStatus",
+  "scoreRaw",
+  "scoreMin",
+  "scoreMax",
+  "lessonLocation",
+  "suspendData",
+  "exit",
+  "sessionTime",
+  "completionStatus",
+  "successStatus",
+  "scoreScaled",
+  "progressMeasure",
+] as const;
 
 function decimal(value: string | undefined): string | null {
   if (value === undefined || value.trim() === "") return null;
@@ -443,24 +550,51 @@ export async function saveScormReport(
       .from(scormAttempts)
       .where(and(eq(scormAttempts.enrolmentId, enrolmentId), eq(scormAttempts.lessonId, lessonId)));
 
-    let status = STATUSES.includes(report.lessonStatus as (typeof STATUSES)[number])
-      ? report.lessonStatus!
-      : (current?.lessonStatus ?? "incomplete");
+    const is2004 = pkg.version === "2004";
     const raw = decimal(report.scoreRaw) ?? current?.scoreRaw ?? null;
-    if (pkg.masteryScore !== null && raw !== null && ["completed", "incomplete", "passed", "failed"].includes(status)) {
-      status = Number(raw) >= Number(pkg.masteryScore) ? "passed" : "failed";
+    let status: string;
+    let only2004 = {};
+    if (is2004) {
+      // Both statuses decided as the specification says the platform must,
+      // from what the package reported and the manifest's pass mark and
+      // threshold (lib/scorm-2004.ts), whatever the browser concluded.
+      const scaled = decimal(report.scoreScaled) ?? current?.scoreScaled ?? null;
+      const progress = decimal(report.progressMeasure) ?? current?.progressMeasure ?? null;
+      const completion = evaluateCompletion(
+        report.completionStatus ?? current?.completionStatus ?? null,
+        progress === null ? null : Number(progress),
+        pkg.completionThreshold === null ? null : Number(pkg.completionThreshold),
+      );
+      const success = evaluateSuccess(
+        report.successStatus ?? current?.successStatus ?? null,
+        scaled === null ? null : Number(scaled),
+        pkg.scaledPassingScore === null ? null : Number(pkg.scaledPassingScore),
+      );
+      status = summaryStatus(completion, success);
+      only2004 = { completionStatus: completion, successStatus: success, scoreScaled: scaled, progressMeasure: progress };
+    } else {
+      status = STATUSES.includes(report.lessonStatus as (typeof STATUSES)[number])
+        ? report.lessonStatus!
+        : (current?.lessonStatus ?? "incomplete");
+      if (pkg.masteryScore !== null && raw !== null && ["completed", "incomplete", "passed", "failed"].includes(status)) {
+        status = Number(raw) >= Number(pkg.masteryScore) ? "passed" : "failed";
+      }
     }
 
+    const spent = report.finished && report.sessionTime
+      ? is2004 ? secondsInInterval(report.sessionTime) : secondsIn(report.sessionTime)
+      : 0;
     const values = {
       lessonStatus: status,
+      ...only2004,
       scoreRaw: raw,
       scoreMin: decimal(report.scoreMin) ?? current?.scoreMin ?? null,
       scoreMax: decimal(report.scoreMax) ?? current?.scoreMax ?? null,
-      lessonLocation: report.lessonLocation?.slice(0, 255) ?? current?.lessonLocation ?? null,
+      // SCORM 1.2 allows a place 255 characters long; 2004 allows 1000.
+      lessonLocation: report.lessonLocation?.slice(0, is2004 ? 1000 : 255) ?? current?.lessonLocation ?? null,
       suspendData: report.suspendData?.slice(0, 64_000) ?? current?.suspendData ?? null,
       exitMode: report.exit ?? current?.exitMode ?? null,
-      totalSeconds:
-        (current?.totalSeconds ?? 0) + (report.finished && report.sessionTime ? secondsIn(report.sessionTime) : 0),
+      totalSeconds: (current?.totalSeconds ?? 0) + spent,
       updatedAt: new Date(),
     };
     if (current) {

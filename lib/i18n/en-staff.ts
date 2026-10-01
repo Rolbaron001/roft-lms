@@ -3589,6 +3589,8 @@ export const staff = {
   "progress.next": "Next: {title}.",
   "lessonUpload.scorm":
     "SCORM 1.2 package “{title}” unpacked, {files} files. Learners play it in this lesson, and it completes the lesson when they finish.",
+  "lessonUpload.scorm2004":
+    "SCORM 2004 package “{title}” unpacked, {files} files. Learners play it in this lesson, and it completes the lesson when they finish.",
   "lessonUpload.scormParts": "It has {parts} parts; only the first is played for now.",
   "lessonUpload.attached": "{label} attached: {file}",
   "lessonUpload.file": "File",

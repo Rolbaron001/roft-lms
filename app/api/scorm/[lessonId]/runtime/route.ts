@@ -1,6 +1,6 @@
 import { currentSession, said } from "@/lib/request";
 import { EnrolmentError } from "@/lib/enrolment";
-import { saveScormReport, scormLaunch, ScormError, type ScormReport } from "@/lib/scorm";
+import { SCORM_REPORT_KEYS, saveScormReport, scormLaunch, ScormError, type ScormReport } from "@/lib/scorm";
 
 /**
  * The SCORM package's line back to the platform (job sheet D8): what it starts
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
 
   // Strings only, as SCORM hands them over; anything else is ignored.
   const report: ScormReport = {};
-  for (const key of ["lessonStatus", "scoreRaw", "scoreMin", "scoreMax", "lessonLocation", "suspendData", "exit", "sessionTime"] as const) {
+  for (const key of SCORM_REPORT_KEYS) {
     const value = body.report[key];
     if (typeof value === "string") report[key] = value;
   }

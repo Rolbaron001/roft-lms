@@ -872,6 +872,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "lessonUpload.notUploaded",
   "lessonUpload.replaces",
   "lessonUpload.scorm",
+  "lessonUpload.scorm2004",
   "lessonUpload.scormNote",
   "lessonUpload.scormParts",
   "lessonUpload.uploading",

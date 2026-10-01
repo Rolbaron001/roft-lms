@@ -56,7 +56,7 @@ export function LessonUpload({
         error?: string;
         label?: string;
         filename?: string;
-        scorm?: { title: string | null; files: number; parts: number } | null;
+        scorm?: { title: string | null; files: number; parts: number; version?: string } | null;
       } = {};
       try {
         payload = JSON.parse(request.responseText);
@@ -68,7 +68,10 @@ export function LessonUpload({
         const scorm = payload.scorm;
         setNotice(
           scorm
-            ? t("lessonUpload.scorm", { title: scorm.title ?? payload.filename ?? "", files: scorm.files }) +
+            ? t(scorm.version === "2004" ? "lessonUpload.scorm2004" : "lessonUpload.scorm", {
+                title: scorm.title ?? payload.filename ?? "",
+                files: scorm.files,
+              }) +
                 (scorm.parts > 1 ? " " + t("lessonUpload.scormParts", { parts: scorm.parts }) : "")
             : t("lessonUpload.attached", {
                 label: payload.label ?? t("lessonUpload.file"),

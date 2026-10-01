@@ -374,7 +374,7 @@ export const scormPackages = pgTable(
     lessonId: uuid("lesson_id")
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
-    /** "1.2" for now; SCORM 2004 and cmi5 are refused with a reason. */
+    /** "1.2" or "2004"; cmi5 is refused with a reason. */
     version: text("version").notNull(),
     /** The package's own title, from its manifest. */
     title: text("title"),
@@ -389,6 +389,14 @@ export const scormPackages = pgTable(
     launchData: text("launch_data"),
     /** A mastery score from the manifest, which decides passed or failed. */
     masteryScore: numeric("mastery_score", { precision: 6, scale: 2 }),
+    /**
+     * SCORM 2004 only: the scaled pass mark (-1 to 1) from the manifest's
+     * primary objective, and the progress (0 to 1) that counts as complete.
+     * Where set, the platform decides passed or failed, and complete or not,
+     * from what the package reports, as the specification requires.
+     */
+    scaledPassingScore: numeric("scaled_passing_score", { precision: 8, scale: 7 }),
+    completionThreshold: numeric("completion_threshold", { precision: 8, scale: 7 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("scorm_packages_lesson_idx").on(t.lessonId)],
@@ -411,8 +419,19 @@ export const scormAttempts = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** What the package reported: "passed", "completed", "failed", "incomplete", "browsed". */
+    /**
+     * One status the rest of the platform reads: "passed", "completed",
+     * "failed", "incomplete", "browsed" or "not attempted". SCORM 1.2 reports
+     * it as one; for SCORM 2004 it is summarised from the two below.
+     */
     lessonStatus: text("lesson_status").notNull().default("not attempted"),
+    /** SCORM 2004 only: "completed", "incomplete", "not attempted" or "unknown". */
+    completionStatus: text("completion_status"),
+    /** SCORM 2004 only: "passed", "failed" or "unknown". */
+    successStatus: text("success_status"),
+    /** SCORM 2004 only: the score from -1 to 1, and progress from 0 to 1. */
+    scoreScaled: numeric("score_scaled", { precision: 8, scale: 7 }),
+    progressMeasure: numeric("progress_measure", { precision: 8, scale: 7 }),
     scoreRaw: numeric("score_raw", { precision: 8, scale: 2 }),
     scoreMin: numeric("score_min", { precision: 8, scale: 2 }),
     scoreMax: numeric("score_max", { precision: 8, scale: 2 }),
