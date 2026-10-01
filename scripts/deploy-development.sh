@@ -182,7 +182,8 @@ $COMPOSE up -d --no-build --remove-orphans app-dev || fail "the development appl
 for container in $(docker network inspect roft-lms_edge --format '{{range .Containers}}{{.Name}} {{end}}'); do
   case "$container" in
     roft-lms-dev-*)
-      if docker inspect "$container" --format '{{range .NetworkSettings.Networks}}{{.DNSNames}}{{end}}' | grep -qw app; then
+      # One name to a line, compared whole: "app-dev" is not "app".
+      if docker inspect "$container" --format '{{range .NetworkSettings.Networks}}{{range .DNSNames}}{{.}}{{"\n"}}{{end}}{{end}}' | grep -qx app; then
         fail "$container answers to 'app' on live's network, so live visitors can reach the development site. Take it off: docker network disconnect roft-lms_edge $container"
       fi
       ;;
