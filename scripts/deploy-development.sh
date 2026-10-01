@@ -130,7 +130,7 @@ if ! have_images "$IMAGE_TAG"; then
   if [ "$FREE_MB" -lt $((FLOOR_MB + PULL_MB)) ] && [ -n "$PREVIOUS" ] && [ "$PREVIOUS" != "$LIVE_TAG" ]; then
     log "${FREE_MB}MB free. Removing this site's previous version (${PREVIOUS:0:7}) to make room; the development site is down until the new one starts."
     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-    $COMPOSE rm -sf app >/dev/null 2>&1 || true
+    $COMPOSE rm -sf app-dev >/dev/null 2>&1 || true
     "$DEV/scripts/prune-images.sh" >/dev/null || true
   fi
 
@@ -142,7 +142,7 @@ if ! have_images "$IMAGE_TAG"; then
   log "Waiting for the images for ${IMAGE_TAG:0:7} to be published."
   WAITED=0
   PULL_LOG=$(mktemp)
-  until $COMPOSE pull --quiet app tools >"$PULL_LOG" 2>&1; do
+  until $COMPOSE pull --quiet app-dev tools >"$PULL_LOG" 2>&1; do
     if grep -qiE "no space left|permission denied|unauthorized|denied:|invalid" "$PULL_LOG"; then
       fail "the pull failed for a reason waiting will not fix: $(tail -2 "$PULL_LOG" | tr '\n' ' ')"
     fi
@@ -172,7 +172,22 @@ $COMPOSE run --rm tools sh -c \
   || fail "the schema change did not apply to the development database. That is what this site is for: fix it before Friday."
 
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-$COMPOSE up -d --no-build app || fail "the development application did not start"
+# --remove-orphans takes down the container from before the service was
+# renamed app-dev, which would otherwise go on answering as `app` beside live.
+$COMPOSE up -d --no-build --remove-orphans app-dev || fail "the development application did not start"
+
+# On live's network the name `app` must mean live and nothing else: Caddy
+# sends every live visitor to app:3000. Until 1 October 2026 this site
+# answered to it as well, and took a share of live's visitors.
+for container in $(docker network inspect roft-lms_edge --format '{{range .Containers}}{{.Name}} {{end}}'); do
+  case "$container" in
+    roft-lms-dev-*)
+      if docker inspect "$container" --format '{{range .NetworkSettings.Networks}}{{.DNSNames}}{{end}}' | grep -qw app; then
+        fail "$container answers to 'app' on live's network, so live visitors can reach the development site. Take it off: docker network disconnect roft-lms_edge $container"
+      fi
+      ;;
+  esac
+done
 
 # --- did it come back? ------------------------------------------------------
 
@@ -190,7 +205,7 @@ if [ "$HEALTHY" = true ]; then
   log "Development healthy at https://$DOMAIN on ${IMAGE_TAG:0:7}."
 else
   log "*** Development NOT HEALTHY after a minute. Live is unaffected. ***"
-  log "*** Look at: docker compose -f docker-compose.development.yml logs --tail=50 app ***"
+  log "*** Look at: docker compose -f docker-compose.development.yml logs --tail=50 app-dev ***"
   exit 1
 fi
 

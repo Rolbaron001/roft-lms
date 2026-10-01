@@ -197,7 +197,7 @@ if [ "$TABLES" -gt 0 ] && [ "$REFRESH" = false ]; then
 else
   if [ "$TABLES" -gt 0 ]; then
     log "Refreshing: the development site stops and its database is emptied."
-    dev rm -sf app >/dev/null 2>&1 || true
+    dev rm -sf app-dev >/dev/null 2>&1 || true
     dev exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q -c \
       "drop schema public cascade; create schema public;"
   fi
@@ -240,7 +240,7 @@ else
   # The files, through a read-only mount of live's volume. The Postgres image
   # is already on this machine, so nothing is downloaded to do it.
   log "Copying live's files."
-  dev up --no-start app >/dev/null 2>&1
+  dev up --no-start app-dev >/dev/null 2>&1
   docker run --rm \
     -v roft-lms_evidence:/from:ro \
     -v roft-lms-dev_evidence:/to \
@@ -264,14 +264,14 @@ log "  $(grep -o 'Policies applied.*' "$MIGRATE_LOG" | tail -1)"
 
 # --- 5. start it, and check the caps took ----------------------------------
 
-dev up -d --no-build app >/dev/null
-LIMITS="$(docker inspect --format '{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}' roft-lms-dev-app-1)"
+dev up -d --no-build --remove-orphans app-dev >/dev/null
+LIMITS="$(docker inspect --format '{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}' roft-lms-dev-app-dev-1)"
 MEM_MB=$(( ${LIMITS% *} / 1024 / 1024 ))
 CPUS="$(awk -v n="${LIMITS#* }" 'BEGIN { printf "%.1f", n / 1000000000 }')"
 if [ "$MEM_MB" -le 0 ]; then
   # Stopped rather than left running: uncapped, it competes with live for the
   # one processor, which is the thing the cap exists to prevent.
-  dev rm -sf app >/dev/null 2>&1 || true
+  dev rm -sf app-dev >/dev/null 2>&1 || true
   fail "the development application started without its memory limit, so it was stopped again."
 fi
 log "Development application started, capped at ${MEM_MB}MB and ${CPUS} of a processor."

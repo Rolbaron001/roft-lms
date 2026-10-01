@@ -70,7 +70,10 @@ grep -qx 'SITE=development' "$LIVE/.env" 2>/dev/null \
 
 # --- what development runs --------------------------------------------------
 
-DEV_IMAGE="$(docker inspect --format '{{.Config.Image}}' roft-lms-dev-app-1 2>/dev/null || true)"
+# app-dev since 1 October 2026; the older name until the server has that change.
+DEV_CONTAINER=roft-lms-dev-app-dev-1
+docker inspect "$DEV_CONTAINER" >/dev/null 2>&1 || DEV_CONTAINER=roft-lms-dev-app-1
+DEV_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$DEV_CONTAINER" 2>/dev/null || true)"
 [ -n "$DEV_IMAGE" ] || stop "the development site is not running, so nothing has been tried."
 DEV_TAG="${DEV_IMAGE##*:}"
 LIVE_TAG="$(docker inspect --format '{{.Config.Image}}' roft-lms-app-1 2>/dev/null | sed 's/.*://' || true)"
@@ -79,7 +82,7 @@ LIVE_TAG="$(docker inspect --format '{{.Config.Image}}' roft-lms-app-1 2>/dev/nu
 
 if [ "$NOW" = true ]; then
   TAG="$DEV_TAG"
-  STARTED="$(docker inspect --format '{{.State.StartedAt}}' roft-lms-dev-app-1)"
+  STARTED="$(docker inspect --format '{{.State.StartedAt}}' "$DEV_CONTAINER")"
   HOURS=$(( ( $(date +%s) - $(date -d "$STARTED" +%s) ) / 3600 ))
 else
   SOAKED="$("$LIVE/scripts/soaked-version.sh" "$DEV_LOG" "$MIN_SOAK_HOURS")" \

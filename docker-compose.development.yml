@@ -33,7 +33,13 @@
 name: roft-lms-dev
 
 services:
-  app:
+  # Named app-dev, never app. Compose gives every service its own name on
+  # every network it joins, and this one joins live's `edge` network, where
+  # live's application is `app`. Named app as well, it answered for live too:
+  # Caddy's `app:3000` reached either, so live visitors were sometimes served
+  # by this site, saw its banner, and were told their address was not in use
+  # (Roland, 1 October 2026). An alias cannot fix that; the name has to differ.
+  app-dev:
     # Always a commit, never "latest". CI publishes "latest" on every build,
     # which is exactly what must not reach a site by accident. IMAGE_TAG is
     # written into this project's .env by scripts/deploy-development.sh.
@@ -85,10 +91,8 @@ services:
       db:
         condition: service_healthy
     networks:
-      internal: {}
-      edge:
-        aliases:
-          - app-dev
+      - internal
+      - edge
 
   db:
     image: postgres:18-alpine

@@ -49,7 +49,7 @@ function service(yaml: string, name: string): string {
   return next === -1 ? yaml.slice(start) : yaml.slice(start, start + 1 + next);
 }
 
-const devAppEnv = service(devCompose, "app");
+const devAppEnv = service(devCompose, "app-dev");
 
 describe("the development site holds nothing of live's", () => {
   it("has its own database, not live's", () => {
@@ -59,7 +59,7 @@ describe("the development site holds nothing of live's", () => {
     // test itself, since a short slice would pass the absence checks below
     // without having looked at the whole block.
     expect(devAppEnv).toMatch(/NODE_OPTIONS/);
-    expect(devAppEnv).toMatch(/aliases:/);
+    expect(devAppEnv).toMatch(/- edge/);
     // Its own compose project, which is what names its volumes apart.
     expect(devCompose).toMatch(/^name: roft-lms-dev$/m);
     expect(devCompose).not.toMatch(/roft-lms_pgdata|roft-lms_evidence/);
@@ -98,10 +98,22 @@ describe("the development site holds nothing of live's", () => {
     expect(devAppEnv).toMatch(/--max-old-space-size=/);
   });
 
+  it("never answers to live's name on live's network", () => {
+    // Compose names every service on every network it joins. Named `app`, the
+    // development application answered for live as well, and Caddy's
+    // app:3000 sent some live visitors here (1 October 2026).
+    expect(devCompose).not.toMatch(/^ {2}app:\s*$/m);
+    expect(devCompose).not.toMatch(/^\s*-\s*app\s*$/m);
+    const deploy = readFileSync(join(process.cwd(), "scripts/deploy-development.sh"), "utf8");
+    expect(deploy).toMatch(/--remove-orphans app-dev/);
+    expect(deploy).toMatch(/answers to 'app' on live's network/);
+  });
+
   it("reaches the proxy over live's network and nothing else of live's", () => {
     expect(devCompose).toMatch(/name: roft-lms_edge/);
     expect(devCompose).toMatch(/external: true/);
-    expect(devCompose).toMatch(/- app-dev/);
+    // The service's own name is what it answers to on live's network.
+    expect(devCompose).toMatch(/^ {2}app-dev:\s*$/m);
     // The database is internal only.
     const db = service(devCompose, "db");
     expect(db).toMatch(/postgres:18-alpine/);
