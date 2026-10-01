@@ -21,7 +21,8 @@
     "db:purge-test-tenants": "tsx scripts/purge-test-tenants.mts",
     "translations:export": "tsx scripts/translation-export.mts",
     "translations:import": "tsx scripts/translation-import.mts",
-    "translations:server": "tsx scripts/translations-server.mts"
+    "translations:server": "tsx scripts/translations-server.mts",
+    "translations:client": "tsx scripts/translations-client.mts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

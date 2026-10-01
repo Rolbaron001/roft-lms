@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
 import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
-import type { MessageKey } from "@/lib/i18n";
+import { maybe, type MessageKey } from "@/lib/i18n";
+import { sayer } from "@/lib/i18n/said";
 import { namingConventionFor } from "@/lib/capture";
 import { proposeModuleCodeTable } from "@/lib/module-code-settings";
 import { settledTerms, structureOf } from "@/lib/features";
@@ -52,6 +53,8 @@ export default async function SettingsPage({
   const tenant = await requireTenant();
   const session = await requireSession();
   const { t, locale } = await pageLocale();
+  // What lib/ wrote about each AI provider and drive, in the reader's language.
+  const say = sayer(locale);
 
   /*
    * Connecting a file store belongs with getting material into a
@@ -129,7 +132,10 @@ export default async function SettingsPage({
     label: section.label,
     items: section.items.map((item) => ({
       href: item.href,
-      label: item.label,
+      // As the menu itself shows it (components/app-shell.tsx). Safe to
+      // translate: a page is saved by its address, never by this label.
+      // Headings stay as stored, because they are typed and saved here.
+      label: item.term ? item.label : (maybe(t, `nav.${item.href}`) ?? item.label),
     })),
   }));
 
@@ -312,7 +318,7 @@ export default async function SettingsPage({
               offered={availableDriveProviders().map((one) => ({
                 name: one.name,
                 label: one.label,
-                description: one.description,
+                description: say(one.description),
               }))}
               notice={driveNotice}
             />
@@ -347,9 +353,9 @@ export default async function SettingsPage({
                     return {
                       name: provider.name,
                       label: provider.label,
-                      description: provider.description,
+                      description: say(provider.description),
                       runsHere: here.available,
-                      reason: here.reason ?? null,
+                      reason: here.reason ? say(here.reason) : null,
                       credentialWord: provider.credentialFormat.word,
                       defaultModel: provider.defaultModel,
                       listsModels: Boolean(provider.listModels),

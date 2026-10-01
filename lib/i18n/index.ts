@@ -1,4 +1,5 @@
 import { af } from "./af";
+import { CLIENT_KEYS, CLIENT_PREFIXES } from "./client-keys";
 import { en, type Catalogue, type MessageKey } from "./en";
 import { DEFAULT_LOCALE, LOCALES, isLocale } from "./locales";
 import type { Translation } from "./phrase-document";
@@ -62,5 +63,19 @@ export function translator(locale: string | null | undefined): Translate {
  */
 export function catalogueFor(locale: string | null | undefined): Record<string, string> {
   if (!isLocale(locale) || locale === DEFAULT_LOCALE) return {};
-  return { ...(CATALOGUES[locale] ?? {}) } as Record<string, string>;
+  const cached = FOR_BROWSER.get(locale);
+  if (cached) return cached;
+  // Only what the browser's own code can ask for (lib/i18n/client-keys.ts):
+  // the rest of a page arrives with its words already in it. Sending the whole
+  // language cost every page a phone opened about 70 KB, and over half of it
+  // was never read.
+  const all = (CATALOGUES[locale] ?? {}) as Record<string, string>;
+  const wanted = Object.fromEntries(
+    Object.entries(all).filter(([key]) => CLIENT_KEY_SET.has(key) || CLIENT_PREFIXES.some((prefix) => key.startsWith(prefix))),
+  );
+  FOR_BROWSER.set(locale, wanted);
+  return wanted;
 }
+
+const CLIENT_KEY_SET = new Set(CLIENT_KEYS);
+const FOR_BROWSER = new Map<string, Record<string, string>>();

@@ -50,7 +50,10 @@ describe("putting a phrase into a language", () => {
     }
     // Only a language's own phrases go to the browser; it has the English.
     expect(catalogueFor("en")).toEqual({});
-    expect(catalogueFor("af")["shell.signOut"]).toBe("Teken uit");
+    // Only what the browser's own code uses (tests/client-phrases.test.ts):
+    // a form's "Saving…" goes, the frame's "Sign out" arrives already written.
+    expect(catalogueFor("af")["common.saving"]).toBe(translator("af")("common.saving"));
+    expect(catalogueFor("af")["shell.signOut"]).toBeUndefined();
     expect(Object.keys(catalogueFor("af")).length).toBeLessThanOrEqual(Object.keys(en).length);
   });
 
