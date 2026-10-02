@@ -19,6 +19,8 @@ import { DocumentUploader } from "./documents/document-uploader";
 import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
+import { QualificationNav } from "@/components/qualification-nav";
+import { verificationOf } from "@/lib/qualification-build";
 import { ViewTabs } from "@/components/view-tabs";
 import { PageNav } from "@/components/page-nav";
 import { qualificationUsage } from "@/lib/qualification-removal";
@@ -125,6 +127,13 @@ export default async function QualificationPage({
   const capturable = session.permissions.includes("assessment:author")
     ? await capturableDocuments(session, id)
     : [];
+  // Whether its study units are built, and whether anything holds it back from
+  // going live (lib/qualification-build.ts). For whoever can build and publish.
+  const verification =
+    canManage && canAuthorCourses && session.permissions.includes("assessment:author")
+      ? await said(await verificationOf(session, id))
+      : null;
+
   const capture = capturable.length
     ? {
         total: capturable.length,
@@ -287,20 +296,54 @@ export default async function QualificationPage({
      * and the only sign of it was a Capture entry in the menu that never
      * mentioned this qualification.
      */
-    ...(capture && capture.total > 0
+    /*
+     * Built, then checked and live (Roland, 2 October 2026).
+     *
+     * Capturing used to be a step of its own, paper by paper, and building
+     * each study unit another nobody was told about. The platform now does
+     * both from what the folder holds, so the map says whether it has, and
+     * ends at the one thing a person still does: check it and make it live.
+     */
+    ...(verification
       ? [
           {
-            title: t("qualPage.step.capture"),
-            done: capture.captured === capture.total,
+            title: t("qualPage.step.built"),
+            done: verification.built && (!capture || capture.captured === capture.total),
             state:
-              capture.captured === capture.total
-                ? t("qualPage.step.captureDone", { count: capture.total })
-                : t("qualPage.step.captureTodo", { captured: capture.captured, total: capture.total }),
-            href: `/qualifications/${id}?view=build#capture`,
-            action: t("qualPage.step.captureAction"),
+              verification.built && (!capture || capture.captured === capture.total)
+                ? t("qualPage.step.builtDone", { units: verification.units.length, papers: capture?.captured ?? 0 })
+                : t("qualPage.step.builtTodo"),
+            href: `/qualifications/${id}/verify`,
+            action: t("qualPage.step.builtAction"),
+          },
+          {
+            title: t("qualPage.step.live"),
+            done: verification.live,
+            state: verification.live
+              ? t("qualPage.step.liveDone")
+              : verification.ready
+                ? t("qualPage.step.liveReady")
+                : t("qualPage.step.liveTodo", {
+                    count: verification.units.reduce((sum, unit) => sum + unit.blocking.length, 0),
+                  }),
+            href: `/qualifications/${id}/verify`,
+            action: t("qualPage.step.liveAction"),
           },
         ]
-      : []),
+      : capture && capture.total > 0
+        ? [
+            {
+              title: t("qualPage.step.capture"),
+              done: capture.captured === capture.total,
+              state:
+                capture.captured === capture.total
+                  ? t("qualPage.step.captureDone", { count: capture.total })
+                  : t("qualPage.step.captureTodo", { captured: capture.captured, total: capture.total }),
+              href: `/qualifications/${id}?view=build#capture`,
+              action: t("qualPage.step.captureAction"),
+            },
+          ]
+        : []),
   ];
 
   const folderExtension = mayUseExtension
@@ -384,6 +427,8 @@ export default async function QualificationPage({
           </Link>
         ) : null}
       </div>
+
+      <QualificationNav qualificationId={id} current="overview" />
 
       {canManage ? <ProgressMap steps={steps} /> : null}
 

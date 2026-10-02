@@ -436,6 +436,14 @@ export async function commitCapture(
     /** Criterion code to criterion id, resolved on the review screen. */
     criterionIds: Record<string, string>;
     /**
+     * The criteria for each question, by section and then by question, where
+     * they were resolved in context (lib/criterion-resolve.ts). Takes the
+     * place of `criterionIds`: the same code means different criteria in
+     * different modules, so one id per code cannot be right for every
+     * question.
+     */
+    itemCriterionIds?: string[][][];
+    /**
      * Set when the reviewer has read the findings and chosen to go on anyway.
      *
      * Required whenever anything is outstanding. The platform's job is to put
@@ -480,7 +488,7 @@ export async function commitCapture(
     code: input.paperCode,
   });
 
-  for (const section of input.confirmed.sections) {
+  for (const [sectionIndex, section] of input.confirmed.sections.entries()) {
     const created = await addSection(session, {
       paperId: paper.id,
       title: section.title,
@@ -488,7 +496,7 @@ export async function commitCapture(
       markTotal: section.markTotal ?? undefined,
     });
 
-    for (const item of section.items) {
+    for (const [itemIndex, item] of section.items.entries()) {
       const created_item = await addSectionItem(session, {
         sectionId: created.id,
         type: item.type,
@@ -500,9 +508,9 @@ export async function commitCapture(
         points: item.points ?? 1,
       });
 
-      const ids = item.criterionCodes
-        .map((code) => input.criterionIds[code])
-        .filter(Boolean);
+      const ids =
+        input.itemCriterionIds?.[sectionIndex]?.[itemIndex] ??
+        item.criterionCodes.map((code) => input.criterionIds[code]).filter(Boolean);
       if (ids.length > 0) {
         await tagItemCriteria(session, created_item.id, ids);
       }

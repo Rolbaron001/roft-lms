@@ -13,6 +13,9 @@ import {
   listCompetencies,
 } from "@/lib/authoring";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { PointHere } from "@/components/progress-map";
+import { QualificationNav } from "@/components/qualification-nav";
+import { qualificationOfCourse, verificationOf } from "@/lib/qualification-build";
 import { CourseEditor } from "./course-editor";
 
 export default async function CoursePage({
@@ -49,6 +52,19 @@ export default async function CoursePage({
     coverageReport(session, id),
     listCompetencies(session),
   ]);
+
+  /*
+   * A study unit's course is built by the platform and goes live with its
+   * qualification (Roland, 2 October 2026: "Moving to the build page, I have
+   * no idea (as a user) what to do. There is no assistant."). So its page says
+   * where it came from, what it holds, and the one thing left, rather than
+   * offering an empty editor to fill by hand.
+   */
+  const qualificationId = await qualificationOfCourse(session, id);
+  const unit =
+    qualificationId && canAuthorHere && session.permissions.includes("assessment:author")
+      ? (await said(await verificationOf(session, qualificationId))).units.find((one) => one.courseId === id) ?? null
+      : null;
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -106,6 +122,45 @@ export default async function CoursePage({
           </p>
         ) : null}
       </div>
+
+      {qualificationId ? <QualificationNav qualificationId={qualificationId} current={id} /> : null}
+
+      {qualificationId && unit && !unit.live ? (
+        <div className="mb-6">
+          <Card>
+            <p className="text-sm font-medium">{t("unitGuide.title")}</p>
+            <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
+              {t("unitGuide.holds", {
+                steps: unit.steps,
+                assessments: unit.assessments.length,
+              })}
+            </p>
+            {unit.blocking.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-[var(--danger)]">
+                {unit.blocking.slice(0, 5).map((item, index) => (
+                  <li key={index}>
+                    {item.href ? (
+                      <Link href={item.href} className="underline-offset-2 hover:underline">
+                        {item.what}
+                      </Link>
+                    ) : (
+                      item.what
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="mt-3">
+              <PointHere>
+                <Link href={`/qualifications/${qualificationId}/verify`} className="underline underline-offset-2">
+                  {unit.steps === 0 ? t("unitGuide.build") : t("unitGuide.verify")}
+                </Link>
+              </PointHere>
+            </div>
+            <p className="text-xs text-[var(--muted)]">{t("unitGuide.change")}</p>
+          </Card>
+        </div>
+      ) : null}
 
       {detail.course.status === "published" ? (
         <Card>

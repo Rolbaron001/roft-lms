@@ -2,10 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requirePermission, said } from "@/lib/request";
 import { withTenant } from "@/db/client";
-import { assessmentCriteria } from "@/db/schema";
+import { assessments, courses } from "@/db/schema";
+import { resolvePaperCriteria } from "@/lib/criterion-resolve";
+import { criteriaOfStudyUnit } from "@/lib/qualification-build";
 import {
   CaptureError,
   commitCapture,
@@ -113,35 +115,28 @@ export async function commitCaptureAction(
     }
 
     // Criterion codes are resolved here rather than in the parser, which knows
-    // nothing about this tenant's curriculum. A code matching nothing is left
-    // unlinked and said so on the screen, not invented.
-    const codes = [
-      ...new Set(
-        confirmed.sections.flatMap((section) =>
-          section.items.flatMap((item) => item.criterionCodes),
-        ),
-      ),
-    ];
-
-    const rows =
-      codes.length === 0
-        ? []
-        : await withTenant(session.organisationId, (tx) =>
-            tx
-              .select({
-                id: assessmentCriteria.id,
-                code: assessmentCriteria.code,
-              })
-              .from(assessmentCriteria)
-              .where(inArray(assessmentCriteria.code, codes)),
-          );
+    // nothing about this tenant's curriculum. Among the criteria of the study
+    // unit the assessment belongs to, by rule and in context
+    // (lib/criterion-resolve.ts): until 2 October this matched the code as
+    // text across the whole provider, and "IAC0104" named 22 criteria. A code
+    // matching nothing is left unlinked, not invented.
+    const [owner] = await withTenant(session.organisationId, (tx) =>
+      tx
+        .select({ studyUnitId: courses.studyUnitId })
+        .from(assessments)
+        .innerJoin(courses, eq(courses.id, assessments.courseId))
+        .where(eq(assessments.id, assessmentId)),
+    );
+    const candidates = owner?.studyUnitId ? await criteriaOfStudyUnit(session, owner.studyUnitId) : [];
+    const { perItem } = resolvePaperCriteria(confirmed, candidates);
 
     const result = await commitCapture(session, {
       jobId,
       assessmentId,
       paperCode,
       confirmed,
-      criterionIds: Object.fromEntries(rows.map((row) => [row.code, row.id])),
+      criterionIds: {},
+      itemCriterionIds: perItem,
       acknowledgedProblems: formData.get("acknowledgedProblems") === "on",
     });
 

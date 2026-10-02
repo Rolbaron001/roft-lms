@@ -6,6 +6,7 @@ import {
   competencies,
   courseCompetencies,
   courseSections,
+  courseSteps,
   courses,
   criterionAlignment,
   curriculumModules,
@@ -791,10 +792,19 @@ export async function listCourses(session: AuthenticatedSession) {
         curriculumModuleId: courses.curriculumModuleId,
         curriculumModuleCode: curriculumModules.code,
         curriculumComponent: curriculumModules.component,
+        // A study unit's course belongs to its qualification through the
+        // unit, not through one module; until 2 October the list read only
+        // the module and called every study unit "not part of a qualification".
+        studyUnitCode: studyUnits.code,
+        qualificationTitle: qualifications.title,
         lessonCount: sql<number>`(
           select count(*)::int from lessons l
           join course_sections cs on cs.id = l.section_id
           where cs.course_id = courses.id
+        )`,
+        stepCount: sql<number>`(
+          select count(*)::int from course_steps st
+          where st.course_id = courses.id
         )`,
         competencyCount: sql<number>`(
           select count(*)::int from course_competencies cc
@@ -806,6 +816,8 @@ export async function listCourses(session: AuthenticatedSession) {
         curriculumModules,
         eq(curriculumModules.id, courses.curriculumModuleId),
       )
+      .leftJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+      .leftJoin(qualifications, eq(qualifications.id, studyUnits.qualificationId))
       .orderBy(asc(courses.title)),
   );
 }
@@ -1363,22 +1375,47 @@ export async function publishCourse(
 ): Promise<PublishSuccess | PublishRefusal> {
   assertSessionCan(session, "course:publish");
 
+  const checked = await coursePublishChecks(session, courseId);
+  if (!checked.ok) return checked;
+  return publishCheckedCourse(session, courseId, checked.report);
+}
+
+/**
+ * Whether a course may be published, and if not, why: every check
+ * `publishCourse` applies, without publishing anything. The qualification's
+ * verification page shows these for each study unit before anybody presses
+ * the one button that makes it live (2 October 2026).
+ */
+export async function coursePublishChecks(
+  session: AuthenticatedSession,
+  courseId: string,
+): Promise<PublishSuccess | PublishRefusal> {
+  assertSessionCan(session, "course:read");
+
   // A study unit's course that has no competency yet is given the one the
   // unit achieves, rather than refused and sent to an unrelated list (W5).
   // Only when it has none: a competency somebody chose stands.
-  await withTenant(session.organisationId, async (tx) => {
+  const stepCount = await withTenant(session.organisationId, async (tx) => {
     const [tagged] = await tx
       .select({ id: courseCompetencies.id })
       .from(courseCompetencies)
       .where(eq(courseCompetencies.courseId, courseId))
       .limit(1);
     if (!tagged) await ensureStudyUnitCompetency(tx, session.organisationId, courseId);
+    const [steps] = await tx
+      .select({ total: count() })
+      .from(courseSteps)
+      .where(eq(courseSteps.courseId, courseId));
+    return steps?.total ?? 0;
   });
 
   const report = await coverageReport(session, courseId);
   const reasons: string[] = [];
 
-  if (report.lessonCount === 0) {
+  // Lessons or steps. A study unit built from a folder is delivered by its
+  // theory guide and its captured workbooks, as steps, and has no lessons of
+  // its own; refusing it for that would refuse the shape the folder describes.
+  if (report.lessonCount === 0 && stepCount === 0) {
     reasons.push("The course has no lessons yet.");
   }
 
@@ -1426,7 +1463,15 @@ export async function publishCourse(
   if (reasons.length > 0) {
     return { ok: false, reasons, report };
   }
+  return { ok: true, report };
+}
 
+/** Publishes a course whose checks have just passed. */
+async function publishCheckedCourse(
+  session: AuthenticatedSession,
+  courseId: string,
+  report: CoverageReport,
+): Promise<PublishSuccess> {
   await withTenant(session.organisationId, async (tx) => {
     const [before] = await tx
       .select({ status: courses.status })

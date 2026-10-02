@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission, said } from "@/lib/request";
 import { IngestError, discardIngest, ingestUpload } from "@/lib/folder-import";
 import { commitPlan } from "@/lib/folder-commit";
+import { buildQualification, buildSummary } from "@/lib/qualification-build";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 export type ImportActionState = {
@@ -194,8 +195,30 @@ export async function commitPlanAction(
       ? ` ${report.refused.length} ${report.refused.length === 1 ? "thing was" : "things were"} turned away by the usual checks: ${report.refused.slice(0, 8).join(" ")}${report.refused.length > 8 ? ` There are ${report.refused.length - 8} more.` : ""}`
       : "";
 
+  /*
+   * Then built, without being asked (Roland, 2 October 2026): each study
+   * unit's course, its papers captured and its steps laid out, all in draft
+   * for one verification on the qualification. Only for somebody who may
+   * author courses and assessments; anybody else's commit stops here, and the
+   * qualification page offers the build to whoever can.
+   */
+  let afterBuild = "";
+  if (
+    report.qualificationId &&
+    session.permissions.includes("course:author") &&
+    session.permissions.includes("assessment:author")
+  ) {
+    try {
+      const build = await buildQualification(session, report.qualificationId);
+      afterBuild = ` ${buildSummary(build)}`;
+    } catch (error) {
+      console.error("qualification build after commit failed", error);
+      afterBuild = " The study units could not be built automatically; build them from the qualification page.";
+    }
+  }
+
   return said({
-    notice: `${made}Committed: ${built}.${held}${refused}`,
+    notice: `${made}Committed: ${built}.${held}${refused}${afterBuild}`,
     committedTo: report.qualificationId || undefined,
   });
 }

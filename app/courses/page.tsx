@@ -83,16 +83,24 @@ export default async function CoursesPage() {
 
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--muted)]">
                 <span>
-                  {course.lessonCount === 1
-                    ? t("courseList.lessonsOne")
-                    : t("courseList.lessons", { count: course.lessonCount })}
+                  {course.lessonCount === 0 && course.stepCount > 0
+                    ? course.stepCount === 1
+                      ? t("courseList.stepsOne")
+                      : t("courseList.steps", { count: course.stepCount })
+                    : course.lessonCount === 1
+                      ? t("courseList.lessonsOne")
+                      : t("courseList.lessons", { count: course.lessonCount })}
                 </span>
                 <span>
                   {course.competencyCount === 1
                     ? t("courseList.competenciesOne")
                     : t("courseList.competencies", { count: course.competencyCount })}
                 </span>
-                {course.curriculumModuleCode ? (
+                {course.studyUnitCode && course.qualificationTitle ? (
+                  <span>
+                    {t("courseList.unitOf", { unit: course.studyUnitCode, qualification: course.qualificationTitle })}
+                  </span>
+                ) : course.curriculumModuleCode ? (
                   <span>
                     {t("courseList.module", {
                       component: maybe(t, `courseList.component.${course.curriculumComponent ?? ""}`) ?? "",

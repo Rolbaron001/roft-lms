@@ -7,6 +7,7 @@ import { vocabulary } from "@/lib/terms";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { StartUnit } from "./start-unit";
+import { QualificationNav } from "@/components/qualification-nav";
 
 /**
  * A qualification walked as a learner will meet it.
@@ -41,6 +42,7 @@ export default async function QualificationPreviewPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <QualificationNav qualificationId={id} current="preview" />
       <div className="mb-6">
         <Link
           href={`/qualifications/${id}`}
