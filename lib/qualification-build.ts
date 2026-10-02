@@ -1,10 +1,11 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentItemCriteria,
   assessmentItems,
   assessmentPapers,
+  assessmentSubmissions,
   assessmentSections,
   assessments,
   captureJobs,
@@ -70,7 +71,7 @@ export type Finding = {
 };
 
 export type BuildReport = {
-  units: { code: string; courseId: string; captured: number; relinked: number; stepsAdded: number; stepsKept: boolean }[];
+  units: { code: string; courseId: string; captured: number; reread: number; relinked: number; stepsAdded: number; stepsKept: boolean }[];
   /** Captured anyway, worth a look before verifying. */
   toCheck: Finding[];
   /** Could not be done without a person. */
@@ -236,6 +237,66 @@ async function relinkCourse(
   return changed;
 }
 
+/**
+ * The paper a document was captured as, if building again may read it afresh:
+ * a draft in this course that nobody has sat, still in the shape it was
+ * captured in, and failing a check or holding a question linked to nothing.
+ */
+async function rereadable(
+  session: AuthenticatedSession,
+  documentId: string,
+  courseId: string,
+): Promise<{ paperId: string; assessmentId: string; code: string } | null> {
+  const found = await withTenant(session.organisationId, async (tx) => {
+    const [job] = await tx
+      .select({
+        paperId: assessmentPapers.id,
+        assessmentId: assessmentPapers.assessmentId,
+        code: assessmentPapers.code,
+        status: assessmentPapers.status,
+        proposal: captureJobs.proposal,
+      })
+      .from(captureJobs)
+      .innerJoin(programmeDocuments, eq(programmeDocuments.sha256, captureJobs.paperSha256))
+      .innerJoin(assessmentPapers, eq(assessmentPapers.id, captureJobs.paperId))
+      .innerJoin(assessments, eq(assessments.id, assessmentPapers.assessmentId))
+      .where(and(eq(programmeDocuments.id, documentId), eq(assessments.courseId, courseId), isNotNull(captureJobs.committedAt)))
+      .orderBy(desc(captureJobs.committedAt))
+      .limit(1);
+    if (!job || job.status === "published") return null;
+
+    const [sat] = await tx.select({ id: assessmentSubmissions.id }).from(assessmentSubmissions).where(eq(assessmentSubmissions.paperId, job.paperId)).limit(1);
+    if (sat) return null;
+
+    const sections = await tx
+      .select({ id: assessmentSections.id })
+      .from(assessmentSections)
+      .where(eq(assessmentSections.paperId, job.paperId))
+      .orderBy(asc(assessmentSections.sortOrder));
+    const items = sections.length
+      ? await tx
+          .select({ id: assessmentItems.id, sectionId: assessmentItems.sectionId, linked: assessmentItemCriteria.id })
+          .from(assessmentItems)
+          .leftJoin(assessmentItemCriteria, eq(assessmentItemCriteria.itemId, assessmentItems.id))
+          .where(inArray(assessmentItems.sectionId, sections.map((s) => s.id)))
+      : [];
+
+    // Worked on by hand since: somebody's own work, left alone.
+    const proposal = job.proposal as ParsedPaper;
+    if (sections.length !== proposal.sections.length) return null;
+    const counts = sections.map((section) => new Set(items.filter((item) => item.sectionId === section.id).map((item) => item.id)).size);
+    if (counts.some((count, index) => count !== proposal.sections[index].items.length)) return null;
+
+    const unlinked = items.some((item) => item.linked === null);
+    return { job, unlinked };
+  });
+  if (!found) return null;
+
+  const failing = (await paperProblems(session, found.job.paperId)).length > 0;
+  if (!failing && !found.unlinked) return null;
+  return { paperId: found.job.paperId, assessmentId: found.job.assessmentId, code: found.job.code };
+}
+
 /** An assessment's papers that are still drafts. */
 async function draftPaperIds(session: AuthenticatedSession, assessmentId: string): Promise<string[]> {
   const rows = await withTenant(session.organisationId, (tx) =>
@@ -359,7 +420,12 @@ export async function buildQualification(
     const candidates = await criteriaOfStudyUnit(session, unit.id);
     let captured = 0;
 
-    for (const document of documents.filter((one) => one.studyUnitId === unit.id && !one.captured)) {
+    /**
+     * Reads one paper with its guide and commits it. `replacing` is a draft
+     * paper captured earlier that this one takes the place of, removed only
+     * once the new reading is known to be capturable.
+     */
+    const capture = async (document: (typeof documents)[number], replacing?: { paperId: string; assessmentId: string; code: string }) => {
       const paper = await readProgrammeDocumentForAuthoring(session, document.documentId);
       const guide = document.guide ? await readProgrammeDocumentForAuthoring(session, document.guide.documentId) : null;
       const proposed = await proposeCapture(session, {
@@ -376,7 +442,7 @@ export async function buildQualification(
           what: `${document.filename} was read but cannot be captured without a decision: ${blockers.slice(0, 2).join(" ")}${blockers.length > 2 ? ` There are ${blockers.length - 2} more.` : ""}`,
           href,
         });
-        continue;
+        return false;
       }
 
       let text = "";
@@ -386,18 +452,22 @@ export async function buildQualification(
         // Section headings are enough to resolve most codes.
       }
       const { perItem, unresolved } = resolvePaperCriteria(proposed.proposal, candidates, text);
-      const assessmentId = await assessmentFor(session, courseId, document.title, document.kind);
+      const assessmentId = replacing?.assessmentId ?? (await assessmentFor(session, courseId, document.title, document.kind));
       const version = versionOf(document.filename);
+      if (replacing) {
+        // Its sections, questions and criterion links go with it. Nobody has
+        // sat it: that was checked before it was chosen for re-reading.
+        await withTenant(session.organisationId, (tx) => tx.delete(assessmentPapers).where(eq(assessmentPapers.id, replacing.paperId)));
+      }
       const committed = await commitCapture(session, {
         jobId: proposed.jobId,
         assessmentId,
-        paperCode: version ? `V${version}` : "V1",
+        paperCode: replacing?.code ?? (version ? `V${version}` : "V1"),
         confirmed: proposed.proposal,
         criterionIds: {},
         itemCriterionIds: perItem,
         acknowledgedProblems: true,
       });
-      captured += 1;
 
       const paperHref = `/papers/${committed.paperId}/preview`;
       for (const problem of proposed.problems) report.toCheck.push({ studyUnit: unit.code, what: `${document.filename}: ${problem}`, href: paperHref });
@@ -409,11 +479,32 @@ export async function buildQualification(
           href: paperHref,
         });
       }
+      return true;
+    };
+
+    const ofUnit = documents.filter((one) => one.studyUnitId === unit.id);
+    for (const document of ofUnit.filter((one) => !one.captured)) {
+      if (await capture(document)) captured += 1;
+    }
+
+    /*
+     * Building again re-reads what was captured badly. Roland, 2 October:
+     * SU1's papers had been captured before the reader took model answers
+     * from the guide, so they could not be opened to learners, and building
+     * again left them as they were. A paper is re-read only while it is a
+     * draft nobody has sat, still in the shape it was captured in (so
+     * nobody has worked on it by hand), and short of something: a check it
+     * fails, or a question linked to no criterion.
+     */
+    let reread = 0;
+    for (const document of ofUnit.filter((one) => one.captured)) {
+      const earlier = await rereadable(session, document.documentId, courseId);
+      if (earlier && (await capture(document, earlier))) reread += 1;
     }
 
     const relinked = await relinkCourse(session, courseId, candidates);
     const steps = await buildSteps(session, courseId, unit.id);
-    report.units.push({ code: unit.code, courseId, captured, relinked, stepsAdded: steps.added, stepsKept: steps.kept });
+    report.units.push({ code: unit.code, courseId, captured, reread, relinked, stepsAdded: steps.added, stepsKept: steps.kept });
   }
 
   await withTenant(session.organisationId, (tx) =>
@@ -470,9 +561,11 @@ export function buildSummary(report: BuildReport): string {
   const units = report.units.length;
   const captured = report.units.reduce((sum, unit) => sum + unit.captured, 0);
   const steps = report.units.reduce((sum, unit) => sum + unit.stepsAdded, 0);
+  const reread = report.units.reduce((sum, unit) => sum + unit.reread, 0);
   const parts = [
     `Built ${units} ${units === 1 ? "study unit" : "study units"}`,
     `${captured} ${captured === 1 ? "paper" : "papers"} captured`,
+    ...(reread > 0 ? [`${reread} ${reread === 1 ? "paper" : "papers"} read again from ${reread === 1 ? "its guide" : "their guides"}`] : []),
     `${steps} ${steps === 1 ? "step" : "steps"} laid out`,
   ];
   const waiting = report.waiting.length > 0 ? ` ${report.waiting.length} ${report.waiting.length === 1 ? "thing needs" : "things need"} a person.` : "";

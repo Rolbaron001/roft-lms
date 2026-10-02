@@ -167,6 +167,17 @@ person going through it question by question.
   looks at anything listed to check, and presses **Verified, make it live**
   once. That is refused while any regulatory check fails, and the page says
   what is missing and links to it.
+- **Build again** is on the qualification page, on each study unit's page
+  and on the check page. It fills anything missing, and reads afresh any
+  paper that is still a draft, has not been worked on by hand, has not been
+  sat by anybody, and fails a check or has a question linked to no
+  criterion. A paper somebody has sat or edited is never replaced.
+- **Answer guides:** each written question or task should be headed in the
+  guide as it is on the paper, `Question 1.3.1: … (10 Marks) [IAC0101]` or
+  `Task A: … [IAC0304]`, with its model answer underneath. The model answer
+  becomes the assessor's marking guidance and the bracketed codes link the
+  question to its criteria. A written question with no model answer cannot
+  be opened to learners.
 - **Every study unit with knowledge or practical modules needs its papers in
   the folder.** The alignment matrix saying a criterion is assessed is not
   enough on its own: a unit with no workbook or assessment is held back, so

@@ -16,6 +16,7 @@ import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { PointHere } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { qualificationOfCourse, verificationOf } from "@/lib/qualification-build";
+import { BuildForm } from "@/app/qualifications/[id]/verify/verify-forms";
 import { CourseEditor } from "./course-editor";
 
 export default async function CoursePage({
@@ -156,6 +157,11 @@ export default async function CoursePage({
                   {unit.steps === 0 ? t("unitGuide.build") : t("unitGuide.verify")}
                 </Link>
               </PointHere>
+            </div>
+            {/* Here as well as on the check page, where it was too easily missed
+                (Roland, 2 October: "there's no button to select Build again"). */}
+            <div className="mb-3">
+              <BuildForm qualificationId={qualificationId} again={unit.steps > 0} />
             </div>
             <p className="text-xs text-[var(--muted)]">{t("unitGuide.change")}</p>
           </Card>

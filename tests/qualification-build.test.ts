@@ -22,6 +22,7 @@ import {
   assessmentItems,
   assessmentSections,
   assessmentPapers,
+  assessmentSubmissions,
   assessments,
   courseSteps,
   courses,
@@ -234,6 +235,45 @@ describe("building SU1 from what was filed", () => {
 
     const steps = await withTenant(organisationId, (tx) => tx.select({ id: courseSteps.id }).from(courseSteps).where(and(eq(courseSteps.courseId, courseId))));
     expect(steps).toHaveLength(2);
+  }, 300_000);
+
+  it("built again, reads afresh a draft paper captured badly, and leaves one somebody sat", async () => {
+    // As SU1's papers were before 2 October: drafts with no marking guidance
+    // on their written questions and nothing linked.
+    const paperOf = () =>
+      withTenant(organisationId, async (tx) => {
+        const [assessment] = await tx.select({ id: assessments.id }).from(assessments).where(eq(assessments.courseId, courseId));
+        const [paper] = await tx.select({ id: assessmentPapers.id, status: assessmentPapers.status }).from(assessmentPapers).where(eq(assessmentPapers.assessmentId, assessment.id));
+        return { assessmentId: assessment.id, ...paper };
+      });
+    const spoil = async (paperId: string) =>
+      withTenant(organisationId, async (tx) => {
+        await tx.update(assessmentPapers).set({ status: "draft" }).where(eq(assessmentPapers.id, paperId));
+        const sections = await tx.select({ id: assessmentSections.id }).from(assessmentSections).where(eq(assessmentSections.paperId, paperId));
+        const items = await tx.select({ id: assessmentItems.id }).from(assessmentItems).where(inArray(assessmentItems.sectionId, sections.map((s) => s.id)));
+        await tx.update(assessmentItems).set({ markingGuide: null }).where(inArray(assessmentItems.id, items.map((i) => i.id)));
+        await tx.delete(assessmentItemCriteria).where(inArray(assessmentItemCriteria.itemId, items.map((i) => i.id)));
+      });
+
+    const before = await paperOf();
+    await spoil(before.id);
+
+    const again = await buildQualification(admin, qualificationId);
+    expect(again.units[0].reread).toBe(1);
+    const after = await paperOf();
+    expect(after.id).not.toBe(before.id);
+    expect(after.status).toBe("published");
+    const verification = await verificationOf(admin, qualificationId);
+    expect(verification.units[0].assessments[0].unlinked).toBe(0);
+
+    // Somebody has sat it: their attempt is never taken from under them.
+    await spoil(after.id);
+    await withTenant(organisationId, (tx) =>
+      tx.insert(assessmentSubmissions).values({ organisationId, assessmentId: after.assessmentId, userId: admin.userId, paperId: after.id }),
+    );
+    const third = await buildQualification(admin, qualificationId);
+    expect(third.units[0].reread).toBe(0);
+    expect((await paperOf()).id).toBe(after.id);
   }, 300_000);
 
   it("leaves the study unit itself where it was", async () => {

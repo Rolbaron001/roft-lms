@@ -21,6 +21,7 @@ import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { verificationOf } from "@/lib/qualification-build";
+import { BuildForm } from "./verify/verify-forms";
 import { ViewTabs } from "@/components/view-tabs";
 import { PageNav } from "@/components/page-nav";
 import { qualificationUsage } from "@/lib/qualification-removal";
@@ -425,6 +426,14 @@ export default async function QualificationPage({
           >
             {qualification.parentQualificationId ? t("qualPage.chooseModules") : t("qualPage.buildCurriculum")}
           </Link>
+        ) : null}
+
+        {/* Building from the folder, offered where a qualification is looked at
+            rather than only on the check page (Roland, 2 October 2026). */}
+        {verification && !verification.live ? (
+          <div className="mt-3">
+            <BuildForm qualificationId={id} again={verification.built} />
+          </div>
         ) : null}
       </div>
 
