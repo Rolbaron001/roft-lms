@@ -39,6 +39,24 @@ export function AiSwitch({
 
   const label = on ? t("aiSwitch.on") : t("aiSwitch.off");
 
+  // The header sits on the provider's brand colour, where the page's muted
+  // grey all but disappears; there it takes the white of the buttons beside it.
+  const header = variant === "header";
+  const buttonTone = header
+    ? on
+      ? "border-white/60 text-white"
+      : "border-white/30 text-white/85 hover:bg-white/10"
+    : on
+      ? "border-[var(--success)] text-[var(--success)]"
+      : "border-[var(--border)] text-[var(--muted)]";
+  const dotTone = header
+    ? on
+      ? "bg-[var(--success)] ring-1 ring-white/70"
+      : "border border-white/70"
+    : on
+      ? "bg-[var(--success)]"
+      : "bg-[var(--border)]";
+
   return (
     <div className={variant === "header" ? "flex items-center" : "space-y-1"}>
       <button
@@ -49,18 +67,10 @@ export function AiSwitch({
         title={on ? t("aiSwitch.onTitle") : t("aiSwitch.offTitle")}
         className={[
           "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-60",
-          on
-            ? "border-[var(--success)] text-[var(--success)]"
-            : "border-[var(--border)] text-[var(--muted)]",
+          buttonTone,
         ].join(" ")}
       >
-        <span
-          aria-hidden
-          className={[
-            "h-2 w-2 rounded-full",
-            on ? "bg-[var(--success)]" : "bg-[var(--border)]",
-          ].join(" ")}
-        />
+        <span aria-hidden className={["h-2 w-2 rounded-full", dotTone].join(" ")} />
         {pending ? "…" : label}
       </button>
 
