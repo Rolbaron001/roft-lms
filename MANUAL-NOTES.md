@@ -51,6 +51,17 @@ happens without it**. Where a provider can change a rule, it says where.
   read from it. A scan is reported as a scan; an old Word file is reported
   with how to resave it.
 
+### 1.4 The alignment document
+
+- **Needed:** each study unit named with its code (`SU1`, `SU2`), its exit
+  level outcome, and the curriculum modules it covers listed by code
+  (`KM-01`, `PM-03`, or the curriculum's full identifier).
+- **Why:** this is what places each module under its study unit.
+- **Uploading it again** is safe: study units are updated, not duplicated,
+  and modules already placed are reported as already there.
+- **Without module codes:** the study units are created with nothing under
+  them, and the platform says the document names no module codes.
+
 ## 2. Naming files
 
 ### 2.1 The naming convention

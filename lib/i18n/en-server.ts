@@ -781,6 +781,7 @@ export const server = {
   "said.qualifications-id-documents.a6619e6b": "Check the curriculum's module codes",
   "said.qualifications-id-documents.c16dde8c": "Read the “{sheetName}” sheet.",
   "said.qualifications-id-documents.dac96cb4": "Alignment document read. Study units built, but no modules placed under them.",
+  "said.qualifications-id-documents.e4f4a13c": "The document names no module codes under its study units, so there was nothing to place. Each study unit's modules need to be listed by code, for example KM-01 or PM-03.",
   "said.qualifications-id-documents.ea78db15": "Choose a file to upload.",
   "said.qualifications-id-documents.ea9c86df": "Alignment document read. Study units built.",
   "said.qualifications-id-edit.2a61cca9": "Choose what this qualification is.",

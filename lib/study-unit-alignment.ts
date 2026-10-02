@@ -41,6 +41,15 @@ export type AlignmentApplied = {
   studyUnitsUpdated: number;
   outcomesRecorded: number;
   modulesLinked: number;
+  /**
+   * Modules the document places that were already under their study unit.
+   * Roland, 2 October, uploading the alignment document again over a
+   * qualification built from its folder: "0 modules placed" read as a fault
+   * when every module was already where the document put it.
+   */
+  modulesAlreadyPlaced: number;
+  /** How many module codes the document names at all. */
+  modulesNamed: number;
   /** What the document named that the curriculum does not have. */
   notes: string[];
 };
@@ -65,6 +74,8 @@ export async function applyAlignmentDocument(
     studyUnitsUpdated: 0,
     outcomesRecorded: 0,
     modulesLinked: 0,
+    modulesAlreadyPlaced: 0,
+    modulesNamed: reading.studyUnits.reduce((sum, unit) => sum + unit.moduleCodes.length, 0),
     notes: [...reading.notes],
   };
 
@@ -267,7 +278,10 @@ export async function applyAlignmentDocument(
             ),
           );
 
-        if (already) continue;
+        if (already) {
+          applied.modulesAlreadyPlaced += 1;
+          continue;
+        }
 
         await tx.insert(studyUnitModules).values({
           organisationId: session.organisationId,
@@ -322,7 +336,7 @@ export async function applyAlignmentDocument(
       applied.notes.push(
         held.length === 0
           ? `The document names ${wanted.length} modules (${wanted.join(", ")}) and this qualification has no curriculum yet. Import the curriculum first; the study units and their outcomes are recorded either way, and uploading this document again afterwards will link them.`
-          : applied.modulesLinked === 0
+          : applied.modulesLinked + applied.modulesAlreadyPlaced === 0
             ? `None of the ${wanted.length} modules this document names could be matched, so nothing has been placed under a study unit. The document names ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Matching ignores spaces and hyphens, so the two schemes genuinely differ. Correct the codes on either side and upload the document again.`
             : `${wanted.length} of the modules this document names could not be matched: ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Everything else was linked.`,
       );

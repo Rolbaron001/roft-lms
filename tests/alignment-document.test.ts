@@ -330,6 +330,11 @@ describe("applying it to a qualification", () => {
     expect(applied.studyUnitsCreated).toBe(0);
     expect(applied.studyUnitsUpdated).toBe(5);
     expect(applied.modulesLinked).toBe(0);
+    // Roland's screen, 2 October: none placed because all fifteen were
+    // already there, which has to be said, or it reads as a fault.
+    expect(applied.modulesAlreadyPlaced).toBe(15);
+    expect(applied.modulesNamed).toBe(15);
+    expect(applied.notes).toEqual([]);
 
     const after = await withTenant(organisationId, (tx) =>
       tx

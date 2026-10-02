@@ -145,9 +145,17 @@ export async function uploadDocumentAction(
      */
     if (result.alignment) {
       const applied = result.alignment;
+      // Placed now, or already where the document puts them: either way the
+      // module is under its study unit. Only none of either is a fault.
+      const placed = applied.modulesLinked + applied.modulesAlreadyPlaced;
       const detail = [
         `${applied.studyUnitsCreated} study units created${applied.studyUnitsUpdated > 0 ? `, ${applied.studyUnitsUpdated} updated` : ""}.`,
-        `${applied.outcomesRecorded} exit level outcomes recorded, ${applied.modulesLinked} modules placed under a study unit.`,
+        applied.modulesAlreadyPlaced > 0
+          ? `${applied.outcomesRecorded} exit level outcomes recorded. ${placed} modules are under their study units: ${applied.modulesLinked} placed now, ${applied.modulesAlreadyPlaced} already there.`
+          : `${applied.outcomesRecorded} exit level outcomes recorded, ${applied.modulesLinked} modules placed under a study unit.`,
+        ...(applied.modulesNamed === 0
+          ? ["The document names no module codes under its study units, so there was nothing to place. Each study unit's modules need to be listed by code, for example KM-01 or PM-03."]
+          : []),
         ...applied.notes,
       ];
 
@@ -178,7 +186,7 @@ export async function uploadDocumentAction(
        * the curriculum rather than to the top of the page.
        */
       const links =
-        applied.modulesLinked === 0
+        placed === 0
           ? [
               {
                 // The curriculum listing, where the codes are actually
@@ -201,7 +209,7 @@ export async function uploadDocumentAction(
 
       return said({
         message:
-          applied.modulesLinked === 0
+          placed === 0
             ? "Alignment document read. Study units built, but no modules placed under them."
             : "Alignment document read. Study units built.",
         detail,
