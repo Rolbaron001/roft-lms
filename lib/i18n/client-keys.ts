@@ -836,6 +836,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "issue.statementFor",
   "issue.unit",
   "issue.whole",
+  "language.disclaimer",
   "language.state.draft",
   "language.state.planned",
   "learn.complete",

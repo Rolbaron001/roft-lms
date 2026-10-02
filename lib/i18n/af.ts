@@ -116,6 +116,8 @@ export const af: Catalogue = {
   "account.languageProvider": "Jou verskaffer se keuse ({language})",
   "account.languageSave": "Stoor",
   "account.languageSaved": "Gestoor.",
+  "language.disclaimer":
+    "Engels is die hooftaal van hierdie platform. Die ander tale word aangebied om enigiemand te help wat Engels moeilik vind. Hulle vertalings is deur 'n masjien gemaak en nie deur 'n vertaler nagegaan nie, so hulle sal nie altyd vlot lees of dinge presies sê nie. Waar die betekenis saak maak, soos 'n assesseringsinstruksie of 'n besluit oor jou werk, is die Engels wat geld.",
   "language.state.draft": "konsepvertaling",
   "language.state.planned": "nog nie vertaal nie",
 

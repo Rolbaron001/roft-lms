@@ -129,6 +129,10 @@ export const en = {
   "account.languageProvider": "Your provider's choice ({language})",
   "account.languageSave": "Save",
   "account.languageSaved": "Saved.",
+  // Roland, 2 October 2026: the translations are machine-made and will not be
+  // checked by translators, so whoever chooses a language is told so.
+  "language.disclaimer":
+    "English is the main language of this platform. The other languages are offered to help anyone who finds English difficult. Their translations were made by machine and have not been checked by a translator, so they will not always read fluently or say things exactly. Where the meaning matters, such as an assessment instruction or a decision about your work, the English is what counts.",
   "language.state.draft": "draft translation",
   "language.state.planned": "not yet translated",
 

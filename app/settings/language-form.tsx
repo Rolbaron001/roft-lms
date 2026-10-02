@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Card } from "@/components/ui";
 import { useT } from "@/components/i18n";
+import { LanguageDisclaimer } from "@/components/language-disclaimer";
 import { LOCALES } from "@/lib/i18n/locales";
 import { setProviderLanguageAction, type ProviderLanguageState } from "./language-actions";
 
@@ -28,6 +29,9 @@ export function ProviderLanguageForm({ current }: { current: string }) {
             </option>
           ))}
         </select>
+        <div className="sm:w-[32rem]">
+          <LanguageDisclaimer />
+        </div>
         {state.error ? <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p> : null}
         {state.notice ? <p className="text-sm text-[var(--success)]">{state.notice}</p> : null}
         <button

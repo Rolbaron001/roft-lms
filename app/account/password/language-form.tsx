@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { LOCALES } from "@/lib/i18n/locales";
 import { useT } from "@/components/i18n";
+import { LanguageDisclaimer } from "@/components/language-disclaimer";
 import { chooseLanguageAction, type LanguageState } from "./actions";
 
 /** A person choosing the language the platform speaks to them in (job sheet D9). */
@@ -35,6 +36,7 @@ export function LanguageForm({
           </option>
         ))}
       </select>
+      <LanguageDisclaimer />
       {state.error ? <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p> : null}
       {state.notice ? <p className="text-sm text-[var(--success)]">{state.notice}</p> : null}
       <button
