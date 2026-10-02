@@ -41,6 +41,14 @@ export type ParsedItem = {
    * this, never for question 1 of another part that shares the number.
    */
   task?: true;
+  /**
+   * Opened by its own heading, "Question C1:" or "Task 1:", rather than taken
+   * from a bare sentence. Used while reading only, and removed before the
+   * paper is returned.
+   */
+  headed?: true;
+  /** Taken from a bare sentence. Used while reading only. */
+  bare?: true;
 };
 
 export type ParsedSection = {
@@ -531,6 +539,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         markingGuide: null,
         markedBy: "assessor",
         task: true,
+        headed: true,
       };
       continue;
     }
@@ -561,6 +570,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         criterionCodes: before.length > 0 ? before : bracket ? codesIn(bracket[1]) : criteriaOf(rest),
         markingGuide: null,
         markedBy: "assessor",
+        headed: true,
       };
       continue;
     }
@@ -642,6 +652,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         criterionCodes: criteriaOf(line),
         markingGuide: null,
         markedBy: "assessor",
+        bare: true,
       });
       continue;
     }
@@ -668,6 +679,25 @@ export function parseWorkbook(text: string): ParsedPaper {
   }
   sections.length = 0;
   sections.push(...real);
+
+  // Where a part's questions have headings of their own ("Question C1:"),
+  // the bare sentences before the first of them are the scenario they are
+  // asked about, not questions. SU1's summative, 2 October 2026: the seven
+  // lines of the Nexus Logistics case study were read as seven questions
+  // with no marks and no guidance, and held the paper back. They become the
+  // part's instruction, which a learner reads above the questions.
+  for (const section of sections) {
+    const firstHeaded = section.items.findIndex((item) => item.headed);
+    if (firstHeaded > 0 && section.items.slice(0, firstHeaded).every((item) => item.bare)) {
+      const context = section.items.slice(0, firstHeaded).map((item) => item.stem);
+      section.instruction = [section.instruction, ...context].filter(Boolean).join("\n");
+      section.items.splice(0, firstHeaded);
+    }
+    for (const item of section.items) {
+      delete item.headed;
+      delete item.bare;
+    }
+  }
 
   // A question that never collected options is not multiple choice.
   for (const section of sections) {
@@ -773,6 +803,12 @@ export type ParsedMemo = {
    * until 27 September it was given to statement 1 of Section B as well.
    */
   questionSections?: Record<string, string>;
+  /**
+   * What the guide says under each written question or task: its model
+   * answer, the criteria in its heading's brackets, and the part of the paper
+   * it was found under. Keyed "question 1.3.1" or "task A".
+   */
+  guides?: Record<string, { text: string; codes: string[]; part: string | null }>;
   answers: MemoAnswer[];
   total: number | null;
   problems: string[];
@@ -827,6 +863,45 @@ function byTitleOrLabel(table: Record<string, number> | undefined, title: string
   const own = label(title);
   const matches = Object.entries(table).filter(([key]) => label(key) === own);
   return matches.length === 1 ? matches[0][1] : null;
+}
+
+/**
+ * A written question's or task's own heading in the guide, with what follows
+ * it being the model answer: "Question 1.3.1: … (10 Marks) [IAC0101]",
+ * "Task A: … [IAC0304]", "MEMORANDUM QUESTION C1: …".
+ */
+const GUIDE_ITEM =
+  /^(MEMORANDUM\s+)?(?:(Question)|(?:Practical\s+)?(Task))\s+([A-Z]?\d+(?:\.\d+)*|[A-Z])\b(?:\s+Model\s+Answer)?\s*[::]/i;
+/** Where one question's guidance ends, short of the next question. */
+const GUIDE_BLOCK_ENDS = /^(?:SECTION|PART|Activity|MEMORANDUM\b|.*\b(?:RUBRIC|GRADING GRID|EVALUATION SUMMARY)\b)/i;
+
+/** Model answers per written question or task. See ParsedMemo.guides. */
+function guideBlocks(lines: string[]): NonNullable<ParsedMemo["guides"]> {
+  const guides: NonNullable<ParsedMemo["guides"]> = {};
+  let part: string | null = null;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const heading = GUIDE_ITEM.exec(line);
+    if (!heading) {
+      // "MEMORANDUM - SECTION C" names the paper's part; "PART 2: ASSESSOR
+      // MEMORANDUM" is the guide's own division and is overridden by it.
+      if (/^(?:MEMORANDUM\s*[-–:]\s*)?(?:SECTION|PART|Activity)\b/i.test(line)) part = paperPartLabel(line) ?? part;
+      continue;
+    }
+    const key = `${heading[3] ? "task" : "question"} ${heading[4].toUpperCase()}`;
+    const body: string[] = [];
+    for (let ahead = index + 1; ahead < lines.length && body.length < 80; ahead += 1) {
+      const next = lines[ahead];
+      if (GUIDE_ITEM.test(next) || GUIDE_BLOCK_ENDS.test(next)) break;
+      if (next) body.push(next);
+    }
+    // The memorandum's own copy wins over a heading that merely repeats the
+    // learner's paper, which the summatives print first (SU1 SA1, Part 1).
+    if (body.length > 0 && (heading[1] || !guides[key])) {
+      guides[key] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part };
+    }
+  }
+  return guides;
 }
 
 const LETTER_ONLY = /^([A-H])$/;
@@ -960,7 +1035,7 @@ export function parseMemorandum(text: string): ParsedMemo {
     );
   }
 
-  return { sectionMarks, questionMarks, taskMarks, sectionEach, questionSections, answers, total, problems };
+  return { sectionMarks, questionMarks, taskMarks, sectionEach, questionSections, guides: guideBlocks(lines), answers, total, problems };
 }
 
 // ---------------------------------------------------------------------------
@@ -1017,6 +1092,37 @@ export function mergeMemorandum(
   const trueFalseAnswers = memo.answers.filter((a) => a.trueFalse);
   let trueFalseIndex = 0;
 
+  /**
+   * The guide's model answer for a written question or task, and the criteria
+   * its heading names. Until 2 October only the marks were taken from these
+   * headings, so every written question of Curiosa's papers was captured with
+   * no marking guidance, could not be published, and assessed no criterion:
+   * the workbooks print their criteria only in the guide ("Task 1: … [35
+   * Marks] [IAC0101, IAC0102]").
+   */
+  const guideFor = (item: ParsedItem, sectionTitle: string) => {
+    const guides = memo.guides ?? {};
+    const number = item.number.toUpperCase();
+    const ours = paperPartLabel(sectionTitle);
+    const samePart = (part: string | null) => !part || !ours || part === ours;
+    const find = (kind: "task" | "question") =>
+      Object.entries(guides).find(
+        ([key, guide]) =>
+          key.startsWith(`${kind} `) &&
+          (key === `${kind} ${number}` || key.endsWith(`.${number}`)) &&
+          samePart(guide.part),
+      )?.[1];
+    // A task first from a task, a question from a question; the other only
+    // where the guide calls it something else and nothing else matches.
+    return item.task ? (find("task") ?? find("question")) : (find("question") ?? find("task"));
+  };
+  const applyGuide = (merged: ParsedItem, sectionTitle: string) => {
+    const guide = guideFor(merged, sectionTitle);
+    if (!guide) return;
+    if (!merged.markingGuide) merged.markingGuide = guide.text;
+    merged.criterionCodes = [...new Set([...merged.criterionCodes, ...guide.codes])];
+  };
+
   const sections = paper.sections.map((section) => {
     const printedMarks =
       section.markTotal ?? memo.sectionMarks[section.title] ?? guideMarksByLabel(memo, section.title);
@@ -1027,6 +1133,7 @@ export function mergeMemorandum(
       // Nothing in the guide can key a question a person marks, and saying so
       // as a problem would bury the real ones.
       if (item.markedBy === "assessor") {
+        applyGuide(merged, section.title);
         // Only where the paper printed none, and a task only from a task:
         // "Question 1" of Part C and "Task 1" of Part E share a number, not
         // their marks.
@@ -1091,6 +1198,7 @@ export function mergeMemorandum(
           number.endsWith(`.${item.number}`),
         );
         if (key) merged.points = memo.questionMarks[key];
+        applyGuide(merged, section.title);
       }
 
       return merged;

@@ -105,8 +105,29 @@ export function resolveCriterion(
     }
   }
 
-  // 2. Topic and position: "IAC0301" is topic 03, its first criterion.
   const positional = /^([A-Z]+)(\d{2})(\d{2})$/.exec(tail(wanted));
+
+  // 2. A practical skill numbers its criteria afresh: the 121151 curriculum
+  // gives PM0101 and PM0102 each their own IAC0101 to IAC0104. So where the
+  // paper names one practical skill, "IAC0103" is that skill's third
+  // criterion, whatever the 01 says. SU1's Workbook 6 (PM0102) was linked to
+  // PM0101's criteria until 2 October.
+  if (positional) {
+    const position = Number(positional[3]);
+    for (const hints of hintSets) {
+      const skills = [...new Set(hints.map((hint) => hint.topic).filter((topic): topic is string => Boolean(topic?.startsWith("PM"))))];
+      if (skills.length !== 1) continue;
+      const inSkill = candidates.filter((c) => c.topicCode && normaliseCode(c.topicCode) === skills[0]);
+      const match = inSkill.filter((c) => c.positionInTopic === position);
+      if (match.length === 1) return { id: match[0].id };
+      if (inSkill.length === 0 && candidates.some((c) => moduleOf(c.moduleCode) === skills[0].slice(0, 4))) {
+        return { id: null, reason: `${code} belongs to practical skill ${skills[0]}, and the curriculum as recorded here holds no assessment criteria for ${skills[0]}.` };
+      }
+      break;
+    }
+  }
+
+  // 3. Topic and position: "IAC0301" is topic 03, its first criterion.
   if (positional) {
     const topicNumber = positional[2];
     const position = Number(positional[3]);

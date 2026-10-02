@@ -25,6 +25,7 @@ import { capturableDocuments, courseForStudyUnit, versionOf } from "./capture-fr
 import { resolvePaperCriteria, type CriterionCandidate } from "./criterion-resolve";
 import { tagItemCriteria } from "./marking";
 import { readDocxText } from "./office";
+import { paperProblems, publishPaper } from "./papers";
 import { NOT_A_LEARNER_STEP, readProgrammeDocumentForAuthoring, type DocumentKind } from "./programme-documents";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { addPrerequisite, addStep } from "./spine";
@@ -233,6 +234,17 @@ async function relinkCourse(
     }
   }
   return changed;
+}
+
+/** An assessment's papers that are still drafts. */
+async function draftPaperIds(session: AuthenticatedSession, assessmentId: string): Promise<string[]> {
+  const rows = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: assessmentPapers.id })
+      .from(assessmentPapers)
+      .where(and(eq(assessmentPapers.assessmentId, assessmentId), ne(assessmentPapers.status, "published"))),
+  );
+  return rows.map((row) => row.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -598,11 +610,25 @@ export async function verificationOf(
       }
       for (const assessment of byAssessment.values()) {
         if (assessment.answerable === 0) {
-          blocking.push({
-            studyUnit: unit.code,
-            what: `"${assessment.title}" has no paper learners can answer yet.`,
-            href: `/courses/${course.id}/assessments`,
-          });
+          // Why, not only that. Roland, 2 October: "the system doesn't help to
+          // indicate what is wrong." A paper that fails its own checks says
+          // which question and what is missing.
+          const draftPapers = papers.filter((row) => row.assessmentId === assessment.id && row.paperId).map((row) => row.paperId!);
+          const reasons = [...new Set((await Promise.all(draftPapers.map((paperId) => paperProblems(session, paperId)))).flat())];
+          const shown = reasons.slice(0, 3).join(" ");
+          const more = reasons.length > 3 ? ` There are ${reasons.length - 3} more like these.` : "";
+          // A paper that passes its checks is opened when the qualification
+          // is made live, so it holds nothing back.
+          if (draftPapers.length === 0 || reasons.length > 0) {
+            blocking.push({
+              studyUnit: unit.code,
+              what:
+                draftPapers.length === 0
+                  ? `"${assessment.title}" has no paper captured yet.`
+                  : `"${assessment.title}" cannot be answered yet: ${shown}${more}`,
+              href: `/courses/${course.id}/assessments`,
+            });
+          }
         }
         if (assessment.unlinked > 0) {
           toCheck.push({
@@ -658,6 +684,11 @@ export async function verifyAndPublish(
   for (const unit of verification.units) {
     if (!unit.courseId || unit.live) continue;
     for (const assessment of unit.assessments) {
+      // Papers that passed their checks but were never opened: opened now.
+      for (const paperId of await draftPaperIds(session, assessment.id)) {
+        const opened = await publishPaper(session, paperId);
+        if (!opened.ok) return { ok: false, blocking: opened.reasons.map((what) => ({ studyUnit: unit.code, what, href: `/courses/${unit.courseId}/assessments` })) };
+      }
       if (assessment.status !== "published") await publishAssessment(session, assessment.id);
     }
     const result = await publishCourse(session, unit.courseId);
