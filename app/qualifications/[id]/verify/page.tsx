@@ -46,6 +46,11 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
       ) : (
         item.what
       )}
+      {item.guideHref ? (
+        <a href={item.guideHref} className="ml-2 whitespace-nowrap underline underline-offset-2">
+          {t("verify.openGuide")}
+        </a>
+      ) : null}
     </li>
   );
 

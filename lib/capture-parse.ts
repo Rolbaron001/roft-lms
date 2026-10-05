@@ -1276,16 +1276,14 @@ export function mergeMemorandum(
     taggedFamilies.size > 0 &&
     [...declaredFamilies].every((family) => !taggedFamilies.has(family));
 
+  // A criterion in the scope that no question names is not a fault. Heidi, 5
+  // October 2026: workbook activities integrate the criteria as a whole, and
+  // the platform takes a workbook as it is. Only codes that disagree in kind
+  // (scope in one scheme, tasks in another) are still worth a word.
   if (familiesDiffer) {
-    problems.push(
-      `The scope lists ${[...declaredFamilies].join(" and ")} codes (${paper.declaredCriteria.join(", ")}), but the tasks are tagged to ${[...taggedFamilies].join(" and ")} codes (${[...otherScheme, ...tested].sort().join(", ")}). One of the two is wrong, and until they agree nothing in this workbook evidences anything.`,
+    notes.push(
+      `The scope lists ${[...declaredFamilies].join(" and ")} codes (${paper.declaredCriteria.join(", ")}), and the tasks name ${[...taggedFamilies].join(" and ")} codes (${[...otherScheme, ...tested].sort().join(", ")}).`,
     );
-  } else {
-    for (const code of untested) {
-      problems.push(
-        `${code} is listed in the workbook's scope but no question is tagged to it.`,
-      );
-    }
   }
 
   // The invariant that matters most: a question the App is meant to mark and

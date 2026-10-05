@@ -23,7 +23,19 @@ export type ScheduledStep = {
   opensAt: Date | null;
   dueAt: Date | null;
   closesAt: Date | null;
+  /** Released by a facilitator's hand, whatever the date says. */
+  releasedAt: Date | null;
 };
+
+/**
+ * Whether anybody walks this course in a cohort. A study unit whose course
+ * has cohorts releases its material through them; one with none (a provider
+ * who runs no cohorts) is not held back by a rule it does not use.
+ */
+export async function courseUsesCohorts(tx: TenantDatabase, courseId: string): Promise<boolean> {
+  const [one] = await tx.select({ id: cohorts.id }).from(cohorts).where(eq(cohorts.courseId, courseId)).limit(1);
+  return Boolean(one);
+}
 
 /**
  * The cohort a learner walks a course with, and the dates that follow from it.
@@ -75,7 +87,7 @@ export async function scheduleForLearner(
           )
         : null;
 
-    steps.set(release.stepId, { stepId: release.stepId, opensAt, dueAt, closesAt });
+    steps.set(release.stepId, { stepId: release.stepId, opensAt, dueAt, closesAt, releasedAt: release.releasedAt });
   }
 
   return { cohortId: membership.cohortId, steps };

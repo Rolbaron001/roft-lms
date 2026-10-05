@@ -289,9 +289,8 @@ describe("a case study with tasks, rather than numbered activities", () => {
     );
 
     const merged = mergeMemorandum(mismatched, parseMemorandum(""));
-    const mismatch = merged.problems.find((problem) =>
-      /different|scope lists/i.test(problem),
-    );
+    // A note, not a fault: workbooks are taken as they are (5 October 2026).
+    const mismatch = merged.notes.find((note) => /scope lists/i.test(note));
 
     expect(mismatch).toBeDefined();
     expect(mismatch).toContain("IAC");
@@ -363,10 +362,12 @@ describe("putting the two together", () => {
    * no question in it is tagged to. Reported rather than corrected — only the
    * author knows whether the scope is wrong or a question is missing.
    */
-  it("reports a criterion the scope claims but nothing tests", () => {
+  // Heidi, 5 October 2026: activities integrate criteria as a whole, so a
+  // criterion in the scope that no question names is not reported.
+  it("does not report a criterion the scope claims but no question names", () => {
     expect(
       merged.problems.some((problem) => problem.includes("IAC0204")),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 

@@ -10,6 +10,7 @@ import {
   removeMember,
   rescheduleCohort,
   setSchedule,
+  setStepReleased,
 } from "@/lib/cohorts";
 import { EnrolmentError } from "@/lib/enrolment";
 import {
@@ -179,6 +180,22 @@ export async function setScheduleAction(
   return said(run(
     () => setSchedule(session, cohortId, schedule),
     "Schedule saved.",
+    [`/cohorts/${cohortId}`],
+  ));
+}
+
+/** "Release now" on one step, or taking that release back. */
+export async function setStepReleasedAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  const released = field(formData, "released") === "yes";
+
+  return said(run(
+    () => setStepReleased(session, cohortId, field(formData, "stepId"), released),
+    released ? "Released to the cohort." : "Release taken back.",
     [`/cohorts/${cohortId}`],
   ));
 }

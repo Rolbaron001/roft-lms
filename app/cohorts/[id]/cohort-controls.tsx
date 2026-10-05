@@ -6,6 +6,7 @@ import {
   removeMemberAction,
   rescheduleCohortAction,
   setScheduleAction,
+  setStepReleasedAction,
   type CohortActionState,
 } from "../actions";
 import { useT } from "@/components/i18n";
@@ -68,6 +69,64 @@ export function Reschedule({
         </button>
       </form>
       <Result state={state} />
+    </div>
+  );
+}
+
+/**
+ * What the cohort can reach today, and the facilitator's hand on it.
+ *
+ * Heidi, 5 October 2026: a workbook does not reach the learners "until that
+ * particular date or until the facilitator clicks a button and says okay,
+ * release this". One button a row; a hand release can be taken back, which
+ * returns the step to its date.
+ */
+export function ReleaseControls({
+  cohortId,
+  steps,
+}: {
+  cohortId: string;
+  steps: { id: string; title: string | null; kind: string; released: boolean; releasedAt: Date | null; opensAt: Date | null }[];
+}) {
+  const t = useT();
+  const [state, act, pending] = useActionState<CohortActionState, FormData>(setStepReleasedAction, {});
+  if (steps.length === 0) return null;
+  return (
+    <div>
+      <ul className="divide-y divide-[var(--border)]">
+        {steps.map((step) => (
+          <li key={step.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+            <div className="min-w-0">
+              <p className="text-sm">{step.title ?? step.kind}</p>
+              <p className="text-xs text-[var(--muted)]">
+                {step.releasedAt
+                  ? t("cohortCtl.releasedByHand", { date: step.releasedAt.toISOString().slice(0, 10) })
+                  : step.released
+                    ? t("cohortCtl.releasedBySchedule")
+                    : step.opensAt
+                      ? t("cohortCtl.opensOn", { date: step.opensAt.toISOString().slice(0, 10) })
+                      : t("cohortCtl.notReleased")}
+              </p>
+            </div>
+            <form action={act}>
+              <input type="hidden" name="cohortId" value={cohortId} />
+              <input type="hidden" name="stepId" value={step.id} />
+              <input type="hidden" name="released" value={step.releasedAt ? "no" : "yes"} />
+              {step.releasedAt ? (
+                <button type="submit" disabled={pending} className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium disabled:opacity-60">
+                  {t("cohortCtl.takeBack")}
+                </button>
+              ) : step.released ? null : (
+                <button type="submit" disabled={pending} className="rounded-md bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
+                  {t("cohortCtl.releaseNow")}
+                </button>
+              )}
+            </form>
+          </li>
+        ))}
+      </ul>
+      {state.error ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.done ? <p className="mt-2 text-sm text-[var(--success)]">{state.done}</p> : null}
     </div>
   );
 }

@@ -15,10 +15,14 @@ import {
   cohorts as cohortsTable,
   competencies,
   competencyFrameworks,
+  courses,
   organisations,
+  qualifications,
+  studyUnits,
   userRoles,
   users,
 } from "@/db/schema";
+import { enrolUser } from "@/lib/enrolment";
 import {
   addLesson,
   addSection,
@@ -36,6 +40,7 @@ import {
   removeMember,
   rescheduleCohort,
   setSchedule,
+  setStepReleased,
 } from "@/lib/cohorts";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -560,5 +565,58 @@ describe("the record", () => {
     expect(move).toBeDefined();
     expect((move!.before as { startDate: string }).startDate).toBe("2026-02-02");
     expect((move!.after as { startDate: string }).startDate).toBe("2026-02-09");
+  });
+});
+
+describe("a study unit released through its cohort (Heidi, 5 October 2026)", () => {
+  it("shows nothing until placed in a cohort, then only what is released, by date or by hand", async () => {
+    const { courseId, stepIds } = await buildCourse();
+    await withTenant(organisationId, async (tx) => {
+      const [qualification] = await tx.insert(qualifications).values({ organisationId, title: "Released Qual" }).returning({ id: qualifications.id });
+      const [unit] = await tx.insert(studyUnits).values({ organisationId, qualificationId: qualification.id, code: "SU1", title: "Unit" }).returning({ id: studyUnits.id });
+      await tx.update(courses).set({ studyUnitId: unit.id }).where(eq(courses.id, courseId));
+    });
+    const cohort = await createCohort(admin, { courseId, name: "Released intake", startDate: "2026-01-05" });
+
+    // Enrolled outside any cohort: the introduction only.
+    await addMember(admin, cohort.id, other.userId);
+    await removeMember(admin, cohort.id, other.userId);
+    const outside = await stepsForLearner(other, courseId, other.userId);
+    expect(outside.every((step) => !step.open)).toBe(true);
+    expect(outside[0].blockedBy.join(" ")).toMatch(/placed in a cohort/);
+
+    // On the cohort, nothing released yet.
+    await addMember(admin, cohort.id, learner.userId);
+    let steps = await stepsForLearner(learner, courseId, learner.userId);
+    expect(steps.every((step) => !step.open)).toBe(true);
+    expect(steps[0].blockedBy.join(" ")).toMatch(/facilitator releases it/);
+
+    // The schedule opens the first; the facilitator releases the third by hand.
+    await setSchedule(admin, cohort.id, [{ stepId: stepIds[0], opensAfterDays: 0 }]);
+    await setStepReleased(admin, cohort.id, stepIds[2], true);
+    steps = await stepsForLearner(learner, courseId, learner.userId);
+    expect(steps.map((step) => step.open)).toEqual([true, false, true, false]);
+
+    // A new schedule keeps the hand release.
+    await setSchedule(admin, cohort.id, [{ stepId: stepIds[1], opensAfterDays: 0 }]);
+    steps = await stepsForLearner(learner, courseId, learner.userId);
+    expect(steps.map((step) => step.open)).toEqual([false, true, true, false]);
+
+    // Taken back, it waits again.
+    await setStepReleased(admin, cohort.id, stepIds[2], false);
+    steps = await stepsForLearner(learner, courseId, learner.userId);
+    expect(steps[2].open).toBe(false);
+  });
+
+  it("leaves a course nobody walks in a cohort as it was", async () => {
+    const { courseId } = await buildCourse();
+    await withTenant(organisationId, async (tx) => {
+      const [qualification] = await tx.insert(qualifications).values({ organisationId, title: "Self-paced Qual" }).returning({ id: qualifications.id });
+      const [unit] = await tx.insert(studyUnits).values({ organisationId, qualificationId: qualification.id, code: "SU1", title: "Unit" }).returning({ id: studyUnits.id });
+      await tx.update(courses).set({ studyUnitId: unit.id }).where(eq(courses.id, courseId));
+    });
+    await enrolUser(admin, { userId: learner.userId, courseId });
+    const steps = await stepsForLearner(learner, courseId, learner.userId);
+    expect(steps.every((step) => step.open)).toBe(true);
   });
 });

@@ -1392,10 +1392,12 @@ describe("the Statement of Results", () => {
   /*
    * Roland, 26 September (W2): a study unit's course is checked against every
    * criterion in the unit's modules, covered by a lesson, a captured question
-   * or what the provider's alignment matrix names as assessing it. The walk
-   * of 26 September published SU1's course with none of its criteria covered.
+   * or what the provider's alignment matrix names as assessing it.
+   *
+   * Heidi and Roland, 5 October: shown, never enforced. Workbook activities
+   * integrate criteria as a whole, and the platform accepts them as they are.
    */
-  it("publishes a study unit's course only once every criterion has something assessing it", async () => {
+  it("reports a study unit's criterion coverage without holding the course back", async () => {
     const code = `su-${suffix()}`;
     const imported = await importCurriculum(admin, twoUnits(code));
     const units = await unitsOf(imported.qualificationId);
@@ -1405,27 +1407,11 @@ describe("the Statement of Results", () => {
     const section = await addSection(admin, { courseId, title: "S" });
     await addLesson(admin, { sectionId: section.id, title: "L" });
 
-    const refused = await publishCourse(admin, courseId);
-    expect(refused.ok).toBe(false);
-    if (!refused.ok) {
-      expect(refused.reasons.join(" ")).toMatch(/1 of SU1's assessment criteria has nothing assessing it: .*KM-01 IAC0101/);
-    }
-    // Only SU1's own criteria: SU2's module is not this course's business.
-    expect(refused.report.criteria.map((c) => c.code)).toEqual(["IAC0101"]);
-
-    const [criterion] = await criteriaFor(imported.qualificationId, "KM-01");
-    await withTenant(admin.organisationId, (tx) =>
-      tx.insert(criterionAlignment).values({
-        organisationId: admin.organisationId,
-        criterionId: criterion,
-        kind: "summative_assessment",
-        reference: "SU1 Summative, Part 1, Task 1",
-      }),
-    );
-
     const published = await publishCourse(admin, courseId);
     expect(published.ok).toBe(true);
-    expect(published.report.criteria[0].coveredBy).toEqual(["SU1 Summative, Part 1, Task 1"]);
+    // Only SU1's own criteria: SU2's module is not this course's business.
+    expect(published.report.criteria.map((c) => c.code)).toEqual(["IAC0101"]);
+    expect(published.report.uncovered.map((c) => c.code)).toEqual(["IAC0101"]);
   });
 
   it("refuses a study unit whose own modules are outstanding", async () => {

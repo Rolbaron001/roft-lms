@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   cohortMembers,
@@ -13,6 +13,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { enrolUser } from "./enrolment";
 import { dayFrom } from "./schedule";
+import { resolveTitles } from "./spine";
 
 // Re-exported so callers keep one import for everything about a cohort.
 export { dayFrom, scheduleForLearner, type ScheduledStep } from "./schedule";
@@ -300,20 +301,41 @@ export async function setSchedule(
       }
     }
 
+    // A facilitator's hand release survives a new schedule: it was a decision
+    // about these learners, not part of the dates being replaced.
+    const handReleased = await tx
+      .select({ stepId: stepReleases.stepId, releasedAt: stepReleases.releasedAt, releasedById: stepReleases.releasedById })
+      .from(stepReleases)
+      .where(and(eq(stepReleases.cohortId, cohortId), isNotNull(stepReleases.releasedAt)));
+    const releasedByStep = new Map(handReleased.map((row) => [row.stepId, row]));
+
     await tx.delete(stepReleases).where(eq(stepReleases.cohortId, cohortId));
 
-    if (schedule.length > 0) {
-      await tx.insert(stepReleases).values(
-        schedule.map((entry) => ({
+    const rows = schedule.map((entry) => ({
+      organisationId: session.organisationId,
+      cohortId,
+      stepId: entry.stepId,
+      opensAfterDays: entry.opensAfterDays ?? null,
+      dueAfterDays: entry.dueAfterDays ?? null,
+      closesAfterDays: entry.closesAfterDays ?? null,
+      releasedAt: releasedByStep.get(entry.stepId)?.releasedAt ?? null,
+      releasedById: releasedByStep.get(entry.stepId)?.releasedById ?? null,
+    }));
+    for (const row of handReleased) {
+      if (!schedule.some((entry) => entry.stepId === row.stepId) && known.has(row.stepId)) {
+        rows.push({
           organisationId: session.organisationId,
           cohortId,
-          stepId: entry.stepId,
-          opensAfterDays: entry.opensAfterDays ?? null,
-          dueAfterDays: entry.dueAfterDays ?? null,
-          closesAfterDays: entry.closesAfterDays ?? null,
-        })),
-      );
+          stepId: row.stepId,
+          opensAfterDays: null,
+          dueAfterDays: null,
+          closesAfterDays: null,
+          releasedAt: row.releasedAt,
+          releasedById: row.releasedById,
+        });
+      }
     }
+    if (rows.length > 0) await tx.insert(stepReleases).values(rows);
 
     await recordAudit(tx, {
       organisationId: session.organisationId,
@@ -325,6 +347,61 @@ export async function setSchedule(
     });
 
     return schedule.length;
+  });
+}
+
+/**
+ * Releases one step to a cohort now, or takes the hand release back.
+ *
+ * Heidi, 5 October 2026: material reaches a cohort on the schedule's date or
+ * "until the facilitator clicks a button and says okay, release this". The
+ * release overrides any later date; taking it back returns the step to its
+ * date, or to waiting where it has none.
+ */
+export async function setStepReleased(
+  session: AuthenticatedSession,
+  cohortId: string,
+  stepId: string,
+  released: boolean,
+) {
+  assertSessionCan(session, "enrolment:manage");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [cohort] = await tx.select().from(cohorts).where(eq(cohorts.id, cohortId));
+    if (!cohort) throw new CohortError("No such cohort.", "not_found");
+    const [step] = await tx
+      .select({ id: courseSteps.id })
+      .from(courseSteps)
+      .where(and(eq(courseSteps.id, stepId), eq(courseSteps.courseId, cohort.courseId)));
+    if (!step) throw new CohortError("That step is not on this cohort's course.", "invalid");
+
+    const releasedAt = released ? new Date() : null;
+    const releasedById = released ? session.userId : null;
+    const [existing] = await tx
+      .select({ id: stepReleases.id, opensAfterDays: stepReleases.opensAfterDays, dueAfterDays: stepReleases.dueAfterDays })
+      .from(stepReleases)
+      .where(and(eq(stepReleases.cohortId, cohortId), eq(stepReleases.stepId, stepId)));
+
+    if (existing) {
+      // A row kept only to hold the hand release goes with it: otherwise its
+      // empty dates would read as "opens at once".
+      if (!released && existing.opensAfterDays === null && existing.dueAfterDays === null) {
+        await tx.delete(stepReleases).where(eq(stepReleases.id, existing.id));
+      } else {
+        await tx.update(stepReleases).set({ releasedAt, releasedById }).where(eq(stepReleases.id, existing.id));
+      }
+    } else if (released) {
+      await tx.insert(stepReleases).values({ organisationId: session.organisationId, cohortId, stepId, releasedAt, releasedById });
+    }
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: released ? "cohort.step_released" : "cohort.step_release_withdrawn",
+      entityType: "cohort",
+      entityId: cohortId,
+      after: { stepId },
+    });
   });
 }
 
@@ -383,6 +460,9 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
       .from(courseSteps)
       .where(eq(courseSteps.courseId, cohort.courseId))
       .orderBy(asc(courseSteps.sortOrder));
+    // A step the platform built has no title of its own; it carries the name
+    // of what it points at, never a bare "document" (Heidi, 5 October 2026).
+    const titles = await resolveTitles(tx, steps);
 
     return {
       cohort,
@@ -391,7 +471,7 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
         const release = releases.find((row) => row.stepId === step.id);
         return {
           id: step.id,
-          title: step.title,
+          title: titles.get(step.id) ?? step.title,
           kind: step.kind,
           sortOrder: step.sortOrder,
           opensAfterDays: release?.opensAfterDays ?? null,
@@ -406,6 +486,12 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
            * have closed did not.
            */
           closesAfterDays: release?.closesAfterDays ?? null,
+          releasedAt: release?.releasedAt ?? null,
+          /** Whether a learner on this cohort can reach it today. */
+          released:
+            Boolean(release?.releasedAt) ||
+            (release !== undefined &&
+              (release.opensAfterDays === null || dayFrom(cohort.startDate, release.opensAfterDays) <= new Date())),
           opensAt:
             release?.opensAfterDays != null
               ? dayFrom(cohort.startDate, release.opensAfterDays)

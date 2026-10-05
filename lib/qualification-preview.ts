@@ -237,6 +237,9 @@ async function stepsOf(
       moduleTitle: curriculumModules.title,
       assessmentTitle: assessments.title,
       assessmentStatus: assessments.status,
+      assessmentPurpose: assessments.purpose,
+      documentKind: programmeDocuments.kind,
+      moduleCode: curriculumModules.code,
     })
     .from(courseSteps)
     .leftJoin(lessons, eq(lessons.id, courseSteps.lessonId))
@@ -288,10 +291,24 @@ async function stepsOf(
       row.assessmentTitle ??
       "Untitled step";
 
+    // What the step is to a learner, never "document" or "assessment": those
+    // were workbooks and a theory guide (Roland and Heidi, 5 October 2026).
+    const kind =
+      row.kind === "assessment"
+        ? row.assessmentPurpose === "summative"
+          ? "summative"
+          : "workbook"
+        : row.kind === "document"
+          ? row.documentKind === "theory_guide"
+            ? "theory_guide"
+            : "material"
+          : (row.kind as string);
+    const workplaceNumber = row.kind === "workplace" ? /WM[\s-]*0*(\d+)\s*$/i.exec(row.moduleCode ?? "")?.[1] : undefined;
+
     const base = {
       id: row.id,
-      kind: row.kind as string,
-      title: row.title ?? fallback,
+      kind,
+      title: row.title ?? (workplaceNumber ? `Workplace experience module ${workplaceNumber}: ${fallback}` : fallback),
       guidance: row.guidance,
       // Stored as 0 or 1, read as a boolean, exactly as lib/spine.ts does.
       optional: row.optional === 1,

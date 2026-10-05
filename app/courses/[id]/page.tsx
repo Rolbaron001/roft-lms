@@ -147,6 +147,11 @@ export default async function CoursePage({
                     ) : (
                       item.what
                     )}
+                    {item.guideHref ? (
+                      <a href={item.guideHref} className="ml-2 whitespace-nowrap underline underline-offset-2">
+                        {t("verify.openGuide")}
+                      </a>
+                    ) : null}
                   </li>
                 ))}
               </ul>

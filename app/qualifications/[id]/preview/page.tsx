@@ -145,7 +145,8 @@ export default async function QualificationPreviewPage({
                 {unit.steps.map((step, index) => (
                   <li
                     key={step.id}
-                    className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--border)] pt-2 text-sm first:border-0 first:pt-0"
+                    id={`step-${step.id}`}
+                    className="flex scroll-mt-24 flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--border)] pt-2 text-sm first:border-0 first:pt-0"
                   >
                     <span className="text-xs text-[var(--muted)]">
                       {index + 1}.
@@ -168,7 +169,11 @@ export default async function QualificationPreviewPage({
                     ) : null}
                     {step.href ? (
                       <Link
-                        href={step.href}
+                        href={
+                          step.href.startsWith("/papers/")
+                            ? `${step.href}?from=${encodeURIComponent(`/qualifications/${id}/preview#step-${step.id}`)}`
+                            : step.href
+                        }
                         className="text-xs underline underline-offset-2"
                       >
                         {t("qualPreview.open")}

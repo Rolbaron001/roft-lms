@@ -68,6 +68,12 @@ export type Finding = {
   what: string;
   /** Where to put it right. */
   href: string | null;
+  /**
+   * The assessor guide the problem is in, where it is in one. Heidi, 5
+   * October 2026: a missing model answer is a fault in the guide, so the link
+   * must reach the guide, not only the question.
+   */
+  guideHref?: string | null;
 };
 
 export type BuildReport = {
@@ -295,6 +301,20 @@ async function rereadable(
   const failing = (await paperProblems(session, found.job.paperId)).length > 0;
   if (!failing && !found.unlinked) return null;
   return { paperId: found.job.paperId, assessmentId: found.job.assessmentId, code: found.job.code };
+}
+
+/** The assessor guide a captured paper was read with, as a filed document. */
+async function guideDocumentOf(session: AuthenticatedSession, paperId: string, qualificationId: string): Promise<string | null> {
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({ id: programmeDocuments.id })
+      .from(captureJobs)
+      .innerJoin(programmeDocuments, eq(programmeDocuments.sha256, captureJobs.guideSha256))
+      .where(and(eq(captureJobs.paperId, paperId), eq(programmeDocuments.qualificationId, qualificationId)))
+      .orderBy(desc(captureJobs.committedAt))
+      .limit(1);
+    return row?.id ?? null;
+  });
 }
 
 /** An assessment's papers that are still drafts. */
@@ -707,29 +727,27 @@ export async function verificationOf(
           // indicate what is wrong." A paper that fails its own checks says
           // which question and what is missing.
           const draftPapers = papers.filter((row) => row.assessmentId === assessment.id && row.paperId).map((row) => row.paperId!);
-          const reasons = [...new Set((await Promise.all(draftPapers.map((paperId) => paperProblems(session, paperId)))).flat())];
-          const shown = reasons.slice(0, 3).join(" ");
-          const more = reasons.length > 3 ? ` There are ${reasons.length - 3} more like these.` : "";
-          // A paper that passes its checks is opened when the qualification
-          // is made live, so it holds nothing back.
-          if (draftPapers.length === 0 || reasons.length > 0) {
+          if (draftPapers.length === 0) {
+            blocking.push({ studyUnit: unit.code, what: `"${assessment.title}" has no paper captured yet.`, href: `/courses/${course.id}/assessments` });
+          }
+          // One finding a paper, linking to the paper and to the assessor
+          // guide it was read with (Heidi, 5 October 2026). A paper that
+          // passes its checks is opened when the qualification is made live,
+          // so it holds nothing back.
+          for (const paperId of draftPapers) {
+            const reasons = await paperProblems(session, paperId);
+            if (reasons.length === 0) continue;
+            const guideId = await guideDocumentOf(session, paperId, qualificationId);
             blocking.push({
               studyUnit: unit.code,
-              what:
-                draftPapers.length === 0
-                  ? `"${assessment.title}" has no paper captured yet.`
-                  : `"${assessment.title}" cannot be answered yet: ${shown}${more}`,
-              href: `/courses/${course.id}/assessments`,
+              what: `"${assessment.title}" cannot be answered yet: ${reasons.slice(0, 3).join(" ")}${reasons.length > 3 ? ` There are ${reasons.length - 3} more like these.` : ""}`,
+              href: `/papers/${paperId}/preview`,
+              guideHref: guideId ? `/api/programme-documents/${guideId}` : null,
             });
           }
         }
-        if (assessment.unlinked > 0) {
-          toCheck.push({
-            studyUnit: unit.code,
-            what: `${assessment.unlinked} ${assessment.unlinked === 1 ? "question" : "questions"} on "${assessment.title}" ${assessment.unlinked === 1 ? "is" : "are"} linked to no assessment criterion.`,
-            href: `/courses/${course.id}/assessments`,
-          });
-        }
+        // A question linked to no criterion is not reported: workbooks are
+        // taken as they are (Heidi, 5 October 2026).
       }
     }
     for (const job of waitingJobs) {

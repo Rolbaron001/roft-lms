@@ -19,6 +19,7 @@ import { AppShell, Card } from "@/components/app-shell";
 import {
   AddMember,
   RemoveMember,
+  ReleaseControls,
   Reschedule,
   ScheduleEditor,
 } from "./cohort-controls";
@@ -344,6 +345,24 @@ export default async function CohortPage({
           />
         </Card>
       </div>
+
+      {canManage && detail.steps.length > 0 ? (
+        <div className="mt-6">
+          <Card title={t("cohort.reachTitle")} description={t("cohort.reachIntro")}>
+            <ReleaseControls
+              cohortId={detail.cohort.id}
+              steps={detail.steps.map((step) => ({
+                id: step.id,
+                title: step.title,
+                kind: step.kind,
+                released: step.released,
+                releasedAt: step.releasedAt,
+                opensAt: step.opensAt,
+              }))}
+            />
+          </Card>
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <Card

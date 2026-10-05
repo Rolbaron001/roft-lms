@@ -29,10 +29,13 @@ import { AppShell, Card } from "@/components/app-shell";
  */
 export default async function PaperPreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
   const t = await pageT();
@@ -47,7 +50,12 @@ export default async function PaperPreviewPage({
 
   const items = paper.sections.flatMap((section) => section.items);
   const byApp = items.filter((item) => item.markedBy === "app").length;
-  const back = wayBackFrom(await captureOrigin(session, { paperId: id }));
+  // Back to the very place it was opened from, where that place says so
+  // (the learner's-eye preview passes its step). Roland, 5 October 2026:
+  // closing an assessment "resets the page to the top". Only a path on this
+  // site is followed.
+  const origin = wayBackFrom(await captureOrigin(session, { paperId: id }));
+  const back = from && from.startsWith("/") && !from.startsWith("//") ? { href: from, label: origin.label } : origin;
 
   return (
     <AppShell tenant={tenant} session={session}>

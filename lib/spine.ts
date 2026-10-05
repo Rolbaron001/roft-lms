@@ -27,7 +27,7 @@ import {
   type DocumentKind,
 } from "./programme-documents";
 import { can } from "./rbac";
-import { scheduleForLearner } from "./schedule";
+import { courseUsesCohorts, scheduleForLearner } from "./schedule";
 
 /**
  * The spine, and the gates on it.
@@ -96,6 +96,14 @@ export type StepView = {
    * on is the one that can actually present it.
    */
   hasPaper: boolean;
+  /**
+   * What the step is to a learner, which is not always its kind: a document
+   * may be the theory guide or other material, an assessment a workbook or a
+   * summative. Screens label by this, never by "document" or "assessment".
+   */
+  category: "theory_guide" | "material" | "workbook" | "summative" | "workplace" | "lesson";
+  /** For a document step, its type and filename, so it can be shown. */
+  document: { mimeType: string; filename: string } | null;
   /** True when this step's own gate is satisfied for this learner. */
   open: boolean;
   /** Why it is not, in words a learner can act on. Empty when open. */
@@ -393,10 +401,51 @@ async function computeSteps(
           );
   const withPaper = new Set(paperedAssessments.map((row) => row.assessmentId));
 
+  const purposes = new Map(
+    (assessmentIds.length === 0
+      ? []
+      : await tx.select({ id: assessments.id, purpose: assessments.purpose }).from(assessments).where(inArray(assessments.id, assessmentIds))
+    ).map((row) => [row.id, row.purpose]),
+  );
+  const documentIds = steps.filter((step) => step.programmeDocumentId).map((step) => step.programmeDocumentId!);
+  const documents = new Map(
+    (documentIds.length === 0
+      ? []
+      : await tx
+          .select({ id: programmeDocuments.id, kind: programmeDocuments.kind, mimeType: programmeDocuments.mimeType, filename: programmeDocuments.filename })
+          .from(programmeDocuments)
+          .where(inArray(programmeDocuments.id, documentIds))
+    ).map((row) => [row.id, row]),
+  );
+  const categoryOf = (step: StepRow): StepView["category"] =>
+    step.kind === "assessment"
+      ? purposes.get(step.assessmentId!) === "summative"
+        ? "summative"
+        : "workbook"
+      : step.kind === "document"
+        ? documents.get(step.programmeDocumentId!)?.kind === "theory_guide"
+          ? "theory_guide"
+          : "material"
+        : step.kind === "workplace"
+          ? "workplace"
+          : "lesson";
+
   // A learner on a cohort takes their dates from it. One who is simply
   // assigned a course takes whatever the course itself says, which for most
   // steps is nothing.
   const schedule = await scheduleForLearner(tx, courseId, userId);
+
+  /*
+   * A study unit releases through its cohort. Heidi, 5 October 2026: learners
+   * "must not have access to any of these items until they've been given
+   * access", by the cohort's schedule or by the facilitator's hand. So on a
+   * study unit's course that has cohorts, a learner on none sees the
+   * introduction only, and a learner on one meets what the cohort has
+   * released and nothing else. A course nobody walks in a cohort is not held
+   * by a rule its provider does not use.
+   */
+  const [course] = await tx.select({ studyUnitId: courses.studyUnitId }).from(courses).where(eq(courses.id, courseId));
+  const releasedThroughCohort = Boolean(course?.studyUnitId) && (schedule !== null || (await courseUsesCohorts(tx, courseId)));
 
   const [prerequisites, overrides, progress, titles] = await Promise.all([
     tx
@@ -484,10 +533,14 @@ async function computeSteps(
     }
 
     const scheduled = schedule?.steps.get(step.id);
-    const opensAt = scheduled?.opensAt ?? step.availableFrom;
+    const opensAt = scheduled?.releasedAt ? null : (scheduled?.opensAt ?? step.availableFrom);
     const closesAt = scheduled?.closesAt ?? step.availableUntil;
 
-    if (opensAt && opensAt > now) {
+    if (releasedThroughCohort && !schedule) {
+      blockedBy.push("Opens when you are placed in a cohort.");
+    } else if (releasedThroughCohort && !scheduled) {
+      blockedBy.push("Opens when your facilitator releases it to your cohort.");
+    } else if (opensAt && opensAt > now) {
       blockedBy.push(
         `Opens on ${opensAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.`,
       );
@@ -513,6 +566,13 @@ async function computeSteps(
         step.programmeDocumentId ??
         step.curriculumModuleId!,
       hasPaper: step.assessmentId ? withPaper.has(step.assessmentId) : false,
+      category: categoryOf(step),
+      document: step.programmeDocumentId
+        ? (() => {
+            const found = documents.get(step.programmeDocumentId);
+            return found ? { mimeType: found.mimeType, filename: found.filename } : null;
+          })()
+        : null,
       open,
       blockedBy: open && override ? [] : blockedBy,
       overrideReason: override,
@@ -528,7 +588,7 @@ async function computeSteps(
 }
 
 /** Titles come from the step, or from whatever it points at. */
-async function resolveTitles(
+export async function resolveTitles(
   tx: TenantDatabase,
   steps: StepRow[],
 ): Promise<Map<string, string>> {
@@ -586,11 +646,18 @@ async function resolveTitles(
 
   const moduleIds = ids("workplace", "curriculumModuleId");
   if (moduleIds.length > 0) {
+    // "Workplace experience module 1: …", numbered by the module's own code.
+    // Heidi, 5 October 2026: "it should technically be labelled workplace
+    // experience module one", not the module's bare title.
+    const modules = await tx
+      .select({ id: curriculumModules.id, title: curriculumModules.title, code: curriculumModules.code })
+      .from(curriculumModules)
+      .where(inArray(curriculumModules.id, moduleIds));
     await pick(
-      await tx
-        .select({ id: curriculumModules.id, title: curriculumModules.title })
-        .from(curriculumModules)
-        .where(inArray(curriculumModules.id, moduleIds)),
+      modules.map((one) => {
+        const number = /WM[\s-]*0*(\d+)\s*$/i.exec(one.code)?.[1];
+        return { id: one.id, title: number ? `Workplace experience module ${number}: ${one.title}` : one.title };
+      }),
       (step) => step.curriculumModuleId,
     );
   }

@@ -479,13 +479,27 @@ export async function uploadProgrammeDocument(
   return { id, matrix, alignment, notice, kind, reclassified };
 }
 
+/**
+ * Who may see an assessor guide or a summative: an assessor, and whoever
+ * both manages the qualification and writes its assessments (the provider's
+ * administrator). Heidi and Roland, 5 October 2026: the guides were filed and
+ * nowhere to be seen, because only an assessor was shown them. An instructor,
+ * a facilitator and a learner still are not.
+ */
+export function maySeeMemoranda(session: AuthenticatedSession): boolean {
+  return (
+    session.permissions.includes("assessment:assess") ||
+    (session.permissions.includes("assessment:author") && session.permissions.includes("qualification:manage"))
+  );
+}
+
 export async function listProgrammeDocuments(
   session: AuthenticatedSession,
   qualificationId: string,
 ) {
   assertSessionCan(session, "course:read");
 
-  const canSeeMemoranda = session.permissions.includes("assessment:assess");
+  const canSeeMemoranda = maySeeMemoranda(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const rows = await tx
@@ -548,7 +562,7 @@ export async function readProgrammeDocument(
 
   if (
     RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind) &&
-    !session.permissions.includes("assessment:assess") &&
+    !maySeeMemoranda(session) &&
     !(options.forAuthoring && session.permissions.includes("assessment:author"))
   ) {
     throw new ProgrammeDocumentError(

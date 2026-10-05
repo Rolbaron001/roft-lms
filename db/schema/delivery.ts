@@ -540,7 +540,9 @@ export const cohortMembers = pgTable(
  * holding it that way means a delayed intake is one edit rather than forty.
  *
  * A step with no row here is governed by whatever the course itself says,
- * which for most steps is nothing at all.
+ * which for most steps is nothing at all. Except on a study unit's course:
+ * there a learner in a cohort meets only what the cohort has released, by
+ * date or by hand (lib/spine.ts, 5 October 2026).
  */
 export const stepReleases = pgTable(
   "step_releases",
@@ -562,6 +564,13 @@ export const stepReleases = pgTable(
     dueAfterDays: integer("due_after_days"),
     /** Days after the due date before it shuts entirely. Null means never. */
     closesAfterDays: integer("closes_after_days"),
+    /**
+     * Released by a facilitator's hand, whatever the date says. Heidi, 5
+     * October 2026: material reaches a cohort "by the schedule or when the
+     * facilitator clicks a button", and not before.
+     */
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    releasedById: uuid("released_by_id").references(() => users.id, { onDelete: "set null" }),
   },
   (t) => [
     uniqueIndex("step_releases_unique_idx").on(t.cohortId, t.stepId),

@@ -1425,17 +1425,15 @@ export async function coursePublishChecks(
     );
   }
 
-  if (report.uncovered.length > 0 && report.studyUnit) {
-    const one = report.uncovered.length === 1;
-    const listed = report.criteria
-      .filter((criterion) => criterion.coveredBy.length === 0)
-      .map((criterion) => `${criterion.moduleCode ?? ""} ${criterion.code}`.trim());
-    reasons.push(
-      `${report.uncovered.length} of ${report.studyUnit.code}'s assessment criteria ${
-        one ? "has" : "have"
-      } nothing assessing ${one ? "it" : "them"}: ${listed.slice(0, 20).join(", ")}${listed.length > 20 ? "..." : ""}. Upload the alignment matrix on the qualification, or link the criteria to a lesson or to a question on one of this course's assessments.`,
-    );
-  } else if (report.uncovered.length > 0) {
+  /*
+   * A study unit's criteria are shown, never enforced. Heidi, 5 October 2026:
+   * a provider's workbook activities "integrate multiple criteria holistically
+   * rather than mapping individually", and the platform must "accept workbooks
+   * as-is without requiring exhaustive criteria-level mapping". Until then
+   * every unassessed criterion held the unit back, which demanded a mapping
+   * nobody writes down. The readiness panel still shows the coverage.
+   */
+  if (report.uncovered.length > 0 && !report.studyUnit) {
     const one = report.uncovered.length === 1;
     reasons.push(
       `${report.uncovered.length} assessment ${
@@ -1449,7 +1447,7 @@ export async function coursePublishChecks(
   // Separate from the criteria check, and not merged with it. "Nothing teaches
   // this" and "nothing assesses this" are different failures with different
   // fixes, and a verifier asks about them separately.
-  if (report.uncoveredElements.length > 0) {
+  if (report.uncoveredElements.length > 0 && !report.studyUnit) {
     const one = report.uncoveredElements.length === 1;
     reasons.push(
       `${report.uncoveredElements.length} curriculum ${

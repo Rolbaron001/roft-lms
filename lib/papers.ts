@@ -10,6 +10,7 @@ import {
   assessmentDecisions,
   assessmentSubmissions,
   assessments,
+  captureJobs,
   courseSteps,
   itemResponses,
 } from "@/db/schema";
@@ -261,9 +262,25 @@ export async function paperProblems(
           assessmentItems.sectionId,
           sections.map((section) => section.id),
         ),
-      );
+      )
+      .orderBy(asc(assessmentItems.sortOrder));
 
-    for (const section of sections) {
+    /*
+     * The number each question is printed with, where the paper was captured
+     * from a document. Heidi, 5 October 2026: a problem "should say it's
+     * question X or Y", or nobody can find it in the workbook. The capture
+     * keeps the reading, numbers included, in the paper's order.
+     */
+    const [job] = await tx
+      .select({ proposal: captureJobs.proposal })
+      .from(captureJobs)
+      .where(eq(captureJobs.paperId, paperId))
+      .orderBy(desc(captureJobs.committedAt))
+      .limit(1);
+    const read = (job?.proposal ?? null) as { sections?: { items?: { number?: string }[] }[] } | null;
+    const printed = (sectionIndex: number, itemIndex: number) => read?.sections?.[sectionIndex]?.items?.[itemIndex]?.number ?? String(itemIndex + 1);
+
+    for (const [sectionIndex, section] of sections.entries()) {
       const own = items.filter((item) => item.sectionId === section.id);
 
       if (own.length === 0) {
@@ -274,15 +291,18 @@ export async function paperProblems(
       // Rounded, since half marks summed in floating point drift.
       const marks = Math.round(own.reduce((sum, item) => sum + item.points, 0) * 100) / 100;
       if (section.markTotal !== null && section.markTotal !== marks) {
+        // Each question's marks, so the one that is wrong can be found
+        // without counting the paper by hand.
+        const each = own.slice(0, 12).map((item, index) => `${printed(sectionIndex, index)}: ${item.points}`).join(", ");
         problems.push(
-          `"${section.title}" says it is worth ${section.markTotal} marks, but its questions add up to ${marks}.`,
+          `"${section.title}" says it is worth ${section.markTotal} marks, but its questions add up to ${marks} (${each}${own.length > 12 ? ", …" : ""}).`,
         );
       }
 
-      for (const item of own) {
+      for (const [itemIndex, item] of own.entries()) {
         if (item.type === "long_answer" && !item.markingGuide) {
           problems.push(
-            `"${item.stem.slice(0, 60)}…" is marked by a person but has no marking guidance.`,
+            `Question ${printed(sectionIndex, itemIndex)} of "${section.title}" ("${item.stem.slice(0, 60)}…") is marked by a person, and the assessor guide gives no marking guidance for it.`,
           );
         }
       }
