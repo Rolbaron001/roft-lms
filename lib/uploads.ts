@@ -68,7 +68,7 @@ export type StoredMedia = DetectedMedia & {
  * what the file turned out to be: half a gigabyte is reasonable for a recorded
  * practical assessment and absurd for a diagram.
  */
-async function acceptFile(
+export async function acceptFile(
   organisationId: string,
   scope: string,
   file: { filename: string; bytes: Uint8Array },

@@ -70,6 +70,8 @@ const SOURCES: { table: string; column: string; archived?: boolean }[] = [
   { table: "library_documents", column: "storage_key" },
   { table: "organisations", column: "logo_storage_key" },
   { table: "mail_attachments", column: "storage_key" },
+  // Videos, diagrams and other learning material (5 October 2026).
+  { table: "library_items", column: "storage_key" },
 ];
 
 async function main() {

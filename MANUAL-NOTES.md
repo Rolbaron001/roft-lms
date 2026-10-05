@@ -184,6 +184,37 @@ person going through it question by question.
   that nobody can finish it without being assessed. A unit made only of
   workplace modules is signed off at work and needs no papers.
 
+## 4a. What a learner sees, and when (5 October 2026)
+
+- **The study unit page** shows what the unit is about (its exit level
+  outcome), what the learner will learn (the topics of its knowledge
+  modules) and its modules, all taken from the curriculum the platform
+  already holds. Then the theory guide, read in the page and downloadable;
+  then the unit's learning material; then its workbooks and assessments.
+- **The theory guide** is filed against the study unit with the kind
+  "Theory guide". A PDF is shown a page at a time. A Word guide is shown a
+  section at a time, split at its own headings, so it needs proper Word
+  heading styles (Heading 1 for chapters, Heading 2 and 3 for modules and
+  topics). A guide typed in plain bold text has no sections to jump to.
+- **Workbook front page:** every workbook must state on its front page the
+  study unit it belongs to and the topics it covers (for example "SU1 WB2:
+  KM0103 and KM0104"). Heidi, 5 October 2026.
+- **Release through the cohort.** On a study unit whose course has
+  cohorts, a learner not yet in a cohort sees the introduction and an
+  outline only. In a cohort, each item opens on its date in the cohort's
+  schedule, or when the facilitator presses **Release now** on the cohort's
+  page, and not before. A row left empty in the schedule is not released.
+  A course that nobody walks in a cohort is not held back.
+- **Learning material** (videos, diagrams, recordings, slides, documents)
+  is added under Learning, Learning material, or from the study unit's own
+  page. Each item is kept once and can be added to several study units,
+  each time "released with" one of that unit's steps, so it reaches a cohort
+  together with that step. Video: MP4 or WebM, up to 500 MB. Learners can
+  download everything to use without a signal.
+- **Criterion coverage is shown, not enforced** for a study unit. A
+  workbook's activities may cover criteria as a whole, and the platform
+  takes workbooks as they are.
+
 ## 5. Languages
 
 - English is the platform's main language. The other languages are machine

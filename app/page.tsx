@@ -6,6 +6,7 @@ import { myEnrolments } from "@/lib/enrolment";
 import { listMyCertificates } from "@/lib/certificates";
 import { listStatementsFor } from "@/lib/statement-of-results";
 import { myLearningPaths } from "@/lib/learning-paths";
+import { learnerQualifications } from "@/lib/learner-qualification";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { feedbackOwedBy } from "@/lib/feedback";
 import { learnerBadges } from "@/lib/badges";
@@ -74,7 +75,11 @@ export default async function HomePage() {
       : 0,
   ]);
 
-  const standalone = enrolments.filter((row) => !inAPath.has(row.courseId));
+  // A study unit is shown inside its qualification (Roland, 5 October 2026),
+  // so it is not listed again on its own.
+  const myQualifications = await learnerQualifications(session);
+  const inAQualification = new Set(myQualifications.flatMap((one) => one.enrolmentIds));
+  const standalone = enrolments.filter((row) => !inAPath.has(row.courseId) && !inAQualification.has(row.enrolmentId));
   const outstanding = standalone.filter((row) => row.status !== "completed");
   const finished = standalone.filter((row) => row.status === "completed");
 
@@ -252,6 +257,55 @@ export default async function HomePage() {
             </ol>
           </Card>
         ))}
+
+        {myQualifications.map((qualification) => {
+          const completed = qualification.units.filter((unit) => unit.state === "completed").length;
+          const next = qualification.units.find((unit) => unit.state === "in_progress" || unit.state === "open");
+          return (
+            <Card key={qualification.id} title={t("learnQual.myQualification")}>
+              <Link href={`/learn/qualification/${qualification.id}`} className="text-lg font-semibold underline-offset-2 hover:underline">
+                {qualification.title}
+              </Link>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {[qualification.saqaId ? t("learnQual.saqa", { id: qualification.saqaId }) : null, qualification.cohortName].filter(Boolean).join(" · ")}
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="h-2 flex-1 rounded-full bg-[var(--border)]">
+                  <div className="h-2 rounded-full bg-[var(--brand-accent)]" style={{ width: `${qualification.units.length ? Math.round((completed / qualification.units.length) * 100) : 0}%` }} />
+                </div>
+                <span className="shrink-0 text-xs text-[var(--muted)]">{t("learnQual.unitsDone", { done: completed, total: qualification.units.length })}</span>
+              </div>
+              <ul className="mt-4 divide-y divide-[var(--border)]">
+                {qualification.units.map((unit) => (
+                  <li key={unit.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm">
+                    <span>
+                      <span className="font-medium">{unit.code}</span> {unit.title}
+                    </span>
+                    {unit.id === next?.id && unit.enrolmentId ? (
+                      <Link href={`/learn/${unit.enrolmentId}`} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand-primary)" }}>
+                        {t("learnQual.continue")}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-[var(--muted)]">
+                        {unit.state === "completed"
+                          ? t("learnQual.state.completed")
+                          : unit.state === "in_progress"
+                            ? t("learnQual.state.inProgress", { done: unit.done, total: unit.total })
+                            : unit.state === "open"
+                              ? t("learnQual.state.open")
+                              : unit.state === "waiting_cohort"
+                                ? t("learnQual.state.waitingCohort")
+                                : unit.state === "waiting_release"
+                                  ? t("learnQual.state.waitingRelease")
+                                  : t("learnQual.state.notEnrolled")}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          );
+        })}
 
         <Card title={t("home.myLearning")}>
           {standalone.length === 0 ? (

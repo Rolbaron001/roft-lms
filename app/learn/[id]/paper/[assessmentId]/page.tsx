@@ -66,7 +66,7 @@ export default async function PaperPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link
-          href={`/learn/${id}`}
+          href={`/learn/${id}#a-${assessmentId}`}
           className="text-sm text-[var(--muted)] hover:underline"
         >
           ← {delivery.course.title}

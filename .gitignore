@@ -51,5 +51,8 @@ next-env.d.ts
 # Scratch scripts used while working. Never committed.
 zz-*
 
+# pdf.js's worker, copied in by scripts/copy-pdf-worker.mjs before each build.
+public/pdfjs/
+
 # The record a purge writes of what it removed. Local, not shared.
 purged-tenants-*.txt

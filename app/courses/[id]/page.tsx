@@ -17,6 +17,8 @@ import { PointHere } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { qualificationOfCourse, verificationOf } from "@/lib/qualification-build";
 import { BuildForm } from "@/app/qualifications/[id]/verify/verify-forms";
+import { UploadMaterial } from "@/app/material/material-forms";
+import { linkableUnits, listLibrary } from "@/lib/library";
 import { CourseEditor } from "./course-editor";
 
 export default async function CoursePage({
@@ -65,6 +67,13 @@ export default async function CoursePage({
   const unit =
     qualificationId && canAuthorHere && session.permissions.includes("assessment:author")
       ? (await said(await verificationOf(session, qualificationId))).units.find((one) => one.courseId === id) ?? null
+      : null;
+  const unitMaterial =
+    detail.course.studyUnitId && canAuthorHere
+      ? {
+          items: await listLibrary(session, detail.course.studyUnitId),
+          units: (await linkableUnits(session)).filter((one) => one.id === detail.course.studyUnitId),
+        }
       : null;
 
   return (
@@ -169,6 +178,35 @@ export default async function CoursePage({
               <BuildForm qualificationId={qualificationId} again={unit.steps > 0} />
             </div>
             <p className="text-xs text-[var(--muted)]">{t("unitGuide.change")}</p>
+          </Card>
+        </div>
+      ) : null}
+
+      {unitMaterial ? (
+        <div className="mb-6">
+          <Card title={t("material.unitCardTitle")} description={t("material.unitCardIntro")}>
+            {unitMaterial.items.length > 0 ? (
+              <ul className="mb-4 space-y-1 text-sm">
+                {unitMaterial.items.map((item) => {
+                  const link = item.links.find((one) => one.studyUnitId === detail.course.studyUnitId);
+                  return (
+                    <li key={item.id} className="flex flex-wrap items-baseline gap-2">
+                      <a href={`/api/material/${item.id}`} className="underline-offset-2 hover:underline">
+                        {item.title}
+                      </a>
+                      <span className="text-xs text-[var(--muted)]">
+                        {item.kind} ·{" "}
+                        {link?.releaseWithTitle ? t("material.releasedWith", { step: link.releaseWithTitle }) : t("material.releasedWithUnit")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+            <UploadMaterial units={unitMaterial.units} fixedUnitId={detail.course.studyUnitId!} />
+            <Link href="/material" className="mt-3 inline-block text-sm underline underline-offset-2">
+              {t("material.manage")}
+            </Link>
           </Card>
         </div>
       ) : null}

@@ -308,13 +308,22 @@ export async function uploadProgrammeDocument(
   let kind = parsed.kind;
   let reclassified = false;
 
+  // The reader refuses (throws) a document with no study units in it, which
+  // is the answer "this is not one", not a failure of the upload. Found 5
+  // October 2026: SU1's theory guide names "Study Unit 1" and "ELO 1", passed
+  // the first test, and then could not be uploaded at all.
+  const readsAsAlignment = (text: string) => {
+    try {
+      return readAlignmentDocument(text).studyUnits.some((unit) => unit.moduleCodes.length > 0);
+    } catch {
+      return false;
+    }
+  };
   if (
     kind !== "alignment_matrix" &&
     extractedText &&
     looksLikeAlignmentDocument(extractedText) &&
-    readAlignmentDocument(extractedText).studyUnits.some(
-      (unit) => unit.moduleCodes.length > 0,
-    )
+    readsAsAlignment(extractedText)
   ) {
     kind = "alignment_matrix";
     reclassified = true;

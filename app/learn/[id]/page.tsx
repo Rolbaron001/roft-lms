@@ -7,6 +7,7 @@ import { listCourseAssessments } from "@/lib/assessment";
 import { AppShell } from "@/components/app-shell";
 import { CoursePlayer } from "./course-player";
 import { StepList } from "./step-list";
+import { StudyUnitView } from "./study-unit-view";
 import { stepsForLearner } from "@/lib/spine";
 
 export default async function LearnPage({
@@ -49,7 +50,28 @@ export default async function LearnPage({
           (assessment) => assessment.status === "published",
         );
 
-  const t = translator(localeFor(tenant, session));
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
+
+  // A study unit opens as its own page (Roland's design, 5 October 2026).
+  if (delivery.course.studyUnitId) {
+    return (
+      <AppShell tenant={tenant} session={session}>
+        {!delivery.isOwn ? (
+          <p className="mb-4 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">{t("learn.notYours")}</p>
+        ) : null}
+        <StudyUnitView
+          session={session}
+          enrolmentId={id}
+          studyUnitId={delivery.course.studyUnitId}
+          steps={steps}
+          isOwn={delivery.isOwn}
+          t={t}
+          dateLocale={locale}
+        />
+      </AppShell>
+    );
+  }
 
   const percentage =
     delivery.totalLessons === 0

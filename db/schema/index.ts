@@ -5,3 +5,4 @@ export * from "./learning";
 export * from "./assessment";
 export * from "./delivery";
 export * from "./support";
+export * from "./library";

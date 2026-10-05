@@ -102,7 +102,8 @@ export function PaperForm({
         setError(result.error ?? result.reasons?.[0] ?? t("paper.handInFailed"));
         return;
       }
-      router.push(`/learn/${enrolmentId}`);
+      // Back to this paper's place in the list, not the top of the page.
+      router.push(`/learn/${enrolmentId}#a-${window.location.pathname.split("/").pop()}`);
     } catch {
       setError(t("paper.handInConnection"));
     } finally {

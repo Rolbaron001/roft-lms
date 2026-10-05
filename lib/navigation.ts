@@ -90,6 +90,10 @@ export const NAV: NavSection[] = [
         ],
       },
       { href: "/capture", label: "Capture", permission: "assessment:author" },
+      // Videos, diagrams and other material, kept once and used by any study
+      // unit (Roland, 5 October 2026). Staff only: learners meet it on their
+      // study unit's page.
+      { href: "/material", label: "Learning material", permission: "course:author" },
       // A reference, not a record. Every signed-in person can read it,
       // learners included - it exists so that everybody uses the same words.
       {

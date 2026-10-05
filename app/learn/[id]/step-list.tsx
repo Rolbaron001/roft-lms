@@ -18,10 +18,13 @@ export function StepList({
   steps,
   enrolmentId,
   isOwn,
+  heading,
 }: {
   steps: StepView[];
   enrolmentId: string;
   isOwn: boolean;
+  /** The study unit page names the list for what it holds. */
+  heading?: string;
 }) {
   const [state, open, pending] = useActionState<LearnState, FormData>(
     openStepAction,
@@ -36,7 +39,7 @@ export function StepList({
     <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          {t("learn.wayThrough")}
+          {heading ?? t("learn.wayThrough")}
         </h2>
         <span className="text-xs text-[var(--muted)]">
           {t("learn.stepsFinished", { done, total: steps.length })}
@@ -59,7 +62,8 @@ export function StepList({
           return (
             <li
               key={step.id}
-              className={`rounded-md border px-4 py-3 ${
+              id={`step-${step.id}`}
+              className={`scroll-mt-24 rounded-md border px-4 py-3 ${
                 isNext
                   ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5"
                   : "border-[var(--border)]"
@@ -67,6 +71,12 @@ export function StepList({
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
+                  {/* Where closing an assessment returns to, rather than the
+                      top of the page (Roland, 5 October 2026). */}
+                  <span id={`a-${step.targetId}`} className="block scroll-mt-24" />
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                    {t(`learn.category.${step.category}`)}
+                  </p>
                   <p className="text-sm font-medium">
                     <span className="mr-2 text-xs tabular-nums text-[var(--muted)]">
                       {index + 1}

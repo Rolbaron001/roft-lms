@@ -64,7 +64,7 @@ export default async function TakeAssessmentPage({
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
         <Link
-          href={`/learn/${id}`}
+          href={`/learn/${id}#a-${assessmentId}`}
           className="text-sm text-[var(--muted)] hover:underline"
         >
           {t("assess.back")}
