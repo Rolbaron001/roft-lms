@@ -83,7 +83,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
           {verification.built && !verification.live && mayPublish ? (
             <VerifyForm qualificationId={id} ready={verification.ready} />
           ) : null}
-          <Link href={`/qualifications/${id}/preview`} className="self-center text-sm underline underline-offset-2">
+          <Link href={`/qualifications/${id}/learner`} className="self-center text-sm underline underline-offset-2">
             {t("verify.seeAsLearner")}
           </Link>
         </div>

@@ -4738,5 +4738,15 @@
   "cohort.openAll": 4737,
   "cohort.walksQualification": 4738,
   "said.cohorts.b7870538": 4739,
-  "said.cohorts.f5cc88e2": 4740
+  "said.cohorts.f5cc88e2": 4740,
+  "learnPreview.banner": 4741,
+  "learnPreview.cohort": 4742,
+  "learnPreview.open": 4743,
+  "learnPreview.live": 4744,
+  "learnPreview.draft": 4745,
+  "learnPreview.notBuilt": 4746,
+  "learnPreview.build": 4747,
+  "learnPreview.openPaper": 4748,
+  "learnPreview.noPaper": 4749,
+  "learnPreview.checklist": 4750
 }

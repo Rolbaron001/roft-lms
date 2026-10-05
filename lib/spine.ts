@@ -373,6 +373,17 @@ export async function stepsForLearner(
   );
 }
 
+/**
+ * Every step of a course as an administrator previews it for a learner:
+ * titled and labelled as the learner sees them, all open, nothing recorded
+ * (Roland, 5 October 2026). Reads only.
+ */
+export async function stepsForPreview(session: AuthenticatedSession, courseId: string): Promise<StepView[]> {
+  assertSessionCan(session, "course:read");
+  const steps = await withTenant(session.organisationId, (tx) => computeSteps(tx, courseId, session.userId));
+  return steps.map((step) => ({ ...step, open: true, blockedBy: [], overrideReason: null, dueAt: null }));
+}
+
 async function computeSteps(
   tx: TenantDatabase,
   courseId: string,

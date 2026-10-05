@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { Translate } from "@/lib/i18n";
 import type { AuthenticatedSession } from "@/lib/session";
 import { recordStepOpened, type StepView } from "@/lib/spine";
-import { learnerMaterial, readLearnerDocument, unitOverview, type UnitOverview } from "@/lib/learner-unit";
+import { learnerMaterial, readLearnerDocument, unitOverview, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
+import { listLibrary } from "@/lib/library";
+import { readProgrammeDocument } from "@/lib/programme-documents";
 import { wordChapters } from "@/lib/word-chapters";
 import { describeSize } from "@/lib/media";
 import { ChapterViewer, PdfViewer } from "@/components/document-viewer";
@@ -58,44 +60,75 @@ export async function StudyUnitView({
   isOwn,
   t,
   dateLocale,
+  preview = null,
 }: {
   session: AuthenticatedSession;
+  /** The learner's enrolment; empty in an administrator's preview. */
   enrolmentId: string;
   studyUnitId: string;
   steps: StepView[];
   isOwn: boolean;
   t: Translate;
   dateLocale: string;
+  /**
+   * An administrator looking at the unit as a learner would, with everything
+   * unlocked and nothing recorded (Roland, 5 October 2026: "As administrator
+   * I want to be able to see that everything is in place for the Learner").
+   * Files come through the staff routes; workbooks open in the paper preview.
+   */
+  preview?: { qualificationId: string; papers: Map<string, string> } | null;
 }) {
   const overview = await unitOverview(session, studyUnitId);
   if (!overview) return null;
-  const material = await learnerMaterial(session, studyUnitId, steps);
+  const material: LearnerMaterial[] = preview
+    ? (await listLibrary(session, studyUnitId)).map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        kind: item.kind,
+        mimeType: item.mimeType,
+        sizeBytes: item.sizeBytes,
+        open: true,
+        waiting: null,
+      }))
+    : await learnerMaterial(session, studyUnitId, steps);
+  const materialHref = (itemId: string) => (preview ? `/api/material/${itemId}` : `/api/learn/${enrolmentId}/material/${itemId}`);
+  const pdfViewHref = (itemId: string) => (preview ? `/api/material/${itemId}` : `/learn/${enrolmentId}/material/${itemId}`);
 
   const guide = steps.find((step) => step.category === "theory_guide") ?? null;
   const work = steps.filter((step) => step.category !== "theory_guide");
+  const hasWork = work.length > 0;
   const done = steps.filter((step) => step.state === "done").length;
-  const waitingForCohort = steps.length > 0 && steps.every((step) => step.blockedBy.some((reason) => /placed in a cohort/.test(reason)));
+  const waitingForCohort = !preview && steps.length > 0 && steps.every((step) => step.blockedBy.some((reason) => /placed in a cohort/.test(reason)));
   const nextDue = steps.filter((step) => step.dueAt && step.state !== "done").map((step) => step.dueAt!).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
 
   // Reading the guide is opening it: that is what the first workbook waits for.
-  if (guide?.open && isOwn && !guide.progress.opened) {
+  // Never in a preview, which records nothing.
+  if (!preview && guide?.open && isOwn && !guide.progress.opened) {
     await recordStepOpened(session, guide.id).catch(() => undefined);
   }
 
-  const documentHref = guide ? `/api/learn/${enrolmentId}/documents/${guide.targetId}` : null;
+  const documentHref = guide ? (preview ? `/api/programme-documents/${guide.targetId}` : `/api/learn/${enrolmentId}/documents/${guide.targetId}`) : null;
+  const downloadHref = documentHref ? (preview ? documentHref : `${documentHref}?download`) : null;
   const isPdf = guide?.document?.mimeType === "application/pdf";
   const chapters =
     guide?.open && guide.document && !isPdf && /wordprocessingml|msword/.test(guide.document.mimeType)
-      ? await readLearnerDocument(session, enrolmentId, guide.targetId)
+      ? await (preview ? readProgrammeDocument(session, guide.targetId) : readLearnerDocument(session, enrolmentId, guide.targetId))
           .then((file) => wordChapters(file.bytes))
           .catch(() => null)
       : null;
 
   return (
     <div className="space-y-6">
+      {preview ? (
+        <div className="rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 text-sm">{t("learnPreview.banner")}</div>
+      ) : null}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href={`/learn/qualification/${overview.qualification.id}`} className="text-sm text-[var(--brand-accent)] underline-offset-2 hover:underline">
+          <Link
+            href={preview ? `/qualifications/${preview.qualificationId}/learner` : `/learn/qualification/${overview.qualification.id}`}
+            className="text-sm text-[var(--brand-accent)] underline-offset-2 hover:underline"
+          >
             {overview.qualification.title}
           </Link>
           <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -122,8 +155,8 @@ export async function StudyUnitView({
       ) : null}
 
       <UnitIntro overview={overview} t={t}>
-        {guide?.open && documentHref ? (
-          <a href={`${documentHref}?download`} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white">
+        {guide?.open && downloadHref ? (
+          <a href={downloadHref} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white">
             {t("learnUnit.downloadGuide")}
           </a>
         ) : guide ? (
@@ -131,16 +164,16 @@ export async function StudyUnitView({
         ) : null}
       </UnitIntro>
 
-      {guide?.open && documentHref ? (
+      {guide?.open && documentHref && downloadHref ? (
         <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
           <h2 className="px-5 pt-4 text-lg font-semibold">{t("learnUnit.guideTitle")}</h2>
           {isPdf ? (
-            <PdfViewer src={documentHref} downloadHref={`${documentHref}?download`} />
+            <PdfViewer src={documentHref} downloadHref={downloadHref} />
           ) : chapters ? (
-            <ChapterViewer chapters={chapters} downloadHref={`${documentHref}?download`} />
+            <ChapterViewer chapters={chapters} downloadHref={downloadHref} />
           ) : (
             <p className="p-5 text-sm">
-              <a href={`${documentHref}?download`} className="underline underline-offset-2">
+              <a href={downloadHref} className="underline underline-offset-2">
                 {t("learnUnit.downloadGuide")}
               </a>
             </p>
@@ -156,7 +189,7 @@ export async function StudyUnitView({
           </div>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {material.map((item) => {
-              const href = `/api/learn/${enrolmentId}/material/${item.id}`;
+              const href = materialHref(item.id);
               return (
                 <article key={item.id} className="flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
                   {item.open ? (
@@ -187,7 +220,7 @@ export async function StudyUnitView({
                     {item.open ? (
                       <div className="mt-2 flex gap-4 text-sm">
                         {item.mimeType === "application/pdf" ? (
-                          <Link href={`/learn/${enrolmentId}/material/${item.id}`} className="underline underline-offset-2">
+                          <Link href={pdfViewHref(item.id)} className="underline underline-offset-2">
                             {t("learnUnit.view")}
                           </Link>
                         ) : item.kind === "image" ? (
@@ -208,7 +241,44 @@ export async function StudyUnitView({
         </section>
       ) : null}
 
-      {work.length > 0 ? <StepList steps={work} enrolmentId={enrolmentId} isOwn={isOwn} heading={t("learnUnit.work")} /> : null}
+      {hasWork && !preview ? <StepList steps={work} enrolmentId={enrolmentId} isOwn={isOwn} heading={t("learnUnit.work")} /> : null}
+      {hasWork && preview ? <PreviewWork steps={work} papers={preview.papers} t={t} /> : null}
     </div>
+  );
+}
+
+/**
+ * The workbooks and assessments as a learner will meet them, each one opening
+ * in the paper preview, where nothing can be handed in.
+ */
+function PreviewWork({ steps, papers, t }: { steps: StepView[]; papers: Map<string, string>; t: Translate }) {
+  return (
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{t("learnUnit.work")}</h2>
+      <ol className="mt-4 space-y-2">
+        {steps.map((step, index) => {
+          const paperId = step.kind === "assessment" ? papers.get(step.targetId) : undefined;
+          return (
+            <li key={step.id} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-[var(--border)] px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">{t(`learn.category.${step.category}`)}</p>
+                <p className="text-sm font-medium">
+                  <span className="mr-2 text-xs tabular-nums text-[var(--muted)]">{index + 1}</span>
+                  {step.title}
+                </p>
+                {step.guidance ? <p className="mt-1 text-xs text-[var(--muted)]">{step.guidance}</p> : null}
+              </div>
+              {paperId ? (
+                <Link href={`/papers/${paperId}/preview`} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand-primary)" }}>
+                  {t("learnPreview.openPaper")}
+                </Link>
+              ) : step.kind === "assessment" ? (
+                <span className="text-xs text-[var(--danger)]">{t("learnPreview.noPaper")}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }

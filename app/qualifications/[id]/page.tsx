@@ -662,7 +662,7 @@ export default async function QualificationPage({
               */}
               {canAuthorCourses ? (
                 <p className="mb-4 text-sm">
-                  <Link href={`/qualifications/${id}/preview`} className="underline underline-offset-2">
+                  <Link href={`/qualifications/${id}/learner`} className="underline underline-offset-2">
                     {t("qualPage.seeAsLearner")}
                   </Link>
                   <span className="text-[var(--muted)]">{t("qualPage.seeAsLearnerNote")}</span>

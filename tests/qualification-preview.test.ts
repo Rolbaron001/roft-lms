@@ -121,7 +121,9 @@ describe("it can be reached", () => {
    */
   it("is linked from the qualification", () => {
     const page = source("app/qualifications/[id]/page.tsx");
-    expect(page).toMatch(/\/qualifications\/\$\{id\}\/preview/);
+    // Since 5 October the learner's own pages, in preview (/learner); the
+    // checklist (/preview) is linked from there.
+    expect(page).toMatch(/\/qualifications\/\$\{id\}\/learner/);
     expect(page).toMatch(/See it as a learner will/);
   });
 
