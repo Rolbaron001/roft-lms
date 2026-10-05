@@ -48,6 +48,11 @@ export type AuthenticatedSession = {
    * `resolveSession`, as tests make them, has no reason to know it.
    */
   locale?: string | null;
+  /**
+   * Set while an administrator sees the platform as this person ("View as",
+   * lib/view-as.ts): who is really looking. Everything is read-only then.
+   */
+  viewAs?: { byUserId: string; byName: string };
 };
 
 export type RequestContext = {
@@ -67,7 +72,7 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-async function loadRoles(
+export async function loadRoles(
   tx: TenantDatabase,
   userId: string,
 ): Promise<Role[]> {
@@ -241,6 +246,11 @@ export async function openSession(
 export async function resolveSession(
   organisationId: string,
   token: string | undefined | null,
+  /**
+   * Whether to record the session as used. Not while viewing as somebody
+   * else: those requests are read-only from the first query (lib/view-as.ts).
+   */
+  options: { touch?: boolean } = {},
 ): Promise<AuthenticatedSession | null> {
   if (!token) return null;
 
@@ -277,13 +287,15 @@ export async function resolveSession(
       return null;
     }
 
-    await tx
-      .update(sessions)
-      .set({
-        lastUsedAt: now,
-        idleExpiresAt: new Date(now.getTime() + IDLE_LIFETIME_MS),
-      })
-      .where(eq(sessions.id, row.sessionId));
+    if (options.touch !== false) {
+      await tx
+        .update(sessions)
+        .set({
+          lastUsedAt: now,
+          idleExpiresAt: new Date(now.getTime() + IDLE_LIFETIME_MS),
+        })
+        .where(eq(sessions.id, row.sessionId));
+    }
 
     const roles = await loadRoles(tx, row.userId);
 

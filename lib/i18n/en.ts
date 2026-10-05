@@ -23,6 +23,9 @@ export const en = {
   "shell.notificationsUnread": "Notifications, {count} unread",
   "shell.account": "Your account: password and language",
   "shell.signOut": "Sign out",
+  "viewAs.stop": "Stop viewing",
+  "viewAs.noAttempt": "Opening this paper would start an attempt for this learner, which is not done while you are viewing as them. The paper itself can be seen from the qualification's See it as a learner.",
+  "viewAs.banner": "You are seeing the platform as {person} ({roles}). Nothing can be changed while you look. Viewed by {by}.",
 
   // Menu headings
   "nav.heading.Learning": "Learning",

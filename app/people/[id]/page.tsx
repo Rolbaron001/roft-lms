@@ -13,6 +13,8 @@ import {
 import { mailDomainFor } from "@/lib/mail";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
+import { mayViewAs } from "@/lib/view-as";
+import { startViewAsAction } from "../view-as-actions";
 import { EnrolmentDocuments } from "./documents";
 import { Appeals } from "./appeals";
 import { Support } from "./support";
@@ -169,10 +171,22 @@ export default async function PersonPage({
                 : t("personPage.neverSignedIn")}
             </p>
           </div>
-          <StatusBadge
-            status={person.status}
-            label={maybe(t, `userStatus.${person.status}`) ?? undefined}
-          />
+          <div className="flex items-center gap-3">
+            {/* "View as" (lib/view-as.ts): the platform exactly as this person
+                sees it, read-only, for an administrator checking it works. */}
+            {mayViewAs(session) && person.id !== session.userId && person.status === "active" ? (
+              <form action={startViewAsAction}>
+                <input type="hidden" name="userId" value={person.id} />
+                <button type="submit" className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--brand-accent)]/10">
+                  {t("viewAs.start", { person: person.firstName })}
+                </button>
+              </form>
+            ) : null}
+            <StatusBadge
+              status={person.status}
+              label={maybe(t, `userStatus.${person.status}`) ?? undefined}
+            />
+          </div>
         </div>
 
         <p className="mt-3 text-sm text-[var(--muted)]">

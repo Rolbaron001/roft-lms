@@ -222,6 +222,20 @@ person going through it question by question.
   workbook's activities may cover criteria as a whole, and the platform
   takes workbooks as they are.
 
+## 4b. Checking what each person sees (5 October 2026)
+
+- **See it as a learner** (on a qualification) shows the learner's own
+  pages for every study unit, with everything unlocked and nothing recorded,
+  so an administrator can check the guide, the material and the workbooks
+  are all in place before going live.
+- **See the platform as a person** (on any person's page under People) is
+  for the provider's administrator: the whole platform exactly as that
+  learner, assessor, facilitator or moderator sees it, with their menu,
+  home page, queues and records. A banner says whose view it is. Nothing
+  can be changed while viewing; press **Stop viewing** to return. Each use
+  is recorded in the audit log. To check a role, choose one person who
+  holds it.
+
 ## 5. Languages
 
 - English is the platform's main language. The other languages are machine

@@ -3730,6 +3730,7 @@ export const staff = {
   "verify.unitDraft": "Draft, {steps} steps",
   "verify.unitDraftOne": "Draft, 1 step",
   "verify.openGuide": "Open the assessor guide",
+  "viewAs.start": "See the platform as {person}",
   "material.heading": "Learning material",
   "material.intro": "Videos, diagrams, recordings and other files learners view on a study unit's page or download to use without a signal. Each is kept once here and can be used by any number of study units. Learners never see this page; they meet each item on their study unit, once their cohort has released it.",
   "material.addTitle": "Add material",

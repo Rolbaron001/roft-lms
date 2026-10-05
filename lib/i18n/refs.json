@@ -4748,5 +4748,9 @@
   "learnPreview.build": 4747,
   "learnPreview.openPaper": 4748,
   "learnPreview.noPaper": 4749,
-  "learnPreview.checklist": 4750
+  "learnPreview.checklist": 4750,
+  "viewAs.start": 4751,
+  "viewAs.stop": 4752,
+  "viewAs.noAttempt": 4753,
+  "viewAs.banner": 4754
 }

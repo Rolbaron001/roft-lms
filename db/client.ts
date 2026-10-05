@@ -100,11 +100,29 @@ export type TenantDatabase = Parameters<
  * `set_config(..., true)` makes the setting local to the transaction, so the
  * context cannot leak to whichever request next borrows this pooled connection.
  */
+/**
+ * Whether this request is an administrator viewing the platform as somebody
+ * else (lib/view-as.ts). Read from the request's cookie; outside a request
+ * (scripts, the scheduled jobs, tests) there is none.
+ */
+async function viewingAsSomebody(): Promise<boolean> {
+  try {
+    const { cookies } = await import("next/headers");
+    return Boolean((await cookies()).get("roft_view_as")?.value);
+  } catch {
+    return false;
+  }
+}
+
 export async function withTenant<T>(
   organisationId: string,
   work: (tx: TenantDatabase) => Promise<T>,
 ): Promise<T> {
+  const readOnly = await viewingAsSomebody();
   return db.transaction(async (tx) => {
+    // While viewing as somebody else nothing may be written, by any page or
+    // action, however it was written: PostgreSQL refuses it for us.
+    if (readOnly) await tx.execute(sql`set transaction read only`);
     await tx.execute(
       sql`select set_config('app.current_organisation', ${organisationId}, true)`,
     );

@@ -42,13 +42,19 @@ export default async function PaperPage({
   let sitting;
   let refusal: string | null = null;
 
-  try {
-    sitting = await startAttempt(session, assessmentId, { enrolmentId: id });
-  } catch (error) {
-    if (error instanceof PaperError) {
-      refusal = error.message;
-    } else {
-      throw error;
+  // Opening a paper starts an attempt, which is a change: not while an
+  // administrator is viewing as the learner (lib/view-as.ts).
+  if (session.viewAs) {
+    refusal = t("viewAs.noAttempt");
+  } else {
+    try {
+      sitting = await startAttempt(session, assessmentId, { enrolmentId: id });
+    } catch (error) {
+      if (error instanceof PaperError) {
+        refusal = error.message;
+      } else {
+        throw error;
+      }
     }
   }
 

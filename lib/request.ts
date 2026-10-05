@@ -9,6 +9,7 @@ import {
   type RequestContext,
 } from "./session";
 import { preferredHost, resolveTenant, type TenantIdentity } from "./tenant";
+import { VIEW_AS_COOKIE, viewAsSession } from "./view-as";
 import type { Permission } from "./rbac";
 import { can, type Capability } from "./features";
 import { dateLocale, localeFor } from "./i18n/locales";
@@ -112,7 +113,13 @@ export const currentSession = cache(async (): Promise<AuthenticatedSession | nul
 
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
-  return resolveSession(tenant.id, token);
+  // "View as" (lib/view-as.ts): the administrator's own session decides
+  // whether it is allowed; the request is read-only from the first query, so
+  // the session is not even marked as used.
+  const viewAsId = cookieStore.get(VIEW_AS_COOKIE)?.value;
+  const real = await resolveSession(tenant.id, token, { touch: !viewAsId });
+  if (!real || !viewAsId) return real;
+  return (await viewAsSession(real, viewAsId)) ?? real;
 });
 
 /** The signed-in session, or a redirect to the tenant's login page. */

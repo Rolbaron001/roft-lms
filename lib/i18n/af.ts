@@ -15,6 +15,9 @@ export const af: Catalogue = {
   "shell.notificationsUnread": "Kennisgewings, {count} ongelees",
   "shell.account": "Jou rekening: wagwoord en taal",
   "shell.signOut": "Teken uit",
+  "viewAs.stop": "Hou op kyk",
+  "viewAs.noAttempt": "Om hierdie vraestel oop te maak sou 'n poging vir hierdie leerder begin, wat nie gedoen word terwyl jy as hulle kyk nie. Die vraestel self kan by die kwalifikasie se Sien dit as 'n leerder gesien word.",
+  "viewAs.banner": "Jy sien die platform soos {person} ({roles}) dit sien. Niks kan verander word terwyl jy kyk nie. Bekyk deur {by}.",
 
   "nav.heading.Learning": "Leer",
   "nav.heading.People": "Mense",

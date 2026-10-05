@@ -160,16 +160,36 @@ export async function AppShell({
             >
               {session.firstName} {session.lastName}
             </Link>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
-              >
-                {t("shell.signOut")}
-              </button>
-            </form>
+            {session.viewAs ? (
+              // Signing out is a change, refused while viewing: Stop first.
+              <form action="/api/view-as/stop" method="post">
+                <button type="submit" className="rounded-md bg-white px-3 py-1.5 text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+                  {t("viewAs.stop")}
+                </button>
+              </form>
+            ) : (
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className="rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
+                >
+                  {t("shell.signOut")}
+                </button>
+              </form>
+            )}
           </div>
         </div>
+
+        {/* "View as" (lib/view-as.ts): whose view this is, on every page. */}
+        {session.viewAs ? (
+          <div className="bg-white/95 px-6 py-2 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
+            {t("viewAs.banner", {
+              person: `${session.firstName} ${session.lastName}`,
+              roles: session.roles.map((role) => maybe(t, `role.${role}`) ?? role).join(", "),
+              by: session.viewAs.byName,
+            })}
+          </div>
+        ) : null}
 
         {/*
           Grouped rather than listed. px-6 matches the header above and the
