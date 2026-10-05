@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
-import { listCohorts } from "@/lib/cohorts";
+import { listCohorts, qualificationsForCohorts } from "@/lib/cohorts";
 import { listCourses } from "@/lib/authoring";
 import { maybe } from "@/lib/i18n/maybe";
 import { EmptyState } from "@/components/empty-state";
@@ -34,6 +34,7 @@ export default async function CohortsPage() {
   // a permission a read-only viewer of this page does not necessarily hold.
   const canManage = session.permissions.includes("enrolment:manage");
   const courses = canManage ? await listCourses(session) : [];
+  const walkable = canManage ? await qualificationsForCohorts(session) : [];
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -57,6 +58,7 @@ export default async function CohortsPage() {
               status: course.status,
               version: course.version,
             }))}
+            qualifications={walkable}
           />
         </div>
       ) : null}

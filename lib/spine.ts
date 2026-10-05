@@ -538,6 +538,9 @@ async function computeSteps(
 
     if (releasedThroughCohort && !schedule) {
       blockedBy.push("Opens when you are placed in a cohort.");
+    } else if (schedule?.openAll && !scheduled) {
+      // A cohort of independent learners: everything is released, and only
+      // the order the steps are taken in still applies.
     } else if (releasedThroughCohort && !scheduled) {
       blockedBy.push("Opens when your facilitator releases it to your cohort.");
     } else if (opensAt && opensAt > now) {

@@ -194,6 +194,17 @@ export async function qualificationUsage(
       ),
     );
 
+    // Cohorts walking the whole qualification go with it.
+    add(
+      "cohorts running the whole qualification",
+      await count(
+        tx
+          .select({ n: sql<number>`count(*)::int` })
+          .from(cohorts)
+          .where(eq(cohorts.qualificationId, qualificationId)),
+      ),
+    );
+
     if (courseIds.length > 0) {
       add(
         "cohorts running its courses",

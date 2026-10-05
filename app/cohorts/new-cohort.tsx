@@ -26,9 +26,12 @@ export type CourseOption = {
  */
 export function NewCohort({
   courses,
+  qualifications = [],
   words,
 }: {
   courses: CourseOption[];
+  /** Qualifications a cohort can walk end to end (Roland, 5 October 2026). */
+  qualifications?: { id: string; title: string }[];
   words: { cohort: string; course: string; courses: string; Course: string };
 }) {
   const t = useT();
@@ -58,7 +61,7 @@ export function NewCohort({
     <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{newLabel}</h2>
 
-      {publishable.length === 0 ? (
+      {publishable.length === 0 && qualifications.length === 0 ? (
         <>
           <p className="mt-3 text-sm">
             {t("cohorts.noPublished", { courses: words.courses, cohort: words.cohort, course: words.course })}
@@ -74,16 +77,42 @@ export function NewCohort({
       ) : (
         <form action={act} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5 sm:col-span-2">
-            <span className="block text-sm font-medium">{words.Course}</span>
-            <select name="courseId" required className={field}>
-              {publishable.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                  {course.version ? ` (v${course.version})` : ""}
-                </option>
-              ))}
+            <span className="block text-sm font-medium">{t("cohorts.walks")}</span>
+            <select name="walks" required className={field}>
+              {qualifications.length > 0 ? (
+                <optgroup label={t("cohorts.wholeQualification")}>
+                  {qualifications.map((qualification) => (
+                    <option key={qualification.id} value={`qualification:${qualification.id}`}>
+                      {qualification.title}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              {publishable.length > 0 ? (
+                <optgroup label={words.Course}>
+                  {publishable.map((course) => (
+                    <option key={course.id} value={`course:${course.id}`}>
+                      {course.title}
+                      {course.version ? ` (v${course.version})` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
             </select>
+            <span className="block text-xs text-[var(--muted)]">{t("cohorts.walksNote")}</span>
           </label>
+
+          <fieldset className="space-y-1.5 sm:col-span-2">
+            <legend className="text-sm font-medium">{t("cohorts.release")}</legend>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="radio" name="releaseMode" value="scheduled" defaultChecked className="mt-1" />
+              <span>{t("cohorts.releaseScheduled")}</span>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="radio" name="releaseMode" value="open" className="mt-1" />
+              <span>{t("cohorts.releaseOpen")}</span>
+            </label>
+          </fieldset>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("cohorts.name")}</span>

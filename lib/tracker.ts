@@ -21,6 +21,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { cohortCourseIds } from "./schedule";
 
 /**
  * The tracker: what the client keeps on spreadsheets.
@@ -46,6 +47,8 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
  * Postgres needs the two joins distinguished, and an alias is how.
  */
 const unitQualification = alias(qualifications, "unit_qualification");
+/** The qualification a cohort walks end to end, where it walks one (5 October 2026). */
+const cohortQualification = alias(qualifications, "cohort_qualification");
 
 export class TrackerError extends Error {
   constructor(
@@ -98,14 +101,14 @@ export async function activeProgrammes(
       .select({
         cohortId: cohorts.id,
         cohortName: cohorts.name,
-        courseTitle: courses.title,
+        courseTitle: sql<string>`coalesce(${courses.title}, ${cohortQualification.title})`,
         // A course reaches its qualification through the curriculum module it
         // teaches, or through the study unit it belongs to. Either can be the
         // link and neither is guaranteed, so both are followed and the first
-        // answer wins.
+        // answer wins. A cohort can also walk a qualification itself.
         qualificationTitle: sql<
           string | null
-        >`coalesce(${qualifications.title}, ${unitQualification.title})`,
+        >`coalesce(${cohortQualification.title}, ${qualifications.title}, ${unitQualification.title})`,
         startDate: cohorts.startDate,
         endDate: cohorts.endDate,
         eisaRegistrationDate: cohorts.eisaRegistrationDate,
@@ -116,7 +119,8 @@ export async function activeProgrammes(
         status: cohorts.status,
       })
       .from(cohorts)
-      .innerJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(cohortQualification, eq(cohortQualification.id, cohorts.qualificationId))
       .leftJoin(
         curriculumModules,
         eq(curriculumModules.id, courses.curriculumModuleId),
@@ -280,7 +284,7 @@ export async function cohortGrid(
 ): Promise<CohortGrid> {
   return withTenant(session.organisationId, async (tx) => {
     const [cohort] = await tx
-      .select({ id: cohorts.id, name: cohorts.name, courseId: cohorts.courseId })
+      .select({ id: cohorts.id, name: cohorts.name, courseId: cohorts.courseId, qualificationId: cohorts.qualificationId })
       .from(cohorts)
       .where(eq(cohorts.id, cohortId));
 
@@ -306,7 +310,9 @@ export async function cohortGrid(
         purpose: assessments.purpose,
       })
       .from(assessments)
-      .where(eq(assessments.courseId, cohort.courseId))
+      // Every course the cohort walks: one, or each study unit of its
+      // qualification (5 October 2026).
+      .where(inArray(assessments.courseId, (await cohortCourseIds(tx, cohort)).concat("00000000-0000-0000-0000-000000000000")))
       .orderBy(asc(assessments.title));
 
     if (columns.length === 0 || learners.length === 0) {

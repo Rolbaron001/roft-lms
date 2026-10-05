@@ -205,6 +205,13 @@ person going through it question by question.
   schedule, or when the facilitator presses **Release now** on the cohort's
   page, and not before. A row left empty in the schedule is not released.
   A course that nobody walks in a cohort is not held back.
+- **Two kinds of cohort, two ways of releasing** (Roland, 5 October 2026).
+  A cohort works through either one course or study unit, or a **whole
+  qualification**: every study unit on one schedule, its members enrolled
+  on each study unit that is live and on each one as it is made live. Each
+  cohort releases either **on the schedule** (dates, or Release now) or
+  **everything open**, for learners who study independently; they still
+  take the steps in order (a workbook after the one before is handed in).
 - **Learning material** (videos, diagrams, recordings, slides, documents)
   is added under Learning, Learning material, or from the study unit's own
   page. Each item is kept once and can be added to several study units,

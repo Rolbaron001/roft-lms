@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { DEFAULT_DECLARATION } from "./declaration";
@@ -14,6 +14,7 @@ import {
   cohortMembers,
   cohorts,
   courses,
+  studyUnits,
   curriculumModules,
   curriculumTopics,
   evidenceArtifacts,
@@ -1499,7 +1500,18 @@ async function cohortSizeForLearner(
     .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
     .where(
       and(
-        eq(cohorts.courseId, courseId),
+        // On this course, or on the whole qualification it is a study unit of.
+        or(
+          eq(cohorts.courseId, courseId),
+          inArray(
+            cohorts.qualificationId,
+            tx
+              .select({ id: studyUnits.qualificationId })
+              .from(courses)
+              .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+              .where(eq(courses.id, courseId)),
+          ),
+        ),
         eq(cohortMembers.userId, userId),
         isNull(cohortMembers.leftAt),
       ),

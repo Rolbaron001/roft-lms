@@ -85,8 +85,13 @@ export async function createCohortAction(
 
   const state = await run(
     async () => {
+      // "course:<id>" or "qualification:<id>": a cohort walks one course or a
+      // whole qualification (5 October 2026). A plain courseId still works.
+      const [kind, walkedId] = field(formData, "walks").split(":");
       created = await createCohort(session, {
-        courseId: field(formData, "courseId"),
+        courseId: kind === "course" ? walkedId : field(formData, "courseId") || undefined,
+        qualificationId: kind === "qualification" ? walkedId : undefined,
+        releaseMode: field(formData, "releaseMode") === "open" ? "open" : "scheduled",
         name: field(formData, "name"),
         code: field(formData, "code") || undefined,
         startDate: field(formData, "startDate"),

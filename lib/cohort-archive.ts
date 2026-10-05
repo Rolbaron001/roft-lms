@@ -316,12 +316,18 @@ async function readState(
       name: cohorts.name,
       code: cohorts.code,
       courseId: cohorts.courseId,
+      qualificationId: cohorts.qualificationId,
     })
     .from(cohorts)
     .where(eq(cohorts.id, cohortId));
   if (!cohort) throw new ArchiveError("No such cohort.", "not_found");
 
-  const qualification = await cohortQualification(tx, cohort.courseId);
+  // A cohort walks one course, or a whole qualification (5 October 2026).
+  const qualification = cohort.courseId
+    ? await cohortQualification(tx, cohort.courseId)
+    : cohort.qualificationId
+      ? ((await tx.select({ id: qualifications.id, title: qualifications.title }).from(qualifications).where(eq(qualifications.id, cohort.qualificationId)))[0] ?? null)
+      : null;
 
   const members = await tx
     .select({

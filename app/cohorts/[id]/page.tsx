@@ -54,7 +54,10 @@ export default async function CohortPage({
     throw error;
   }
 
-  const blocked = await said(await blockedLearners(session, detail.cohort.courseId));
+  // Every course the cohort walks: one, or each study unit of a qualification.
+  const blocked = await said(
+    (await Promise.all(detail.courseIds.map((courseId) => blockedLearners(session, courseId)))).flat(),
+  );
   const active = detail.members.filter((member) => member.leftAt === null);
 
   const canManage = session.permissions.includes("enrolment:manage");
@@ -74,11 +77,9 @@ export default async function CohortPage({
     : [];
   const tasks = await cohortTaskList(session, detail.cohort.id);
 
-  const timings = await stepTimings(
-    session,
-    detail.cohort.id,
-    detail.cohort.courseId,
-  );
+  const timings = (
+    await Promise.all(detail.courseIds.map((courseId) => stepTimings(session, detail.cohort.id, courseId)))
+  ).flat();
   const stalled = timings.filter((row) => row.inProgress > 0);
 
   // Only somebody who can change the register needs the list of who could join
@@ -114,6 +115,12 @@ export default async function CohortPage({
             </>
           ) : null}
         </p>
+        {detail.qualificationTitle ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.walksQualification", { qualification: detail.qualificationTitle })}</p>
+        ) : null}
+        {detail.cohort.releaseMode === "open" ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.openAll")}</p>
+        ) : null}
       </div>
 
       {/*
@@ -346,7 +353,7 @@ export default async function CohortPage({
         </Card>
       </div>
 
-      {canManage && detail.steps.length > 0 ? (
+      {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
         <div className="mt-6">
           <Card title={t("cohort.reachTitle")} description={t("cohort.reachIntro")}>
             <ReleaseControls

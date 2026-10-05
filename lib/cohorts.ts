@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   cohortMembers,
@@ -6,13 +6,15 @@ import {
   courseSteps,
   courses,
   enrolments,
+  qualifications,
   stepReleases,
+  studyUnits,
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { enrolUser } from "./enrolment";
-import { dayFrom } from "./schedule";
+import { cohortCourseIds, dayFrom } from "./schedule";
 import { resolveTitles } from "./spine";
 
 // Re-exported so callers keep one import for everything about a cohort.
@@ -42,7 +44,12 @@ export class CohortError extends Error {
 export async function createCohort(
   session: AuthenticatedSession,
   input: {
-    courseId: string;
+    /** One course or study unit; or name a qualification instead. */
+    courseId?: string;
+    /** A whole qualification, every study unit on one schedule. */
+    qualificationId?: string;
+    /** "scheduled" (the default) or "open": everything at once. */
+    releaseMode?: "scheduled" | "open";
     name: string;
     code?: string;
     startDate: string;
@@ -55,20 +62,26 @@ export async function createCohort(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) {
     throw new CohortError("Give the start date as YYYY-MM-DD.", "invalid");
   }
+  if (Boolean(input.courseId) === Boolean(input.qualificationId)) {
+    throw new CohortError("Choose either a course or a whole qualification for the cohort.", "invalid");
+  }
 
   return withTenant(session.organisationId, async (tx) => {
-    const [course] = await tx
-      .select({ id: courses.id, status: courses.status })
-      .from(courses)
-      .where(eq(courses.id, input.courseId));
-
-    if (!course) throw new CohortError("No such course.", "not_found");
+    if (input.courseId) {
+      const [course] = await tx.select({ id: courses.id }).from(courses).where(eq(courses.id, input.courseId));
+      if (!course) throw new CohortError("No such course.", "not_found");
+    } else {
+      const [qualification] = await tx.select({ id: qualifications.id }).from(qualifications).where(eq(qualifications.id, input.qualificationId!));
+      if (!qualification) throw new CohortError("No such qualification.", "not_found");
+    }
 
     const [cohort] = await tx
       .insert(cohorts)
       .values({
         organisationId: session.organisationId,
-        courseId: input.courseId,
+        courseId: input.courseId ?? null,
+        qualificationId: input.qualificationId ?? null,
+        releaseMode: input.releaseMode === "open" ? "open" : "scheduled",
         name: input.name.trim(),
         code: input.code?.trim() || null,
         startDate: input.startDate,
@@ -164,26 +177,10 @@ export async function addMember(
 
   // Somebody re-joining after a break is already enrolled, and enrolling them
   // twice is refused. The cohort is the register; the enrolment is what lets
-  // them open anything. Only the missing half is created.
-  const alreadyEnrolled = await withTenant(
-    session.organisationId,
-    async (tx) => {
-      const [existing] = await tx
-        .select({ id: enrolments.id })
-        .from(enrolments)
-        .where(
-          and(
-            eq(enrolments.courseId, cohort.courseId),
-            eq(enrolments.userId, userId),
-          ),
-        );
-      return Boolean(existing);
-    },
-  );
-
-  if (!alreadyEnrolled) {
-    await enrolUser(session, { userId, courseId: cohort.courseId });
-  }
+  // them open anything. Only the missing half is created. A cohort that walks
+  // a whole qualification enrols on every study unit that is live; one made
+  // live later is added for its members then (enrolCohortsOnCourse).
+  await enrolOnCohortCourses(session, cohort, userId);
 
   return withTenant(session.organisationId, async (tx) => {
     const [member] = await tx
@@ -212,6 +209,48 @@ export async function addMember(
 
     return member;
   });
+}
+
+async function enrolOnCohortCourses(
+  session: AuthenticatedSession,
+  cohort: { courseId: string | null; qualificationId: string | null },
+  userId: string,
+) {
+  const { courseIds, published, enrolled } = await withTenant(session.organisationId, async (tx) => {
+    const ids = await cohortCourseIds(tx, cohort);
+    const live = ids.length ? await tx.select({ id: courses.id }).from(courses).where(and(inArray(courses.id, ids), eq(courses.status, "published"))) : [];
+    const mine = ids.length ? await tx.select({ courseId: enrolments.courseId }).from(enrolments).where(and(inArray(enrolments.courseId, ids), eq(enrolments.userId, userId))) : [];
+    return { courseIds: ids, published: new Set(live.map((row) => row.id)), enrolled: new Set(mine.map((row) => row.courseId)) };
+  });
+  for (const courseId of courseIds) {
+    if (enrolled.has(courseId)) continue;
+    // A single course must be live to join; a qualification's units are
+    // joined as they go live.
+    if (cohort.qualificationId && !published.has(courseId)) continue;
+    await enrolUser(session, { userId, courseId, qualificationId: cohort.qualificationId ?? undefined });
+  }
+}
+
+/**
+ * Enrols the members of every qualification cohort on a study unit that has
+ * just gone live, so a cohort formed before the qualification was finished
+ * gains each unit as it is made live.
+ */
+export async function enrolCohortsOnCourse(session: AuthenticatedSession, courseId: string) {
+  const memberships = await withTenant(session.organisationId, async (tx) => {
+    const [unit] = await tx
+      .select({ qualificationId: studyUnits.qualificationId })
+      .from(courses)
+      .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+      .where(eq(courses.id, courseId));
+    if (!unit) return [];
+    return tx
+      .select({ userId: cohortMembers.userId, courseId: cohorts.courseId, qualificationId: cohorts.qualificationId })
+      .from(cohortMembers)
+      .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+      .where(and(eq(cohorts.qualificationId, unit.qualificationId), isNull(cohortMembers.leftAt)));
+  });
+  for (const member of memberships) await enrolOnCohortCourses(session, member, member.userId);
 }
 
 export async function removeMember(
@@ -279,7 +318,7 @@ export async function setSchedule(
     const steps = await tx
       .select({ id: courseSteps.id })
       .from(courseSteps)
-      .where(eq(courseSteps.courseId, cohort.courseId));
+      .where(inArray(courseSteps.courseId, await cohortCourseIdsOrNone(tx, cohort)));
     const known = new Set(steps.map((step) => step.id));
 
     for (const entry of schedule) {
@@ -372,7 +411,7 @@ export async function setStepReleased(
     const [step] = await tx
       .select({ id: courseSteps.id })
       .from(courseSteps)
-      .where(and(eq(courseSteps.id, stepId), eq(courseSteps.courseId, cohort.courseId)));
+      .where(and(eq(courseSteps.id, stepId), inArray(courseSteps.courseId, await cohortCourseIdsOrNone(tx, cohort))));
     if (!step) throw new CohortError("That step is not on this cohort's course.", "invalid");
 
     const releasedAt = released ? new Date() : null;
@@ -418,12 +457,35 @@ export async function listCohorts(session: AuthenticatedSession) {
         endDate: cohorts.endDate,
         status: cohorts.status,
         courseId: cohorts.courseId,
-        courseTitle: courses.title,
+        qualificationId: cohorts.qualificationId,
+        releaseMode: cohorts.releaseMode,
+        // What the cohort walks: its course, or the whole qualification.
+        courseTitle: sql<string>`coalesce(${courses.title}, ${qualifications.title})`,
       })
       .from(cohorts)
-      .innerJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(qualifications, eq(qualifications.id, cohorts.qualificationId))
       .orderBy(asc(cohorts.startDate)),
   );
+}
+
+/** Qualifications a cohort can walk end to end: those with study units. */
+export async function qualificationsForCohorts(session: AuthenticatedSession) {
+  assertSessionCan(session, "enrolment:read_all");
+  return withTenant(session.organisationId, (tx) =>
+    tx
+      .selectDistinct({ id: qualifications.id, title: qualifications.title })
+      .from(qualifications)
+      .innerJoin(studyUnits, eq(studyUnits.qualificationId, qualifications.id))
+      .orderBy(asc(qualifications.title)),
+  );
+}
+
+/** The steps a cohort's schedule covers: one course's, or every study unit's of its qualification. */
+async function cohortCourseIdsOrNone(tx: TenantDatabase, cohort: { courseId: string | null; qualificationId: string | null }) {
+  const ids = await cohortCourseIds(tx, cohort);
+  // inArray with nothing matches nothing, which is the right answer.
+  return ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
 }
 
 export async function getCohort(session: AuthenticatedSession, cohortId: string) {
@@ -455,23 +517,41 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
       .from(stepReleases)
       .where(eq(stepReleases.cohortId, cohortId));
 
-    const steps = await tx
-      .select()
-      .from(courseSteps)
-      .where(eq(courseSteps.courseId, cohort.courseId))
-      .orderBy(asc(courseSteps.sortOrder));
+    // Every course the cohort walks, in study unit order, each one's steps in
+    // its own order.
+    const courseIds = await cohortCourseIds(tx, cohort);
+    const unitCodes = new Map(
+      (courseIds.length
+        ? await tx
+            .select({ courseId: courses.id, code: studyUnits.code })
+            .from(courses)
+            .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+            .where(inArray(courses.id, courseIds))
+        : []
+      ).map((row) => [row.courseId, row.code]),
+    );
+    const unordered = courseIds.length ? await tx.select().from(courseSteps).where(inArray(courseSteps.courseId, courseIds)) : [];
+    const steps = unordered.sort((a, b) => courseIds.indexOf(a.courseId) - courseIds.indexOf(b.courseId) || a.sortOrder - b.sortOrder);
     // A step the platform built has no title of its own; it carries the name
     // of what it points at, never a bare "document" (Heidi, 5 October 2026).
     const titles = await resolveTitles(tx, steps);
+    const [qualification] = cohort.qualificationId
+      ? await tx.select({ title: qualifications.title }).from(qualifications).where(eq(qualifications.id, cohort.qualificationId))
+      : [];
 
     return {
       cohort,
+      courseIds,
+      qualificationTitle: qualification?.title ?? null,
       members,
       steps: steps.map((step) => {
         const release = releases.find((row) => row.stepId === step.id);
+        const title = titles.get(step.id) ?? step.title;
         return {
           id: step.id,
-          title: titles.get(step.id) ?? step.title,
+          courseId: step.courseId,
+          // A qualification cohort's steps say which study unit they are in.
+          title: cohort.qualificationId && unitCodes.get(step.courseId) ? `${unitCodes.get(step.courseId)} · ${title}` : title,
           kind: step.kind,
           sortOrder: step.sortOrder,
           opensAfterDays: release?.opensAfterDays ?? null,
@@ -489,6 +569,7 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
           releasedAt: release?.releasedAt ?? null,
           /** Whether a learner on this cohort can reach it today. */
           released:
+            cohort.releaseMode === "open" ||
             Boolean(release?.releasedAt) ||
             (release !== undefined &&
               (release.opensAfterDays === null || dayFrom(cohort.startDate, release.opensAfterDays) <= new Date())),

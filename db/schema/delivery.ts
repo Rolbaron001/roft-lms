@@ -371,10 +371,24 @@ export const cohorts = pgTable(
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
 
-    /** The course this cohort walks. */
-    courseId: uuid("course_id")
-      .notNull()
-      .references(() => courses.id, { onDelete: "cascade" }),
+    /**
+     * The course this cohort walks: one course or one study unit. Null for a
+     * cohort that walks a whole qualification, which names it below instead.
+     */
+    courseId: uuid("course_id").references(() => courses.id, { onDelete: "cascade" }),
+    /**
+     * The qualification a cohort walks end to end: every study unit of it, on
+     * one schedule. Roland, 5 October 2026: "I would prefer that both options
+     * exist", a cohort for one study unit or for the whole qualification,
+     * because providers and their clients run learning both ways.
+     */
+    qualificationId: uuid("qualification_id").references(() => qualifications.id, { onDelete: "cascade" }),
+    /**
+     * How material reaches the cohort. "scheduled": on the schedule's dates or
+     * the facilitator's hand. "open": everything at once, for learners who
+     * study independently (Roland, 5 October 2026).
+     */
+    releaseMode: text("release_mode").notNull().default("scheduled"),
 
     /** "HRM Officer 2026 Intake 1". */
     name: text("name").notNull(),

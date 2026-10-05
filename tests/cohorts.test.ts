@@ -608,6 +608,49 @@ describe("a study unit released through its cohort (Heidi, 5 October 2026)", () 
     expect(steps[2].open).toBe(false);
   });
 
+  it("runs a whole qualification on one schedule, enrolling on every live study unit", async () => {
+    const first = await buildCourse();
+    const second = await buildCourse();
+    const qualificationId = await withTenant(organisationId, async (tx) => {
+      const [qualification] = await tx.insert(qualifications).values({ organisationId, title: "Whole Qual" }).returning({ id: qualifications.id });
+      for (const [index, built] of [first, second].entries()) {
+        const [unit] = await tx.insert(studyUnits).values({ organisationId, qualificationId: qualification.id, code: `SU${index + 1}`, title: `Unit ${index + 1}`, sortOrder: index }).returning({ id: studyUnits.id });
+        await tx.update(courses).set({ studyUnitId: unit.id }).where(eq(courses.id, built.courseId));
+      }
+      return qualification.id;
+    });
+    const cohort = await createCohort(admin, { qualificationId, name: "Whole intake", startDate: "2026-01-05" });
+    const joiner = sessionFor(["learner"], await createPerson(`whole-${suffix()}@cohort.test`, ["learner"]));
+    await addMember(admin, cohort.id, joiner.userId);
+
+    // Enrolled on both units; nothing released yet in either.
+    for (const built of [first, second]) {
+      const steps = await stepsForLearner(joiner, built.courseId, joiner.userId);
+      expect(steps.every((step) => !step.open)).toBe(true);
+    }
+    // One schedule across the units; a step from SU2 opens on its day.
+    await setSchedule(admin, cohort.id, [{ stepId: second.stepIds[0], opensAfterDays: 0 }]);
+    const su2 = await stepsForLearner(joiner, second.courseId, joiner.userId);
+    expect(su2[0].open).toBe(true);
+    const detail = await getCohort(admin, cohort.id);
+    expect(detail.steps).toHaveLength(8);
+    expect(detail.steps[0].title).toMatch(/^SU1 · /);
+  });
+
+  it("opens everything to a cohort of independent learners", async () => {
+    const { courseId } = await buildCourse();
+    await withTenant(organisationId, async (tx) => {
+      const [qualification] = await tx.insert(qualifications).values({ organisationId, title: "Open Qual" }).returning({ id: qualifications.id });
+      const [unit] = await tx.insert(studyUnits).values({ organisationId, qualificationId: qualification.id, code: "SU1", title: "Unit" }).returning({ id: studyUnits.id });
+      await tx.update(courses).set({ studyUnitId: unit.id }).where(eq(courses.id, courseId));
+    });
+    const cohort = await createCohort(admin, { courseId, name: "Independent", startDate: "2026-01-05", releaseMode: "open" });
+    const joiner = sessionFor(["learner"], await createPerson(`open-${suffix()}@cohort.test`, ["learner"]));
+    await addMember(admin, cohort.id, joiner.userId);
+    const steps = await stepsForLearner(joiner, courseId, joiner.userId);
+    expect(steps.every((step) => step.open)).toBe(true);
+  });
+
   it("leaves a course nobody walks in a cohort as it was", async () => {
     const { courseId } = await buildCourse();
     await withTenant(organisationId, async (tx) => {

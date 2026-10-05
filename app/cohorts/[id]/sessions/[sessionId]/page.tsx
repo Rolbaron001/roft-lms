@@ -19,7 +19,8 @@ import {
   users,
 } from "@/db/schema";
 import { sittingRegister } from "@/lib/invigilation";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
+import { cohortCourseIds } from "@/lib/schedule";
 
 /**
  * One session's register.
@@ -85,17 +86,19 @@ export default async function SessionRegisterPage({
       ? { assessments: [], invigilators: [] }
       : await withTenant(session.organisationId, async (tx) => {
           const [cohort] = await tx
-            .select({ courseId: cohorts.courseId })
+            .select({ courseId: cohorts.courseId, qualificationId: cohorts.qualificationId })
             .from(cohorts)
             .where(eq(cohorts.id, id));
+          // One course, or every study unit of a qualification cohort.
+          const courseIds = cohort ? await cohortCourseIds(tx, cohort) : [];
 
-          const papers = cohort
+          const papers = courseIds.length
             ? await tx
                 .select({ id: assessments.id, title: assessments.title })
                 .from(assessments)
                 .where(
                   and(
-                    eq(assessments.courseId, cohort.courseId),
+                    inArray(assessments.courseId, courseIds),
                     eq(assessments.status, "published"),
                   ),
                 )

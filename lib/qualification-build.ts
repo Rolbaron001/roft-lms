@@ -27,6 +27,7 @@ import { resolvePaperCriteria, type CriterionCandidate } from "./criterion-resol
 import { tagItemCriteria } from "./marking";
 import { readDocxText } from "./office";
 import { paperProblems, publishPaper } from "./papers";
+import { enrolCohortsOnCourse } from "./cohorts";
 import { NOT_A_LEARNER_STEP, readProgrammeDocumentForAuthoring, type DocumentKind } from "./programme-documents";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { addPrerequisite, addStep } from "./spine";
@@ -806,6 +807,8 @@ export async function verifyAndPublish(
     // Checked a moment ago; a refusal now means something changed underneath.
     if (!result.ok) return { ok: false, blocking: result.reasons.map((what) => ({ studyUnit: unit.code, what, href: `/courses/${unit.courseId}` })) };
     published += 1;
+    // A cohort formed for the whole qualification gains the unit now it is live.
+    if (session.permissions.includes("enrolment:manage")) await enrolCohortsOnCourse(session, unit.courseId);
   }
 
   await withTenant(session.organisationId, (tx) =>

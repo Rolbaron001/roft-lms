@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
@@ -7,6 +7,7 @@ import {
   cohorts,
   courses,
   learnerProfiles,
+  qualifications,
   users,
 } from "@/db/schema";
 import {
@@ -490,11 +491,13 @@ export async function inheritedFor(
       .select({
         cohortId: cohorts.id,
         cohortName: cohorts.name,
-        programme: courses.title,
+        // Its course, or the whole qualification it walks (5 October 2026).
+        programme: sql<string>`coalesce(${courses.title}, ${qualifications.title})`,
       })
       .from(cohortMembers)
       .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
-      .innerJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(courses, eq(courses.id, cohorts.courseId))
+      .leftJoin(qualifications, eq(qualifications.id, cohorts.qualificationId))
       .where(
         and(
           eq(cohortMembers.userId, learnerId),
