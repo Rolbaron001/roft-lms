@@ -20,6 +20,7 @@ import {
   AddMember,
   RemoveMember,
   ReleaseControls,
+  RolloutImport,
   Reschedule,
   ScheduleEditor,
 } from "./cohort-controls";
@@ -352,6 +353,14 @@ export default async function CohortPage({
           />
         </Card>
       </div>
+
+      {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
+        <div className="mt-6">
+          <Card title={t("rolloutImport.title")} description={t("rolloutImport.intro")}>
+            <RolloutImport cohortId={detail.cohort.id} />
+          </Card>
+        </div>
+      ) : null}
 
       {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
         <div className="mt-6">

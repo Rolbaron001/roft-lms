@@ -7,7 +7,9 @@ import {
   rescheduleCohortAction,
   setScheduleAction,
   setStepReleasedAction,
+  rolloutAction,
   type CohortActionState,
+  type RolloutState,
 } from "../actions";
 import { useT } from "@/components/i18n";
 
@@ -70,6 +72,61 @@ export function Reschedule({
       </form>
       <Result state={state} />
     </div>
+  );
+}
+
+/**
+ * Reading the cohort's roll-out schedule (lib/rollout-import.ts): check
+ * first, then save. The file stays chosen between the two presses.
+ */
+export function RolloutImport({ cohortId }: { cohortId: string }) {
+  const t = useT();
+  const [state, act, pending] = useActionState<RolloutState, FormData>(rolloutAction, {});
+  const preview = state.preview;
+  return (
+    <form action={act} className="space-y-3">
+      <input type="hidden" name="cohortId" value={cohortId} />
+      <input name="file" type="file" accept=".xlsx" required className="block text-sm" />
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" name="mode" value="check" disabled={pending} className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium disabled:opacity-60">
+          {t("rolloutImport.check")}
+        </button>
+        {preview ? (
+          <button type="submit" name="mode" value="apply" disabled={pending} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--brand-primary)" }}>
+            {t("rolloutImport.apply", { steps: preview.entries.length, sessions: preview.sessions })}
+          </button>
+        ) : null}
+      </div>
+      {state.error ? <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+      {state.done ? <p className="text-sm text-[var(--success)]">{state.done}</p> : null}
+      {preview ? (
+        <div className="space-y-2 text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                  <th className="pb-2">{t("cohort.step")}</th>
+                  <th className="pb-2">{t("cohort.opens")}</th>
+                  <th className="pb-2">{t("cohort.due")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.entries.map((entry, index) => (
+                  <tr key={index} className="border-t border-[var(--border)]">
+                    <td className="py-1.5 pr-3">{entry.title}</td>
+                    <td className="py-1.5 pr-3 tabular-nums">{entry.opens ?? "—"}</td>
+                    <td className="py-1.5 tabular-nums">{entry.due ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {preview.unmatched.length > 0 ? <p className="text-[var(--danger)]">{t("rolloutImport.unmatched", { names: preview.unmatched.join(", ") })}</p> : null}
+          {preview.undated.length > 0 ? <p className="text-[var(--muted)]">{t("rolloutImport.undated", { names: preview.undated.join(", ") })}</p> : null}
+          {preview.unused > 0 ? <p className="text-[var(--muted)]">{t("rolloutImport.unused", { count: preview.unused })}</p> : null}
+        </div>
+      ) : null}
+    </form>
   );
 }
 

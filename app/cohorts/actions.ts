@@ -13,6 +13,7 @@ import {
   setStepReleased,
 } from "@/lib/cohorts";
 import { EnrolmentError } from "@/lib/enrolment";
+import { applyRollout, planRollout, readRollout } from "@/lib/rollout-import";
 import {
   scheduleSession,
   SchedulingError,
@@ -187,6 +188,47 @@ export async function setScheduleAction(
     "Schedule saved.",
     [`/cohorts/${cohortId}`],
   ));
+}
+
+export type RolloutState = {
+  error?: string;
+  done?: string;
+  /** What was read, for checking before it is saved. */
+  preview?: { entries: { title: string; opens: string | null; due: string | null }[]; sessions: number; unmatched: string[]; undated: string[]; unused: number };
+};
+
+/**
+ * Reads a roll-out schedule into the cohort (Roland, 7 October 2026). The
+ * first press shows what was read; "apply" saves it. Nothing is saved from a
+ * file nobody has looked at.
+ */
+export async function rolloutAction(_previous: RolloutState, formData: FormData): Promise<RolloutState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return said({ error: "Choose the roll-out spreadsheet first." });
+  try {
+    const parsed = readRollout(new Uint8Array(await file.arrayBuffer()));
+    const plan = await planRollout(session, cohortId, parsed);
+    if (field(formData, "mode") === "apply") {
+      const applied = await applyRollout(session, cohortId, plan);
+      revalidatePath(`/cohorts/${cohortId}`);
+      return said({ done: `Schedule saved: ${applied.scheduled} steps dated, ${applied.sessions} class sessions added.` });
+    }
+    return said({
+      preview: {
+        entries: plan.entries.map(({ title, opens, due }) => ({ title, opens, due })),
+        sessions: plan.sessions.length,
+        unmatched: plan.unmatched,
+        undated: plan.undated,
+        unused: plan.unused.length,
+      },
+    });
+  } catch (error) {
+    if (error instanceof CohortError || error instanceof SchedulingError || error instanceof PermissionDeniedError) return said({ error: error.message });
+    if (error instanceof Error && /roll-out|No such cohort/.test(error.message)) return said({ error: error.message });
+    throw error;
+  }
 }
 
 /** "Release now" on one step, or taking that release back. */

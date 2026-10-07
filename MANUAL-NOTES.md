@@ -255,9 +255,32 @@ person going through it question by question.
   completion threshold in its manifest, the platform decides passed and
   complete from what the package reports.
 
+## 6a. Reading a cohort's roll-out schedule (7 October 2026)
+
+- **Needed:** an Excel sheet with a header row holding **Dates**, and **WB
+  Handout** and **WB Submission** columns (other headings are found by
+  their words: Lectures, Alignment With Curriculum Modules, WB Feedback,
+  Moderation). A row per lecture date.
+- **How things are named:** workbooks as `SU1 WB2` in the hand-out and
+  submission columns; a study unit's start as `Study Unit 2` in the
+  alignment column; a summative as `SU 2 Supervised Summative Assessment`
+  in the alignment column, with its sitting written as `SA2 assessment 10
+  Feb - 12 Feb` in the moderation column. Times as `09:00 to 15:00`.
+- **What happens:** on the cohort's page, Read the roll-out schedule, check
+  what was read, then save. Each workbook opens on its hand-out date and is
+  due on its submission date; the theory guide and workplace module open on
+  the unit's start; the summative opens and is due on its sitting days; a
+  second version of a summative (the re-sit) is left to be released by hand.
+  Every dated row becomes a class session. Feedback dates are read but not
+  yet used.
+
 ## 7. Adding people from a spreadsheet
 
 - **Needed:** columns for first name, last name and email address at least,
-  with headings on the first row (a title above them is tolerated).
+  with headings on the first row (a title above them is tolerated). The
+  learners may be on any sheet of the workbook; the sheet whose headings
+  name people is used. An identity number column may be headed `ID #`.
+- **Email is required.** Everybody signs in with their email address, so a
+  list without an Email column cannot create anyone; the platform says so.
 - **Without it:** nobody can be created from that sheet; the platform says
   which column it could not find.
