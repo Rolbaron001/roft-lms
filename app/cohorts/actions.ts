@@ -14,6 +14,7 @@ import {
 } from "@/lib/cohorts";
 import { EnrolmentError } from "@/lib/enrolment";
 import { applyRollout, planRollout, readRollout } from "@/lib/rollout-import";
+import { autoPlan, setStepDates } from "@/lib/cohort-plan";
 import {
   scheduleSession,
   SchedulingError,
@@ -231,6 +232,28 @@ export async function rolloutAction(_previous: RolloutState, formData: FormData)
   }
 }
 
+/** The planner's "Plan it for me" (lib/cohort-plan.ts). */
+export async function autoPlanAction(_previous: CohortActionState, formData: FormData): Promise<CohortActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  let count = 0;
+  const state = await run(async () => {
+    count = await autoPlan(session, cohortId);
+  }, "", [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`]);
+  return said(state.error ? state : { done: `Planned: ${count} steps dated. Adjust anything below.` });
+}
+
+/** The planner's dates for one item, leaving the rest of the plan alone. */
+export async function setStepDatesAction(_previous: CohortActionState, formData: FormData): Promise<CohortActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  return said(run(
+    () => setStepDates(session, cohortId, field(formData, "stepId"), { opens: field(formData, "opens") || null, due: field(formData, "due") || null }),
+    "Saved.",
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
+  ));
+}
+
 /** "Release now" on one step, or taking that release back. */
 export async function setStepReleasedAction(
   _previous: CohortActionState,
@@ -243,7 +266,7 @@ export async function setStepReleasedAction(
   return said(run(
     () => setStepReleased(session, cohortId, field(formData, "stepId"), released),
     released ? "Released to the cohort." : "Release taken back.",
-    [`/cohorts/${cohortId}`],
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
   ));
 }
 

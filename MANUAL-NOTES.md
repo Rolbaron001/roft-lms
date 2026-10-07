@@ -274,6 +274,26 @@ person going through it question by question.
   Every dated row becomes a class session. Feedback dates are read but not
   yet used.
 
+## 6b. Planning a cohort on the platform (7 October 2026)
+
+- **Where:** a cohort's page, Plan the cohort. The plan shows week by week
+  under each study unit; beside it, what learners see on any chosen day.
+- **Plan it for me** drafts a plan from the qualification itself. Each study
+  unit starts on a lecture day; its theory guide, material and workplace
+  module open then; one workbook a week is handed out and handed in the
+  week after; the summative is sat the week after the last workbook is in
+  and closes two days later; the next study unit starts the week after.
+  Lecture days are the cohort's class sessions where it has them,
+  otherwise the cohort's start weekday. A re-sit paper is never dated.
+  Running it again replaces the dates; anything released by hand stays
+  released.
+- **What it depends on:** workbooks recognised as `WB1`, `WB2` and so on in
+  their titles, so their order is the hand-out order; a second version of a
+  summative marked `V2` in its title, so it is treated as the re-sit.
+- **Changing one thing:** click any item to change its dates or release it
+  now. The change shows in its new week at once. Clearing both dates puts
+  it back to waiting for a hand release.
+
 ## 7. Adding people from a spreadsheet
 
 - **Needed:** columns for first name, last name and email address at least,

@@ -122,6 +122,13 @@ export default async function CohortPage({
         {detail.cohort.releaseMode === "open" ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.openAll")}</p>
         ) : null}
+        <Link
+          href={`/cohorts/${detail.cohort.id}/plan`}
+          className="mt-4 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 hover:bg-[var(--brand-accent)]/10"
+        >
+          <span className="font-semibold">{t("planner.open_link")} →</span>
+          <span className="text-sm text-[var(--muted)]">{t("planner.openIntro")}</span>
+        </Link>
       </div>
 
       {/*
@@ -156,7 +163,7 @@ export default async function CohortPage({
       ) : null}
 
       {canManage ? (
-        <div className="mb-6">
+        <div id="move" className="mb-6 scroll-mt-4">
           <Card title={t("cohort.move")} description={t("cohort.moveIntro")}>
             <Reschedule cohortId={detail.cohort.id} startDate={detail.cohort.startDate} />
           </Card>
@@ -355,7 +362,7 @@ export default async function CohortPage({
       </div>
 
       {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
-        <div className="mt-6">
+        <div id="rollout" className="mt-6 scroll-mt-4">
           <Card title={t("rolloutImport.title")} description={t("rolloutImport.intro")}>
             <RolloutImport cohortId={detail.cohort.id} />
           </Card>

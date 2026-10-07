@@ -42,6 +42,7 @@ import {
   setSchedule,
   setStepReleased,
 } from "@/lib/cohorts";
+import { autoPlan, cohortPlan, setStepDates } from "@/lib/cohort-plan";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -649,6 +650,55 @@ describe("a study unit released through its cohort (Heidi, 5 October 2026)", () 
     await addMember(admin, cohort.id, joiner.userId);
     const steps = await stepsForLearner(joiner, courseId, joiner.userId);
     expect(steps.every((step) => step.open)).toBe(true);
+  });
+
+  it("drafts a plan from the qualification, and changes one item without touching the rest (Roland, 7 October 2026)", async () => {
+    const first = await buildCourse();
+    const second = await buildCourse();
+    const qualificationId = await withTenant(organisationId, async (tx) => {
+      const [qualification] = await tx.insert(qualifications).values({ organisationId, title: "Planned Qual" }).returning({ id: qualifications.id });
+      for (const [index, built] of [first, second].entries()) {
+        const [unit] = await tx.insert(studyUnits).values({ organisationId, qualificationId: qualification.id, code: `SU${index + 1}`, title: `Unit ${index + 1}`, sortOrder: index }).returning({ id: studyUnits.id });
+        await tx.update(courses).set({ studyUnitId: unit.id }).where(eq(courses.id, built.courseId));
+      }
+      return qualification.id;
+    });
+    const cohort = await createCohort(admin, { qualificationId, name: "Planned intake", startDate: "2026-01-05" });
+
+    // Nothing planned yet: every step is listed, none dated.
+    let plan = await cohortPlan(admin, cohort.id);
+    expect(plan.units.map((unit) => unit.code)).toEqual(["SU1", "SU2"]);
+    expect(plan.steps).toHaveLength(8);
+    expect(plan.steps.every((step) => step.opens === null)).toBe(true);
+
+    // With no class sessions, the first unit starts a week in and the next
+    // after the first one's sitting week.
+    expect(await autoPlan(admin, cohort.id)).toBe(8);
+    plan = await cohortPlan(admin, cohort.id);
+    const su1 = plan.steps.filter((step) => step.unitCode === "SU1");
+    const su2 = plan.steps.filter((step) => step.unitCode === "SU2");
+    expect(su1.every((step) => step.opens === "2026-01-12")).toBe(true);
+    expect(su2.every((step) => step.opens === "2026-01-26")).toBe(true);
+
+    // One item moved; the others keep their dates.
+    await setStepDates(admin, cohort.id, first.stepIds[1], { opens: "2026-02-02", due: "2026-02-09" });
+    plan = await cohortPlan(admin, cohort.id);
+    const moved = plan.steps.find((step) => step.id === first.stepIds[1])!;
+    expect([moved.opens, moved.due]).toEqual(["2026-02-02", "2026-02-09"]);
+    expect(plan.steps.find((step) => step.id === first.stepIds[0])!.opens).toBe("2026-01-12");
+
+    // Undated, it waits for a hand release again.
+    await setStepDates(admin, cohort.id, first.stepIds[1], { opens: null, due: null });
+    plan = await cohortPlan(admin, cohort.id);
+    expect(plan.steps.find((step) => step.id === first.stepIds[1])!.opens).toBeNull();
+
+    // Due before it opens is refused, as is a step from another course.
+    await expect(setStepDates(admin, cohort.id, first.stepIds[0], { opens: "2026-02-09", due: "2026-02-02" })).rejects.toThrow(/due before it opens/);
+    const stranger = await buildCourse();
+    await expect(setStepDates(admin, cohort.id, stranger.stepIds[0], { opens: "2026-02-02", due: null })).rejects.toThrow(/not on this cohort/);
+
+    // A learner cannot plan.
+    await expect(autoPlan(learner, cohort.id)).rejects.toThrow();
   });
 
   it("leaves a course nobody walks in a cohort as it was", async () => {
