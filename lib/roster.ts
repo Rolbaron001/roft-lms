@@ -45,7 +45,8 @@ const HEADING_RULES: { field: RosterField; match: RegExp }[] = [
   { field: "email", match: /e-?mail|email address/i },
   {
     field: "nationalId",
-    match: /identity|\bid\b.*(number|no)|\bid_?number|sa ?id|national ?id/i,
+    // "ID #" as Curiosa's cohort list writes it (7 October 2026).
+    match: /identity|\bid\b.*(number|no)|\bid\s*#|\bid_?number|sa ?id|national ?id/i,
   },
   { field: "firstName", match: /first ?name|given ?name|forename|voornaam/i },
   { field: "lastName", match: /last ?name|surname|family ?name|van\b/i },

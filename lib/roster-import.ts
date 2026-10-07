@@ -117,12 +117,17 @@ export function readGrid(filename: string, bytes: Uint8Array): string[][] {
     if (sheets.length === 0) {
       throw new RosterError("That workbook has no sheets in it.", "empty");
     }
-    // The first sheet with more than a header on it. A workbook often opens on
-    // an instructions tab, and reading that finds no learners and says the
-    // file is empty, which is true of the sheet and wrong about the file.
-    const usable =
-      sheets.find((sheet) => sheet.rows.length > 1) ?? sheets[0];
-    return usable.rows.map((row) => row.map((cell) => String(cell ?? "")));
+    // The sheet that holds people: the one whose header row names the most
+    // learner fields. A workbook often opens on another tab. Curiosa's cohort
+    // workbook (7 October 2026) opens on its roll-out schedule and keeps the
+    // learners on the second sheet, and reading the first found no headings.
+    const grids = sheets.map((sheet) => sheet.rows.map((row) => row.map((cell) => String(cell ?? ""))));
+    const score = (grid: string[][]) => {
+      const mapping = detectColumns(grid[findHeaderRow(grid)] ?? []).mapping;
+      return ROSTER_FIELDS.filter((field) => mapping[field] !== undefined).length;
+    };
+    const best = grids.reduce((chosen, grid) => (score(grid) > score(chosen) ? grid : chosen), grids.find((grid) => grid.length > 1) ?? grids[0]);
+    return best;
   }
 
   throw new RosterError(

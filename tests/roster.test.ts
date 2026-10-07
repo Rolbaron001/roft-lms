@@ -1,10 +1,44 @@
 import { describe, expect, it } from "vitest";
+import { strToU8, zipSync } from "fflate";
 import {
   detectColumns,
   findHeaderRow,
   readRows,
   type ColumnMap,
 } from "@/lib/roster";
+import { readGrid } from "@/lib/roster-import";
+
+/** A workbook of plain-text sheets, written by hand: rows of cells per sheet. */
+function workbook(sheets: { name: string; rows: string[][] }[]): Uint8Array {
+  const column = (index: number) => String.fromCharCode(65 + index);
+  const files: Record<string, Uint8Array> = {
+    "[Content_Types].xml": strToU8("<Types/>"),
+    "xl/workbook.xml": strToU8(`<workbook><sheets>${sheets.map((sheet, index) => `<sheet name="${sheet.name}" sheetId="${index + 1}"/>`).join("")}</sheets></workbook>`),
+  };
+  sheets.forEach((sheet, index) => {
+    const rows = sheet.rows
+      .map((cells, rowIndex) => `<row r="${rowIndex + 1}">${cells.map((cell, cellIndex) => `<c r="${column(cellIndex)}${rowIndex + 1}" t="inlineStr"><is><t>${cell}</t></is></c>`).join("")}</row>`)
+      .join("");
+    files[`xl/worksheets/sheet${index + 1}.xml`] = strToU8(`<worksheet><sheetData>${rows}</sheetData></worksheet>`);
+  });
+  return zipSync(files);
+}
+
+describe("a cohort workbook with the learners on a later sheet (7 October 2026)", () => {
+  it("reads the sheet that holds people, not the schedule it opens on, and knows ID #", () => {
+    const bytes = workbook([
+      { name: "RollOut", rows: [["Training Roll-Out Schedule"], ["Lecture #", "Dates", "Lectures"], ["1", "2026-10-13", "Study Unit 1"]] },
+      { name: "Learners", rows: [["Cohort Learners"], ["Induction: Tuesday"], [], ["Entry #", "ID #", "First Name", "Middle Name", "Surname", "Employer"], ["1", "0000000000000", "Thandi", "", "Example", "Acme"]] },
+    ]);
+    const grid = readGrid("cohort.xlsx", bytes);
+    const header = findHeaderRow(grid);
+    const { mapping } = detectColumns(grid[header]);
+    expect(grid[header]).toContain("First Name");
+    expect(mapping.nationalId).toBe(1);
+    expect(mapping.firstName).toBe(2);
+    expect(mapping.lastName).toBe(4);
+  });
+});
 
 describe("detectColumns", () => {
   it("recognises the headings a platform would choose", () => {
