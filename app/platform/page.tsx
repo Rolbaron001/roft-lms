@@ -63,7 +63,8 @@ export default async function PlatformPage() {
                 {tenants.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-b border-[var(--border)] last:border-0"
+                    id={`tenant-${row.id}`}
+                    className="scroll-mt-28 border-b border-[var(--border)] last:border-0 target:bg-[var(--brand-accent)]/10"
                   >
                     <td className="py-2.5 pr-4">
                       <span className="font-medium">{row.displayName}</span>

@@ -14,6 +14,19 @@ import { listAssessorQueue, listModerationQueue } from "@/lib/assessment";
 import { adminDashboard } from "@/lib/dashboard";
 import { PageNav } from "@/components/page-nav";
 import { AdminDashboardView } from "./admin-dashboard";
+import { RoleDashboardView } from "./role-dashboard";
+import { combineDashboards, type RoleDashboard } from "@/lib/dashboard-kit";
+import {
+  assessorDashboard,
+  coachDashboard,
+  facilitatorDashboard,
+  learnerDashboard,
+  managerDashboard,
+  moderatorDashboard,
+  platformDashboard,
+  sdfDashboard,
+  verifierDashboard,
+} from "@/lib/role-dashboards";
 
 function dueLabel(t: Translate, dueDate: Date | null, status: string): string | null {
   if (!dueDate || status === "completed") return null;
@@ -93,10 +106,49 @@ export default async function HomePage() {
   const dashboard = isAdministrator ? await adminDashboard(session, { leisaTargetHours: tenant.leisaTargetHours }) : null;
   const hasOwnLearning = standalone.length + paths.length + myQualifications.length + statements.length + certificates.length + earned.length > 0;
 
+  // Every other role's dashboard, combined into one for a person with several
+  // (job sheet D25). The administrator's covers what a skills development
+  // facilitator would see, so it is not repeated. One that fails is left out
+  // rather than taking the home page down with it.
+  const kit = { t, day, now: new Date() };
+  const roles = session.roles;
+  const builders: [boolean, () => Promise<RoleDashboard>][] = [
+    [roles.includes("platform_owner"), () => platformDashboard(session, kit)],
+    [roles.includes("instructor"), () => facilitatorDashboard(session, kit)],
+    [roles.includes("assessor"), () => assessorDashboard(session, kit)],
+    [roles.includes("moderator"), () => moderatorDashboard(session, kit)],
+    [roles.includes("skills_development_facilitator") && !isAdministrator, () => sdfDashboard(session, kit, tenant.leisaTargetHours)],
+    [roles.includes("workplace_coach"), () => coachDashboard(session, kit)],
+    [roles.includes("line_manager"), () => managerDashboard(session, kit)],
+    [roles.includes("external_verifier"), () => verifierDashboard(session, kit)],
+  ];
+  const parts = (
+    await Promise.all(
+      builders
+        .filter(([wanted]) => wanted)
+        .map(([, build]) =>
+          build().catch((error: unknown) => {
+            console.error("A dashboard could not be built", error);
+            return null;
+          }),
+        ),
+    )
+  ).filter((part): part is RoleDashboard => part !== null);
+  const staffDashboard = parts.length ? combineDashboards(parts) : null;
+  // The learner's own: what to do now, above their qualification and courses.
+  const learnerView =
+    roles.includes("learner") || (!dashboard && !staffDashboard && hasOwnLearning)
+      ? await learnerDashboard(session, kit).catch((error: unknown) => {
+          console.error("The learner's dashboard could not be built", error);
+          return null;
+        })
+      : null;
+  const anyDashboard = Boolean(dashboard || staffDashboard || learnerView);
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        {dashboard ? <p className="text-sm text-[var(--muted)]">{day(new Date())}</p> : null}
+        {anyDashboard ? <p className="text-sm text-[var(--muted)]">{day(new Date())}</p> : null}
         <h1 className="text-xl font-semibold">
           {session.firstName} {session.lastName}
         </h1>
@@ -113,16 +165,30 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {dashboard ? (
-        <>
-          <PageNav />
-          <AdminDashboardView data={dashboard} t={t} day={day} />
-        </>
+      {anyDashboard ? <PageNav /> : null}
+
+      {dashboard ? <AdminDashboardView data={dashboard} t={t} day={day} /> : null}
+
+      {staffDashboard ? (
+        <div className={dashboard ? "mt-10" : undefined}>
+          <RoleDashboardView
+            data={staffDashboard}
+            todayTitle={dashboard ? t("dash.alsoYours") : (staffDashboard.heading?.title ?? t("rd.needsYou"))}
+            todayIntro={staffDashboard.heading?.intro ?? t("rd.needsYouIntro")}
+            nothing={t("rd.nothing")}
+          />
+        </div>
       ) : null}
 
-      <div className={dashboard ? (hasOwnLearning || owed.length > 0 ? "mt-10 space-y-6" : "hidden") : "space-y-6"}>
-        {dashboard && (hasOwnLearning || owed.length > 0) ? <h2 className="text-lg font-semibold">{t("dash.ownLearning")}</h2> : null}
-        {toAssess + toModerate > 0 && !dashboard ? (
+      {learnerView && !dashboard && !staffDashboard ? (
+        <div className="mb-6">
+          <RoleDashboardView data={learnerView} todayTitle={t("rd.toDo")} todayIntro={t("rd.toDoIntro")} nothing={t("rd.nothing")} />
+        </div>
+      ) : null}
+
+      <div className={dashboard || staffDashboard ? (hasOwnLearning || owed.length > 0 ? "mt-10 space-y-6" : "hidden") : "space-y-6"}>
+        {(dashboard || staffDashboard) && (hasOwnLearning || owed.length > 0) ? <h2 className="text-lg font-semibold">{t("dash.ownLearning")}</h2> : null}
+        {toAssess + toModerate > 0 && !anyDashboard ? (
           <Card title={t("home.waiting")}>
             <ul className="space-y-2 text-sm">
               {toAssess > 0 ? (

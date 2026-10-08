@@ -112,7 +112,8 @@ export function ModerationList({
         return (
           <section
             key={item.decisionId}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5"
+            id={`decision-${item.decisionId}`}
+            className="scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 target:border-[var(--brand-accent)]"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

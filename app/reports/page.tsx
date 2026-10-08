@@ -164,7 +164,7 @@ export default async function ReportsPage({
 
       <div className="mt-6 space-y-6">
         {/* The report the platform exists for. */}
-        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="coverage" className="scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -274,7 +274,7 @@ export default async function ReportsPage({
           )}
         </section>
 
-        <Card title={t("reports.byCourse")}>
+        <Card section={{ id: "by-course", label: t("reports.byCourse") }} title={t("reports.byCourse")}>
           {completion.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">{t("reports.nobodyEnrolled")}</p>
           ) : (
@@ -316,7 +316,7 @@ export default async function ReportsPage({
           )}
         </Card>
 
-        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="overdue" className="scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
               {t("reports.overdueTraining")}

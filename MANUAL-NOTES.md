@@ -417,6 +417,44 @@ person going through it question by question.
   missing (most often the payment) says so on its card under the running
   cohorts instead.
 
+## 6j. Every role's dashboard (8 October 2026)
+
+- **Everyone opens on a dashboard** built for what they do. A person with
+  several roles sees one page: every role's counts in one row across the top,
+  most urgent first, then each role's sections. An administrator's own
+  dashboard comes first, with their other roles beneath it.
+- **Everything is a link to the item itself**: a tile opens the one item when
+  there is one, otherwise the list of them; each row opens the session, the
+  submission, the logbook, the cohort or the learner it names. Where a role
+  may not open the working page (a facilitator who does not assess, for
+  instance), the link goes to where the work shows instead.
+- **Facilitator:** sessions today and this week, registers not taken, their
+  cohorts with attendance, workbooks waiting for feedback, learners held up or
+  absent twice running, sittings and inductions coming up. **What it depends
+  on:** the facilitator named on each class session; without that, every
+  running cohort is shown.
+- **Assessor:** summatives and workbooks waiting, oldest first; decisions a
+  moderator referred back; reassessments; sittings in the next six weeks.
+- **Moderator:** the moderation sample, FISA papers being written or with
+  them, appeals on results, moderation packs ready to compile.
+- **Learner:** to do now (a class today, work due within a week, feedback to
+  read, forms to fill in, enrolment documents still needed), what is open now
+  and when it is due, the next classes with the meeting link, results and
+  feedback. Their qualification and courses follow beneath, as before.
+- **Workplace coach:** logbooks waiting for their signature, the learners they
+  supervise, logbooks signed recently, their workplace agreements.
+- **Line manager:** the team's progress, capabilities resting on one person or
+  no one, overdue courses. **What it depends on:** each team member's line
+  manager recorded on their person record.
+- **Skills development facilitator:** the LEISA per cohort (the provider's own
+  target or the QCTO's limit), learners missing statutory details, learners
+  with no induction date, the WSP and ATR, this year's numbers.
+- **External verifier:** read only; the cohort files and each cohort's
+  readiness for the external assessment, the qualifications offered, and the
+  policies and documents library.
+- **Platform owner:** every client organisation with its usage, any without an
+  administrator, and totals across the platform.
+
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 
 - **The bar at the top of every cohort page** names the steps in order: Set
