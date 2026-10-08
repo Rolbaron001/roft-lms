@@ -254,7 +254,7 @@ export const en = {
   // The home page
   "role.platform_owner": "Platform Owner",
   "role.tenant_admin": "Administrator",
-  "role.instructor": "Instructor",
+  "role.instructor": "Facilitator",
   "role.assessor": "Assessor",
   "role.moderator": "Moderator",
   "role.line_manager": "Line Manager",
