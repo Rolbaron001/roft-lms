@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { moderateJudgementAction, type RecognitionState } from "./actions";
@@ -44,7 +45,7 @@ export function ModerateJudgement({ judgementId }: { judgementId: string }) {
 
         <label className="text-sm">
           <span className="text-[var(--muted)]">{t("rpl.grantedOn")}</span>
-          <input type="date" name="grantedOn" required className={`${inputClass} mt-1 block`} />
+          <DateField name="grantedOn" required className={`${inputClass} mt-1 block`} />
         </label>
 
         <button

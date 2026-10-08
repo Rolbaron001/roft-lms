@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import {
@@ -135,12 +136,12 @@ export function CohortTasks({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("tasks.starts")}</span>
-            <input name="startDate" type="date" className={inputClass} />
+            <DateField name="startDate" className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("tasks.due")}</span>
-            <input name="dueDate" type="date" className={inputClass} />
+            <DateField name="dueDate" className={inputClass} />
           </label>
 
           <label className="block space-y-1.5 sm:col-span-4">

@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
@@ -175,13 +176,14 @@ export function Planner({ plan, canManage }: { plan: CohortPlan; canManage: bool
               <p className="text-xs font-semibold uppercase tracking-wide opacity-85">{t("planner.learnersSee")}</p>
               <div className="flex items-center justify-between gap-2">
                 <button type="button" aria-label={t("planner.previousWeek")} onClick={() => setViewDate(day(viewDate, -7))} className="h-10 w-10 rounded-md border border-white/40">‹</button>
-                <input
-                  type="date"
-                  value={viewDate}
-                  onChange={(event) => event.target.value && setViewDate(event.target.value)}
-                  aria-label={t("planner.chooseDay")}
-                  className="rounded-md bg-white/10 px-2 py-1.5 text-base font-semibold text-white [color-scheme:dark]"
-                />
+                <span className="max-w-56 flex-1">
+                  <DateField
+                    value={viewDate}
+                    onChange={(iso) => iso && setViewDate(iso)}
+                    label={t("planner.chooseDay")}
+                    className="rounded-md bg-white/10 px-2 py-1.5 text-base font-semibold text-white placeholder:text-white/70"
+                  />
+                </span>
                 <button type="button" aria-label={t("planner.nextWeek")} onClick={() => setViewDate(day(viewDate, 7))} className="h-10 w-10 rounded-md border border-white/40">›</button>
               </div>
             </div>
@@ -251,12 +253,12 @@ function StepEditor({ cohortId, step, onDone }: { cohortId: string; step: PlanSt
         <input type="hidden" name="stepId" value={step.id} />
         <label className="flex flex-col gap-1 text-xs">
           {t("planner.opensOn")}
-          <input name="opens" type="date" defaultValue={step.opens ?? ""} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm" />
+          <DateField name="opens" defaultValue={step.opens ?? ""} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm" />
         </label>
         {step.category === "workbook" || step.category === "summative" ? (
           <label className="flex flex-col gap-1 text-xs">
             {step.category === "summative" ? t("planner.closesOn") : t("planner.dueOn")}
-            <input name="due" type="date" defaultValue={step.due ?? ""} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm" />
+            <DateField name="due" defaultValue={step.due ?? ""} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm" />
           </label>
         ) : null}
         <button type="submit" disabled={pending} className="h-10 rounded-md px-3 text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--brand-primary)" }}>

@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { recordTransferAction, type RecognitionState } from "./actions";
@@ -108,8 +109,7 @@ export function RecordTransfer({
 
         <label className="block text-sm">
           <span className="text-[var(--muted)]">{t("rpl.awardedOn")}</span>
-          <input
-            type="date"
+          <DateField
             name="awardedOn"
             defaultValue={kept.awardedOn}
             className={`${inputClass} mt-1 block w-full`}
@@ -118,8 +118,7 @@ export function RecordTransfer({
 
         <label className="block text-sm">
           <span className="text-[var(--muted)]">{t("rpl.approvedOn")}</span>
-          <input
-            type="date"
+          <DateField
             name="approvedOn"
             required
             defaultValue={kept.approvedOn}

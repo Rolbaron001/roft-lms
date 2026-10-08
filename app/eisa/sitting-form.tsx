@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { recordSittingAction, type EisaActionState } from "./actions";
@@ -28,11 +29,11 @@ export function SittingForm() {
         <input name="name" required placeholder={t("eisa.sittingName")} className={inputClass} />
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">{t("eisa.sitting")}</span>
-          <input type="date" name="sittingDate" required className={inputClass} />
+          <DateField name="sittingDate" required className={inputClass} />
         </label>
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">{t("eisa.registrationCloses")}</span>
-          <input type="date" name="registrationCloses" required className={inputClass} />
+          <DateField name="registrationCloses" required className={inputClass} />
         </label>
       </div>
 

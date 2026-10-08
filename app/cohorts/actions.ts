@@ -304,9 +304,12 @@ export async function scheduleSessionAction(
         sequence: field(formData, "sequence")
           ? Number(field(formData, "sequence"))
           : undefined,
+        studyUnitId: field(formData, "studyUnitId") || undefined,
+        handoutAssessmentId: field(formData, "handoutAssessmentId") || undefined,
+        handinAssessmentId: field(formData, "handinAssessmentId") || undefined,
       }),
     "Session added to the schedule.",
-    [`/cohorts/${cohortId}`],
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
   ));
 }
 

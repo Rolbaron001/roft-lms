@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { bulkEnrolAction, enrolOneAction, type EnrolState } from "./actions";
@@ -72,7 +73,7 @@ export function EnrolmentPanel({
               {t("courseEnrol.dueDate")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input type="date" name="dueDate" className={inputClass} />
+            <DateField name="dueDate" className={inputClass} />
           </label>
 
           <Message state={oneState} />
@@ -113,7 +114,7 @@ export function EnrolmentPanel({
               {t("courseEnrol.dueDate")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input type="date" name="dueDate" className={inputClass} />
+            <DateField name="dueDate" className={inputClass} />
           </label>
 
           <Message state={bulkState} />

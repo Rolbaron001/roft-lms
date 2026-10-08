@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -146,8 +147,7 @@ export function Grievances({
                     <span className="mr-2 text-[var(--muted)]">
                       {t("grievance.meeting")}
                     </span>
-                    <input
-                      type="date"
+                    <DateField
                       name="meetingHeldOn"
                       defaultValue={today}
                       required

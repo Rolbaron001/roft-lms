@@ -1,10 +1,11 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { scheduleSessionAction } from "@/app/cohorts/actions";
 import type { CohortActionState } from "@/app/cohorts/actions";
-import type { ScheduledSession } from "@/lib/scheduling";
+import type { ScheduledSession, SessionChoices } from "@/lib/scheduling";
 import { ProviderClockNote } from "@/components/zoned-time";
 import { useDay, useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
@@ -36,6 +37,7 @@ export function Rollout({
   sessions,
   canManage,
   canRegister,
+  choices,
 }: {
   cohortId: string;
   /** The provider's clock. Every time in the timetable is on it. */
@@ -43,9 +45,14 @@ export function Rollout({
   sessions: ScheduledSession[];
   canManage: boolean;
   canRegister: boolean;
+  /** The cohort's study units and workbooks, for the form (D17). */
+  choices: SessionChoices;
 }) {
   const t = useT();
   const { day } = useDay();
+  const [kind, setKind] = useState<string>("lecture");
+  const [unitId, setUnitId] = useState<string>(choices.units.length === 1 ? choices.units[0].id : "");
+  const offered = choices.workbooks.filter((book) => !unitId || book.studyUnitId === unitId);
   const [state, action, pending] = useActionState<CohortActionState, FormData>(
     scheduleSessionAction,
     {},
@@ -65,7 +72,7 @@ export function Rollout({
                   <th className="pb-2">#</th>
                   <th className="pb-2">{t("rollout.date")}</th>
                   <th className="pb-2">{t("rollout.session")}</th>
-                  <th className="pb-2">{t("rollout.covers")}</th>
+                  <th className="pb-2">{t("rollout.studyUnit")}</th>
                   <th className="pb-2">{t("rollout.workbooks")}</th>
                   <th className="pb-2">{t("rollout.register")}</th>
                 </tr>
@@ -129,12 +136,12 @@ export function Rollout({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("rollout.date")}</span>
-            <input name="scheduledDate" type="date" required className={inputClass} />
+            <DateField name="scheduledDate" required className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("rollout.kind")}</span>
-            <select name="kind" defaultValue="lecture" className={inputClass}>
+            <select name="kind" value={kind} onChange={(event) => setKind(event.target.value)} className={inputClass}>
               {KINDS.map((value) => (
                 <option key={value} value={value}>
                   {t(`session.kind.${value}`)}
@@ -148,8 +155,66 @@ export function Rollout({
               {t("rollout.number")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input name="sequence" type="number" min={1} className={inputClass} />
+            {kind === "lecture" ? (
+              <input key={choices.nextLecture} name="sequence" type="number" min={1} defaultValue={choices.nextLecture} className={inputClass} />
+            ) : (
+              <input name="sequence" type="number" min={1} className={inputClass} />
+            )}
+            <span className="block text-xs text-[var(--muted)]">{t("rollout.numberNote")}</span>
           </label>
+
+          {choices.units.length > 0 ? (
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">{t("rollout.studyUnit")}</span>
+              <select name="studyUnitId" value={unitId} onChange={(event) => setUnitId(event.target.value)} className={inputClass}>
+                <option value="">{t("rollout.noUnit")}</option>
+                {choices.units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.code} {unit.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {offered.length > 0 ? (
+            <>
+              <label className="block space-y-1.5">
+                <span className="block text-sm font-medium">
+                  {kind === "summative" || kind === "mock_eisa" ? t("rollout.sat") : t("rollout.handout")}{" "}
+                  <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
+                </span>
+                <select name="handoutAssessmentId" defaultValue="" className={inputClass}>
+                  <option value="">{t("rollout.none")}</option>
+                  {offered
+                    .filter((book) => (kind === "summative" || kind === "mock_eisa" ? book.summative : !book.summative))
+                    .map((book) => (
+                      <option key={book.assessmentId} value={book.assessmentId}>
+                        {book.title}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {kind === "summative" || kind === "mock_eisa" ? null : (
+                <label className="block space-y-1.5">
+                  <span className="block text-sm font-medium">
+                    {t("rollout.handin")} <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
+                  </span>
+                  <select name="handinAssessmentId" defaultValue="" className={inputClass}>
+                    <option value="">{t("rollout.none")}</option>
+                    {offered
+                      .filter((book) => !book.summative)
+                      .map((book) => (
+                        <option key={book.assessmentId} value={book.assessmentId}>
+                          {book.title}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+              <p className="text-xs text-[var(--muted)] sm:col-span-3">{t("rollout.datesNote")}</p>
+            </>
+          ) : null}
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("rollout.starts")}</span>
@@ -175,7 +240,7 @@ export function Rollout({
               {t("rollout.link")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input name="meetingUrl" type="url" placeholder="https://…" className={inputClass} />
+            <input name="meetingUrl" type="text" inputMode="url" placeholder={t("rollout.linkHint")} className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">

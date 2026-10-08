@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -103,11 +104,10 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("enrolNotify.inductionDate")}</span>
-          <input
+          <DateField
             name="inductionOn"
-            type="date"
             value={inductionOn}
-            onChange={(e) => setInductionOn(e.target.value)}
+            onChange={setInductionOn}
             className={`${input} w-full`}
           />
           <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.clockFrom")}</span>
@@ -221,7 +221,7 @@ export function AcknowledgeForm({
       </label>
       <label className="space-y-1">
         <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.on")}</span>
-        <input name="acknowledgedOn" type="date" className={input} />
+        <DateField name="acknowledgedOn" className={input} />
       </label>
       <button
         type="submit"
@@ -272,7 +272,7 @@ export function OwnInductionForm({ rows }: { rows: DueRow[] }) {
       <input type="hidden" name="cohortId" value={candidates[0].cohortId ?? ""} />
       <label className="space-y-1">
         <span className="block text-xs text-[var(--muted)]">{t("enrolNotify.theirOwn")}</span>
-        <input name="inductionOn" type="date" className={input} />
+        <DateField name="inductionOn" className={input} />
       </label>
       <button
         type="submit"

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cohortAttendance, cohortSchedule } from "@/lib/scheduling";
+import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduling";
+import { cohortLeisa } from "@/lib/statutory-notification";
+import { CohortLeisa } from "./leisa";
 import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
 import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
@@ -70,6 +72,18 @@ export default async function CohortPage({
   const canRegister = session.permissions.includes("attendance:record");
 
   const rollout = await cohortSchedule(session, detail.cohort.id);
+  const choices = await sessionChoices(session, detail.cohort.id);
+
+  // The LEISA, for whoever makes the statutory returns (D19).
+  const canStatutory = session.permissions.includes("report:statutory");
+  const leisa = canStatutory ? await said(await cohortLeisa(session, detail.cohort.id)) : null;
+  const leisaGaps = leisa
+    ? [...new Set(leisa.problems.map((problem) => problem.learner))].map((learner) => ({
+        learner,
+        userId: leisa.due.find((row) => `${row.firstName} ${row.lastName}` === learner)?.userId ?? null,
+        fields: leisa.problems.filter((problem) => problem.learner === learner).map((problem) => problem.field),
+      }))
+    : [];
   const attendance = await cohortAttendance(session, detail.cohort.id);
   const grid = await cohortGrid(session, detail.cohort.id);
 
@@ -218,6 +232,30 @@ export default async function CohortPage({
           ) : null}
         </Card>
 
+        {leisa ? (
+          <Card
+            section={{ id: "leisa", label: t("cohortNav.section.leisa") }}
+            title={t("leisa.title")}
+            description={t("leisa.intro")}
+            guide={guide(["leisa.guide.1", "leisa.guide.2", "leisa.guide.3"])}
+          >
+            <CohortLeisa
+              cohortId={detail.cohort.id}
+              cohortName={detail.cohort.name}
+              learners={leisa.due.map((row) => ({
+                userId: row.userId,
+                name: `${row.firstName} ${row.lastName}`,
+                state: row.state,
+                dueOn: row.dueOn,
+                notifiedOn: row.notifiedOn,
+                inductionOn: row.inductionOn,
+                kind: row.kind,
+              }))}
+              gaps={leisaGaps}
+            />
+          </Card>
+        ) : null}
+
         <Card
           section={{ id: "dates", label: t("cohortNav.section.dates") }}
           title={t("cohortGuide.plan")}
@@ -321,6 +359,7 @@ export default async function CohortPage({
             sessions={rollout}
             canManage={canSchedule}
             canRegister={canRegister}
+            choices={choices}
           />
         </Card>
 

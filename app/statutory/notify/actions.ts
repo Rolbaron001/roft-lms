@@ -52,6 +52,8 @@ export async function draftAction(
   }
 
   revalidatePath("/statutory/notify");
+  const fromCohort = String(formData.get("cohortId") ?? "");
+  if (fromCohort) revalidatePath(`/cohorts/${fromCohort}`);
   return said({
     notice: `Drafted, covering ${learnerIds.length} ${learnerIds.length === 1 ? "learner" : "learners"}. Download the workbook, check it, then record that it went.`,
   });

@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import { recordAwardAction, removeAwardAction, type AwardState } from "./actions";
@@ -132,7 +133,7 @@ export function QualificationAward({
       </label>
       <label className="block space-y-1.5">
         <span className="block text-sm font-medium">{t("award.date")}</span>
-        <input name="awardedOn" type="date" required className={inputClass} />
+        <DateField name="awardedOn" required className={inputClass} />
       </label>
       <label className="block space-y-1.5">
         <span className="block text-sm font-medium">{t("award.by")}</span>

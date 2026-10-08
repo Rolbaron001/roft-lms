@@ -1,5 +1,7 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   addMemberAction,
@@ -64,7 +66,7 @@ export function Reschedule({
         <input type="hidden" name="cohortId" value={cohortId} />
         <label className="space-y-1.5">
           <span className="block text-sm font-medium">{t("cohortCtl.start")}</span>
-          <input name="startDate" type="date" defaultValue={startDate} required className={field} />
+          <DateField name="startDate" defaultValue={startDate} required className={field} />
         </label>
         <button type="submit" disabled={pending} className={primary} style={{ background: "var(--brand-primary)" }}>
           {pending ? t("cohortCtl.moving") : t("cohortCtl.move")}
@@ -148,14 +150,30 @@ export function ReleaseControls({
   const t = useT();
   const { day } = useDay();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(setStepReleasedAction, {});
+  // The row just pressed, so its confirmation shows where the eye already is
+  // (Heidi, 8 October 2026: "I've clicked but I don't know what it has done").
+  const [pressed, setPressed] = useState<string | null>(null);
   if (steps.length === 0) return null;
   return (
     <div>
+      <p className="mb-2 text-sm">
+        <Link href={`/cohorts/${cohortId}/plan`} className="font-medium text-[var(--brand-primary)] underline underline-offset-2">
+          {t("cohortCtl.changeInPlanner")}
+        </Link>
+      </p>
       <ul className="divide-y divide-[var(--border)]">
         {steps.map((step) => (
-          <li key={step.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+          <li
+            key={step.id}
+            className={`flex flex-wrap items-center justify-between gap-3 py-2.5 ${pressed === step.id && state.done ? "rounded-md bg-[var(--success)]/10 px-2" : ""}`}
+          >
             <div className="min-w-0">
               <p className="text-sm">{step.title ?? step.kind}</p>
+              {pressed === step.id && state.done ? (
+                <p role="status" className="text-xs font-medium text-[var(--success)]">
+                  {step.releasedAt ? t("cohortCtl.justReleased") : t("cohortCtl.justTakenBack")}
+                </p>
+              ) : null}
               <p className="text-xs text-[var(--muted)]">
                 {step.releasedAt
                   ? t("cohortCtl.releasedByHand", { date: day(step.releasedAt) })
@@ -166,7 +184,7 @@ export function ReleaseControls({
                       : t("cohortCtl.notReleased")}
               </p>
             </div>
-            <form action={act}>
+            <form action={act} onSubmit={() => setPressed(step.id)}>
               <input type="hidden" name="cohortId" value={cohortId} />
               <input type="hidden" name="stepId" value={step.id} />
               <input type="hidden" name="released" value={step.releasedAt ? "no" : "yes"} />
@@ -184,7 +202,6 @@ export function ReleaseControls({
         ))}
       </ul>
       {state.error ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{state.error}</p> : null}
-      {state.done ? <p className="mt-2 text-sm text-[var(--success)]">{state.done}</p> : null}
     </div>
   );
 }

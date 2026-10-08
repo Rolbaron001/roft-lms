@@ -7,13 +7,17 @@ import {
   cohortMembers,
   cohortSessions,
   cohorts,
+  courseSteps,
+  courses,
   curriculumModules,
   notifications,
   sessionWorkbooks,
+  stepReleases,
   studyUnits,
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { cohortCourseIds } from "./schedule";
 import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -73,7 +77,19 @@ export const sessionInput = z.object({
   startTime: z.string().regex(CLOCK, "Use a 24-hour time, e.g. 18:30.").optional(),
   endTime: z.string().regex(CLOCK, "Use a 24-hour time, e.g. 20:30.").optional(),
   deliveryMode: z.enum(["virtual", "in_person", "blended"]).default("virtual"),
-  meetingUrl: z.string().trim().url().max(1000).optional(),
+  // Taken as pasted (Heidi, 8 October 2026): a Google Meet, Teams or Zoom
+  // link with or without its https://.
+  meetingUrl: z
+    .string()
+    .trim()
+    .max(1000)
+    .transform((value) => (value && !/^[a-z]+:\/\//i.test(value) ? `https://${value}` : value))
+    .pipe(z.string().url("That does not look like a meeting link. Paste it as it appears in the invitation."))
+    .optional(),
+  /** The workbook handed out at this session, which then opens on its date (D17). */
+  handoutAssessmentId: z.string().uuid().optional(),
+  /** The workbook handed in at this session, which is then due on its date. */
+  handinAssessmentId: z.string().uuid().optional(),
   venue: z.string().trim().max(300).optional(),
   facilitatorId: z.string().uuid().optional(),
   curriculumModuleId: z.string().uuid().optional(),
@@ -111,13 +127,30 @@ export async function scheduleSession(
 
   return withTenant(session.organisationId, async (tx) => {
     const [cohort] = await tx
-      .select({ id: cohorts.id })
+      .select()
       .from(cohorts)
       .where(eq(cohorts.id, parsed.cohortId));
 
     if (!cohort) {
       throw new SchedulingError("Cohort not found.", "not_found");
     }
+
+    // The study unit, taken from the workbook when only that was chosen.
+    const courseIds = await cohortCourseIds(tx, cohort);
+    const named = [parsed.handoutAssessmentId, parsed.handinAssessmentId].filter((id): id is string => Boolean(id));
+    const steps = named.length && courseIds.length
+      ? await tx
+          .select({ id: courseSteps.id, assessmentId: courseSteps.assessmentId, studyUnitId: courses.studyUnitId })
+          .from(courseSteps)
+          .innerJoin(courses, eq(courses.id, courseSteps.courseId))
+          .where(and(inArray(courseSteps.courseId, courseIds), inArray(courseSteps.assessmentId, named)))
+      : [];
+    for (const id of named) {
+      if (!steps.some((step) => step.assessmentId === id)) {
+        throw new SchedulingError("That workbook is not on this cohort's study units.", "invalid_state");
+      }
+    }
+    const studyUnitId = parsed.studyUnitId ?? steps[0]?.studyUnitId ?? null;
 
     const [created] = await tx
       .insert(cohortSessions)
@@ -134,10 +167,36 @@ export async function scheduleSession(
         venue: parsed.venue ?? null,
         facilitatorId: parsed.facilitatorId ?? null,
         curriculumModuleId: parsed.curriculumModuleId ?? null,
-        studyUnitId: parsed.studyUnitId ?? null,
+        studyUnitId,
         sequence: parsed.sequence ?? null,
       })
       .returning();
+
+    // A workbook handed out here opens on this day, and one handed in is due
+    // on it: the session dates the release, so nothing is dated twice (D17).
+    const offset = Math.max(0, Math.round((Date.parse(parsed.scheduledDate) - Date.parse(cohort.startDate)) / 86_400_000));
+    for (const [assessmentId, role] of [
+      [parsed.handoutAssessmentId, "handout"],
+      [parsed.handinAssessmentId, "submission"],
+    ] as const) {
+      if (!assessmentId) continue;
+      await tx
+        .insert(sessionWorkbooks)
+        .values({ organisationId: session.organisationId, sessionId: created.id, assessmentId, role })
+        .onConflictDoNothing();
+      for (const step of steps.filter((one) => one.assessmentId === assessmentId)) {
+        const [existing] = await tx
+          .select()
+          .from(stepReleases)
+          .where(and(eq(stepReleases.cohortId, cohort.id), eq(stepReleases.stepId, step.id)));
+        const dates = role === "handout" ? { opensAfterDays: offset } : { dueAfterDays: offset };
+        if (existing) {
+          await tx.update(stepReleases).set(dates).where(eq(stepReleases.id, existing.id));
+        } else {
+          await tx.insert(stepReleases).values({ organisationId: session.organisationId, cohortId: cohort.id, stepId: step.id, ...dates });
+        }
+      }
+    }
 
     await recordAudit(tx, {
       organisationId: session.organisationId,
@@ -730,4 +789,56 @@ export function suggestCohortName(
   const yyyy = date.getUTCFullYear();
 
   return `${programmeName.trim()} Cohort ${dd}${mm}${yyyy}`;
+}
+
+export type SessionChoices = {
+  units: { id: string; code: string; title: string }[];
+  workbooks: { assessmentId: string; studyUnitId: string | null; title: string; summative: boolean }[];
+  /** The number the next lecture would carry. */
+  nextLecture: number;
+};
+
+/**
+ * What the class session form offers (job sheet D17, Heidi, 8 October 2026):
+ * the cohort's own study units, the workbooks and summatives on them in
+ * order, and the next lecture number.
+ */
+export async function sessionChoices(session: AuthenticatedSession, cohortId: string): Promise<SessionChoices> {
+  assertSessionCan(session, "enrolment:read_all");
+  return withTenant(session.organisationId, async (tx) => {
+    const [cohort] = await tx.select().from(cohorts).where(eq(cohorts.id, cohortId));
+    if (!cohort) throw new SchedulingError("Cohort not found.", "not_found");
+    const courseIds = await cohortCourseIds(tx, cohort);
+    const units = courseIds.length
+      ? await tx
+          .select({ id: studyUnits.id, code: studyUnits.code, title: studyUnits.title, courseId: courses.id, sortOrder: studyUnits.sortOrder })
+          .from(courses)
+          .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+          .where(inArray(courses.id, courseIds))
+      : [];
+    units.sort((a, b) => a.sortOrder - b.sortOrder);
+    const rows = courseIds.length
+      ? await tx
+          .select({ assessmentId: assessments.id, title: assessments.title, purpose: assessments.purpose, courseId: courseSteps.courseId, sortOrder: courseSteps.sortOrder })
+          .from(courseSteps)
+          .innerJoin(assessments, eq(assessments.id, courseSteps.assessmentId))
+          .where(inArray(courseSteps.courseId, courseIds))
+      : [];
+    const unitOf = new Map(units.map((unit) => [unit.courseId, unit]));
+    rows.sort((a, b) => (unitOf.get(a.courseId)?.sortOrder ?? 0) - (unitOf.get(b.courseId)?.sortOrder ?? 0) || a.sortOrder - b.sortOrder);
+    const [last] = await tx
+      .select({ top: sql<number | null>`max(${cohortSessions.sequence})` })
+      .from(cohortSessions)
+      .where(and(eq(cohortSessions.cohortId, cohortId), eq(cohortSessions.kind, "lecture")));
+    return {
+      units: units.map((unit) => ({ id: unit.id, code: unit.code, title: unit.title })),
+      workbooks: rows.map((row) => ({
+        assessmentId: row.assessmentId,
+        studyUnitId: unitOf.get(row.courseId)?.id ?? null,
+        title: unitOf.get(row.courseId) ? `${unitOf.get(row.courseId)!.code} · ${row.title}` : row.title,
+        summative: row.purpose === "summative",
+      })),
+      nextLecture: (last?.top ?? 0) + 1,
+    };
+  });
 }

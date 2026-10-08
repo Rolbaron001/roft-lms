@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -179,14 +180,14 @@ export function AgreementForm({
           <label htmlFor="startDate" className="block text-sm font-medium">
             {t("wpSetup.starts")}
           </label>
-          <input id="startDate" name="startDate" type="date" className={FIELD} />
+          <DateField id="startDate" name="startDate" className={FIELD} />
         </div>
 
         <div className="space-y-1.5">
           <label htmlFor="endDate" className="block text-sm font-medium">
             {t("wpSetup.ends")}
           </label>
-          <input id="endDate" name="endDate" type="date" className={FIELD} />
+          <DateField id="endDate" name="endDate" className={FIELD} />
         </div>
       </div>
 

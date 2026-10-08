@@ -45,6 +45,13 @@ export function useDates(): string {
   return useContext(Dates);
 }
 
+/** The provider's date style and the reader's settings, for a field that reads a typed date. */
+export function useDateSettings(): DateSettings {
+  const settings = useContext(DateStyleContext);
+  const language = useContext(Dates);
+  return settings ?? { style: DEFAULT_DATE_STYLE, language, device: null, timeZone: DEFAULT_TIME_ZONE };
+}
+
 /** Dates written in the provider's chosen style (lib/date-format.ts). */
 export function useDay(): DateWriter {
   const settings = useContext(DateStyleContext);

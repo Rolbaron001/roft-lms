@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -83,11 +84,11 @@ export function FileDocument({
       <div className="flex flex-wrap gap-2">
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">{t("records.effective")}</span>
-          <input type="date" name="effectiveFrom" className={inputClass} />
+          <DateField name="effectiveFrom" className={inputClass} />
         </label>
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">{t("records.expiresLabel")}</span>
-          <input type="date" name="expiresOn" className={inputClass} />
+          <DateField name="expiresOn" className={inputClass} />
         </label>
       </div>
 

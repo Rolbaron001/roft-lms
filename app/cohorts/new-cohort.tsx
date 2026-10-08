@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import { createCohortAction, type CohortActionState } from "./actions";
@@ -31,7 +32,7 @@ export function NewCohort({
 }: {
   courses: CourseOption[];
   /** Qualifications a cohort can walk end to end (Roland, 5 October 2026). */
-  qualifications?: { id: string; title: string }[];
+  qualifications?: { id: string; title: string; credits?: number | null }[];
   words: { cohort: string; course: string; courses: string; Course: string };
 }) {
   const t = useT();
@@ -42,6 +43,12 @@ export function NewCohort({
   );
 
   const publishable = courses.filter((course) => course.status === "published");
+  const [walks, setWalks] = useState<string>(
+    qualifications[0] ? `qualification:${qualifications[0].id}` : publishable[0] ? `course:${publishable[0].id}` : "",
+  );
+  const [mode, setMode] = useState<"scheduled" | "open">("scheduled");
+  const chosenQualification = walks.startsWith("qualification:") ? qualifications.find((one) => `qualification:${one.id}` === walks) : undefined;
+  const creditBearing = chosenQualification?.credits ?? 0;
   const newLabel = t("cohorts.new", { cohort: words.cohort });
 
   if (!open) {
@@ -78,7 +85,7 @@ export function NewCohort({
         <form action={act} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1.5 sm:col-span-2">
             <span className="block text-sm font-medium">{t("cohorts.walks")}</span>
-            <select name="walks" required className={field}>
+            <select name="walks" required className={field} value={walks} onChange={(event) => setWalks(event.target.value)}>
               {qualifications.length > 0 ? (
                 <optgroup label={t("cohorts.wholeQualification")}>
                   {qualifications.map((qualification) => (
@@ -105,13 +112,24 @@ export function NewCohort({
           <fieldset className="space-y-1.5 sm:col-span-2">
             <legend className="text-sm font-medium">{t("cohorts.release")}</legend>
             <label className="flex items-start gap-2 text-sm">
-              <input type="radio" name="releaseMode" value="scheduled" defaultChecked className="mt-1" />
+              <input type="radio" name="releaseMode" value="scheduled" className="mt-1" checked={mode === "scheduled"} onChange={() => setMode("scheduled")} />
               <span>{t("cohorts.releaseScheduled")}</span>
             </label>
             <label className="flex items-start gap-2 text-sm">
-              <input type="radio" name="releaseMode" value="open" className="mt-1" />
+              <input type="radio" name="releaseMode" value="open" className="mt-1" checked={mode === "open"} onChange={() => setMode("open")} />
               <span>{t("cohorts.releaseOpen")}</span>
             </label>
+            {/*
+              Heidi, 8 October 2026: self-study is not allowed on credit-bearing
+              programmes. No QCTO document held says so, and the QCTO allows
+              online delivery, so this warns rather than refuses: it is Curiosa's
+              rule, and another provider's may differ (job sheet D22).
+            */}
+            {mode === "open" && creditBearing ? (
+              <p role="alert" className="rounded-md border border-[#b7791f]/40 bg-[#fbefd9] px-3 py-2 text-sm text-[#7a4f10]">
+                {t("cohorts.openCredits", { credits: creditBearing })}
+              </p>
+            ) : null}
           </fieldset>
 
           <label className="block space-y-1.5">
@@ -129,7 +147,7 @@ export function NewCohort({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("cohorts.start")}</span>
-            <input name="startDate" type="date" required className={field} />
+            <DateField name="startDate" required className={field} />
             <span className="block text-xs text-[var(--muted)]">{t("cohorts.startNote")}</span>
           </label>
 
@@ -138,7 +156,7 @@ export function NewCohort({
               {t("cohorts.end")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input name="endDate" type="date" className={field} />
+            <DateField name="endDate" className={field} />
           </label>
 
           {state.error ? (

@@ -311,6 +311,40 @@ person going through it question by question.
 - **Times** are always the 24-hour clock, on the provider's own clock
   (Settings, Clock).
 
+## 6e. Typing dates (8 October 2026)
+
+- Every date box takes the date in the provider's order: 28/10/2026,
+  28-10-2026, 28 October 2026 or 28 Oct 2026, never year first unless the
+  provider's style is year-month-day. The stored form (2026-10-28) is always
+  understood. A calendar button beside each box picks a date instead.
+- Under "each person's own computer settings", a reader whose computer writes
+  dates month first types them month first.
+
+## 6f. Class sessions date the workbooks (8 October 2026)
+
+- Each class session can name its study unit, the workbook handed out and
+  the workbook handed in (or, for a summative sitting, the summative sat).
+- Saving the session dates those items for the cohort: a workbook handed out
+  opens on the session's date, one handed in is due on it, and a summative
+  opens on the day it is sat. The planner and the release list show the same
+  dates; nothing needs to be dated twice.
+- The meeting link is taken as pasted, with or without https://.
+- Lectures are numbered in order, and the next number is suggested.
+
+## 6g. The LEISA on the cohort (8 October 2026)
+
+- On the cohort page, for staff who make statutory returns. It lists, per
+  learner, what the QCTO's LEISA workbook still lacks, each name linking to
+  that learner's enrolment form, and counts the deadline from the induction
+  session: 21 working days for a full or part qualification, 5 for a skills
+  programme.
+- **What it depends on:** the induction scheduled as a class session of the
+  kind Induction; each learner's enrolment form completed; the provider's
+  accreditation number in Settings; the qualification's SAQA ID.
+- Drafting there covers every learner not yet notified. The workbook is then
+  downloaded, uploaded to the QCTO and recorded as sent on the enrolment
+  notification page.
+
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 
 - **The bar at the top of every cohort page** names the steps in order: Set

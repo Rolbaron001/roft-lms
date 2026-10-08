@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -160,11 +161,11 @@ export function Missed({
               </label>
               <label className="text-sm">
                 <span className="mr-2 text-[var(--muted)]">{t("missed.missed")}</span>
-                <input type="date" name="missedOn" defaultValue={today} required className={inputClass} />
+                <DateField name="missedOn" defaultValue={today} required className={inputClass} />
               </label>
               <label className="text-sm">
                 <span className="mr-2 text-[var(--muted)]">{t("missed.additionalDate")}</span>
-                <input type="date" name="additionalDate" required className={inputClass} />
+                <DateField name="additionalDate" required className={inputClass} />
               </label>
             </div>
             <input

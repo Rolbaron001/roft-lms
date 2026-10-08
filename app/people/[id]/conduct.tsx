@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -272,7 +273,7 @@ export function Conduct({
                             </option>
                           ))}
                         </select>
-                        <input type="date" name="issuedOn" defaultValue={today} className={inputClass} />
+                        <DateField name="issuedOn" defaultValue={today} className={inputClass} />
                       </div>
                       <textarea
                         name="terms"
@@ -395,8 +396,7 @@ export function Conduct({
                 </option>
               ))}
             </select>
-            <input
-              type="date"
+            <DateField
               name="occurredOn"
               defaultValue={openState.values?.occurredOn ?? today}
               required

@@ -474,7 +474,7 @@ export async function qualificationsForCohorts(session: AuthenticatedSession) {
   assertSessionCan(session, "enrolment:read_all");
   return withTenant(session.organisationId, (tx) =>
     tx
-      .selectDistinct({ id: qualifications.id, title: qualifications.title })
+      .selectDistinct({ id: qualifications.id, title: qualifications.title, credits: qualifications.totalCredits })
       .from(qualifications)
       .innerJoin(studyUnits, eq(studyUnits.qualificationId, qualifications.id))
       .orderBy(asc(qualifications.title)),

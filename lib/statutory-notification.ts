@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { withTenant } from "@/db/client";
+import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   cohortMembers,
   cohortSessions,
@@ -569,7 +569,39 @@ export async function buildLeisa(
       .from(statutoryNotificationLearners)
       .where(eq(statutoryNotificationLearners.notificationId, notificationId));
 
-    const ids = covered.map((c) => c.userId);
+    return leisaRows(tx, provider ?? null, covered.map((c) => c.userId));
+  });
+}
+
+/**
+ * The LEISA for a cohort's current learners, before anything is drafted (job
+ * sheet D19, Heidi and Roland, 8 October 2026: the LEISA "must be explicitly
+ * utilised as the starting point for building a new cohort"). What each
+ * learner still lacks, and where each stands against the deadline.
+ */
+export async function cohortLeisa(session: AuthenticatedSession, cohortId: string) {
+  assertSessionCan(session, "report:statutory");
+  const today = new Date().toISOString().slice(0, 10);
+  const due = (await dueWithin(session.organisationId, today)).filter((row) => row.cohortId === cohortId);
+  const workbook = await withTenant(session.organisationId, async (tx) => {
+    const [provider] = await tx
+      .select({ sdpCode: organisations.accreditationNumber, name: organisations.displayName })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+    const members = await tx
+      .select({ userId: cohortMembers.userId })
+      .from(cohortMembers)
+      .where(and(eq(cohortMembers.cohortId, cohortId), isNull(cohortMembers.leftAt)));
+    return leisaRows(tx, provider ?? null, members.map((member) => member.userId));
+  });
+  return { ...workbook, due };
+}
+
+async function leisaRows(
+  tx: TenantDatabase,
+  provider: { sdpCode: string | null; name: string } | null,
+  ids: string[],
+): Promise<LeisaWorkbook> {
     if (ids.length === 0) return { rows: [], problems: [] };
 
     const people = await tx
@@ -694,7 +726,6 @@ export async function buildLeisa(
     });
 
     return { rows, problems };
-  });
 }
 
 /**

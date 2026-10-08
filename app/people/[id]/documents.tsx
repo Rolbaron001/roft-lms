@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -236,9 +237,8 @@ export function EnrolmentDocuments({
                 <span className="font-normal text-[var(--muted)]">{t("docs.notNeeded")}</span>
               )}
             </span>
-            <input
+            <DateField
               name="certifiedOn"
-              type="date"
               disabled={!CERTIFIED_KINDS.includes(kind)}
               className={inputClass}
             />

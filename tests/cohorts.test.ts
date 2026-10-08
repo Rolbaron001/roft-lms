@@ -44,6 +44,8 @@ import {
 } from "@/lib/cohorts";
 import { autoPlan, cohortPlan, setStepDates } from "@/lib/cohort-plan";
 import { cohortJourney } from "@/lib/cohort-journey";
+import { scheduleSession, sessionChoices } from "@/lib/scheduling";
+import { addAssessmentItem, createAssessment, publishAssessment } from "@/lib/assessment";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -721,6 +723,38 @@ describe("a study unit released through its cohort (Heidi, 5 October 2026)", () 
     journey = await cohortJourney(admin, cohort.id);
     expect(journey.done.plan).toBe(true);
     expect(journey.next).toBe("sessions");
+  });
+
+  it("dates a workbook from the class session that hands it out (job sheet D17)", async () => {
+    const course = await createCourse(admin, { title: `Sessions ${suffix()}` });
+    const section = await addSection(admin, { courseId: course.id, title: "Study Unit 1" });
+    const lesson = await addLesson(admin, { sectionId: section.id, title: "Theory" });
+    await addStep(admin, { courseId: course.id, kind: "lesson", lessonId: lesson.id, release: "open" });
+    const workbook = await createAssessment(admin, { courseId: course.id, title: "SU1 WB1", purpose: "formative" });
+    await addAssessmentItem(admin, { assessmentId: workbook.id, stem: "Question", options: ["Right", "Wrong"], correctIndexes: [0] });
+    await publishAssessment(admin, workbook.id);
+    const step = await addStep(admin, { courseId: course.id, kind: "assessment", assessmentId: workbook.id });
+    await tagCourseCompetency(admin, course.id, competencyId);
+    const published = await publishCourse(admin, course.id);
+    if (!published.ok) throw new Error(published.reasons.join(" "));
+    const cohort = await createCohort(admin, { courseId: course.id, name: "Session-dated intake", startDate: "2026-01-05" });
+
+    // Handed out at the lecture on 12 January, handed in at the one on 19 January.
+    await scheduleSession(admin, { cohortId: cohort.id, kind: "lecture", scheduledDate: "2026-01-12", meetingUrl: "meet.google.com/abc-defg-hij", handoutAssessmentId: workbook.id });
+    await scheduleSession(admin, { cohortId: cohort.id, kind: "lecture", scheduledDate: "2026-01-19", handinAssessmentId: workbook.id });
+
+    const plan = await cohortPlan(admin, cohort.id);
+    const dated = plan.steps.find((one) => one.id === step.id)!;
+    expect([dated.opens, dated.due]).toEqual(["2026-01-12", "2026-01-19"]);
+
+    const choices = await sessionChoices(admin, cohort.id);
+    expect(choices.workbooks.map((book) => book.assessmentId)).toContain(workbook.id);
+    expect(choices.nextLecture).toBe(1);
+
+    // A workbook from another cohort's course is refused.
+    const stranger = await buildCourse();
+    const other = await createCohort(admin, { courseId: stranger.courseId, name: "Other intake", startDate: "2026-01-05" });
+    await expect(scheduleSession(admin, { cohortId: other.id, scheduledDate: "2026-01-12", handoutAssessmentId: workbook.id })).rejects.toThrow(/not on this cohort/);
   });
 
   it("leaves a course nobody walks in a cohort as it was", async () => {

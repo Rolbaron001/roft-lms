@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { recordPaymentAction, type PaymentState } from "./payment-actions";
@@ -44,13 +45,12 @@ export function PaymentForm({
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("payment.invoiced")}</span>
-          <input name="invoicedOn" type="date" defaultValue={asDate(invoicedAt)} className={`${field} w-full`} />
+          <DateField name="invoicedOn" defaultValue={asDate(invoicedAt)} className={`${field} w-full`} />
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("payment.received")}</span>
-          <input
+          <DateField
             name="receivedOn"
-            type="date"
             defaultValue={asDate(paymentReceivedAt)}
             className={`${field} w-full`}
           />

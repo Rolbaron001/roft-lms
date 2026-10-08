@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -168,8 +169,7 @@ function LodgeForm({
           <span className="mr-2 text-[var(--muted)]">
             {ground === "result" ? t("lodge.resultsReceived") : t("lodge.incident")}
           </span>
-          <input
-            type="date"
+          <DateField
             name="triggeredOn"
             defaultValue={kept.triggeredOn}
             required

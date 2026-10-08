@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import { openApplicationAction, type RecognitionState } from "./actions";
@@ -75,8 +76,7 @@ export function OpenApplication({
 
         <label className="block text-sm">
           <span className="text-[var(--muted)]">{t("rpl.appliedOn")}</span>
-          <input
-            type="date"
+          <DateField
             name="appliedOn"
             required
             defaultValue={kept.appliedOn}

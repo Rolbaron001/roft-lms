@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState, useState } from "react";
 import {
@@ -123,7 +124,7 @@ export function Support({
                       <div className="flex flex-wrap gap-2">
                         <label className="text-sm">
                           <span className="mr-2 text-[var(--muted)]">{t("support.reviewed")}</span>
-                          <input type="date" name="reviewedOn" defaultValue={today} className={inputClass} />
+                          <DateField name="reviewedOn" defaultValue={today} className={inputClass} />
                         </label>
                         <label className="text-sm">
                           <span className="mr-2 text-[var(--muted)]">{t("support.working")}</span>
@@ -139,7 +140,7 @@ export function Support({
                         </label>
                         <label className="text-sm">
                           <span className="mr-2 text-[var(--muted)]">{t("support.nextReview")}</span>
-                          <input type="date" name="nextReviewDue" className={inputClass} />
+                          <DateField name="nextReviewDue" className={inputClass} />
                         </label>
                       </div>
                       <textarea
@@ -217,7 +218,7 @@ export function Support({
               </label>
               <label className="text-sm">
                 <span className="mr-2 text-[var(--muted)]">{t("support.reviewDueLabel")}</span>
-                <input type="date" name="reviewDue" className={inputClass} />
+                <DateField name="reviewDue" className={inputClass} />
               </label>
             </div>
 

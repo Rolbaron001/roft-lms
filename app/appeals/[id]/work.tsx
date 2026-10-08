@@ -1,4 +1,5 @@
 "use client";
+import { DateField } from "@/components/date-field";
 
 import { useActionState } from "react";
 import {
@@ -135,8 +136,7 @@ export function Work({
             <input type="hidden" name="appealId" value={appeal.id} />
             <label className="text-sm">
               <span className="mr-2 text-[var(--muted)]">{t("appeals.met")}</span>
-              <input
-                type="date"
+              <DateField
                 name="metLearnerOn"
                 defaultValue={appeal.metLearnerOn ?? ""}
                 className={inputClass}
