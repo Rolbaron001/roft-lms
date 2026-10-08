@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
-import { updateOwnBranding, setTenantDateStyle, setTenantTimeZone } from "@/lib/provisioning";
+import { updateOwnBranding, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -147,6 +147,24 @@ export async function updateDateStyleAction(_previous: ClockState, formData: For
   // Dates appear on nearly every page.
   revalidatePath("/", "layout");
   return said({ notice: "Saved. Dates are now written this way throughout." });
+}
+
+/** Saves the provider's own LEISA target (D19). */
+export async function updateLeisaTargetAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  const typed = String(formData.get("hours") ?? "").trim();
+  try {
+    await setTenantLeisaTarget(session, typed === "" ? null : Number(typed));
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    if (error && typeof error === "object" && "issues" in error) {
+      return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
+    }
+    console.error(error);
+    return said({ error: "That could not be saved. Please try again." });
+  }
+  revalidatePath("/cohorts", "layout");
+  return said({ notice: typed === "" ? "Saved. Only the regulator's limit is shown." : "Saved. Each cohort's LEISA now shows your target beside the regulator's limit." });
 }
 
 export type ExtensionState = { error?: string; notice?: string };

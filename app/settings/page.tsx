@@ -17,6 +17,7 @@ import { ModuleCodesForm } from "./module-codes-form";
 import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
 import { DateForm } from "./date-form";
+import { LeisaTargetForm } from "./leisa-target-form";
 import { DEFAULT_DATE_STYLE, isDateStyle } from "@/lib/date-format";
 import { ProviderLanguageForm } from "./language-form";
 import { ExtensionForm } from "./extension-form";
@@ -210,6 +211,16 @@ export default async function SettingsPage({
             timeZone={tenant.timezone}
             device={(await pageDates()).settings.device}
           />
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="leisa"
+          data-settings-section={t("settings.section.leisa")}
+          className="mt-6 scroll-mt-24"
+        >
+          <LeisaTargetForm current={tenant.leisaTargetHours} />
         </div>
       ) : null}
 

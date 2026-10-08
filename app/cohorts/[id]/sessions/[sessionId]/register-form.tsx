@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { takeRegisterAction } from "@/app/cohorts/actions";
-import type { CohortActionState } from "@/app/cohorts/actions";
+import { importAttendanceAction, takeRegisterAction } from "@/app/cohorts/actions";
+import type { AttendanceImportState, CohortActionState } from "@/app/cohorts/actions";
 import type { RegisterLine } from "@/lib/scheduling";
 import { useT } from "@/components/i18n";
 
@@ -31,12 +31,40 @@ export function RegisterForm({
     takeRegisterAction,
     {},
   );
+  // A meeting's attendance export, read into the register for checking (D20).
+  const [imported, importAct, importing] = useActionState<AttendanceImportState, FormData>(importAttendanceAction, {});
+  const proposed = imported.marks;
 
   if (lines.length === 0) {
     return <p className="text-sm text-[var(--muted)]">{t("register.nobody")}</p>;
   }
 
   return (
+    <div className="space-y-4">
+    <form action={importAct} className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
+      <input type="hidden" name="cohortId" value={cohortId} />
+      <input type="hidden" name="sessionId" value={sessionId} />
+      <p className="text-sm font-medium">{t("register.importTitle")}</p>
+      <p className="text-xs text-[var(--muted)]">{t("register.importNote")}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input name="file" type="file" accept=".csv,.xlsx" required className="text-sm" />
+        <button type="submit" disabled={importing} className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-medium disabled:opacity-60">
+          {importing ? t("register.importing") : t("register.import")}
+        </button>
+      </div>
+      {imported.error ? <p role="alert" className="text-sm text-[var(--danger)]">{imported.error}</p> : null}
+      {proposed ? (
+        <div role="status" className="text-sm">
+          <p className="text-[var(--success)]">
+            {t("register.imported", { read: imported.read ?? 0, present: proposed.filter((mark) => mark.status === "present").length })}
+            {imported.filed ? ` ${t("register.importFiled")}` : ""}
+          </p>
+          {imported.unknown && imported.unknown.length > 0 ? (
+            <p className="text-[var(--muted)]">{t("register.importUnknown", { names: imported.unknown.join(", ") })}</p>
+          ) : null}
+        </div>
+      ) : null}
+    </form>
     <form action={action} className="space-y-4">
       <input type="hidden" name="cohortId" value={cohortId} />
       <input type="hidden" name="sessionId" value={sessionId} />
@@ -52,8 +80,11 @@ export function RegisterForm({
               <th className="pb-2">{t("register.note")}</th>
             </tr>
           </thead>
-          <tbody>
-            {lines.map((line) => (
+          <tbody key={proposed ? `proposed-${imported.read}-${proposed.length}` : "saved"}>
+            {lines.map((saved) => {
+              const suggestion = proposed?.find((mark) => mark.userId === saved.userId);
+              const line = suggestion ? { ...saved, status: suggestion.status, note: suggestion.note || saved.note } : saved;
+              return (
               <tr key={line.userId} className="border-t border-[var(--border)]">
                 <td className="py-2 pr-4">{line.name}</td>
                 {MARKS.map((status) => (
@@ -76,7 +107,8 @@ export function RegisterForm({
                   />
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -94,5 +126,6 @@ export function RegisterForm({
 
       <p className="text-xs text-[var(--muted)]">{t("register.excusedNote")}</p>
     </form>
+    </div>
   );
 }

@@ -6,3 +6,4 @@ export * from "./assessment";
 export * from "./delivery";
 export * from "./support";
 export * from "./library";
+export * from "./cohort-file";

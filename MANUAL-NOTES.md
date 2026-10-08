@@ -344,6 +344,53 @@ person going through it question by question.
 - Drafting there covers every learner not yet notified. The workbook is then
   downloaded, uploaded to the QCTO and recorded as sent on the enrolment
   notification page.
+- **Your own target:** Settings, "LEISA target", takes a number of hours after
+  the induction (Curiosa use 48). Each cohort's LEISA then shows that date
+  above the regulator's limit, in red once it has passed. Left empty, only the
+  limit is shown.
+
+## 6h. The cohort file (8 October 2026)
+
+- **Where:** "Cohort file" at the top of each cohort page. One section per
+  folder of a provider's cohort file, in this order: Qualification Docs,
+  Learning Material, LEISA, Induction, Learner Docs, Attendance Records,
+  Facilitation Plans, Learner Evidence, Assessor Reports, Programme Feedback
+  Forms, WEM, M&E. Each says what the platform holds, what is missing, and
+  links to where the work is done. Nothing is stored twice.
+- **Download the cohort file** produces a zip laid out in those folders, for a
+  monitor or an auditor: Learner Docs and Learner Evidence have one folder per
+  learner, evidence arranged by study unit then learner.
+- **Filing a document** that the platform does not produce itself: facilitation
+  plans, the induction pack, a meeting's attendance export, an assessor's own
+  report, programme feedback forms, monitoring reports, and correspondence
+  with the QCTO. Choose the kind and, where it applies, the class session or
+  study unit; the kind decides the folder.
+- **Learner documents** now also take a signed code of conduct, proof of
+  employment, a signed workplace agreement and correspondence (for example a
+  letter about non-attendance), filed on the learner's enrolment documents.
+- **Attendance from the meeting:** on a class session's register, "Read the
+  attendance export from the meeting" takes the CSV or Excel file from Google
+  Meet or its attendance add-on; another service's export is read if it has a
+  name column (or first and last name columns). Learners are matched by email,
+  or by every part of their name in any order. Those found are marked present,
+  with the time each was in the call as the note, and everyone else absent;
+  anybody in the file not matched is listed. Nothing is saved until the
+  register is. **What it depends on:** the
+  learners' names on the platform as they appear in the meeting, or their
+  email addresses; a participant who joins under a nickname is listed as not
+  matched.
+- **Assessor reports** are produced, not typed: one per study unit, from the
+  Assessor Reports section. Programme, SAQA ID, level and credits; the study
+  unit, cohort and modules; the summative and its date; the assessor; each
+  learner's workbooks returned, first and second summative results,
+  attendance and the assessor's comments. Print it or save it as PDF.
+  **What it depends on:** the summative set as a step of the study unit's
+  course, and the assessor's comments written with the decision.
+- **Work experience:** the cohort page shows each learner against each
+  workplace module of the qualification, with the logbook's stage (being
+  kept, with the coach, signed by the coach, accepted) and the hours recorded.
+  It is read from the logbooks, so it needs the workplace modules loaded with
+  the qualification and each learner's logbook opened under Workplace.
 
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 

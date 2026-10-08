@@ -36,6 +36,8 @@ export type TenantIdentity = {
   timezone: string;
   /** How dates are written (lib/date-format.ts). */
   dateStyle: string;
+  /** The provider's own LEISA target, in hours after the induction (D19). */
+  leisaTargetHours: number | null;
   /** The language its people read the platform in unless they choose (D9). */
   defaultLocale: string;
   /** How this provider arranged their menu, or null for the built-in one. */
@@ -200,6 +202,7 @@ export async function resolveTenant(
           accentColour: organisations.accentColour,
           timezone: organisations.timezone,
           dateStyle: organisations.dateStyle,
+          leisaTargetHours: organisations.leisaTargetHours,
           defaultLocale: organisations.defaultLocale,
           navigation: organisations.navigation,
           terminology: organisations.terminology,

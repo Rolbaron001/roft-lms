@@ -156,6 +156,11 @@ export const enrolmentDocumentKind = pgEnum("enrolment_document_kind", [
   "learnership_agreement",
   "rpl_portfolio",
   "employment_equity_form",
+  // From Curiosa's learner folders (job sheet D20, 8 October 2026).
+  "code_of_conduct",
+  "proof_of_employment",
+  "workplace_agreement",
+  "correspondence",
   "other",
 ]);
 

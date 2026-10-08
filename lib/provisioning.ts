@@ -666,6 +666,33 @@ export async function setTenantDateStyle(session: AuthenticatedSession, style: s
   clearTenantCache();
 }
 
+/**
+ * The provider's own LEISA target, in hours after the induction (D19), or
+ * none. Three weeks is the most it may be, since a target later than that is
+ * no target.
+ */
+export async function setTenantLeisaTarget(session: AuthenticatedSession, hours: number | null) {
+  assertSessionCan(session, "tenant:manage_settings");
+  if (hours !== null && (!Number.isInteger(hours) || hours < 1 || hours > 504)) {
+    throw new z.ZodError([{ code: "custom", path: ["hours"], message: "Give a whole number of hours from 1 to 504, or leave it empty." }]);
+  }
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx.select({ hours: organisations.leisaTargetHours }).from(organisations).where(eq(organisations.id, session.organisationId));
+    await tx.update(organisations).set({ leisaTargetHours: hours, updatedAt: new Date() }).where(eq(organisations.id, session.organisationId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.leisa_target_updated",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { leisaTargetHours: before?.hours ?? null },
+      after: { leisaTargetHours: hours },
+    });
+  });
+  clearTenantCache();
+}
+
 export { RESERVED_SLUGS };
 
 /**

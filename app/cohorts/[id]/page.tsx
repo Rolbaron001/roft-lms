@@ -4,6 +4,7 @@ import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduli
 import { cohortLeisa } from "@/lib/statutory-notification";
 import { CohortLeisa } from "./leisa";
 import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
+import { cohortWem } from "@/lib/wem-tracker";
 import { CohortTasks } from "./tasks";
 import { Rollout } from "./rollout";
 import { Feedback } from "./feedback";
@@ -86,6 +87,7 @@ export default async function CohortPage({
     : [];
   const attendance = await cohortAttendance(session, detail.cohort.id);
   const grid = await cohortGrid(session, detail.cohort.id);
+  const wem = await cohortWem(session, detail.cohort.id);
 
   // Feedback is a tenant-level report rather than an enrolment one: it is read
   // by whoever runs the programme, and asked for by whoever schedules it.
@@ -143,6 +145,13 @@ export default async function CohortPage({
         {!scheduled ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.openAll")}</p>
         ) : null}
+        <Link
+          href={`/cohorts/${detail.cohort.id}/file`}
+          className="mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 hover:bg-[var(--border)]/30"
+        >
+          <span className="font-semibold">{t("cohortFile.link")} →</span>
+          <span className="text-sm text-[var(--muted)]">{t("cohortFile.linkIntro")}</span>
+        </Link>
       </div>
 
       <CohortNav cohortId={detail.cohort.id} current="overview" sections />
@@ -242,6 +251,7 @@ export default async function CohortPage({
             <CohortLeisa
               cohortId={detail.cohort.id}
               cohortName={detail.cohort.name}
+              targetHours={tenant.leisaTargetHours}
               learners={leisa.due.map((row) => ({
                 userId: row.userId,
                 name: `${row.firstName} ${row.lastName}`,
@@ -542,6 +552,47 @@ export default async function CohortPage({
                 </table>
               </div>
               <p className="mt-3 text-xs text-[var(--muted)]">{t("cohort.absentNote")}</p>
+            </Card>
+          ) : null}
+
+          {/* Work experience, from the logbooks (D20). */}
+          {wem.modules.length > 0 && wem.learners.length > 0 ? (
+            <Card
+              section={{ id: "wem", label: t("cohortNav.section.wem") }}
+              title={t("wem.title")}
+              description={t("wem.intro")}
+              guide={guide(["wem.guide.1", "wem.guide.2", "wem.guide.3"])}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                      <th className="pb-2 pr-3">{words.one("learner")}</th>
+                      {wem.modules.map((module) => (
+                        <th key={module.id} className="pb-2 pr-3" title={module.title}>
+                          <span className="block">{module.code}</span>
+                          {module.notionalHours ? (
+                            <span className="block font-normal normal-case">{t("wem.notional", { hours: module.notionalHours })}</span>
+                          ) : null}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wem.learners.map((row) => (
+                      <tr key={row.userId} className="border-t border-[var(--border)]">
+                        <td className="py-2 pr-3 whitespace-nowrap">{row.name}</td>
+                        {row.cells.map((cell) => (
+                          <td key={cell.moduleId} className={`py-2 pr-3 whitespace-nowrap ${cell.stage === "none" ? "text-[var(--muted)]" : ""}`}>
+                            {t(`wem.stage.${cell.stage}`)}
+                            {cell.hours !== null ? <span className="ml-1 tabular-nums text-[var(--muted)]">· {t("wem.hours", { hours: cell.hours })}</span> : null}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           ) : null}
 

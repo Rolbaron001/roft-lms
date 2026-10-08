@@ -18,6 +18,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { cohortCourseIds } from "./schedule";
+import { matchAttendance, readAttendanceExport } from "./attendance-import";
 import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -635,6 +636,45 @@ export async function takeRegister(
 
     return { marked: marks.length };
   });
+}
+
+/**
+ * A register proposed from a meeting's attendance export (job sheet D20):
+ * learners found in it present, with their time in the call as the note, and
+ * everyone else absent; names that match no learner are listed. Nothing is
+ * saved: the register page shows it for a person to check and save.
+ */
+export async function proposeAttendance(
+  session: AuthenticatedSession,
+  sessionId: string,
+  filename: string,
+  bytes: Uint8Array,
+): Promise<{ marks: { userId: string; status: "present" | "absent"; note: string }[]; unknown: string[]; read: number }> {
+  assertSessionCan(session, "attendance:record");
+  const attendees = readAttendanceExport(filename, bytes);
+  if (attendees.length === 0) {
+    throw new SchedulingError("No participants were found in that file. It should be the attendance export from the meeting, with a column of names.", "invalid_state");
+  }
+  const learners = await withTenant(session.organisationId, async (tx) => {
+    const [target] = await tx.select({ cohortId: cohortSessions.cohortId }).from(cohortSessions).where(eq(cohortSessions.id, sessionId));
+    if (!target) throw new SchedulingError("Session not found.", "not_found");
+    return tx
+      .select({ userId: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email })
+      .from(cohortMembers)
+      .innerJoin(users, eq(users.id, cohortMembers.userId))
+      .where(and(eq(cohortMembers.cohortId, target.cohortId), isNull(cohortMembers.leftAt)));
+  });
+  const { present, unknown } = matchAttendance(attendees, learners);
+  return {
+    marks: learners.map((learner) => {
+      const found = present.find((one) => one.userId === learner.userId);
+      return found
+        ? { userId: learner.userId, status: "present" as const, note: found.duration ? `In the call ${found.duration}` : "" }
+        : { userId: learner.userId, status: "absent" as const, note: "" };
+    }),
+    unknown,
+    read: attendees.length,
+  };
 }
 
 // ---------------------------------------------------------------------------

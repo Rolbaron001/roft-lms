@@ -253,6 +253,13 @@ export const organisations = pgTable(
     dateStyle: text("date_style").notNull().default("long"),
 
     /**
+     * The provider's own target for the LEISA, in hours after the induction,
+     * shown beside the regulator's limit (job sheet D19: Curiosa send it
+     * within 48 hours although the rule allows longer). None by default.
+     */
+    leisaTargetHours: integer("leisa_target_hours"),
+
+    /**
      * The language this provider's people read the platform in unless they
      * choose their own (job sheet D9). A code from lib/i18n/locales.ts.
      */

@@ -15,9 +15,11 @@ import {
 import { EnrolmentError } from "@/lib/enrolment";
 import { applyRollout, planRollout, readRollout } from "@/lib/rollout-import";
 import { autoPlan, setStepDates } from "@/lib/cohort-plan";
+import { CohortFileError, fileCohortDocument, removeCohortFile, type CohortFileKind } from "@/lib/cohort-file";
 import {
   scheduleSession,
   SchedulingError,
+  proposeAttendance,
   setSessionStatus,
   takeRegister,
 } from "@/lib/scheduling";
@@ -243,6 +245,44 @@ export async function autoPlanAction(_previous: CohortActionState, formData: For
   return said(state.error ? state : { done: `Planned: ${count} steps dated. Adjust anything below.` });
 }
 
+/** Files a document in the cohort's file (D20): a facilitation plan, a monitoring report. */
+export async function fileCohortDocumentAction(_previous: CohortActionState, formData: FormData): Promise<CohortActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return said({ error: "Choose the file first." });
+  try {
+    await fileCohortDocument(session, {
+      cohortId,
+      kind: field(formData, "kind") as CohortFileKind,
+      sessionId: field(formData, "sessionId") || undefined,
+      studyUnitId: field(formData, "studyUnitId") || undefined,
+      title: field(formData, "title") || undefined,
+      filename: file.name,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+    });
+  } catch (error) {
+    if (error instanceof CohortFileError || error instanceof PermissionDeniedError) return said({ error: error.message });
+    if (error && typeof error === "object" && "issues" in error) return said({ error: "Choose what kind of document this is." });
+    throw error;
+  }
+  revalidatePath(`/cohorts/${cohortId}/file`);
+  return said({ done: "Filed in the cohort's file." });
+}
+
+export async function removeCohortFileAction(_previous: CohortActionState, formData: FormData): Promise<CohortActionState> {
+  const session = await requirePermission("enrolment:manage");
+  const cohortId = field(formData, "cohortId");
+  try {
+    await removeCohortFile(session, field(formData, "fileId"));
+  } catch (error) {
+    if (error instanceof CohortFileError) return said({ error: error.message });
+    throw error;
+  }
+  revalidatePath(`/cohorts/${cohortId}/file`);
+  return said({ done: "Removed from the cohort's file." });
+}
+
 /** The planner's dates for one item, leaving the rest of the plan alone. */
 export async function setStepDatesAction(_previous: CohortActionState, formData: FormData): Promise<CohortActionState> {
   const session = await requirePermission("enrolment:manage");
@@ -341,6 +381,45 @@ export async function setSessionStatusAction(
  * the changed rows would make an unmarked learner indistinguishable from one
  * marked and then cleared.
  */
+export type AttendanceImportState = {
+  error?: string;
+  marks?: { userId: string; status: "present" | "absent"; note: string }[];
+  unknown?: string[];
+  read?: number;
+  filed?: boolean;
+};
+
+/**
+ * Reads a meeting's attendance export into the register for checking (D20),
+ * and files the export in the cohort's file where the person may do so.
+ */
+export async function importAttendanceAction(_previous: AttendanceImportState, formData: FormData): Promise<AttendanceImportState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return said({ error: "Choose the attendance export first." });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    const proposal = await proposeAttendance(session, sessionId, file.name, bytes);
+    let filed = false;
+    if (session.permissions.includes("enrolment:manage")) {
+      try {
+        await fileCohortDocument(session, { cohortId, kind: "attendance_export", sessionId, filename: file.name, bytes });
+        filed = true;
+      } catch {
+        // Reading the register matters more than filing the export; a file
+        // type the store refuses still leaves the register filled in.
+      }
+    }
+    return { ...proposal, filed };
+  } catch (error) {
+    if (error instanceof SchedulingError) return said({ error: error.message });
+    if (error instanceof Error && /spreadsheet|CSV|sheets|nothing in it/.test(error.message)) return said({ error: error.message });
+    throw error;
+  }
+}
+
 export async function takeRegisterAction(
   _previous: CohortActionState,
   formData: FormData,

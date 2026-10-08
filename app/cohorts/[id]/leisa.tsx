@@ -18,9 +18,12 @@ export function CohortLeisa({
   cohortName,
   learners,
   gaps,
+  targetHours,
 }: {
   cohortId: string;
   cohortName: string;
+  /** The provider's own target, in hours after the induction (Settings). */
+  targetHours: number | null;
   learners: { userId: string; name: string; state: string; dueOn: string | null; notifiedOn: string | null; inductionOn: string | null; kind: string | null }[];
   gaps: { userId: string | null; learner: string; fields: string[] }[];
 }) {
@@ -32,6 +35,9 @@ export function CohortLeisa({
   const noInduction = learners.some((row) => row.state === "no_induction");
   const inductionOn = waiting[0]?.inductionOn ?? null;
   const dueOn = waiting.map((row) => row.dueOn).filter((date): date is string => Boolean(date)).sort()[0] ?? null;
+  // The provider's own target falls on the day the hours run out.
+  const targetOn = targetHours && inductionOn ? addDays(inductionOn, Math.ceil(targetHours / 24)) : null;
+  const targetPassed = targetOn !== null && targetOn < new Date().toISOString().slice(0, 10);
 
   if (learners.length === 0) return <p className="text-sm text-[var(--muted)]">{t("leisa.noLearners")}</p>;
 
@@ -45,9 +51,16 @@ export function CohortLeisa({
           </a>
         </p>
       ) : dueOn ? (
-        <p>
-          {t("leisa.due", { date: day(dueOn), induction: inductionOn ? day(inductionOn) : "" })}
-        </p>
+        <div>
+          {targetOn && targetHours ? (
+            <p className={targetPassed ? "text-[var(--danger)]" : "font-medium"}>
+              {targetPassed
+                ? t("leisa.targetPassed", { hours: targetHours, date: day(targetOn) })
+                : t("leisa.target", { hours: targetHours, date: day(targetOn) })}
+            </p>
+          ) : null}
+          <p>{t("leisa.due", { date: day(dueOn), induction: inductionOn ? day(inductionOn) : "" })}</p>
+        </div>
       ) : (
         <p className="text-[var(--success)]">{t("leisa.allNotified")}</p>
       )}
@@ -103,4 +116,11 @@ export function CohortLeisa({
       {state.error ? <p role="alert" className="text-[var(--danger)]">{state.error}</p> : null}
     </div>
   );
+}
+
+/** A stored calendar date moved on by whole days, without a time zone. */
+function addDays(date: string, days: number): string {
+  const moved = new Date(`${date}T00:00:00Z`);
+  moved.setUTCDate(moved.getUTCDate() + days);
+  return moved.toISOString().slice(0, 10);
 }

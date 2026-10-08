@@ -25,6 +25,10 @@ export type DocumentKind =
   | "learnership_agreement"
   | "rpl_portfolio"
   | "employment_equity_form"
+  | "code_of_conduct"
+  | "proof_of_employment"
+  | "workplace_agreement"
+  | "correspondence"
   | "other";
 
 export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
@@ -35,6 +39,10 @@ export const DOCUMENT_LABEL: Record<DocumentKind, string> = {
   learnership_agreement: "Learnership agreement",
   rpl_portfolio: "Portfolio of prior learning",
   employment_equity_form: "Employment equity form",
+  code_of_conduct: "Signed code of conduct",
+  proof_of_employment: "Proof of employment",
+  workplace_agreement: "Signed workplace agreement",
+  correspondence: "Correspondence",
   other: "Other",
 };
 
