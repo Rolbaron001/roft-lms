@@ -10,6 +10,7 @@ import type { ChecklistAnswer } from "@/lib/fisa-checklist";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
+import { PageNav } from "@/components/page-nav";
 import {
   AppointForm,
   ChecklistForm,
@@ -203,8 +204,10 @@ export default async function FisaDetailPage({
         </div>
       </div>
 
+      <PageNav />
+
       {/* Appointments, and the confidentiality that makes them real. */}
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+      <div id="appointments" data-page-section={t("fisa.nav.appointments")} className="mb-6 grid scroll-mt-28 gap-4 lg:grid-cols-2">
         {(["examiner", "moderator"] as const).map((role) => {
           const appointment = role === "examiner" ? examiner : moderator;
 
@@ -263,7 +266,7 @@ export default async function FisaDetailPage({
       </div>
 
       {/* Section 2, which is the part a monitor interrogates. */}
-      <div className="mb-6">
+      <div id="outcomes" data-page-section={t("fisa.nav.outcomes")} className="mb-6 scroll-mt-28">
         <Card title={t("fisa.outcomes")} description={t("fisa.outcomesIntro")}>
           {outcomes.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">{t("fisa.noOutcomes")}</p>
@@ -292,7 +295,7 @@ export default async function FisaDetailPage({
       </div>
 
       {/* The two reports. */}
-      <div className="mb-6 space-y-6">
+      <div id="reports" data-page-section={t("fisa.nav.reports")} className="mb-6 scroll-mt-28 space-y-6">
         {(["examiner", "moderator"] as const).map((role) => (
           <Card
             key={role}
@@ -321,7 +324,16 @@ export default async function FisaDetailPage({
       </div>
 
       {/* What happens next. */}
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+      <div
+        id="next"
+        data-page-section={
+          (canWrite("examiner") && instrument.status === "draft") ||
+          (canWrite("moderator") && instrument.status === "in_moderation") ||
+          (mayAuthor && instrument.status === "approved")
+            ? t("fisa.nav.next")
+            : undefined
+        }
+        className="mb-6 grid scroll-mt-28 gap-4 lg:grid-cols-2">
         {canWrite("examiner") && instrument.status === "draft" ? (
           <Card title={t("fisa.handOver")} description={t("fisa.handOverIntro")}>
             <SendToModerationForm instrumentId={instrument.id} />

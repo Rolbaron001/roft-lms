@@ -16,6 +16,8 @@ import { vocabulary } from "@/lib/terms";
 import { maybe } from "@/lib/i18n/maybe";
 import { Rich } from "@/components/rich-text";
 import { AppShell, Card } from "@/components/app-shell";
+import { Guide } from "@/components/ui";
+import { CohortNav } from "@/components/cohort-nav";
 import {
   AddMember,
   RemoveMember,
@@ -26,10 +28,11 @@ import {
 } from "./cohort-controls";
 
 /**
- * One cohort: who is on it, what the schedule says, and who is stuck.
- *
- * The blocked list comes first deliberately. It is the only part a facilitator
- * has to act on today; the schedule and the register are reference.
+ * One cohort, laid out in the order it is set up and run (Roland, 8 October
+ * 2026): payment, learners, dates, class sessions, then what needs doing
+ * today and how the cohort is getting on. The bar at the top names each step,
+ * ticks what is done and says what comes next; each card says how it works
+ * under its heading.
  *
  * The assessment grid uses the client's own words, from the consolidated cohort
  * workbook they run today, kept short because these sit in grid cells: C and
@@ -95,9 +98,13 @@ export default async function CohortPage({
       )
     : [];
 
+  const scheduled = detail.cohort.releaseMode !== "open";
+  const how = t("guide.how");
+  const guide = (keys: Parameters<typeof t>[0][]) => <Guide label={how} points={keys.map((key) => t(key))} />;
+
   return (
     <AppShell tenant={tenant} session={session}>
-      <div className="mb-6">
+      <div className="mb-4">
         <Link href="/cohorts" className="text-sm text-[var(--muted)] hover:underline">
           {t("cohort.back", { cohorts: words.many("cohort") })}
         </Link>
@@ -119,28 +126,24 @@ export default async function CohortPage({
         {detail.qualificationTitle ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.walksQualification", { qualification: detail.qualificationTitle })}</p>
         ) : null}
-        {detail.cohort.releaseMode === "open" ? (
+        {!scheduled ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.openAll")}</p>
         ) : null}
-        <Link
-          href={`/cohorts/${detail.cohort.id}/plan`}
-          className="mt-4 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 hover:bg-[var(--brand-accent)]/10"
-        >
-          <span className="font-semibold">{t("planner.open_link")} →</span>
-          <span className="text-sm text-[var(--muted)]">{t("planner.openIntro")}</span>
-        </Link>
       </div>
 
-      {/*
-        The opening step of the enrolment procedure: "once the client has been
-        invoiced and proof of payment has been received". Shown here because
-        that payment covers the whole cohort - a learner paying their own way
-        supplies a proof of payment against themselves instead, and either
-        satisfies it.
-      */}
-      {canManage ? (
-        <div className="mb-6">
+      <CohortNav cohortId={detail.cohort.id} current="overview" sections />
+
+      <div className="space-y-6">
+        {/*
+          The opening step of the enrolment procedure: "once the client has been
+          invoiced and proof of payment has been received". Shown here because
+          that payment covers the whole cohort - a learner paying their own way
+          supplies a proof of payment against themselves instead, and either
+          satisfies it.
+        */}
+        {canManage ? (
           <Card
+            section={{ id: "payment", label: t("cohortNav.section.payment") }}
             title={t("cohort.payment")}
             description={
               detail.cohort.paymentReceivedAt
@@ -151,6 +154,7 @@ export default async function CohortPage({
                   ? t("cohort.invoiced")
                   : t("cohort.nothingRecorded")
             }
+            guide={guide(["cohortGuide.payment.1", "cohortGuide.payment.2", "cohortGuide.payment.3"])}
           >
             <PaymentForm
               cohortId={detail.cohort.id}
@@ -159,238 +163,96 @@ export default async function CohortPage({
               reference={detail.cohort.paymentReference}
             />
           </Card>
-        </div>
-      ) : null}
+        ) : null}
 
-      {canManage ? (
-        <div id="move" className="mb-6 scroll-mt-4">
-          <Card title={t("cohort.move")} description={t("cohort.moveIntro")}>
-            <Reschedule cohortId={detail.cohort.id} startDate={detail.cohort.startDate} />
-          </Card>
-        </div>
-      ) : null}
+        <Card
+          section={{ id: "learners", label: t("cohortNav.section.learners") }}
+          title={t("cohort.members", { count: active.length })}
+          description={t("cohort.membersIntro", { course: words.lowerOne("course") })}
+          guide={canManage ? guide(["cohortGuide.learners.1", "cohortGuide.learners.2", "cohortGuide.learners.3"]) : undefined}
+        >
+          {detail.members.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">{t("cohort.nobody")}</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {detail.members.map((member) => (
+                <li
+                  key={member.userId}
+                  className={`flex flex-wrap items-center justify-between gap-2 ${
+                    member.leftAt ? "opacity-60" : ""
+                  }`}
+                >
+                  <span>
+                    {member.firstName} {member.lastName}
+                    <span className="ml-2 text-xs text-[var(--muted)]">
+                      {member.email}
+                      {member.leftAt
+                        ? t("cohort.leftOn", { date: member.leftAt.toISOString().slice(0, 10) })
+                        : ""}
+                    </span>
+                  </span>
+                  {canManage && !member.leftAt ? (
+                    <RemoveMember
+                      cohortId={detail.cohort.id}
+                      userId={member.userId}
+                      name={`${member.firstName} ${member.lastName}`}
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
 
-      {blocked.length > 0 ? (
-        <Card title={t("cohort.waiting", { count: blocked.length })} description={t("cohort.waitingIntro")}>
-          <ul className="space-y-2">
-            {blocked.map((row) => (
-              <li key={row.userId} className="rounded-md border border-[var(--border)] px-4 py-3 text-sm">
-                <span className="font-medium">
-                  {row.firstName} {row.lastName}
-                </span>
-                <span className="mt-0.5 block">
-                  <Rich text={t("cohort.stuckAt")} parts={{ step: <strong>{row.stepTitle}</strong> }} />
-                </span>
-                <span className="mt-0.5 block text-xs text-[var(--muted)]">{row.blockedBy.join(" ")}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {timings.some((row) => row.opened > 0) ? (
-        <div className="mt-6">
-          <Card title={t("cohort.progress")} description={t("cohort.progressIntro")}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">{t("cohort.step")}</th>
-                    <th className="pb-2">{t("cohort.opened")}</th>
-                    <th className="pb-2">{t("cohort.finished")}</th>
-                    <th className="pb-2">{t("cohort.stillOn")}</th>
-                    <th className="pb-2">{t("cohort.median")}</th>
-                    <th className="pb-2">{t("cohort.longest")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {timings.map((row) => (
-                    <tr key={row.stepId} className="border-t border-[var(--border)]">
-                      <td className="py-2 pr-3">{row.title}</td>
-                      <td className="py-2 pr-3 tabular-nums">{row.opened}</td>
-                      <td className="py-2 pr-3 tabular-nums">{row.completed}</td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {row.inProgress > 0 ? <strong>{row.inProgress}</strong> : row.inProgress}
-                      </td>
-                      <td className="py-2 pr-3 tabular-nums">{row.medianDays === null ? "—" : row.medianDays}</td>
-                      <td className="py-2 tabular-nums">{row.longestDays === null ? "—" : row.longestDays}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {canManage ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <AddMember
+                cohortId={detail.cohort.id}
+                candidates={candidates.map((person) => ({
+                  id: person.id,
+                  firstName: person.firstName,
+                  lastName: person.lastName,
+                  email: person.email,
+                }))}
+              />
             </div>
-
-            {stalled.length > 0 ? (
-              <p className="mt-3 text-sm text-[var(--muted)]">
-                {stalled.length === 1
-                  ? t("cohort.stalledOne", { steps: stalled.map((row) => row.title).join(", ") })
-                  : t("cohort.stalledMany", {
-                      count: stalled.length,
-                      steps: stalled.map((row) => row.title).join(", "),
-                    })}
-              </p>
-            ) : null}
-          </Card>
-        </div>
-      ) : null}
-
-      <div className="mt-6">
-        <Card title={t("cohort.rollout")} description={t("cohort.rolloutIntro")}>
-          <Rollout
-            zone={tenant.timezone}
-            cohortId={detail.cohort.id}
-            sessions={rollout}
-            canManage={canSchedule}
-            canRegister={canRegister}
-          />
+          ) : null}
         </Card>
-      </div>
 
-      {attendance.countable > 0 ? (
-        <div className="mt-6">
-          <Card title={t("cohort.attendance")} description={t("cohort.attendanceIntro")}>
-            <p className="mb-3 text-sm text-[var(--muted)]">
-              {t("cohort.held", { held: attendance.held, countable: attendance.countable })}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2">{words.one("learner")}</th>
-                    <th className="pb-2">{t("cohort.present")}</th>
-                    <th className="pb-2">{t("cohort.absent")}</th>
-                    <th className="pb-2">{t("cohort.excused")}</th>
-                    <th className="pb-2">{t("cohort.toDate")}</th>
-                    <th className="pb-2">{t("cohort.overall")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendance.learners.map((line) => (
-                    <tr key={line.userId} className="border-t border-[var(--border)]">
-                      <td className="py-2 pr-3">{line.name}</td>
-                      <td className="py-2 pr-3 tabular-nums">{line.present}</td>
-                      <td className="py-2 pr-3 tabular-nums">{line.absent}</td>
-                      <td className="py-2 pr-3 tabular-nums">{line.excused}</td>
-                      <td className="py-2 pr-3 tabular-nums">{line.toDatePercent}%</td>
-                      <td className="py-2 tabular-nums">{line.overallPercent}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      ) : null}
-
-      {canReadReports ? (
-        <div className="mt-6">
-          <Card
-            title={t("cohort.feedback", { programme: words.one("programme") })}
-            description={t("cohort.feedbackIntro", { hours: HOURS_TO_RESPOND })}
+        <Card
+          section={{ id: "dates", label: t("cohortNav.section.dates") }}
+          title={t("cohortGuide.plan")}
+          description={t("cohortGuide.planIntro")}
+          guide={guide(["cohortGuide.plan.1", "cohortGuide.plan.2", "cohortGuide.plan.3", "cohortGuide.plan.4"])}
+        >
+          <Link
+            href={`/cohorts/${detail.cohort.id}/plan`}
+            className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 hover:bg-[var(--brand-accent)]/10"
           >
-            <Feedback
-              cohortId={detail.cohort.id}
-              zone={tenant.timezone}
-              assessments={grid.assessments.map((column) => ({
-                id: column.id,
-                title: column.title,
-              }))}
-              requests={feedbackRequests}
-              canAsk={canManage}
-            />
-          </Card>
-        </div>
-      ) : null}
-
-      {grid.assessments.length > 0 && grid.learners.length > 0 ? (
-        <div className="mt-6">
-          <Card title={t("cohort.assessment")} description={t("cohort.assessmentIntro")}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                    <th className="pb-2 pr-3">{words.one("learner")}</th>
-                    {grid.assessments.map((column) => (
-                      <th key={column.id} className="pb-2 pr-3">
-                        <span className="block">{column.title}</span>
-                        {column.dueOn ? (
-                          <span className="block font-normal normal-case tabular-nums">{column.dueOn}</span>
-                        ) : null}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {grid.learners.map((row) => (
-                    <tr key={row.userId} className="border-t border-[var(--border)]">
-                      <td className="py-2 pr-3 whitespace-nowrap">
-                        {row.name}
-                        {row.leftAt ? (
-                          <span className="ml-2 text-xs text-[var(--muted)]">{t("cohort.left")}</span>
-                        ) : null}
-                      </td>
-                      {row.cells.map((cell) => (
-                        <td
-                          key={cell.assessmentId}
-                          className="py-2 pr-3 whitespace-nowrap"
-                          title={cell.on ?? undefined}
-                        >
-                          {cell.status === "not_started"
-                            ? "—"
-                            : (maybe(t, `cohort.grid.${cell.status}`) ?? cell.status)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-3 text-xs text-[var(--muted)]">{t("cohort.absentNote")}</p>
-          </Card>
-        </div>
-      ) : null}
-
-      <div className="mt-6">
-        <Card title={t("cohort.work")} description={t("cohort.workIntro")}>
-          <CohortTasks
-            cohortId={detail.cohort.id}
-            tasks={tasks}
-            progress={taskProgress(tasks)}
-            canManage={canSchedule}
-          />
+            <span className="font-semibold">{t("planner.open_link")} →</span>
+            <span className="text-sm text-[var(--muted)]">{t("planner.openIntro")}</span>
+          </Link>
         </Card>
-      </div>
 
-      {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
-        <div id="rollout" className="mt-6 scroll-mt-4">
-          <Card title={t("rolloutImport.title")} description={t("rolloutImport.intro")}>
-            <RolloutImport cohortId={detail.cohort.id} />
-          </Card>
-        </div>
-      ) : null}
+        {canManage && detail.steps.length > 0 && scheduled ? (
+          <div id="rollout" className="scroll-mt-28">
+            <Card title={t("rolloutImport.title")} description={t("rolloutImport.intro")} guide={guide(["cohortGuide.rollout.1", "cohortGuide.rollout.2", "cohortGuide.rollout.3", "cohortGuide.rollout.4"])}>
+              <RolloutImport cohortId={detail.cohort.id} />
+            </Card>
+          </div>
+        ) : null}
 
-      {canManage && detail.steps.length > 0 && detail.cohort.releaseMode !== "open" ? (
-        <div className="mt-6">
-          <Card title={t("cohort.reachTitle")} description={t("cohort.reachIntro")}>
-            <ReleaseControls
-              cohortId={detail.cohort.id}
-              steps={detail.steps.map((step) => ({
-                id: step.id,
-                title: step.title,
-                kind: step.kind,
-                released: step.released,
-                releasedAt: step.releasedAt,
-                opensAt: step.opensAt,
-              }))}
-            />
-          </Card>
-        </div>
-      ) : null}
+        {canManage ? (
+          <div id="move" className="scroll-mt-28">
+            <Card title={t("cohort.move")} description={t("cohort.moveIntro")}>
+              <Reschedule cohortId={detail.cohort.id} startDate={detail.cohort.startDate} />
+            </Card>
+          </div>
+        ) : null}
 
-      <div className="mt-6">
         <Card
           title={t("cohort.release", { course: words.one("course") })}
           description={t("cohort.releaseIntro")}
+          guide={guide(["cohortGuide.release.1", "cohortGuide.release.2"])}
         >
           {canManage ? (
             <ScheduleEditor
@@ -446,59 +308,236 @@ export default async function CohortPage({
             </div>
           )}
         </Card>
-      </div>
 
-      <div className="mt-6">
         <Card
-          title={t("cohort.members", { count: active.length })}
-          description={t("cohort.membersIntro", { course: words.lowerOne("course") })}
+          section={{ id: "sessions", label: t("cohortNav.section.sessions") }}
+          title={t("cohort.rollout")}
+          description={t("cohort.rolloutIntro")}
+          guide={guide(["cohortGuide.sessions.1", "cohortGuide.sessions.2", "cohortGuide.sessions.3", "cohortGuide.sessions.4"])}
         >
-          {detail.members.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">{t("cohort.nobody")}</p>
-          ) : (
-            <ul className="space-y-1 text-sm">
-              {detail.members.map((member) => (
-                <li
-                  key={member.userId}
-                  className={`flex flex-wrap items-center justify-between gap-2 ${
-                    member.leftAt ? "opacity-60" : ""
-                  }`}
-                >
-                  <span>
-                    {member.firstName} {member.lastName}
-                    <span className="ml-2 text-xs text-[var(--muted)]">
-                      {member.email}
-                      {member.leftAt
-                        ? t("cohort.leftOn", { date: member.leftAt.toISOString().slice(0, 10) })
-                        : ""}
-                    </span>
-                  </span>
-                  {canManage && !member.leftAt ? (
-                    <RemoveMember
-                      cohortId={detail.cohort.id}
-                      userId={member.userId}
-                      name={`${member.firstName} ${member.lastName}`}
-                    />
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
+          <Rollout
+            zone={tenant.timezone}
+            cohortId={detail.cohort.id}
+            sessions={rollout}
+            canManage={canSchedule}
+            canRegister={canRegister}
+          />
+        </Card>
 
-          {canManage ? (
-            <div className="mt-4 border-t border-[var(--border)] pt-4">
-              <AddMember
+        {/* Running it: what needs doing today, then how the cohort is getting on. */}
+        <div id="today" className="scroll-mt-28 space-y-6">
+          {canManage && detail.steps.length > 0 && scheduled ? (
+            <Card
+              section={{ id: "release", label: t("cohortNav.section.today") }}
+              title={t("cohort.reachTitle")}
+              description={t("cohort.reachIntro")}
+              guide={guide(["cohortGuide.today.1", "cohortGuide.today.2", "cohortGuide.today.3"])}
+            >
+              <ReleaseControls
                 cohortId={detail.cohort.id}
-                candidates={candidates.map((person) => ({
-                  id: person.id,
-                  firstName: person.firstName,
-                  lastName: person.lastName,
-                  email: person.email,
+                steps={detail.steps.map((step) => ({
+                  id: step.id,
+                  title: step.title,
+                  kind: step.kind,
+                  released: step.released,
+                  releasedAt: step.releasedAt,
+                  opensAt: step.opensAt,
                 }))}
               />
-            </div>
+            </Card>
           ) : null}
-        </Card>
+
+          {blocked.length > 0 ? (
+            <Card
+              section={{ id: "waiting", label: t("cohortNav.section.waiting") }}
+              title={t("cohort.waiting", { count: blocked.length })}
+              description={t("cohort.waitingIntro")}
+              guide={guide(["cohortGuide.waiting.1", "cohortGuide.waiting.2"])}
+            >
+              <ul className="space-y-2">
+                {blocked.map((row) => (
+                  <li key={row.userId} className="rounded-md border border-[var(--border)] px-4 py-3 text-sm">
+                    <span className="font-medium">
+                      {row.firstName} {row.lastName}
+                    </span>
+                    <span className="mt-0.5 block">
+                      <Rich text={t("cohort.stuckAt")} parts={{ step: <strong>{row.stepTitle}</strong> }} />
+                    </span>
+                    <span className="mt-0.5 block text-xs text-[var(--muted)]">{row.blockedBy.join(" ")}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {timings.some((row) => row.opened > 0) ? (
+            <Card
+              section={{ id: "progress", label: t("cohortNav.section.progress") }}
+              title={t("cohort.progress")}
+              description={t("cohort.progressIntro")}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                      <th className="pb-2">{t("cohort.step")}</th>
+                      <th className="pb-2">{t("cohort.opened")}</th>
+                      <th className="pb-2">{t("cohort.finished")}</th>
+                      <th className="pb-2">{t("cohort.stillOn")}</th>
+                      <th className="pb-2">{t("cohort.median")}</th>
+                      <th className="pb-2">{t("cohort.longest")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timings.map((row) => (
+                      <tr key={row.stepId} className="border-t border-[var(--border)]">
+                        <td className="py-2 pr-3">{row.title}</td>
+                        <td className="py-2 pr-3 tabular-nums">{row.opened}</td>
+                        <td className="py-2 pr-3 tabular-nums">{row.completed}</td>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {row.inProgress > 0 ? <strong>{row.inProgress}</strong> : row.inProgress}
+                        </td>
+                        <td className="py-2 pr-3 tabular-nums">{row.medianDays === null ? "—" : row.medianDays}</td>
+                        <td className="py-2 tabular-nums">{row.longestDays === null ? "—" : row.longestDays}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {stalled.length > 0 ? (
+                <p className="mt-3 text-sm text-[var(--muted)]">
+                  {stalled.length === 1
+                    ? t("cohort.stalledOne", { steps: stalled.map((row) => row.title).join(", ") })
+                    : t("cohort.stalledMany", {
+                        count: stalled.length,
+                        steps: stalled.map((row) => row.title).join(", "),
+                      })}
+                </p>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {attendance.countable > 0 ? (
+            <Card
+              section={{ id: "attendance", label: t("cohortNav.section.attendance") }}
+              title={t("cohort.attendance")}
+              description={t("cohort.attendanceIntro")}
+            >
+              <p className="mb-3 text-sm text-[var(--muted)]">
+                {t("cohort.held", { held: attendance.held, countable: attendance.countable })}
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                      <th className="pb-2">{words.one("learner")}</th>
+                      <th className="pb-2">{t("cohort.present")}</th>
+                      <th className="pb-2">{t("cohort.absent")}</th>
+                      <th className="pb-2">{t("cohort.excused")}</th>
+                      <th className="pb-2">{t("cohort.toDate")}</th>
+                      <th className="pb-2">{t("cohort.overall")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendance.learners.map((line) => (
+                      <tr key={line.userId} className="border-t border-[var(--border)]">
+                        <td className="py-2 pr-3">{line.name}</td>
+                        <td className="py-2 pr-3 tabular-nums">{line.present}</td>
+                        <td className="py-2 pr-3 tabular-nums">{line.absent}</td>
+                        <td className="py-2 pr-3 tabular-nums">{line.excused}</td>
+                        <td className="py-2 pr-3 tabular-nums">{line.toDatePercent}%</td>
+                        <td className="py-2 tabular-nums">{line.overallPercent}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : null}
+
+          {grid.assessments.length > 0 && grid.learners.length > 0 ? (
+            <Card
+              section={{ id: "results", label: t("cohortNav.section.results") }}
+              title={t("cohort.assessment")}
+              description={t("cohort.assessmentIntro")}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                      <th className="pb-2 pr-3">{words.one("learner")}</th>
+                      {grid.assessments.map((column) => (
+                        <th key={column.id} className="pb-2 pr-3">
+                          <span className="block">{column.title}</span>
+                          {column.dueOn ? (
+                            <span className="block font-normal normal-case tabular-nums">{column.dueOn}</span>
+                          ) : null}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grid.learners.map((row) => (
+                      <tr key={row.userId} className="border-t border-[var(--border)]">
+                        <td className="py-2 pr-3 whitespace-nowrap">
+                          {row.name}
+                          {row.leftAt ? (
+                            <span className="ml-2 text-xs text-[var(--muted)]">{t("cohort.left")}</span>
+                          ) : null}
+                        </td>
+                        {row.cells.map((cell) => (
+                          <td
+                            key={cell.assessmentId}
+                            className="py-2 pr-3 whitespace-nowrap"
+                            title={cell.on ?? undefined}
+                          >
+                            {cell.status === "not_started"
+                              ? "—"
+                              : (maybe(t, `cohort.grid.${cell.status}`) ?? cell.status)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-xs text-[var(--muted)]">{t("cohort.absentNote")}</p>
+            </Card>
+          ) : null}
+
+          <Card
+            section={{ id: "tasks", label: t("cohortNav.section.tasks") }}
+            title={t("cohort.work")}
+            description={t("cohort.workIntro")}
+          >
+            <CohortTasks
+              cohortId={detail.cohort.id}
+              tasks={tasks}
+              progress={taskProgress(tasks)}
+              canManage={canSchedule}
+            />
+          </Card>
+
+          {canReadReports ? (
+            <Card
+              section={{ id: "feedback", label: t("cohortNav.section.feedback") }}
+              title={t("cohort.feedback", { programme: words.one("programme") })}
+              description={t("cohort.feedbackIntro", { hours: HOURS_TO_RESPOND })}
+            >
+              <Feedback
+                cohortId={detail.cohort.id}
+                zone={tenant.timezone}
+                assessments={grid.assessments.map((column) => ({
+                  id: column.id,
+                  title: column.title,
+                }))}
+                requests={feedbackRequests}
+                canAsk={canManage}
+              />
+            </Card>
+          ) : null}
+        </div>
       </div>
     </AppShell>
   );

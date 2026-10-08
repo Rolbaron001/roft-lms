@@ -43,6 +43,7 @@ import {
   setStepReleased,
 } from "@/lib/cohorts";
 import { autoPlan, cohortPlan, setStepDates } from "@/lib/cohort-plan";
+import { cohortJourney } from "@/lib/cohort-journey";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 
@@ -699,6 +700,27 @@ describe("a study unit released through its cohort (Heidi, 5 October 2026)", () 
 
     // A learner cannot plan.
     await expect(autoPlan(learner, cohort.id)).rejects.toThrow();
+  });
+
+  it("ticks each step of setting up a cohort from what is held, and says what comes next (Roland, 8 October 2026)", async () => {
+    const { courseId, stepIds } = await buildCourse();
+    const cohort = await createCohort(admin, { courseId, name: "Guided intake", startDate: "2026-01-05" });
+
+    let journey = await cohortJourney(admin, cohort.id);
+    expect(journey.done.setup).toBe(true);
+    expect([journey.done.payment, journey.done.learners, journey.done.plan, journey.done.sessions]).toEqual([false, false, false, false]);
+    expect(journey.next).toBe("payment");
+
+    await withTenant(organisationId, (tx) => tx.update(cohortsTable).set({ paymentReceivedAt: new Date() }).where(eq(cohortsTable.id, cohort.id)));
+    await addMember(admin, cohort.id, other.userId);
+    journey = await cohortJourney(admin, cohort.id);
+    expect([journey.done.payment, journey.done.learners]).toEqual([true, true]);
+    expect(journey.next).toBe("plan");
+
+    await setSchedule(admin, cohort.id, [{ stepId: stepIds[0], opensAfterDays: 7 }]);
+    journey = await cohortJourney(admin, cohort.id);
+    expect(journey.done.plan).toBe(true);
+    expect(journey.next).toBe("sessions");
   });
 
   it("leaves a course nobody walks in a cohort as it was", async () => {

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/empty-state";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { NewCohort } from "./new-cohort";
 import { RosterForm } from "@/app/people/roster-form";
-import { Card } from "@/components/ui";
+import { Card, Guide } from "@/components/ui";
 import { extensionState } from "@/lib/extensions";
 import { vocabulary } from "@/lib/terms";
 
@@ -41,6 +41,22 @@ export default async function CohortsPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{words.many("cohort")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("cohorts.intro")}</p>
+        {canManage ? (
+          <div className="max-w-2xl">
+            <Guide
+              label={t("cohortsGuide.label")}
+              points={[
+                t("cohortsGuide.1"),
+                t("cohortsGuide.2"),
+                t("cohortsGuide.3"),
+                t("cohortsGuide.4"),
+                t("cohortsGuide.5"),
+                t("cohortsGuide.6"),
+                t("cohortsGuide.7"),
+              ]}
+            />
+          </div>
+        ) : null}
       </div>
 
       {canManage ? (

@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/components/i18n";
+import { Guide } from "@/components/ui";
 import type { CohortPlan, PlanStep } from "@/lib/cohort-plan";
 import { autoPlanAction, setStepDatesAction, setStepReleasedAction, type CohortActionState } from "../../actions";
 
@@ -97,6 +98,8 @@ export function Planner({ plan, canManage, dateLocale }: { plan: CohortPlan; can
             </div>
           </div>
 
+          <Guide label={t("guide.how")} points={[t("planner.guideWeeks.1"), t("planner.guideWeeks.2"), t("planner.guideWeeks.3"), t("planner.guideWeeks.4")]} />
+
           {!anyPlanned ? <p className="text-sm text-[var(--muted)]">{t("planner.empty")}</p> : null}
 
           {bands.map(({ unit, steps, weeks: unitWeeks }) => (
@@ -182,6 +185,7 @@ export function Planner({ plan, canManage, dateLocale }: { plan: CohortPlan; can
               </div>
             </div>
             <div className="space-y-4 p-4 text-sm">
+              <Guide label={t("guide.how")} points={[t("planner.guideSee.1"), t("planner.guideSee.2")]} />
               {bands.map(({ unit, steps }) => {
                 const started = steps.some((step) => {
                   const opensOn = step.releasedAt ?? step.opens;

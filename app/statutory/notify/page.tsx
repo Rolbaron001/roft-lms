@@ -9,6 +9,7 @@ import {
 } from "@/lib/statutory-notification";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
+import { PageNav } from "@/components/page-nav";
 import { recipientsFor } from "@/lib/qcto-recipients";
 import {
   AcknowledgeForm,
@@ -58,9 +59,11 @@ export default async function NotifyPage() {
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("enrolNotify.intro")}</p>
       </div>
 
+      <PageNav />
+
       {overdue.length > 0 ? (
         <div className="mb-6">
-          <Card title={t("enrolNotify.overdue", { count: overdue.length })} description={t("enrolNotify.overdueNote")}>
+          <Card section={{ id: "overdue", label: t("enrolNotify.overdue", { count: overdue.length }) }} title={t("enrolNotify.overdue", { count: overdue.length })} description={t("enrolNotify.overdueNote")}>
             <ul className="space-y-1">
               {overdue.map((row) => (
                 <li key={row.userId} className="text-sm">
@@ -83,7 +86,7 @@ export default async function NotifyPage() {
 
       {soon.length > 0 ? (
         <div className="mb-6">
-          <Card title={t("enrolNotify.soon", { count: soon.length })} description={t("enrolNotify.soonNote")}>
+          <Card section={{ id: "soon", label: t("enrolNotify.soon", { count: soon.length }) }} title={t("enrolNotify.soon", { count: soon.length })} description={t("enrolNotify.soonNote")}>
             <ul className="space-y-1">
               {soon.map((row) => (
                 <li key={row.userId} className="text-sm">
@@ -105,6 +108,7 @@ export default async function NotifyPage() {
       {noInduction.length > 0 ? (
         <div className="mb-6">
           <Card
+            section={{ id: "no-induction", label: t("enrolNotify.noInduction", { count: noInduction.length }) }}
             title={t("enrolNotify.noInduction", { count: noInduction.length })}
             description={t("enrolNotify.noInductionNote")}
           >
@@ -121,19 +125,19 @@ export default async function NotifyPage() {
       ) : null}
 
       <div className="mb-6">
-        <Card title={t("enrolNotify.draft")} description={t("enrolNotify.draftNote")}>
+        <Card section={{ id: "draft", label: t("enrolNotify.draft") }} title={t("enrolNotify.draft")} description={t("enrolNotify.draftNote")}>
           <DraftForm rows={due} />
         </Card>
       </div>
 
       <div className="mb-6">
-        <Card title={t("enrolNotify.ownInduction")} description={t("enrolNotify.ownInductionNote")}>
+        <Card section={{ id: "own-induction", label: t("enrolNotify.ownInduction") }} title={t("enrolNotify.ownInduction")} description={t("enrolNotify.ownInductionNote")}>
           <OwnInductionForm rows={due} />
         </Card>
       </div>
 
       <div className="mb-6">
-        <Card title={t("enrolNotify.submissions")} description={t("enrolNotify.notified", { count: notified.length })}>
+        <Card section={{ id: "submissions", label: t("enrolNotify.submissions") }} title={t("enrolNotify.submissions")} description={t("enrolNotify.notified", { count: notified.length })}>
           {notifications.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">{t("enrolNotify.nothingDrafted")}</p>
           ) : (

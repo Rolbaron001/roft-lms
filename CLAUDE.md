@@ -147,3 +147,10 @@ Start the sentence with its subject.
 
 It is a house style decision, not a preference to be weighed. Curiosa hand
 these documents to the QCTO and to their own clients.
+
+Roland, 8 October 2026: "Don't use sloppy American language in the LMS. Make
+sure that all comments, notes, instructions etc in the LMS use 'Kings
+English'." Heidi is pedantic about language. British spelling and usage
+throughout: organise, colour, programme, enrol, enrolment, catalogue, centre,
+judgement, cancelled, labelled; "fill in", not "fill out"; no "gotten", "reach
+out" or "learnings".

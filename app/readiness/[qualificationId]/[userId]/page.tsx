@@ -8,6 +8,7 @@ import {
 } from "@/lib/statement-of-results";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card } from "@/components/app-shell";
+import { PageNav } from "@/components/page-nav";
 import { IssueStatement } from "./issue";
 import { QualificationAward } from "./award";
 import { awardsFor } from "@/lib/qualification-awards";
@@ -83,8 +84,12 @@ export default async function LearnerReadinessPage({
         </p>
       </div>
 
+      <PageNav />
+
       <section
-        className="mb-6 rounded-lg border-2 bg-[var(--surface)] p-6"
+        id="summary"
+        data-page-section={t("ready.nav.summary")}
+        className="mb-6 scroll-mt-28 rounded-lg border-2 bg-[var(--surface)] p-6"
         style={{
           borderColor: readiness.eisaEligible ? "var(--success)" : "var(--border)",
         }}
@@ -139,7 +144,7 @@ export default async function LearnerReadinessPage({
 
       {units.length > 0 && (canIssue || units.some((unit) => liveFor(unit.id))) ? (
         <div className="mb-6">
-          <Card title={t("ready.perUnit")} description={t("ready.perUnitIntro")}>
+          <Card section={{ id: "units", label: t("ready.nav.units") }} title={t("ready.perUnit")} description={t("ready.perUnitIntro")}>
             <ul className="space-y-3">
               {units.map((unit) => {
                 const held = liveFor(unit.id);
@@ -176,6 +181,7 @@ export default async function LearnerReadinessPage({
 
       <div className="mb-6">
         <Card
+          section={{ id: "certificate", label: t("ready.nav.certificate") }}
           title={t("ready.certificate")}
           description={t("ready.certificateIntro", { provider: tenant.displayName })}
         >
@@ -208,7 +214,12 @@ export default async function LearnerReadinessPage({
       {readiness.components
         .filter((component) => component.modules.length > 0)
         .map((component) => (
-          <section key={component.component} className="mb-6">
+          <section
+            key={component.component}
+            id={`component-${component.component}`}
+            data-page-section={maybe(t, `ready.component.${component.component}`) ?? component.component}
+            className="mb-6 scroll-mt-28"
+          >
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="font-semibold">
                 {maybe(t, `ready.component.${component.component}`) ?? component.component}

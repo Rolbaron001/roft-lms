@@ -268,7 +268,7 @@ export function CapabilitiesForm({
           never says what they add up to. This is derived from them, so it
           cannot drift, and it uses this provider's own words.
         */}
-        <div className="rounded-md border border-[var(--border)] bg-[var(--bg)] p-4">
+        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("shape.gives")}
           </p>

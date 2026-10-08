@@ -294,6 +294,24 @@ person going through it question by question.
   now. The change shows in its new week at once. Clearing both dates puts
   it back to waiting for a hand release.
 
+## 6c. The steps of a cohort, and finding your way (8 October 2026)
+
+- **The bar at the top of every cohort page** names the steps in order: Set
+  up, Payment, Learners, Dates, Class sessions, Running it, Archive. Each is
+  ticked from what the platform holds, never by hand, and the line beneath
+  says what to do next, with a link to where it is done.
+- **When a step counts as done:** Payment, when the cohort's payment is
+  recorded, or when every learner on it has an accepted proof of payment of
+  their own; Learners, when anybody is on it; Dates, when anything is dated
+  or released (or the cohort has everything open); Class sessions, when any
+  is scheduled; Running it and Archive, when the cohort's evidence archive
+  has been checked.
+- **How this works:** under most headings, a folded list of the steps that
+  part of the page involves.
+- **On this page:** long pages (a cohort, a person, a FISA instrument,
+  readiness, records, enrolment notifications, a qualification) list their
+  sections in a bar that stays at the top while scrolling.
+
 ## 7. Adding people from a spreadsheet
 
 - **Needed:** columns for first name, last name and email address at least,

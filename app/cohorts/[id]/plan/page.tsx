@@ -4,6 +4,7 @@ import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { cohortPlan } from "@/lib/cohort-plan";
 import { CohortError } from "@/lib/cohorts";
 import { AppShell } from "@/components/app-shell";
+import { CohortNav } from "@/components/cohort-nav";
 import { Planner } from "./planner";
 
 /**
@@ -36,6 +37,7 @@ export default async function CohortPlanPage({ params }: { params: Promise<{ id:
           {t("planner.starts", { date: plan.cohort.startDate })} · {plan.cohort.releaseMode === "open" ? t("planner.modeOpen") : t("planner.modeScheduled")}
         </p>
       </div>
+      <CohortNav cohortId={id} current="plan" />
       <Planner plan={plan} canManage={session.permissions.includes("enrolment:manage")} dateLocale={dates} />
     </AppShell>
   );

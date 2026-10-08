@@ -13,6 +13,7 @@ import {
 import { mailDomainFor } from "@/lib/mail";
 import { AppShell, StatusBadge } from "@/components/app-shell";
 import { PersonEditor } from "./person-editor";
+import { PageNav } from "@/components/page-nav";
 import { mayViewAs } from "@/lib/view-as";
 import { startViewAsAction } from "../view-as-actions";
 import { EnrolmentDocuments } from "./documents";
@@ -200,6 +201,8 @@ export default async function PersonPage({
         </p>
       </div>
 
+      <PageNav />
+
       {person.status === "anonymised" ? (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="font-medium">{t("personPage.anonymised")}</h2>
@@ -216,6 +219,7 @@ export default async function PersonPage({
           <p className="mt-2 text-sm text-[var(--muted)]">{t("personPage.noEdit")}</p>
         </section>
       ) : (
+        <div id="details" data-page-section={t("personPage.detailsSection")} className="scroll-mt-28">
         <PersonEditor
           userId={person.id}
           isSelf={isSelf}
@@ -249,10 +253,11 @@ export default async function PersonPage({
           canManageRoles={session.permissions.includes("user:manage_roles")}
           canAnonymise={session.permissions.includes("user:anonymise")}
         />
+        </div>
       )}
 
       {canManageConduct ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="conduct" data-page-section={t("personPage.conduct")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.conduct")}
           </h2>
@@ -268,7 +273,7 @@ export default async function PersonPage({
       ) : null}
 
       {canActOnSupport ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="support" data-page-section={t("personPage.support")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.support")}
           </h2>
@@ -284,7 +289,7 @@ export default async function PersonPage({
       ) : null}
 
       {canActOnSupport ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="missed" data-page-section={t("personPage.missed")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.missed")}
           </h2>
@@ -300,7 +305,7 @@ export default async function PersonPage({
       ) : null}
 
       {canManageAppeals ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="appeals" data-page-section={t("personPage.appeals")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.appeals")}
           </h2>
@@ -326,7 +331,7 @@ export default async function PersonPage({
       ) : null}
 
       {readiness ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="documents" data-page-section={t("personPage.documents")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.documents")}
           </h2>
@@ -348,7 +353,7 @@ export default async function PersonPage({
       ) : null}
 
       {awards.length > 0 ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="awarded" data-page-section={t("personPage.awarded")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.awarded")}
           </h2>
@@ -375,7 +380,7 @@ export default async function PersonPage({
       ) : null}
 
       {elsewhere.length > 0 ? (
-        <section className="mt-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+        <section id="elsewhere" data-page-section={t("personPage.elsewhere")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
             {t("personPage.elsewhere")}
           </h2>

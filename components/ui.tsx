@@ -11,14 +11,31 @@
 export function Card({
   title,
   description,
+  guide,
+  section,
   children,
 }: {
   title?: string;
   description?: string;
+  /**
+   * How this part of the page works, under its heading (Roland, 8 October
+   * 2026: what comes next and what is required should be said where it is
+   * done). Usually a <Guide>.
+   */
+  guide?: React.ReactNode;
+  /**
+   * An anchor for the floating "On this page" menu: { id, label }. Marking the
+   * card is all it takes for the menu to list it (components/page-nav.tsx).
+   */
+  section?: { id: string; label: string };
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+    <section
+      id={section?.id}
+      data-page-section={section?.label}
+      className="scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6"
+    >
       {title ? (
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
           {title}
@@ -27,8 +44,30 @@ export function Card({
       {description ? (
         <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
       ) : null}
+      {guide}
       <div className={title || description ? "mt-4" : undefined}>{children}</div>
     </section>
+  );
+}
+
+/**
+ * "How this works": the steps of one part of a page, folded under its heading
+ * so it informs without crowding (design restraint). The label is passed in so
+ * this file stays free of the phrase catalogue.
+ */
+export function Guide({ label, points }: { label: string; points: string[] }) {
+  return (
+    <details className="group mt-2 text-sm">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded text-[var(--brand-primary)] hover:underline [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>
+        {label}
+      </summary>
+      <ol className="mt-2 list-decimal space-y-1 rounded-md border border-[var(--border)] bg-[var(--background)] py-3 pl-8 pr-4 text-[var(--foreground)]">
+        {points.map((point) => (
+          <li key={point}>{point}</li>
+        ))}
+      </ol>
+    </details>
   );
 }
 

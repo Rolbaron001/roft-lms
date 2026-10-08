@@ -27,12 +27,18 @@ export function PageNav({
   label,
   attribute = "data-page-section",
   ariaLabel,
+  embedded = false,
 }: {
   /** The heading above the list. */
   label?: string;
   /** Which attribute marks a section, so Settings can keep its own. */
   attribute?: string;
   ariaLabel?: string;
+  /**
+   * Inside another floating bar (a process guide such as the cohort's), which
+   * already floats; this one then only lists the sections.
+   */
+  embedded?: boolean;
 }) {
   const t = useT();
   const [sections, setSections] = useState<{ id: string; label: string }[]>([]);
@@ -112,7 +118,11 @@ export function PageNav({
        * the full width of the column while the list stays aligned with the
        * text beneath it.
        */
-      className="sticky top-0 z-30 -mx-4 mb-6 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-[var(--bg)]/80"
+      className={
+        embedded
+          ? "mt-1.5 border-t border-[var(--border)] pt-1.5"
+          : "sticky top-0 z-30 -mx-4 mb-6 border-b border-[var(--border)] bg-[var(--background)]/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-[var(--background)]/80"
+      }
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">

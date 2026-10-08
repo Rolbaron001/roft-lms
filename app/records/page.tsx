@@ -11,6 +11,7 @@ import { dateInZone } from "@/lib/timezone";
 import { addWorkingDays } from "@/lib/working-days";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
+import { PageNav } from "@/components/page-nav";
 import { CATEGORY_LABEL, DisposalForm, FileDocument } from "./forms";
 
 /**
@@ -58,9 +59,11 @@ export default async function RecordsPage() {
         </p>
       </div>
 
+      <PageNav />
+
       {expiring.length > 0 ? (
         <div className="mb-6">
-          <Card title={t("records.expiring", { count: expiring.length })} description={t("records.expiringNote")}>
+          <Card section={{ id: "expiring", label: t("records.expiring", { count: expiring.length }) }} title={t("records.expiring", { count: expiring.length })} description={t("records.expiringNote")}>
             <ul className="space-y-1 text-sm">
               {expiring.map((row) => (
                 <li key={row.id}>
@@ -83,7 +86,7 @@ export default async function RecordsPage() {
         </div>
       ) : null}
 
-      <Card title={t("records.library")} description={t("records.libraryNote")}>
+      <Card section={{ id: "library", label: t("records.library") }} title={t("records.library")} description={t("records.libraryNote")}>
         {documents.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
             {t("records.nothing")}
@@ -158,7 +161,7 @@ export default async function RecordsPage() {
 
       {canManage && due.length > 0 ? (
         <div className="mt-6">
-          <Card title={t("records.retention", { count: due.length })} description={t("records.retentionNote")}>
+          <Card section={{ id: "retention", label: t("records.retention", { count: due.length }) }} title={t("records.retention", { count: due.length })} description={t("records.retentionNote")}>
             <ul className="space-y-4 text-sm">
               {due.map((row) => (
                 <li key={row.userId}>
@@ -187,7 +190,7 @@ export default async function RecordsPage() {
 
       {canReadAll && register.length > 0 ? (
         <div className="mt-6">
-          <Card title={t("records.register")} description={t("records.registerNote")}>
+          <Card section={{ id: "register", label: t("records.register") }} title={t("records.register")} description={t("records.registerNote")}>
             <ul className="space-y-1 text-sm">
               {register.map((row) => (
                 <li key={row.id} className="flex flex-wrap gap-x-3">

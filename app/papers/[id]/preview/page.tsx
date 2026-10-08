@@ -192,7 +192,7 @@ export default async function PaperPreviewPage({
                     answer sits beside the question rather than in the document
                     it was read from.
                   */}
-                  <div className="mt-3 ml-6 rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2">
+                  <div className="mt-3 ml-6 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                       {item.markedBy === "app" ? t("preview.byApp") : t("preview.byAssessor")}
                     </p>

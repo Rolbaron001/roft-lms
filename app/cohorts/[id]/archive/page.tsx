@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell, Card } from "@/components/app-shell";
+import { CohortNav } from "@/components/cohort-nav";
 import { ArchiveError, cohortArchiveState } from "@/lib/cohort-archive";
 import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n/maybe";
@@ -61,6 +62,8 @@ export default async function CohortArchivePage({
         <h1 className="mt-2 text-xl font-semibold">{t("archive.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("archive.intro")}</p>
       </div>
+
+      <CohortNav cohortId={id} current="archive" />
 
       <Card
         title={t("archive.ready", { count: state.ready.length })}
