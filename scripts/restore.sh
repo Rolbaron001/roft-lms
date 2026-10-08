@@ -76,6 +76,8 @@ storage_keys_in() {
     select storage_key from certificates c where storage_key is not null and (to_jsonb(c) ->> 'archived_at') is null
     union
     select storage_key from lessons            where storage_key is not null
+    union
+    select storage_key from cohort_files f where storage_key is not null and (to_jsonb(f) ->> 'archived_at') is null
   "
 }
 

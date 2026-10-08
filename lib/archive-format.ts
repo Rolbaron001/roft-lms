@@ -98,7 +98,8 @@ export class ChunkedFingerprint {
 export type ArchivedFileSource =
   | { table: "evidence_artifacts"; id: string; storageKey: string }
   | { table: "enrolment_documents"; id: string; storageKey: string }
-  | { table: "certificates"; id: string; storageKey: string };
+  | { table: "certificates"; id: string; storageKey: string }
+  | { table: "cohort_files"; id: string; storageKey: string };
 
 export type ArchivedFile = {
   /** Path inside the archive. */
@@ -157,7 +158,18 @@ export type ArchiveManifest = {
   /** Years the records are kept after each certificate is issued. */
   retentionYears: number;
   learners: ArchivedLearner[];
+  /**
+   * Documents filed against the cohort itself (job sheet D20): plans,
+   * attendance exports, reports, correspondence. Absent from archives made
+   * before 8 October 2026.
+   */
+  cohortFiles?: ArchivedFile[];
 };
+
+/** Every file an archive holds: each learner's, then the cohort's own. */
+export function archivedFiles(manifest: ArchiveManifest): ArchivedFile[] {
+  return [...manifest.learners.flatMap((learner) => learner.files), ...(manifest.cohortFiles ?? [])];
+}
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -243,9 +255,25 @@ export function renderArchiveIndex(manifest: ArchiveManifest): string {
 <p>Keep this archive for ${manifest.retentionYears} years after the last certificate in it was issued. Nothing in it needs the platform to be read: open this page in a browser.</p>
 <h2>Learners</h2>
 <table><thead><tr><th>Learner</th><th>Email</th><th>Files</th><th>Certificate issued</th></tr></thead><tbody>${rows}</tbody></table>
-<h2>Checking the archive</h2>
+${renderCohortFiles(manifest)}<h2>Checking the archive</h2>
 <p class="muted"><code>manifest.json</code> lists every file with its SHA-256 fingerprint. A file whose fingerprint no longer matches has been changed since it was uploaded. Archive ${escapeHtml(manifest.archiveId)}, format ${manifest.formatVersion}.</p>`,
   );
+}
+
+/** The cohort's own documents, on the archive's front page. */
+function renderCohortFiles(manifest: ArchiveManifest): string {
+  const files = manifest.cohortFiles ?? [];
+  if (files.length === 0) return "";
+  const rows = files
+    .map(
+      (file) =>
+        `<tr><td><a href="${escapeHtml(file.path)}">${escapeHtml(file.path.split("/").pop() ?? file.path)}</a></td><td>${escapeHtml(file.label)}</td><td><code>${escapeHtml(file.sha256)}</code></td></tr>`,
+    )
+    .join("");
+  return `<h2>The cohort file</h2>
+<p class="muted">Documents filed against the cohort rather than a learner, in the folder <code>Cohort file</code>.</p>
+<table><thead><tr><th>File</th><th>What it is</th><th>Fingerprint</th></tr></thead><tbody>${rows}</tbody></table>
+`;
 }
 
 function renderCriteria(criteria: ArchivedLearner["decisions"][number]["criteria"]): string {

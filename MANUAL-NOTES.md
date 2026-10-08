@@ -391,6 +391,31 @@ person going through it question by question.
   kept, with the coach, signed by the coach, accepted) and the hours recorded.
   It is read from the logbooks, so it needs the workplace modules loaded with
   the qualification and each learner's logbook opened under Workplace.
+- **Archiving:** a cohort's archive carries the documents filed against the
+  cohort, in a "Cohort file" folder. They leave the server only with the
+  archive that takes the cohort's last learners; until then each archive holds
+  a copy and the originals stay. Once archived, a filed document cannot be
+  removed from the cohort file, since its record is what a restore puts it
+  back against.
+
+## 6i. The administrator's dashboard (8 October 2026)
+
+- **Where:** the home page, for anyone who holds the administrator role. Their
+  own learning, if they have any, follows beneath it.
+- **Needs you today** counts what is waiting and opens where it is done:
+  learners to notify on the LEISA, appeals to acknowledge, submissions to
+  assess, class sessions held with no register, logbooks with workplace
+  coaches, and decisions sampled for moderation. A tile appears only when there
+  is something to do.
+- **What it depends on:** a cohort's end date, for the week count and the bar
+  showing how far through it is; the induction scheduled as a class session,
+  for the LEISA dates; the LEISA target in Settings, for the provider's own
+  date; registers taken at each session, for attendance and for spotting a
+  learner absent twice running; the facilitator named on each class session.
+- **Cohorts being set up** lists cohorts that have not started, with the next
+  of the seven steps as a button. A cohort that has started with a step still
+  missing (most often the payment) says so on its card under the running
+  cohorts instead.
 
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 

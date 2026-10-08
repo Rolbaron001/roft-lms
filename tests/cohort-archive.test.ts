@@ -22,6 +22,7 @@ import {
   assessments,
   certificates,
   cohortArchives,
+  cohortFiles,
   cohortMembers,
   cohorts,
   courses,
@@ -51,6 +52,7 @@ import {
   restoreProgress,
   startCohortArchive,
 } from "@/lib/cohort-archive";
+import { readCohortFile, removeCohortFile } from "@/lib/cohort-file";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
 import { buildStorageKey, getObject, putObject } from "@/lib/storage";
@@ -227,6 +229,20 @@ beforeAll(async () => {
       .values({ organisationId, courseId, name: "Archive Officer 2026 A", code: "ARC-26A", startDate: "2026-01-12" })
       .returning({ id: cohorts.id });
     cohortId = cohort.id;
+
+    // A document filed against the cohort itself (job sheet D20).
+    const plan = await store("facilitation-plan.pdf", sample(7_000, 7));
+    await tx.insert(cohortFiles).values({
+      organisationId,
+      cohortId,
+      kind: "facilitation_plan",
+      title: "Lecture 1 plan",
+      storageKey: plan.storageKey,
+      filename: "plan.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: plan.sizeBytes,
+      sha256: plan.sha256,
+    });
 
     const [assessment] = await tx
       .insert(assessments)
@@ -423,6 +439,14 @@ describe("building an archive", () => {
     expect(documentOf("Sipho Tester").removeFromServer).toBe(false);
   });
 
+  it("carries the cohort's own documents, kept on the server while learners remain", () => {
+    expect(Buffer.from(opened["Cohort file/Facilitation Plans/plan.pdf"]).equals(Buffer.from(contents["facilitation-plan.pdf"]))).toBe(true);
+    const manifest = JSON.parse(new TextDecoder().decode(opened["manifest.json"]));
+    expect(manifest.cohortFiles).toHaveLength(1);
+    expect(manifest.cohortFiles[0].removeFromServer).toBe(false);
+    expect(new TextDecoder().decode(opened["index.html"])).toContain("Lecture 1 plan");
+  });
+
   it("will not start a second archive of the same learners", async () => {
     await expectReason(startCohortArchive(admin, cohortId, { wait: true }), "nobody_eligible");
   });
@@ -471,8 +495,9 @@ describe("removing and restoring", () => {
 
     // Sipho's identity document stays; his other programme is still running.
     expect(Buffer.from(await getObject(keys["sipho-id.pdf"])).equals(Buffer.from(contents["sipho-id.pdf"]))).toBe(true);
-    // Lerato was never in it.
+    // Lerato was never in it, and the cohort's own file stays while she remains.
     expect(Buffer.from(await getObject(keys["lerato-evidence.pdf"])).length).toBe(40_000);
+    expect(Buffer.from(await getObject(keys["facilitation-plan.pdf"])).length).toBe(7_000);
 
     const state = await cohortArchiveState(admin, cohortId);
     expect(state.ready).toHaveLength(0);
@@ -525,5 +550,38 @@ describe("a file that cannot be read", () => {
     } finally {
       await writeFile(join(process.env.STORAGE_LOCAL_ROOT ?? "storage", keys["sipho-photo.jpg"]), saved);
     }
+  });
+});
+
+describe("the archive that closes the cohort", () => {
+  it("takes the cohort's own documents off the server too, and restores them", async () => {
+    // Lerato's certificate arrives, so nobody is left waiting.
+    await withPlatformScope("archive test fixture", async (tx) => {
+      await tx.insert(statementsOfResults).values({
+        organisationId,
+        userId: people.lerato,
+        qualificationId,
+        verificationReference: `SOR-${reference()}`,
+        statement: {
+          learner: { firstName: "lerato", lastName: "Tester", nationalId: null },
+          qualification: { title: "Occupational Certificate: Archive Officer", saqaId: null, curriculumCode: null, nqfLevel: 4, totalCredits: 40, assessmentQualityPartner: null },
+          provider: { legalName: "Archive Test Co", accreditationNumber: null },
+          modules: [],
+        },
+      });
+      await tx.insert(qualificationAwards).values({ organisationId, userId: people.lerato, qualificationId, certificateNumber: "QCTO-lerato", awardedOn: "2026-12-01" });
+    });
+    expect((await cohortArchiveState(admin, cohortId)).waiting).toHaveLength(0);
+
+    const { archiveId, copy } = await archiveAndRemove();
+    await expect(getObject(keys["facilitation-plan.pdf"])).rejects.toThrow();
+    const [filed] = await withPlatformScope("archive test read", (tx) => tx.select().from(cohortFiles).where(eq(cohortFiles.cohortId, cohortId)));
+    expect(filed.archiveId).toBe(archiveId);
+    await expect(readCohortFile(admin, filed.id)).rejects.toMatchObject({ code: "archived" });
+    await expect(removeCohortFile(admin, filed.id)).rejects.toMatchObject({ code: "archived" });
+
+    await appendRestoreChunk(admin, archiveId, 0, copy);
+    await finishRestore(admin, archiveId);
+    expect(Buffer.from((await readCohortFile(admin, filed.id)).bytes).equals(Buffer.from(contents["facilitation-plan.pdf"]))).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import {
   assessments,
   certificates,
   cohortArchives,
+  cohortFiles,
   cohortMembers,
   cohorts,
   courses,
@@ -32,6 +33,7 @@ import {
 } from "@/db/schema";
 import {
   ARCHIVE_FORMAT_VERSION,
+  archivedFiles,
   ChunkedFingerprint,
   renderArchiveIndex,
   renderLearnerIndex,
@@ -51,6 +53,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { deleteObject, getObject, hashBytes, putObject } from "./storage";
 import { writtenDay } from "./date-format";
+import { FOLDER_NAME, FOLDER_OF } from "./cohort-file";
 
 /**
  * Archiving a cohort's evidence off the server. Job sheet 4.3.
@@ -375,7 +378,7 @@ async function readState(
 
   const archives = archiveRows.map((row) => {
     const manifest = row.manifest as ArchiveManifest;
-    const files = manifest.learners.flatMap((learner) => learner.files);
+    const files = archivedFiles(manifest);
     return {
       id: row.id,
       status: row.status,
@@ -861,6 +864,8 @@ export async function startCohortArchive(
 
     const learnerIds = state.ready.map((row) => row.userId);
     const learners = await planLearners(tx, state.qualification.id, learnerIds);
+    // Nobody left waiting means this archive closes the cohort.
+    const filed = await planCohortFiles(tx, cohortId, state.waiting.length === 0);
 
     const [organisation] = await tx
       .select({
@@ -870,10 +875,10 @@ export async function startCohortArchive(
       .from(organisations)
       .where(eq(organisations.id, organisationId));
 
-    return { state, learners, organisation };
+    return { state, learners, filed, organisation };
   });
 
-  const { state, learners, organisation } = planned;
+  const { state, learners, filed, organisation } = planned;
 
   // Sizes as recorded. A certificate's size is not, so it is allowed for
   // generously; certificates are small.
@@ -885,6 +890,7 @@ export async function startCohortArchive(
         64 * 1024,
       0,
     ) +
+    filed.reduce((n, file) => n + file.sizeBytes + 256, 0) +
     1024 * 1024;
   if (estimate > MAX_ARCHIVE_BYTES) throw new ArchiveTooLargeError(estimate);
 
@@ -918,6 +924,7 @@ export async function startCohortArchive(
       ...learner,
       files: learner.files.map(stripPlanned),
     })),
+    cohortFiles: filed.map(stripPlanned),
   };
 
   await withTenant(organisationId, async (tx) => {
@@ -942,9 +949,33 @@ export async function startCohortArchive(
     });
   });
 
-  const done = writeCohortArchive(organisationId, archiveId, manifest, learners);
+  const done = writeCohortArchive(organisationId, archiveId, manifest, learners, filed);
   if (options.wait) await done;
   return { archiveId, done };
+}
+
+/**
+ * The documents filed against the cohort itself (job sheet D20), in the
+ * archive's "Cohort file" folder, arranged as the cohort file page arranges
+ * them. They belong to the whole cohort, so only the archive that takes its
+ * last learners removes them from the server; an earlier one carries a copy.
+ */
+async function planCohortFiles(tx: TenantDatabase, cohortId: string, closesCohort: boolean): Promise<PlannedFile[]> {
+  const rows = await tx
+    .select()
+    .from(cohortFiles)
+    .where(and(eq(cohortFiles.cohortId, cohortId), isNull(cohortFiles.archivedAt)))
+    .orderBy(asc(cohortFiles.createdAt));
+  const taken = new Set<string>();
+  return rows.map((row) => ({
+    path: uniquePath(taken, `Cohort file/${FOLDER_NAME[FOLDER_OF[row.kind]]}`, row.filename),
+    sha256: row.sha256,
+    sizeBytes: row.sizeBytes,
+    label: `${row.title}${closesCohort ? "" : ". Kept on the platform as well, since learners remain on the cohort"}`,
+    source: { table: "cohort_files", id: row.id, storageKey: row.storageKey },
+    removeFromServer: closesCohort,
+    recordedSha256: row.sha256,
+  }));
 }
 
 function stripPlanned(file: PlannedFile): ArchivedFile {
@@ -968,6 +999,7 @@ async function writeCohortArchive(
   archiveId: string,
   manifest: ArchiveManifest,
   learners: PlannedLearner[],
+  filed: PlannedFile[],
 ): Promise<void> {
   const partial = partialPath(organisationId, archiveId);
   const finished = archivePath(organisationId, archiveId);
@@ -977,7 +1009,7 @@ async function writeCohortArchive(
     let result: { fingerprint: string; bytes: number };
     try {
       result = await writeArchive(
-        entriesFor(manifest, learners),
+        entriesFor(manifest, learners, filed),
         async (piece) => {
           await handle.write(piece);
         },
@@ -1039,8 +1071,34 @@ async function writeCohortArchive(
 async function* entriesFor(
   manifest: ArchiveManifest,
   learners: PlannedLearner[],
+  filed: PlannedFile[],
 ): AsyncGenerator<ArchiveEntry> {
   const encoder = new TextEncoder();
+
+  for (const [fileIndex, file] of filed.entries()) {
+    const entry = manifest.cohortFiles![fileIndex];
+    yield {
+      path: file.path,
+      read: async () => {
+        let bytes: Uint8Array;
+        try {
+          bytes = await getObject(file.source.storageKey);
+        } catch {
+          throw new ArchiveError(
+            `The cohort's file "${file.path.split("/").pop()}" could not be read from storage, so the archive was not finished and nothing was removed. The file needs to be found, or removed from the cohort file, before the cohort can be archived.`,
+            "not_found",
+          );
+        }
+        const actual = hashBytes(bytes);
+        entry.sha256 = actual;
+        entry.sizeBytes = bytes.byteLength;
+        if (file.recordedSha256 && file.recordedSha256 !== actual) {
+          entry.label = `${entry.label}. This file no longer matches the fingerprint recorded when it was filed, which was ${file.recordedSha256}`;
+        }
+        return bytes;
+      },
+    };
+  }
 
   for (const [index, learner] of learners.entries()) {
     const archived = manifest.learners[index];
@@ -1172,7 +1230,7 @@ export async function confirmArchiveCopy(
 // ---------------------------------------------------------------------------
 
 function filesOf(manifest: ArchiveManifest): ArchivedFile[] {
-  return manifest.learners.flatMap((learner) => learner.files);
+  return archivedFiles(manifest);
 }
 
 async function markArchived(
@@ -1187,6 +1245,8 @@ async function markArchived(
     await tx.update(evidenceArtifacts).set(values).where(eq(evidenceArtifacts.id, id));
   } else if (table === "enrolment_documents") {
     await tx.update(enrolmentDocuments).set(values).where(eq(enrolmentDocuments.id, id));
+  } else if (table === "cohort_files") {
+    await tx.update(cohortFiles).set(values).where(eq(cohortFiles.id, id));
   } else {
     await tx.update(certificates).set(values).where(eq(certificates.id, id));
   }

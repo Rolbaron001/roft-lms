@@ -46,6 +46,13 @@ export const cohortFiles = pgTable(
     sizeBytes: integer("size_bytes").notNull(),
     sha256: text("sha256").notNull(),
     uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * When the file left the server in a cohort archive (lib/cohort-archive.ts),
+     * and which. Only the archive that takes the cohort's last learners removes
+     * these; earlier archives carry a copy.
+     */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveId: uuid("archive_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -11,6 +11,9 @@ import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { feedbackOwedBy } from "@/lib/feedback";
 import { learnerBadges } from "@/lib/badges";
 import { listAssessorQueue, listModerationQueue } from "@/lib/assessment";
+import { adminDashboard } from "@/lib/dashboard";
+import { PageNav } from "@/components/page-nav";
+import { AdminDashboardView } from "./admin-dashboard";
 
 function dueLabel(t: Translate, dueDate: Date | null, status: string): string | null {
   if (!dueDate || status === "completed") return null;
@@ -84,9 +87,16 @@ export default async function HomePage() {
   const outstanding = standalone.filter((row) => row.status !== "completed");
   const finished = standalone.filter((row) => row.status === "completed");
 
+  // An administrator opens on the provider's dashboard (job sheet D25). Their
+  // own learning, if they have any, follows it.
+  const isAdministrator = session.permissions.includes("tenant:manage_settings") && session.permissions.includes("enrolment:read_all");
+  const dashboard = isAdministrator ? await adminDashboard(session, { leisaTargetHours: tenant.leisaTargetHours }) : null;
+  const hasOwnLearning = standalone.length + paths.length + myQualifications.length + statements.length + certificates.length + earned.length > 0;
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
+        {dashboard ? <p className="text-sm text-[var(--muted)]">{day(new Date())}</p> : null}
         <h1 className="text-xl font-semibold">
           {session.firstName} {session.lastName}
         </h1>
@@ -103,8 +113,16 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {toAssess + toModerate > 0 ? (
+      {dashboard ? (
+        <>
+          <PageNav />
+          <AdminDashboardView data={dashboard} t={t} day={day} />
+        </>
+      ) : null}
+
+      <div className={dashboard ? (hasOwnLearning || owed.length > 0 ? "mt-10 space-y-6" : "hidden") : "space-y-6"}>
+        {dashboard && (hasOwnLearning || owed.length > 0) ? <h2 className="text-lg font-semibold">{t("dash.ownLearning")}</h2> : null}
+        {toAssess + toModerate > 0 && !dashboard ? (
           <Card title={t("home.waiting")}>
             <ul className="space-y-2 text-sm">
               {toAssess > 0 ? (

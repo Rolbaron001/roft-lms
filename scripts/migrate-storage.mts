@@ -73,7 +73,7 @@ const SOURCES: { table: string; column: string; archived?: boolean }[] = [
   // Videos, diagrams and other learning material (5 October 2026).
   { table: "library_items", column: "storage_key" },
   // Documents filed against a cohort: plans, exports, reports (8 October 2026).
-  { table: "cohort_files", column: "storage_key" },
+  { table: "cohort_files", column: "storage_key", archived: true },
 ];
 
 async function main() {

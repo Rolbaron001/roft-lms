@@ -23,6 +23,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       },
     });
   } catch (error) {
+    if (error instanceof CohortFileError && error.code === "archived") {
+      return new Response(error.message, { status: 410 });
+    }
     if (error instanceof CohortFileError || error instanceof PermissionDeniedError) {
       return new Response(error.message, { status: 404 });
     }

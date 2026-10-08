@@ -39,6 +39,7 @@ export default async function CohortFilePage({ params }: { params: Promise<{ id:
     if (code === "evidence") return t("cohortFile.note.evidence", { count: a, learners: b });
     if (code === "logbooks") return t("cohortFile.note.logbooks", { count: a, signed: b });
     if (code === "generated") return t("cohortFile.note.generated");
+    if (code === "archived") return t("cohortFile.note.archived", { file: text.slice("archived:".length) });
     return maybe(t, `enrolNotify.status.${text}`) ?? text;
   };
   const missing = (text: string) => {

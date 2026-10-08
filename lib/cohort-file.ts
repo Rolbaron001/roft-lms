@@ -25,6 +25,7 @@ import { cohortCourseIds } from "./schedule";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { buildStorageKey, getObject, putObject } from "./storage";
 import type { ArchiveEntry } from "./archive-writer";
+import { archivedFileNotice } from "./cohort-archive";
 import { COHORT_FILE_KINDS, type CohortFileKind } from "./cohort-file-kinds";
 
 /**
@@ -45,7 +46,7 @@ import { COHORT_FILE_KINDS, type CohortFileKind } from "./cohort-file-kinds";
  */
 
 export class CohortFileError extends Error {
-  constructor(message: string, public readonly code: "not_found" | "invalid") {
+  constructor(message: string, public readonly code: "not_found" | "invalid" | "archived") {
     super(message);
     this.name = "CohortFileError";
   }
@@ -87,7 +88,7 @@ export const FOLDER_NAME: Record<CohortFolder, string> = {
 };
 
 /** Which folder a stored cohort file belongs in. */
-const FOLDER_OF: Record<CohortFileKind, CohortFolder> = {
+export const FOLDER_OF: Record<CohortFileKind, CohortFolder> = {
   facilitation_plan: "facilitationPlans",
   induction_pack: "induction",
   attendance_export: "attendance",
@@ -164,6 +165,8 @@ export async function removeCohortFile(session: AuthenticatedSession, fileId: st
   await withTenant(session.organisationId, async (tx) => {
     const [file] = await tx.select().from(cohortFiles).where(eq(cohortFiles.id, fileId));
     if (!file) throw new CohortFileError("No such file.", "not_found");
+    // Its record is what says where the archived copy went.
+    if (file.archivedAt) throw new CohortFileError("This file is in the cohort's archive. Its record stays so that the archive can be restored.", "archived");
     await tx.delete(cohortFiles).where(eq(cohortFiles.id, fileId));
     await recordAudit(tx, {
       organisationId: session.organisationId,
@@ -180,6 +183,9 @@ export async function readCohortFile(session: AuthenticatedSession, fileId: stri
   assertSessionCan(session, "enrolment:read_all");
   const file = await withTenant(session.organisationId, async (tx) => {
     const [row] = await tx.select().from(cohortFiles).where(eq(cohortFiles.id, fileId));
+    if (row?.archivedAt && row.archiveId) {
+      throw new CohortFileError(await archivedFileNotice(tx, row.archiveId, row.archivedAt), "archived");
+    }
     return row;
   });
   if (!file) throw new CohortFileError("No such file.", "not_found");
@@ -244,7 +250,11 @@ export async function cohortFileView(session: AuthenticatedSession, cohortId: st
     const fileItems = (folder: CohortFolder): FolderItem[] =>
       files
         .filter((file) => FOLDER_OF[file.kind] === folder)
-        .map((file) => ({ label: file.title, href: `/api/cohort-files/${file.id}`, note: file.filename, fileId: file.id }));
+        .map((file) =>
+          file.archivedAt
+            ? { label: file.title, note: `archived:${file.filename}` }
+            : { label: file.title, href: `/api/cohort-files/${file.id}`, note: file.filename, fileId: file.id },
+        );
 
     const today = new Date().toISOString().slice(0, 10);
     const sessionLabel = (row: (typeof sessions)[number]) =>
@@ -506,7 +516,8 @@ export async function cohortFileEntries(session: AuthenticatedSession, cohortId:
       }
     }
 
-    const files = await tx.select().from(cohortFiles).where(eq(cohortFiles.cohortId, cohortId));
+    // A file in the cohort's archive is no longer here to copy.
+    const files = await tx.select().from(cohortFiles).where(and(eq(cohortFiles.cohortId, cohortId), isNull(cohortFiles.archivedAt)));
     for (const file of files) add(`${FOLDER_NAME[FOLDER_OF[file.kind]]}/${safe(file.filename)}`, file.storageKey);
 
     return { name: safe(cohort.name), entries };
