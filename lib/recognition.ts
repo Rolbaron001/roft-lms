@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { writtenDay } from "./date-format";
 
 /**
  * Recognition of prior learning, and credit accumulation and transfer.
@@ -278,7 +279,7 @@ export async function recordAdvisory(
   const advice = input.adviceGiven.trim();
   if (advice.length < 30) {
     throw new RecognitionError(
-      "Record what the candidate was told to gather. A refused candidate disputes this paragraph, and 'advised on requirements' is not one.",
+      "Record what the candidate was told to gather. If the candidate is refused, this is the paragraph they will dispute, so it must be specific.",
       "invalid",
     );
   }
@@ -345,7 +346,7 @@ export async function recordRplJudgement(
     }
     if (!application.advisedOn) {
       throw new RecognitionError(
-        "This candidate has not had an advisory session. Judging prior learning against requirements nobody explained is how a candidate is failed for assembling the wrong evidence. Record the advice first.",
+        "This candidate has not had an advisory session. Without advice on the requirements, a candidate may assemble the wrong evidence. Please record the advice first.",
         "needs_advice",
       );
     }
@@ -398,7 +399,7 @@ export async function moderateRplJudgement(
   const comment = input.comment.trim();
   if (comment.length < 10) {
     throw new RecognitionError(
-      "Say what you looked at and whether you agree. A moderation with no comment is a signature.",
+      "Please say what you looked at and whether you agree. A moderation must include a comment.",
       "invalid",
     );
   }
@@ -510,7 +511,7 @@ const transferInput = z.object({
     .trim()
     .min(
       30,
-      "Say how the outcomes of what they hold cover this module's. That paragraph is the whole of the decision, and a transfer without it is a claim nobody can check.",
+      "Say how the outcomes of what they hold cover this module's. That paragraph is the whole of the decision; without it, the transfer cannot be checked.",
     ),
   approvedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -542,7 +543,7 @@ export async function recordCreditTransfer(
     !withinCreditTransferWindow(parsed.awardedOn, parsed.approvedOn)
   ) {
     throw new RecognitionError(
-      `That was awarded on ${parsed.awardedOn}, more than ${CAT_YEARS} years before this approval. Credit Accumulation and Transfer covers completions within ${CAT_YEARS} years; beyond that the route is Recognition of Prior Learning, which assesses what the learner can still do rather than what they once passed. Open an RPL application instead.`,
+      `That was awarded on ${writtenDay(parsed.awardedOn)}, more than ${CAT_YEARS} years before this approval. Credit Accumulation and Transfer covers completions within ${CAT_YEARS} years; beyond that the route is Recognition of Prior Learning, which assesses what the learner can still do rather than what they once passed. Open an RPL application instead.`,
       "too_old_for_cat",
     );
   }

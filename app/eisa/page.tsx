@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { currentLocale, pageT, requireCapability, requirePermission } from "@/lib/request";
+import { currentLocale, pageDates, pageT, requireCapability, requirePermission } from "@/lib/request";
 import {
   registrationDue,
   upcomingSittings,
@@ -26,6 +26,7 @@ export default async function EisaPage() {
   const tenant = await requireCapability("qualifications");
   const session = await requirePermission("enrolment:read_all");
   const t = await pageT();
+  const { day } = await pageDates();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, await currentLocale());
 
   const today = dateInZone(new Date(), tenant.timezone);
@@ -120,7 +121,7 @@ export default async function EisaPage() {
                       {sitting.qualificationTitle ?? t("eisa.all")}
                     </td>
                     <td className="py-2 pr-3 tabular-nums">{sitting.registrationCloses}</td>
-                    <td className="py-2 tabular-nums">{sitting.sittingDate}</td>
+                    <td className="py-2 tabular-nums">{day(sitting.sittingDate, { short: true })}</td>
                   </tr>
                 ))}
               </tbody>

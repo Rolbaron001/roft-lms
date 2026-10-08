@@ -6,7 +6,7 @@ import { AppShell, Card } from "@/components/app-shell";
 export default async function AssessorQueuePage() {
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:assess");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
   const queue = await listAssessorQueue(session);
 
   return (
@@ -55,7 +55,7 @@ export default async function AssessorQueuePage() {
                       : ""}
                   </span>
                   <span className="block">
-                    {row.submittedAt ? row.submittedAt.toLocaleDateString(dates) : ""}
+                    {day(row.submittedAt, { short: true })}
                   </span>
                 </div>
               </div>

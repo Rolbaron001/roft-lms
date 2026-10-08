@@ -137,7 +137,7 @@ export async function enrolOnPathAction(
   const dueDate = String(formData.get("dueDate") ?? "");
 
   if (!userId) {
-    return said({ error: "Choose somebody to put on the programme." });
+    return said({ error: "Choose a person to add to the programme." });
   }
 
   try {

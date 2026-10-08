@@ -1078,7 +1078,7 @@ export function mergeMemorandum(
 
   if (everyItemIsAssessorMarked && memo.problems.includes(noAnswerKey)) {
     notes.push(
-      "The guide carries no answer key, which is right for this paper: every task is written work an assessor reads.",
+      "The guide carries no answer key, which is correct for this paper: every task is written work an assessor reads.",
     );
   }
 
@@ -1351,7 +1351,7 @@ export function mergeMemorandum(
     for (const item of section.items) {
       if (item.points !== null && item.points === 0) {
         problems.push(
-          `"${short(item.stem)}" is worth no marks. Either give it some or take it out: a question worth nothing still costs a learner time.`,
+          `"${short(item.stem)}" is worth no marks. Either give it marks or remove it.`,
         );
       }
 
@@ -1376,7 +1376,7 @@ export function mergeMemorandum(
         const longest = Math.max(...others);
         if (correct > longest * 1.8 && correct > 40) {
           notes.push(
-            `In "${short(item.stem)}" the correct answer is much longer than the others, which is a well-known giveaway. Worth evening them up.`,
+            `In "${short(item.stem)}" the correct answer is much longer than the others, which can give the answer away. Consider making the options similar in length.`,
           );
         }
       }

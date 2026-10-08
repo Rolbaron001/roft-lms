@@ -18,6 +18,7 @@ import {
   users,
 } from "@/db/schema";
 import type { AuthenticatedSession } from "./session";
+import { writtenDay } from "./date-format";
 
 /**
  * Notifications.
@@ -349,7 +350,7 @@ export async function sweepTenant(
         userId: row.userId,
         kind: "enrolment.due_soon",
         subject: `"${row.courseTitle}" is due in ${days} ${days === 1 ? "day" : "days"}`,
-        body: `You have not finished "${row.courseTitle}" yet. It is due on ${row.dueDate!.toLocaleDateString("en-ZA")}.`,
+        body: `You have not finished "${row.courseTitle}" yet. It is due on ${writtenDay(row.dueDate)}.`,
         linkPath: `/learn/${row.enrolmentId}`,
         entityType: "enrolment",
         entityId: row.enrolmentId,
@@ -388,7 +389,7 @@ export async function sweepTenant(
         userId: row.userId,
         kind: "enrolment.overdue",
         subject: `"${row.courseTitle}" is overdue`,
-        body: `"${row.courseTitle}" was due on ${row.dueDate?.toLocaleDateString("en-ZA") ?? "an earlier date"} and has not been finished.`,
+        body: `"${row.courseTitle}" was due on ${row.dueDate ? writtenDay(row.dueDate) : "an earlier date"} and has not been finished.`,
         linkPath: `/learn/${row.enrolmentId}`,
         entityType: "enrolment",
         entityId: row.enrolmentId,
@@ -409,7 +410,7 @@ export async function sweepTenant(
           userId: managerId,
           kind: "enrolment.overdue",
           subject: `${learner.firstName} ${learner.lastName} has overdue training`,
-          body: `"${row.courseTitle}" was due on ${row.dueDate?.toLocaleDateString("en-ZA") ?? "an earlier date"}.`,
+          body: `"${row.courseTitle}" was due on ${row.dueDate ? writtenDay(row.dueDate) : "an earlier date"}.`,
           linkPath: "/reports",
           entityType: "enrolment",
           entityId: row.enrolmentId,
@@ -623,7 +624,7 @@ export async function sweepTenant(
           userId,
           kind: "statutory.overdue",
           subject: `${overdue.length} QCTO enrolment ${overdue.length === 1 ? "notification is" : "notifications are"} overdue`,
-          body: "Submit them anyway. A late notification with an explanation is a different problem to one nobody made.",
+          body: "Submit them regardless. A late notification with an explanation is far less serious than none at all.",
           linkPath: "/statutory/notify",
           // One a week, not one a night: an overdue item stays overdue, and a
           // nightly repeat of the same bad news teaches people to ignore it.

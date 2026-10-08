@@ -11,6 +11,7 @@ import { recordAudit } from "./audit";
 import { buildStorageKey, getObject, putObject } from "./storage";
 import { detectMedia } from "./media";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { writtenDay } from "./date-format";
 import {
   CERTIFICATION_VALID_DAYS,
   CERTIFIED_KINDS,
@@ -202,7 +203,7 @@ export async function recordEnrolmentDocument(
   ) {
     throw new DocumentError(
       parsed.certifiedOn
-        ? `That copy was certified on ${parsed.certifiedOn}, which is more than ${CERTIFICATION_VALID_DAYS} days ago. A certified copy has to be current when it is supplied.`
+        ? `That copy was certified on ${writtenDay(parsed.certifiedOn)}, which is more than ${CERTIFICATION_VALID_DAYS} days ago. A certified copy has to be current when it is supplied.`
         : "Give the date this copy was certified. A copy whose certification date is unknown cannot be shown to be current.",
       "invalid_state",
     );

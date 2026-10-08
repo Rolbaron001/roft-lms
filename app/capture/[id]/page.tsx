@@ -37,7 +37,7 @@ export default async function ReviewCapturePage({
   const suggested = (await searchParams).assessment ?? null;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
 
   let job;
   try {
@@ -102,7 +102,7 @@ export default async function ReviewCapturePage({
         <Card>
           <p className="text-sm">
             {t("capture.committedLong", {
-              date: job.committedAt.toLocaleDateString(dates, { dateStyle: "long" }),
+              date: day(job.committedAt),
             })}
           </p>
         </Card>

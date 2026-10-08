@@ -8,7 +8,7 @@ import {
   submitAction,
   type NotifyState,
 } from "./actions";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 
 const input =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -57,6 +57,7 @@ export type DueRow = {
  */
 export function DraftForm({ rows }: { rows: DueRow[] }) {
   const t = useT();
+  const { day } = useDay();
   const [state, act, working] = useActionState<NotifyState, FormData>(
     draftAction,
     {},
@@ -154,7 +155,7 @@ export function DraftForm({ rows }: { rows: DueRow[] }) {
                   {row.firstName} {row.lastName}
                 </span>
                 <span className="text-xs text-[var(--muted)]">
-                  {row.cohortName} · {t("enrolNotify.due", { date: row.dueOn ?? "" })}
+                  {row.cohortName} · {t("enrolNotify.due", { date: day(row.dueOn) })}
                 </span>
               </label>
             ))}

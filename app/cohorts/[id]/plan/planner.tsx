@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { Guide } from "@/components/ui";
 import type { CohortPlan, PlanStep } from "@/lib/cohort-plan";
 import { autoPlanAction, setStepDatesAction, setStepReleasedAction, type CohortActionState } from "../../actions";
@@ -15,14 +15,15 @@ const day = (date: string, days: number) => new Date(Date.parse(date) + days * 8
  * release it, and beside it what learners see on any chosen day. A change
  * shows in the week it lands in as soon as it is saved.
  */
-export function Planner({ plan, canManage, dateLocale }: { plan: CohortPlan; canManage: boolean; dateLocale: string }) {
+export function Planner({ plan, canManage }: { plan: CohortPlan; canManage: boolean }) {
   const t = useT();
   const [selected, setSelected] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const [viewDate, setViewDate] = useState(today < plan.cohort.startDate ? plan.cohort.startDate : today);
   const [planState, planAct, planning] = useActionState<CohortActionState, FormData>(autoPlanAction, {});
 
-  const nice = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString(dateLocale, { weekday: "short", day: "numeric", month: "short" });
+  const { day: writeDay } = useDay();
+  const nice = (date: string) => writeDay(date, { short: true, weekday: true });
   const anyPlanned = plan.steps.some((step) => step.opens || step.due);
 
   // Weeks counted from the cohort's start, so each row is one teaching week.

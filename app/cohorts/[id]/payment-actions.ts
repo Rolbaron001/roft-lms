@@ -42,7 +42,7 @@ export async function recordPaymentAction(
 
   return said({
     notice: receivedOn
-      ? "Recorded. Everybody in this cohort now counts as paid for."
+      ? "Recorded. Every learner in this cohort is now treated as paid for."
       : "Invoice recorded. Add the payment date when it comes in.",
   });
 }

@@ -47,7 +47,7 @@ export default async function CohortPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
-  const { t, locale } = await pageLocale();
+  const { t, locale, day } = await pageLocale();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   let detail;
@@ -110,7 +110,7 @@ export default async function CohortPage({
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{detail.cohort.name}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {t("cohort.starts", { date: detail.cohort.startDate })} ·{" "}
+          {t("cohort.starts", { date: day(detail.cohort.startDate) })} ·{" "}
           {active.length === 1
             ? t("cohort.oneLearner", { learner: words.lowerOne("learner") })
             : t("cohort.learners", { count: active.length, learners: words.lowerMany("learner") })}
@@ -187,7 +187,7 @@ export default async function CohortPage({
                     <span className="ml-2 text-xs text-[var(--muted)]">
                       {member.email}
                       {member.leftAt
-                        ? t("cohort.leftOn", { date: member.leftAt.toISOString().slice(0, 10) })
+                        ? t("cohort.leftOn", { date: day(member.leftAt) })
                         : ""}
                     </span>
                   </span>
@@ -286,7 +286,7 @@ export default async function CohortPage({
                     <tr key={step.id} className="border-t border-[var(--border)]">
                       <td className="py-2">{step.title ?? step.kind}</td>
                       <td className="py-2 tabular-nums">
-                        {step.opensAt ? step.opensAt.toISOString().slice(0, 10) : "—"}
+                        {step.opensAt ? day(step.opensAt, { short: true }) : "—"}
                         {step.opensAfterDays !== null ? (
                           <span className="ml-2 text-xs text-[var(--muted)]">
                             {t("cohort.day", { day: step.opensAfterDays })}
@@ -294,7 +294,7 @@ export default async function CohortPage({
                         ) : null}
                       </td>
                       <td className="py-2 tabular-nums">
-                        {step.dueAt ? step.dueAt.toISOString().slice(0, 10) : "—"}
+                        {step.dueAt ? day(step.dueAt, { short: true }) : "—"}
                         {step.dueAfterDays !== null ? (
                           <span className="ml-2 text-xs text-[var(--muted)]">
                             {t("cohort.day", { day: step.dueAfterDays })}
@@ -471,7 +471,7 @@ export default async function CohortPage({
                         <th key={column.id} className="pb-2 pr-3">
                           <span className="block">{column.title}</span>
                           {column.dueOn ? (
-                            <span className="block font-normal normal-case tabular-nums">{column.dueOn}</span>
+                            <span className="block font-normal normal-case tabular-nums">{day(column.dueOn, { short: true })}</span>
                           ) : null}
                         </th>
                       ))}

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { recordAwardAction, removeAwardAction, type AwardState } from "./actions";
-import { useDates, useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 
 const inputClass =
   "w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -38,7 +38,7 @@ function Held({
   canManage: boolean;
 }) {
   const t = useT();
-  const dates = useDates();
+  const { day } = useDay();
   const [removing, setRemoving] = useState(false);
   const [state, action, pending] = useActionState<AwardState, FormData>(removeAwardAction, {});
 
@@ -48,11 +48,7 @@ function Held({
         {t("award.held", {
           number: award.certificateNumber,
           by: award.awardedBy,
-          date: new Date(`${award.awardedOn}T00:00:00`).toLocaleDateString(dates, {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
+          date: day(award.awardedOn),
         })}
       </p>
       {award.note ? <p className="text-[var(--muted)]">{award.note}</p> : null}

@@ -46,7 +46,7 @@ describe("the Settings page", () => {
     // A card is a section on this page. One outside a marked block would not
     // appear in the list, which is the fault this guards.
     const cards = Array.from(page.matchAll(/<Card\b/g)).length;
-    const forms = ["<BrandingForm", "<ClockForm", "<ProviderLanguageForm"].filter((one) =>
+    const forms = ["<BrandingForm", "<ClockForm", "<DateForm", "<ProviderLanguageForm"].filter((one) =>
       page.includes(one),
     ).length;
 

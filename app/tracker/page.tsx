@@ -23,7 +23,7 @@ export default async function TrackerPage({
 }) {
   const { all } = await searchParams;
   const tenant = await requireTenant();
-  const { t, locale } = await pageLocale();
+  const { t, locale, day } = await pageLocale();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("enrolment:read_all");
 
@@ -97,8 +97,8 @@ export default async function TrackerPage({
                           {row.learners}
                         </td>
                         <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
-                          {row.startDate}
-                          {row.endDate ? ` – ${row.endDate}` : ""}
+                          {day(row.startDate, { short: true })}
+                          {row.endDate ? ` – ${day(row.endDate, { short: true })}` : ""}
                         </td>
                         <td className="py-2 pr-3 tabular-nums">
                           {row.sessionsTotal === 0

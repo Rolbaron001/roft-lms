@@ -16,7 +16,7 @@ import type { TenantIdentity } from "@/lib/tenant";
 import { DeploymentBanner } from "./deployment-banner";
 import { I18nProvider } from "./i18n";
 import { catalogueFor, maybe, translator } from "@/lib/i18n";
-import { localeFor } from "@/lib/request";
+import { localeFor, pageDates } from "@/lib/request";
 import { dateLocale } from "@/lib/i18n/locales";
 
 /**
@@ -209,7 +209,7 @@ export async function AppShell({
       <TenantIllustrationProvider
         url={tenant.illustrationUrl ?? platformIllustration()}
       >
-        <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)}>
+        <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)} dateSettings={(await pageDates()).settings}>
           <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
         </I18nProvider>
       </TenantIllustrationProvider>

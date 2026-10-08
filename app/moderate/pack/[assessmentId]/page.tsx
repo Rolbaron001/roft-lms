@@ -20,7 +20,7 @@ export default async function ModerationPackPage({
   const { assessmentId } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:moderate");
-  const { t, dates } = await pageLocale();
+  const { t, day, when } = await pageLocale();
   const outcome = (value: string) => maybe(t, `outcome.${value}`) ?? value.replace(/_/g, " ");
 
   let pack;
@@ -185,7 +185,7 @@ export default async function ModerationPackPage({
                   {override.learner} · {override.stepTitle ?? t("pack.aStep")} ·{" "}
                   {override.reason}
                   <span className="ml-2 text-xs text-[var(--muted)]">
-                    {override.grantedBy}, {override.grantedAt.toLocaleDateString(dates)}
+                    {override.grantedBy}, {day(override.grantedAt)}
                     {override.revokedAt ? ` ${t("pack.withdrawn")}` : ""}
                   </span>
                 </li>
@@ -195,7 +195,7 @@ export default async function ModerationPackPage({
         </Card>
 
         <p className="text-xs text-[var(--muted)]">
-          {t("pack.assembled", { date: pack.assembledAt.toLocaleString(dates) })}
+          {t("pack.assembled", { date: when(pack.assembledAt) })}
         </p>
       </div>
     </AppShell>

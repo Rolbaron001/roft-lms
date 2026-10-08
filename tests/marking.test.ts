@@ -701,7 +701,7 @@ describe("returning a workbook", () => {
 
     await expect(
       returnFeedback(assessor, { submissionId, comments: "Fine." }),
-    ).rejects.toThrow(/Say something/);
+    ).rejects.toThrow(/write feedback the learner can use/);
   });
 
   it("writes nothing a decision could be mistaken for", async () => {

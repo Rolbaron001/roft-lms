@@ -22,7 +22,7 @@ export async function GET() {
   const manifest = {
     name: `${tenant.displayName}: Learning`,
     short_name: tenant.displayName.slice(0, 12),
-    description: "Study material, the rollout schedule, and work you can record with no signal.",
+    description: "Study material, the roll-out schedule, and work you can record with no signal.",
     start_url: "/",
     scope: "/",
     display: "standalone",

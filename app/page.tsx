@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { localeFor, pageDates, requireSession, requireTenant } from "@/lib/request";
 import { maybe, translator, type Translate } from "@/lib/i18n";
 import { vocabulary } from "@/lib/terms";
 import { myEnrolments } from "@/lib/enrolment";
@@ -33,7 +33,8 @@ export default async function HomePage() {
   // In the person's language (job sheet D9).
   const locale = localeFor(tenant, session);
   const t = translator(locale);
-  const date = (at: Date) => at.toLocaleDateString(locale === "en" ? "en-ZA" : locale);
+  const { day } = await pageDates();
+  const date = (at: Date) => day(at);
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   // Feedback forms this person still owes. On the front page rather than behind

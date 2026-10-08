@@ -79,7 +79,7 @@ export const staff = {
   "marking.title": "Marking",
   "marking.implies": "What these marks imply",
   "marking.impliesIntro":
-    "Arithmetic, not a judgement. The marks average out at this; practical performance and workplace evidence do not reach the platform, and you weigh those before deciding. Change any of these on the decision screen and say why: the reason is stored beside the proposal so a moderator can see where the two parted.",
+    "This is calculated from the marks; it is not a judgement. The marks average out at this; practical performance and workplace evidence do not reach the platform, and you weigh those before deciding. Change any of these on the decision screen and say why: the reason is stored beside the proposal so a moderator can see where the two parted.",
   "marking.markAllFirst": "Every question has to be marked before the criteria can be worked out.",
   "marking.across": "{percent}% across {marks}",
   "marking.and": " and ",
@@ -161,7 +161,7 @@ export const staff = {
   "pack.openScript": "Open the script",
   "pack.departures": "Departures and overturns ({count})",
   "pack.departuresIntro":
-    "Where an assessor differed from what the marks proposed, or a moderator differed from the assessor. A pack that leaves these out is worse than no pack.",
+    "Where an assessor differed from what the marks proposed, or a moderator differed from the assessor.",
   "pack.none": "None.",
   "pack.departure": "Proposed {proposed}, decided {decided}: {reason}",
   "pack.noReason": "no reason recorded",
@@ -175,7 +175,7 @@ export const staff = {
   // Held for review, and the oral third attempt
   "held.title": "Held for review",
   "held.intro":
-    "A learner found not yet competent twice is not failed. The assessment is held, and a programme review is convened with their employer, because by this point the question is rarely whether they know it, and usually what has been going on around them.",
+    "A learner found not yet competent twice is not failed. The assessment is held, and a programme review is convened with their employer.",
   "held.emptyTitle": "Nobody is held",
   "held.empty":
     "This fills when a learner is found not yet competent for a second time on a summative assessment. Until then there is nothing to review.",
@@ -210,7 +210,7 @@ export const staff = {
   "oral.nothingYet": "Nothing has been recorded yet.",
   "oral.outcome": "Recording the outcome",
   "oral.outcomeIntro":
-    "Judged the same way as a written attempt, against the same criteria, and moderated the same way afterwards.",
+    "It is judged in the same way as a written attempt, against the same criteria, and moderated in the same way afterwards.",
   "oral.goMark": "Go to the marking screen",
   "oral.how": "How it was conducted",
   "oral.howHint": "In person, or the video call it was held on",
@@ -231,7 +231,7 @@ export const staff = {
   // Appeals
   "appeals.title": "Appeals",
   "appeals.intro":
-    "A learner may appeal against a result or against an assessor's conduct. Receipt is acknowledged within {hours} hours, which is the deadline that gets missed, because it runs while somebody is teaching.",
+    "A learner may appeal against a result or against an assessor's conduct. Receipt must be acknowledged within {hours} hours of the appeal being lodged; this is the deadline most often missed.",
   "appeals.ground.result": "Against a result",
   "appeals.ground.assessor_conduct": "Against an assessor's conduct",
   "appeals.status.lodged": "Lodged",
@@ -269,7 +269,7 @@ export const staff = {
   "appeals.acknowledgedAt": "Acknowledged {time}.",
   "appeals.closedUnacknowledged": "Closed without an acknowledgement being recorded.",
   "appeals.firstCounts":
-    "The first acknowledgement is the one the record keeps. It cannot be re-stamped later, because a time that can be changed is not evidence of anything.",
+    "The first acknowledgement is the one the record keeps. It cannot be changed afterwards, so that the time stands as evidence.",
   "appeals.acknowledgeButton": "Acknowledge",
   "appeals.meeting": "The meeting and the moderator",
   "appeals.resultNeedsModerator":
@@ -287,7 +287,7 @@ export const staff = {
   "appeals.hasBeenTold": "The learner has been told",
   "appeals.withdrawnBecause": "Withdrawn: {reason}",
   "appeals.chooseOutcome": "Choose an outcome",
-  "appeals.whyHint": "Why. This is the part the learner is entitled to.",
+  "appeals.whyHint": "Give the reasons for the outcome. The learner is entitled to them.",
   "appeals.resolving": "Resolving…",
   "appeals.resolve": "Resolve",
   "appeals.notes": "Notes",
@@ -301,7 +301,7 @@ export const staff = {
   "appeals.withdrawing": "Withdrawing…",
   "appeals.withdraw": "Withdraw",
   "appeals.withdrawNeedsReason":
-    "A withdrawal needs a reason. One with none looks like pressure, and that is exactly what an appeal about conduct would be about.",
+    "A withdrawal needs a reason. Without one, it could appear that the learner was put under pressure to withdraw.",
 
   // Recognition of prior learning, and credit transfer
   "rpl.title": "Recognition of prior learning",
@@ -314,7 +314,7 @@ export const staff = {
   "rpl.appearHere": "Judgements appear here as they are made.",
   "rpl.judged": "Judged {outcome} on {date}",
   "rpl.open": "Open an application",
-  "rpl.openIntro": "The first step, and the one that creates the record everything else attaches to.",
+  "rpl.openIntro": "This is the first step. It creates the record to which everything else is attached.",
   "rpl.transfer": "Credit transfer",
   "rpl.transferIntro":
     "Different from RPL: the learner already holds a qualification whose outcomes cover this module. No advisory, but the mapping has to be written down; a transfer without it is a claim nobody can check.",
@@ -359,7 +359,7 @@ export const staff = {
   "fisa.state.retired": "Withdrawn",
   "fisa.state.draft": "Being written",
   "fisa.setNew": "Set a new one",
-  "fisa.setNewIntro": "Against a skills programme. A full or part qualification is assessed externally.",
+  "fisa.setNewIntro": "A FISA is set against a skills programme. A full or part qualification is assessed externally.",
   "fisa.versionN": "version {version}",
   "fisa.credits": "{credits} credits",
   "fisa.gate.approved": "Signed off as fit for purpose: candidates may sit this paper",
@@ -375,7 +375,7 @@ export const staff = {
   "fisa.totalMarks": "Total marks",
   "fisa.passMark": "Pass mark",
   "fisa.passOf": "{percent}% ({needed} of {total})",
-  "fisa.practical": "Also has a practical component, judged competent or not yet competent.",
+  "fisa.practical": "It also has a practical component, judged competent or not yet competent.",
   "fisa.overall": "Moderator's overall judgement: {rating}",
   "fisa.examiner": "Examiner / developer",
   "fisa.examinerIntro": "Writes the paper.",
@@ -392,7 +392,7 @@ export const staff = {
   "fisa.nav.next": "Next step",
   "fisa.outcomes": "Exit level outcomes, and where the paper assesses them",
   "fisa.outcomesIntro":
-    "Section 2 of both reports. The only place that shows the paper covers the qualification rather than merely looking like an exam.",
+    "Section 2 of both reports. This is where the paper is shown to cover the qualification.",
   "fisa.noOutcomes":
     "This programme has no exit level outcomes recorded, so there is nothing to map the paper against. Import the curriculum first.",
   "fisa.examinerReport": "Examiner / developer report",
@@ -402,7 +402,7 @@ export const staff = {
   "fisa.onlyExaminer": "Only the appointed examiner, once their confidentiality agreement is signed, can answer these.",
   "fisa.onlyModerator": "Only the appointed moderator, once their confidentiality agreement is signed, can answer these.",
   "fisa.handOver": "Hand it to the moderator",
-  "fisa.handOverIntro": "Once your own report is complete.",
+  "fisa.handOverIntro": "Do this once your own report is complete.",
   "fisa.final": "Final moderation",
   "fisa.allAnswered": "Everything is answered.",
   "fisa.notReady": "Not ready yet.",
@@ -465,9 +465,9 @@ export const staff = {
   "eisa.for": "for {sitting}",
   "eisa.sittings": "Sittings",
   "eisa.sittingsIntro":
-    "Only those still open for registration. A closed one is nothing anybody can act on, and leaving it here would push the next real deadline down the page.",
+    "Only sittings still open for registration are listed.",
   "eisa.nextYear":
-    "Nothing is recorded beyond this year. The assessment quality partner publishes next year's dates in December, so the letter should be out; adding them now is what keeps the countdown running into January.",
+    "Nothing is recorded beyond this year. The assessment quality partner publishes next year's dates in December; please add them as soon as they are available.",
   "eisa.sitting": "Sitting",
   "eisa.qualification": "Qualification",
   "eisa.registrationCloses": "Registration closes",
@@ -484,21 +484,21 @@ export const staff = {
   "eisa.readyOf": "{ready} of {total} ready",
   "eisa.noId": "{count} without an identity number",
   "eisa.noIdIntro":
-    "Every quality partner asks for one, and a registration returned for a missing number costs a cycle. Better found now than after the file is sent.",
+    "Every quality partner requires one, and a registration returned for a missing number delays the learner by a full cycle.",
   "eisa.ready": "Ready to be entered",
-  "eisa.readyIntro": "Every criterion in every module met, whether taught or recognised through prior learning.",
-  "eisa.nobodyYet": "Nobody yet. The list below says how far each of them has to go.",
+  "eisa.readyIntro": "Every criterion in every module has been met, whether taught or recognised through prior learning.",
+  "eisa.nobodyYet": "No one yet. The list below shows how far each learner still has to go.",
   "eisa.noIdNumber": "no identity number",
   "eisa.download": "Download the registration file",
   "eisa.notReady": "Not ready",
   "eisa.notReadyIntro":
-    "How far each has to go. Somebody one criterion short can still make the deadline if it is noticed this week.",
+    "How far each learner still has to go. A learner who is one criterion short may still meet the deadline if this is noticed in time.",
   "eisa.outstanding": "{percent}% · {count} outstanding",
 
   // EISA readiness
   "ready.title": "EISA readiness",
   "ready.intro":
-    "A learner may sit the External Integrated Summative Assessment once every internal assessment criterion in every module has been achieved. Not most of them, and no percentage stands in for it: the percentage below is progress, the badge is permission.",
+    "A learner may sit the External Integrated Summative Assessment once every internal assessment criterion in every module has been achieved. All of them are required: the percentage below shows progress, and only the eligibility badge permits entry.",
   "ready.nobody":
     "Nobody is enrolled against a qualification yet. Enrol a learner on a course and choose the qualification it counts towards, and they will appear here.",
   "ready.readyCount": "Ready for the EISA",
@@ -534,7 +534,7 @@ export const staff = {
   "ready.notIssued": "Not issued yet.",
   "ready.certificate": "Qualification certificate",
   "ready.certificateIntro":
-    "Issued by the awarding body after the EISA, not by {provider}. Recorded here when it arrives, so the learner's record says they are qualified.",
+    "The certificate is issued by the awarding body after the EISA, not by {provider}. Record it here when it arrives, so that the learner's record shows that they are qualified.",
   "ready.thisNotCaptured": "This curriculum is not fully captured.",
   "ready.thisNotCapturedIntro":
     "{modules} carry no assessment criteria. Nobody can be declared eligible against this qualification until the full curriculum document has been imported; otherwise the missing modules would silently count as passed.",
@@ -592,7 +592,7 @@ export const staff = {
   "preview.draft": "Draft",
   "preview.isPreview": "This is a preview.",
   "preview.isPreviewIntro":
-    "Exactly what a learner sees, with the boxes they would type into. Nothing is saved and no attempt has been started, so the controls are switched off. The panel under each question is for you because you built this paper; a learner never sees it.",
+    "This is exactly what a learner sees, with the boxes they would type into. Nothing is saved and no attempt has been started, so the controls are switched off. The panel under each question is for you because you built this paper; a learner never sees it.",
   "preview.empty": "There are no questions in this paper yet.",
   "preview.oneMark": "1 mark",
   "preview.correct": "✓ correct",
@@ -613,7 +613,7 @@ export const staff = {
     "Being a learner grants no access on its own, so they sign in to an empty screen. Enrol them on a course, add them to a cohort, or assign a programme.",
   "people.missingOne": "1 person is missing details a SETA or SAQA return needs.",
   "people.missingMany": "{count} people are missing details a SETA or SAQA return needs.",
-  "people.missingWhy": "They are marked below. Filling them in now is far easier than the night before a submission.",
+  "people.missingWhy": "They are marked below. It is far easier to complete these details now than shortly before a submission.",
   "people.search": "Search by name or email",
   "people.searchButton": "Search",
   "people.clear": "Clear",
@@ -631,8 +631,8 @@ export const staff = {
   "people.missing": "Missing {fields}",
   "people.roster": "Add a cohort from a spreadsheet",
   "people.rosterIntro":
-    "Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created.",
-  "people.add": "Add somebody",
+    "Read a CSV or Excel file of learners and create them all at once. You are shown how the file has been read before anyone is created.",
+  "people.add": "Add a person",
   "people.added": "Added. Give them this password: it is shown once and cannot be retrieved.",
   "people.noMail": "There is no mail server connected yet, so nothing was emailed. Ask them to change it after signing in.",
   "people.adding": "Adding…",
@@ -719,24 +719,24 @@ export const staff = {
   "personPage.detailsSection": "Details and roles",
   "personPage.conduct": "Conduct",
   "personPage.conductIntro":
-    "What was alleged, which warnings were live at the time, whether notice of a hearing was adequate, and what was decided. In the order it happened, which is the order it gets read back in.",
+    "What was alleged, which warnings were live at the time, whether notice of a hearing was adequate, and what was decided, listed in the order in which events occurred.",
   "personPage.support": "Support",
   "personPage.supportIntro":
     "What is being done for this learner, and by whom. The reason behind an accommodation is health or financial information and is held apart from it, because doing the accommodating does not require knowing why.",
   "personPage.missed": "Missed summative dates",
   "personPage.missedIntro":
-    "One additional date, and one only. Where that is also missed on medical grounds the learner goes to an oral assessment with an observer from the employer.",
+    "Only one additional date may be set. Where that date is also missed on medical grounds, the learner goes to an oral assessment with an observer from the employer.",
   "personPage.appeals": "Appeals",
   "personPage.appealsIntro":
-    "Against a result, or against an assessor's conduct. Receipt is acknowledged within {hours} hours, and the clock starts when it is lodged here.",
+    "An appeal may be made against a result or against an assessor's conduct. Receipt must be acknowledged within {hours} hours of the appeal being lodged here.",
   "personPage.documents": "Enrolment documents",
   "personPage.documentsIntro":
-    "Checked as they are collected rather than when a return is being assembled. A missing certified copy found months later is far harder to get, and the deadline is usually days away by then.",
+    "Documents are checked as they are collected rather than when a return is being assembled, because a missing certified copy is much harder to obtain months later.",
   "personPage.awarded": "Qualifications awarded",
   "personPage.award": " · certificate {number}, {by}, {date}",
   "personPage.elsewhere": "Learning recorded elsewhere",
   "personPage.elsewhereIntro":
-    "Imported from another system. Shown as it was recorded there; none of it was taught, assessed or moderated on this platform.",
+    "This learning was imported from another system and is shown as it was recorded there. None of it was taught, assessed or moderated on this platform.",
   "personPage.passed": " · passed",
   "personPage.notPassed": " · not passed",
   "personPage.noDate": "no date",
@@ -750,10 +750,10 @@ export const staff = {
   "editor.saveRoles": "Save roles",
   "editor.mailbox": "Platform mailbox",
   "editor.mailboxIntro":
-    "The address learners and assessors write to and from. Separate from the sign-in address above, so a conversation about an assessment lands inside the learner's record rather than in somebody's private inbox, where it is outside the audit log, outside the backup, and gone when they leave.",
-  "editor.noPassword": "There is no separate password, because there is no separate login.",
+    "The address learners and assessors write to and from. It is separate from the sign-in address above, so that correspondence about an assessment is kept with the learner's record, in the audit log and in the backup, rather than in a private inbox.",
+  "editor.noPassword": "There is no separate password, because there is no separate sign-in.",
   "editor.noPasswordWhy":
-    "This is not a mailbox on a mail host with its own webmail. Mail sent to this address is delivered into the platform, and the person reads and answers it under Mail after signing in the way they always do. That is the point of it: the correspondence sits inside the learner's record, in the audit log and in the backup, rather than in a private inbox that leaves when they do.",
+    "This is not a mailbox on a mail host with its own webmail. Mail sent to this address is delivered into the platform, and the person reads and answers it under Mail after signing in as usual. The correspondence is therefore kept with the learner's record, in the audit log and in the backup, rather than in a private inbox.",
   "editor.mailboxAddress": "Mailbox address",
   "editor.mailboxChange": "Changing it does not move mail already received.",
   "editor.mailboxSuggested": "Suggested: {address}. Leave blank for no mailbox.",
@@ -772,7 +772,7 @@ export const staff = {
   "editor.eraseIntro":
     "For a POPIA erasure request. Removes the name, contact and demographic details permanently. Certificates and assessment records are kept and stay verifiable, because a qualification once earned has to remain on the national record, which is also why this cannot be undone.",
   "editor.why": "Why is this being done?",
-  "editor.whyHint": "Kept permanently in the audit log.",
+  "editor.whyHint": "This is kept permanently in the audit log.",
   "editor.typeToConfirm": "Type {surname} to confirm",
   "editor.erasing": "Erasing…",
   "editor.erasePermanently": "Erase permanently",
@@ -791,7 +791,7 @@ export const staff = {
   "lodge.statementHint": "What the learner says, in their words where possible.",
   "lodge.lateWhy": "Why this is being accepted out of time",
   "lodge.lateNote":
-    "A late appeal is still an appeal, and turning it away here would only send it to somebody's inbox. The reason becomes part of the file.",
+    "A late appeal is still an appeal and should be recorded here. The reason for accepting it becomes part of the file.",
   "lodge.lodging": "Lodging…",
   "lodge.lodge": "Lodge",
 
@@ -819,7 +819,7 @@ export const staff = {
   "missed.additionalDate": "Additional date",
   "missed.whyHint": "Why it was missed, if known",
   "missed.onlyOne":
-    "One additional date, and one only. Recording it here is what stops a third being arranged later by somebody who did not know about this one.",
+    "Only one additional date may be set. Recording it here prevents a further date being arranged by someone unaware of this one.",
   "missed.set": "Set the additional date",
 
   // Support needs
@@ -837,7 +837,7 @@ export const staff = {
   "support.employerInformed": " · employer informed",
   "support.employerNotInformed": " · employer not informed",
   "support.reviewed": "Reviewed",
-  "support.working": "Working?",
+  "support.working": "Is it working?",
   "support.yes": "Yes",
   "support.no": "No",
   "support.nextReview": "Next review",
@@ -853,7 +853,7 @@ export const staff = {
   "support.kind": "Kind",
   "support.accommodation": "What will be done: shared with whoever has to do it",
   "support.accommodationHint": "Seat near the door. Allow a break every 40 minutes. Provide printed materials.",
-  "support.reason": "The reason behind it: restricted, and better left empty",
+  "support.reason": "The reason behind it (restricted; best left empty)",
   "support.reasonNote":
     "Health, disability and financial circumstances are special personal information. A record that says only what to do serves the learner just as well and puts far less at risk. Fill this in only where somebody genuinely could not act without it.",
   "support.consented": "The learner has agreed to this being recorded",
@@ -948,10 +948,10 @@ export const staff = {
   "conduct.rights":
     "The notice tells the learner they may be assisted by a fellow learner, present their case, and call and question witnesses.",
   "conduct.notice":
-    "At least {hours} hours from now. Short notice is refused: it is the defect an appeal is won on, whatever the learner did.",
+    "At least {hours} hours from now. Shorter notice is refused, because inadequate notice would allow an appeal to succeed whatever the facts of the case.",
   "conduct.convening": "Convening…",
   "conduct.convene": "Convene",
-  "conduct.whyHint": "Why. This is the paragraph the learner is entitled to.",
+  "conduct.whyHint": "Give the reasons for the outcome. The learner is entitled to them.",
   "conduct.closing": "Closing…",
   "conduct.closeCase": "Close the case",
   "conduct.issueWarning": "Issue a warning",
@@ -976,7 +976,7 @@ export const staff = {
   "cohorts.starts": "{course} · starts {date}",
   "cohorts.roster": "Add a cohort from a spreadsheet",
   "cohorts.rosterIntro":
-    "Read a CSV or Excel file of learners and create them all at once. It shows you what it made of the file before anybody is created, then enrol them onto a cohort above.",
+    "Read a CSV or Excel file of learners and create them all at once. You are shown how the file has been read before anyone is created; then enrol them on a cohort above.",
   "cohorts.new": "New {cohort}",
   "cohorts.noPublished":
     "There are no published {courses} yet. A {cohort} runs against a published {course}, so that the material cannot change under a group already working through it.",
@@ -1006,33 +1006,33 @@ export const staff = {
   "cohort.learners": "{count} {learners}",
   "cohort.archive": "Archive evidence",
   "cohort.payment": "Invoicing and payment",
-  "cohort.paid": "Paid. Everybody on this cohort counts as paid for.",
-  "cohort.paidRef": "Paid · {reference}. Everybody on this cohort counts as paid for.",
-  "cohort.invoiced": "Invoiced, and no payment recorded against it yet.",
+  "cohort.paid": "Paid. Every learner on this cohort is treated as paid for.",
+  "cohort.paidRef": "Paid · {reference}. Every learner on this cohort is treated as paid for.",
+  "cohort.invoiced": "Invoiced; no payment has been recorded yet.",
   "cohort.nothingRecorded": "Nothing recorded. The enrolment procedure begins here.",
   "cohort.move": "Move the start",
   "cohort.moveIntro":
     "Every date below is held as a number of days from this one, so changing it moves the whole roll-out for everybody on the cohort.",
-  "cohort.waiting": "Waiting on something ({count})",
-  "cohort.waitingIntro": "Each learner once, at the earliest step they cannot open.",
-  "cohort.stuckAt": "Stuck at {step}",
+  "cohort.waiting": "Held up ({count})",
+  "cohort.waitingIntro": "Each learner is listed once, at the earliest step they cannot open.",
+  "cohort.stuckAt": "Held up at {step}",
   "cohort.progress": "Where the cohort has got to",
   "cohort.progressIntro":
-    "Opened and finished per step, and how long it took those who finished. The median rather than the average, so one learner who disappeared for a term does not hide where everybody else is.",
+    "How many learners have opened and finished each step, and how long those who finished took. The median is used rather than the average, so that one long absence does not distort the figure.",
   "cohort.step": "Step",
   "cohort.opened": "Opened",
   "cohort.finished": "Finished",
-  "cohort.stillOn": "Still on it",
+  "cohort.stillOn": "In progress",
   "cohort.median": "Median days",
   "cohort.longest": "Longest",
-  "cohort.stalledOne": "One step has people sitting on it: {steps}.",
-  "cohort.stalledMany": "{count} steps have people sitting on them: {steps}.",
+  "cohort.stalledOne": "One step has learners still working on it: {steps}.",
+  "cohort.stalledMany": "{count} steps have learners still working on them: {steps}.",
   "cohort.rollout": "Class sessions",
   "cohort.rolloutIntro":
     "The dated sessions this cohort meets for, and the register taken at each. Where a programme carries credits it has to be facilitator-led, and this is the evidence that it was.",
   "cohort.attendance": "Attendance",
   "cohort.attendanceIntro":
-    "Overall is against the whole programme; to date is against what has actually been held. Early in a programme the first is meaninglessly low and the second is the honest one, so both are given rather than one being chosen for you.",
+    "Overall is measured against the whole programme; to date is measured against the sessions held so far. Early in a programme the overall figure is necessarily low, so both are shown.",
   "cohort.held": "{held} of {countable} sessions held. Cancelled sessions and voluntary walk-ins are left out of both.",
   "cohort.learner": "Learner",
   "cohort.present": "Present",
@@ -1042,10 +1042,10 @@ export const staff = {
   "cohort.overall": "Overall",
   "cohort.feedback": "{programme} feedback",
   "cohort.feedbackIntro":
-    "Sent after a summative, answered within {hours} hours. Nobody acknowledges receipt and nobody transcribes anything: receipt is a row and the report is a query.",
+    "Sent after a summative assessment and answered within {hours} hours. Responses are recorded and reported automatically; nothing needs to be transcribed.",
   "cohort.assessment": "Assessment",
   "cohort.assessmentIntro":
-    "Every learner against every piece of assessed work, in the order it is collected. Read from submissions, decisions and registers rather than kept by hand, so it cannot disagree with them.",
+    "Every learner against every piece of assessed work, in the order in which it is collected. It is read from submissions, decisions and registers rather than kept by hand, so it always agrees with them.",
   "cohort.left": "left",
   "cohort.absentNote":
     "Absent is read from the register of the sitting the work was written at, not from the submission, because a learner who did not attend has no submission for it to be recorded on.",
@@ -1063,15 +1063,15 @@ export const staff = {
   "cohort.workIntro":
     "What has to happen around the teaching: material readied, documents submitted, a moderator appointed, certificates chased.",
   "cohort.release": "{course} step release",
-  "cohort.releaseIntro": "Held as days from the start. Change the start date and every one of these moves with it.",
+  "cohort.releaseIntro": "Each date is held as a number of days from the start, so changing the start date moves every one of them.",
   "cohort.noSteps": "This cohort's {course} has no steps yet.",
   "cohort.opens": "Opens",
   "cohort.due": "Due",
   "cohort.day": "day {day}",
   "cohort.members": "On this cohort ({count})",
   "cohort.membersIntro":
-    "Adding somebody here also enrols them on the {course}. A name on a register who cannot open anything is the half-state this avoids.",
-  "cohort.nobody": "Nobody has been added yet.",
+    "Adding a learner here also enrols them on the {course}, so that everyone on the register can open the material.",
+  "cohort.nobody": "No one has been added yet.",
   "cohort.leftOn": " · left {date}",
 
   // Cohort controls
@@ -1094,14 +1094,14 @@ export const staff = {
   "planner.openMode": "Everything is open to this cohort, so nothing needs to be planned for it to be reached. Dates set here still show learners when things are due.",
   "planner.planForMe": "Plan it for me",
   "planner.planning": "Planning…",
-  "planner.replaceConfirm": "This replaces the dates already planned with a fresh plan. Things released by hand stay released. Go ahead?",
+  "planner.replaceConfirm": "This replaces the dates already planned with a fresh plan. Anything released by hand stays released. Do you wish to continue?",
   "planner.fromSpreadsheet": "Read a roll-out spreadsheet",
   "planner.moveStart": "Move the start date",
   "planner.byWeek": "The plan, week by week",
   "planner.legendOpens": "Opens",
   "planner.legendDue": "Due",
   "planner.legendSummative": "Summative",
-  "planner.empty": "Nothing is planned yet. Plan it for me drafts a plan from the qualification: one workbook a week, each handed in the week after, the summative after the last. Then change anything by clicking it.",
+  "planner.empty": "Nothing is planned yet. Plan it for me drafts a plan from the qualification: one workbook a week, each handed in the week after, the summative after the last. Any item can then be changed by clicking it.",
   "planner.unitNotPlanned": "Nothing planned for this study unit yet.",
   "planner.releasedByHand": "{item} released by hand on {date}",
   "planner.lecture": "Lecture",
@@ -1124,7 +1124,7 @@ export const staff = {
   "planner.notPlanned": "Not planned",
   "planner.openLearnerView": "Open the learner pages",
   "planner.notPlannedTitle": "Not planned yet",
-  "planner.resit": "the re-sit paper; release it by hand when somebody needs it.",
+  "planner.resit": "the re-sit paper; release it by hand when a learner needs it.",
   "planner.waitsForRelease": "no date yet, so it waits to be released by hand.",
   "planner.noDue": "{item} opens but has no hand-in date.",
   "planner.opensOn": "Opens on",
@@ -1150,7 +1150,7 @@ export const staff = {
   "cohortNav.done": "(done)",
   "cohortNav.isNext": "(next)",
   "cohortNav.next": "Next:",
-  "cohortNav.goThere": "Go there →",
+  "cohortNav.goThere": "Go to this step →",
   "cohortNav.nextText.setup": "set up the cohort.",
   "cohortNav.nextText.payment": "record the invoice, then the payment when it arrives. The enrolment procedure begins here. Learners paying their own way supply their own proof of payment instead.",
   "cohortNav.nextText.learners": "add the learners, one at a time or from a class spreadsheet.",
@@ -1178,9 +1178,9 @@ export const staff = {
   "cohortsGuide.6": "Running it: from the start date, release work as it falls due and help anyone held up at a step.",
   "cohortsGuide.7": "Archive: once the learners have their results, archive the cohort's evidence.",
   "cohortGuide.plan": "Plan the dates",
-  "cohortGuide.planIntro": "When each workbook, guide and assessment opens and is due. Work it out in the planner, where every change shows at once.",
+  "cohortGuide.planIntro": "Set when each workbook, guide and assessment opens and is due. The planner shows every change at once.",
   "cohortGuide.payment.1": "When the client has been invoiced, record the date of the invoice.",
-  "cohortGuide.payment.2": "When proof of payment arrives, record the date and the reference. Everybody on the cohort then counts as paid for.",
+  "cohortGuide.payment.2": "When proof of payment arrives, record the date and the reference. Every learner on the cohort is then treated as paid for.",
   "cohortGuide.payment.3": "A learner paying their own way supplies their own proof of payment instead; either satisfies the enrolment procedure.",
   "cohortGuide.learners.1": "Add learners one at a time below, or read a whole class from a spreadsheet on the cohorts page.",
   "cohortGuide.learners.2": "Each learner is enrolled on the cohort's course, or on every live study unit of its qualification.",
@@ -1202,7 +1202,7 @@ export const staff = {
   "cohortGuide.rollout.2": "Check what was read: each workbook, guide, workplace module and summative, with its dates.",
   "cohortGuide.rollout.3": "Save. Workbooks open on their hand-out date and are due on their submission date, and every dated row becomes a class session.",
   "cohortGuide.rollout.4": "A re-sit paper is left to be released by hand.",
-  "cohortGuide.release.1": "Every item in order, with the day it opens and the day it is due, counted from the start.",
+  "cohortGuide.release.1": "Every item is listed in order, with the day it opens and the day it is due, counted from the start.",
   "cohortGuide.release.2": "The planner shows the same dates week by week and is easier to work in; this table is for exact adjustments.",
   "rolloutImport.title": "Read the roll-out schedule",
   "rolloutImport.intro": "Upload the cohort's roll-out spreadsheet: a row per lecture date, with the workbooks handed out and handed in and the summative sittings. Each workbook's open and due dates, each study unit's start and each summative are set from it, and every lecture becomes a class session. Check what was read before saving it.",
@@ -1225,7 +1225,7 @@ export const staff = {
     "Day 0 is the start date. On a study unit, a row left empty is not released: it waits until you release it above. On any other course, an empty row opens as soon as whatever comes before it is done.",
   "cohortCtl.save": "Save the schedule",
   "cohortCtl.everybody":
-    "Everybody with a learner account is already on this cohort. Invite more people from the People screen first.",
+    "Everyone with a learner account is already on this cohort. Invite more people from the People screen first.",
   "cohortCtl.addLearner": "Add a learner",
   "cohortCtl.adding": "Adding…",
   "cohortCtl.add": "Add",
@@ -1233,7 +1233,7 @@ export const staff = {
   "cohortCtl.remove": "Remove",
 
   // Asking a cohort for feedback
-  "askFeedback.none": "Nobody has been asked yet.",
+  "askFeedback.none": "No one has been asked yet.",
   "askFeedback.programme": "The programme",
   "askFeedback.asked": "asked {when}",
   "askFeedback.oneAnswer": "1 answer",
@@ -1247,7 +1247,7 @@ export const staff = {
   "payment.invoiced": "Invoiced on",
   "payment.received": "Payment received",
   "payment.reference": "Their reference",
-  "payment.referenceNote": "So it can be matched to what finance holds.",
+  "payment.referenceNote": "This allows the payment to be matched with the finance records.",
   "payment.record": "Record it",
 
   // Work on a cohort
@@ -1258,7 +1258,7 @@ export const staff = {
   "tasks.status.postponed": "Postponed",
   "tasks.nothing": "Nothing tracked yet.",
   "tasks.progress":
-    "{done} of {counted} done: {percent}%. Cancelled work is left out of both halves, so abandoning a task neither helps nor hurts the figure.",
+    "{done} of {counted} done: {percent}%. Cancelled tasks are left out of both figures, so cancelling a task does not affect the percentage.",
   "tasks.task": "Task",
   "tasks.assigned": "Assigned",
   "tasks.due": "Due",
@@ -1286,7 +1286,7 @@ export const staff = {
   "session.role.feedback": "feedback",
   "session.role.moderation": "moderation",
   "rollout.nothing":
-    "Nothing scheduled yet. Where a programme carries credits it has to be facilitator-led, so this is where the evidence that it was begins.",
+    "Nothing scheduled yet. Where a programme carries credits it must be facilitator-led, and the sessions recorded here are the evidence of that.",
   "rollout.date": "Date",
   "rollout.session": "Session",
   "rollout.covers": "Covers",
@@ -1321,7 +1321,7 @@ export const staff = {
   "archive.ready": "Ready to archive ({count})",
   "archive.readyFor": "Holding a statement of results and the qualification certificate for {qualification}.",
   "archive.noQualification": "This cohort's course counts towards no qualification.",
-  "archive.nobody": "Nobody yet.",
+  "archive.nobody": "No one yet.",
   "archive.anotherBuilding": "Another archive is being written. Start the next one when it has finished.",
   "archive.notYet": "Not yet ({count})",
   "archive.notYetIntro":
@@ -1385,11 +1385,11 @@ export const staff = {
   "register.marked": "{marked} of {total} marked",
   "register.supervised": "Supervised sitting",
   "register.supervisedIntro":
-    "Who was admitted, what they agreed to, and that their script was received. The meeting itself runs where your lectures do; this is the record of how it was supervised.",
+    "This records who was admitted, what they agreed to, and that their script was received. The meeting itself takes place where your lectures do; this is the record of how it was supervised.",
   "register.canInvigilate": "This is a summative session, so it can be invigilated.",
   "register.title": "Register",
-  "register.intro": "Who was here. Saved marks can be corrected later, and every change is recorded against whoever made it.",
-  "register.nobody": "Nobody is on this cohort yet, so there is no register to take.",
+  "register.intro": "Record who attended. Saved marks can be corrected later, and every change is recorded against the person who made it.",
+  "register.nobody": "No one is on this cohort yet, so there is no register to take.",
   "register.learner": "Learner",
   "register.present": "Present",
   "register.absent": "Absent",
@@ -1419,7 +1419,7 @@ export const staff = {
   "sitting.which": "Which assessment",
   "sitting.choose": "Choose",
   "sitting.invigilator": "Invigilator (optional, and can be set on the day)",
-  "sitting.nobodyYet": "Nobody yet",
+  "sitting.nobodyYet": "No one yet",
   "sitting.early": "Candidates arrive this many minutes early",
   "sitting.closesAfter": "Admission closes this many minutes after the start",
   "sitting.camera": "A camera must be on throughout",
@@ -1437,9 +1437,9 @@ export const staff = {
     "That is {time} {zone} where you are. Times recorded here are the provider's, which is what the record keeps.",
   "room.arrive": "Candidates arrive {minutes} minutes before.",
   "room.closesAt":
-    "Admission closes {minutes} minutes after the start, at {time}; after that the platform refuses, because somebody admitted late has had longer with the paper than everybody else.",
+    "Admission closes {minutes} minutes after the start, at {time}. After that the platform refuses admission, because a candidate admitted late would have had longer with the paper than the others.",
   "room.closes":
-    "Admission closes {minutes} minutes after the start; after that the platform refuses, because somebody admitted late has had longer with the paper than everybody else.",
+    "Admission closes {minutes} minutes after the start. After that the platform refuses admission, because a candidate admitted late would have had longer with the paper than the others.",
   "room.cameras": "Cameras stay on throughout.",
   "room.join": "Join the sitting",
   "room.joinNote": "The meeting runs on the platform you already use. What is recorded here is how it was supervised.",
@@ -1465,7 +1465,7 @@ export const staff = {
   "room.received": "Received",
   "room.incidents": "Incidents",
   "room.incidentsNote":
-    "Filed on the day. An account written weeks later is worth very little at an appeal, which is the only place it is ever read.",
+    "Incidents should be filed on the day. An account written weeks later carries little weight at an appeal.",
   "room.what": "What happened",
   "room.did": "What you did",
   "room.filing": "Filing…",
@@ -1490,11 +1490,11 @@ export const staff = {
     "The same folder, read where it already lives. It ends in the same place: a proposal to check before anything is written.",
   "quals.noneTitle": "No qualifications yet",
   "quals.noneManage":
-    "Build one from its documents (the tab above): the curriculum document and the qualification document are enough, and no AI extension is involved. Everything else on the platform hangs off a qualification, so this is the first thing to do.",
+    "Build one from its documents (the tab above): the curriculum document and the qualification document are enough, and no AI extension is involved. Everything else on the platform is built on a qualification, so this is the first thing to do.",
   "quals.noneRead":
     "None has been loaded yet. When one has been, the curriculum you teach and mark against will be here: its modules, its topics and the criteria each one is assessed by. Loading one is an administrator's job.",
   "how.title": "How would you like to add it?",
-  "how.intro": "Three ways in. Pick one and only that one opens; you can close it again and choose differently.",
+  "how.intro": "There are three ways to add a qualification. Choose one; you can close it again and choose another.",
   "how.or": "or",
   "how.needs": "Needs:",
   "how.takes": "Takes:",
@@ -1503,18 +1503,18 @@ export const staff = {
   "how.documents.summary":
     "The curriculum document, the SAQA qualification document and the assessment specification. The App reads the whole curriculum out of them.",
   "how.documents.needs": "Two or three PDFs or Word files.",
-  "how.documents.speed": "Seconds. No AI involved at any point.",
+  "how.documents.speed": "A few seconds. No AI is involved at any point.",
   "how.folder.title": "From a folder",
   "how.folder.summary":
     "Everything at once: the curriculum, the study units, the guides, the workbooks and the policies, filed as they are read.",
   "how.folder.needs": "The qualification's whole folder, from your computer or a drive.",
   "how.folder.speed":
-    "Minutes. A folder that includes a summary of itself needs no AI; one that does not has its structure worked out, and that part does.",
+    "A few minutes. A folder that includes a summary of itself needs no AI; for one that does not, the AI extension works out its structure.",
   "how.blank.title": "From scratch",
   "how.blank.summary":
     "An empty qualification you build by hand: the title, the code, the level and credits, then its modules one at a time.",
   "how.blank.needs": "The details in front of you.",
-  "how.blank.speed": "As long as it takes. Nothing is read for you.",
+  "how.blank.speed": "As long as the work takes; nothing is read for you.",
 
   // Shared across the qualification screens
   "qualKind.full": "Full qualification",
@@ -1573,7 +1573,7 @@ export const staff = {
     "It shares that qualification's curriculum and takes a subset of its modules; you choose which, once it exists.",
   "manager.curriculumCode": "Curriculum code",
   "manager.codeFull":
-    "As written on the curriculum document. Never worked out: only the QCTO or the OFO can say what it is.",
+    "As written on the curriculum document. The platform never works it out: only the QCTO or the OFO can say what it is.",
   "manager.codePart": "The same code as the qualification it comes from. They share one curriculum, so they share its code.",
   "manager.saqaId": "SAQA ID",
   "manager.accreditation": "Accreditation number",
@@ -1598,12 +1598,12 @@ export const staff = {
   "fromDoc.youAreHere": " (you are here)",
   "fromDoc.title": "From the qualification documents",
   "fromDoc.intro":
-    "These three are the foundation everything else is built on. Upload them and the App reads the qualification's details, its Exit Level Outcomes and its whole curriculum out of them. Check what it found, correct anything it got wrong, and it is written in one go.",
+    "These three are the foundation everything else is built on. Upload them and the App reads the qualification's details, its Exit Level Outcomes and its whole curriculum out of them. Check what it found, correct anything that is wrong, and everything is saved at once.",
   "fromDoc.close": "Close",
   "fromDoc.recommended": " (recommended)",
   "fromDoc.reading": "Reading…",
   "fromDoc.read": "Read them",
-  "fromDoc.pressThis": "Now press this. Nothing is written yet.",
+  "fromDoc.pressThis": "Press this next. Nothing is saved yet.",
   "fromDoc.readingDocs": "Reading the documents…",
   "fromDoc.stillReading": "Still reading: {seconds} seconds. A curriculum document is long; this is normal.",
   "fromDoc.found":
@@ -1686,9 +1686,9 @@ export const staff = {
   "qualPage.step.unitsNone":
     "The curriculum publishes modules and says nothing about how you group them, so this is yours to decide. Your alignment document does it in one upload: Word or Excel.",
   "qualPage.step.unitsSomeOne":
-    "1 module belongs to no unit yet. A module no study unit delivers is a module nobody teaches.",
+    "1 module belongs to no unit yet. A module that belongs to no study unit is not taught.",
   "qualPage.step.unitsSome":
-    "{count} modules belong to no unit yet. A module no study unit delivers is a module nobody teaches.",
+    "{count} modules belong to no unit yet. A module that belongs to no study unit is not taught.",
   "qualPage.step.unitsAction": "Upload the alignment document",
   "qualPage.step.material": "The material",
   "qualPage.step.materialDone": "{count} theory guides, workbooks and assessments filed.",
@@ -1714,14 +1714,14 @@ export const staff = {
   "qualPage.tabHolds": "The qualification",
   "qualPage.tabBuild": "Add to it",
   "qualPage.addTitle": "Add to this qualification",
-  "qualPage.addIntro": "Everything that puts something in. What is already here is on the other tab.",
+  "qualPage.addIntro": "Everything that adds to this qualification is here. What it already holds is on the other tab.",
   "qualPage.finish": "Finish this qualification from a fuller folder",
   "qualPage.finishLabel": "The completed folder for this qualification, from your own computer",
   "qualPage.finishHint":
     "For a qualification that was loaded before its documents were complete. The whole folder is read again (the curriculum as well as the material) and only what is missing is added.",
   "qualPage.finishHint2":
     "Nothing already here is changed or replaced, down to the wording of a single criterion, and running it twice does nothing the second time. You still see everything it found and confirm it before any of it is written.",
-  "qualPage.finishDrive": "Or the completed folder from a drive you have connected. It tops up the same way: only what is missing is added.",
+  "qualPage.finishDrive": "Or the completed folder from a drive you have connected. It works in the same way: only what is missing is added.",
   "qualPage.materialHere": "The material goes here: the whole folder at once. Nothing is saved until you have seen what it found.",
   "qualPage.wholeFolder": "A whole folder at once",
   "qualPage.materialLabel": "A folder of material, from your own computer",
@@ -1739,7 +1739,7 @@ export const staff = {
   "qualPage.notCarried": "What the file does not carry",
   "qualPage.notCaptured": "{count} of {total} modules have no criteria yet.",
   "qualPage.notCapturedWhy":
-    "Nobody can be declared ready for the EISA against this qualification until the whole curriculum document has been transcribed; a module with no criteria cannot be failed, so leaving them empty would make every learner look finished.",
+    "No one can be declared ready for the EISA against this qualification until the whole curriculum document has been transcribed. A module with no criteria cannot be failed, so leaving them empty would make every learner appear to have finished.",
   "qualPage.nav.units": "Study units",
   "qualPage.nav.documents": "Documents",
   "qualPage.nav.curriculum": "Curriculum",
@@ -1754,11 +1754,11 @@ export const staff = {
     "The curriculum publishes modules and says nothing about study units, because grouping them is the provider's own decision, so a qualification read from its documents arrives with all {count} of its modules unplaced. That is expected, not a fault in the import.",
   "qualPage.nextStepHow":
     "Upload your alignment document: the one mapping each Exit Level Outcome to its modules, in Word or Excel. It creates the study units, names them, and places every module it covers.",
-  "qualPage.takeMe": "Take me to the upload →",
+  "qualPage.takeMe": "Go to the upload →",
   "qualPage.unplacedOne": "1 module belongs to no study unit.",
   "qualPage.unplaced": "{count} modules belong to no study unit.",
   "qualPage.unplacedWhy":
-    "{modules}. A module no study unit delivers is a module nobody teaches, however completely its curriculum has been captured.",
+    "{modules}. A module that belongs to no study unit is not taught, however completely its curriculum has been captured.",
   "qualPage.elo": "Exit Level Outcome {number}",
   "qualPage.noElo": "Aligned to no Exit Level Outcome",
   "qualPage.eisaTests": "Associated assessment criteria: what the EISA tests",
@@ -1784,7 +1784,7 @@ export const staff = {
   "qualPage.toTeach": "{kind}: what must be taught",
   "qualPage.iac": "Internal assessment criteria: what must be achieved",
   "qualPage.workplaceNone":
-    "No assessment criteria, which is right for work experience: it is proved by a signed record of the work rather than judged against criteria.",
+    "No assessment criteria, which is correct for work experience: it is proved by a signed record of the work rather than judged against criteria.",
   "qualPage.neverAchieved": "No assessment criteria, so this topic can never be achieved.",
   "qualPage.looseCriteria": "Assessment criteria",
 
@@ -1823,7 +1823,7 @@ export const staff = {
   "uploader.attach": "Attach it to",
   "uploader.whole": "The whole qualification",
   "uploader.title": "Title",
-  "uploader.titleHint": "Left blank, the file name is used",
+  "uploader.titleHint": "If left blank, the file name is used",
   "uploader.version": "Version",
   "uploader.versionHint": "V2, Final, 07072025",
   "uploader.versionNote":
@@ -1849,11 +1849,11 @@ export const staff = {
   "buildCurr.notReady": "Not ready for material yet.",
   "buildCurr.whatItIs": "What this qualification is",
   "buildCurr.whatItIsNote":
-    "Set when it was imported, and correctable here. A full qualification has its own curriculum; a part or a skills programme selects modules from one.",
-  "buildCurr.faults": "{count} to sort out",
+    "This was set when it was imported and can be corrected here. A full qualification has its own curriculum; a part or a skills programme selects modules from one.",
+  "buildCurr.faults": "{count} to resolve",
   "buildCurr.faultsNote":
-    "Not a gate: you can leave and come back. Each of these, though, is something the platform cannot work around later.",
-  "buildCurr.worthKnowing": "Worth knowing",
+    "These do not stop you continuing, and you may return to them later. Each, however, is something the platform cannot work around.",
+  "buildCurr.worthKnowing": "Please note",
   "addModule.title": "Add a module",
   "addModule.note":
     "A work experience module is evidenced by a logbook a coach signs, not by assessment criteria, so it takes work activities instead.",
@@ -1904,9 +1904,9 @@ export const staff = {
   "elementKind.supporting_evidence": "Supporting evidence",
   "reclassify.recordedAs": "This is recorded as {kind}.",
   "reclassify.lockedOne":
-    "It cannot be changed: 1 learner is enrolled on it. Enrolment is per programme ID, and changing what this is would change which modules they are assessed against, and so what they have to do to finish. If it is genuinely the wrong sort of thing, create the right one and enrol them onto that.",
+    "It cannot be changed: 1 learner is enrolled on it. Enrolment is per programme ID, and changing what this is would change which modules they are assessed against, and so what they have to do to finish. If it is genuinely the wrong kind, create the correct one and enrol the learner on that.",
   "reclassify.locked":
-    "It cannot be changed: {count} learners are enrolled on it. Enrolment is per programme ID, and changing what this is would change which modules they are assessed against, and so what they have to do to finish. If it is genuinely the wrong sort of thing, create the right one and enrol them onto that.",
+    "It cannot be changed: {count} learners are enrolled on it. Enrolment is per programme ID, and changing what this is would change which modules they are assessed against, and so what they have to do to finish. If it is genuinely the wrong kind, create the correct one and enrol the learners on that.",
   "reclassify.whatItIs": "What this is",
   "reclassify.kind.full": "A full qualification",
   "reclassify.kind.part": "A part qualification",
@@ -1922,9 +1922,9 @@ export const staff = {
   "reclassify.ownModules":
     "This qualification has {count} modules of its own curriculum, from when it was imported. Those stay where they are: recording it as a part does not delete them, and you choose separately which of the parent's modules it selects.",
   "reclassify.selectedOne":
-    "The 1 module selected from its parent will be cleared. A full qualification selects nothing from anybody, and leaving it would keep it counting towards its credits.",
+    "The 1 module selected from its parent will be cleared. A full qualification does not select modules from another qualification, and leaving it would keep it counting towards its credits.",
   "reclassify.selected":
-    "The {count} modules selected from its parent will be cleared. A full qualification selects nothing from anybody, and leaving them would keep them counting towards its credits.",
+    "The {count} modules selected from its parent will be cleared. A full qualification does not select modules from another qualification, and leaving them would keep them counting towards its credits.",
   "reclassify.recording": "Recording…",
   "reclassify.record": "Record what this is",
 
@@ -1938,7 +1938,7 @@ export const staff = {
   "takeDoc.goToDocuments": "Go to the documents for this qualification",
   "takeDoc.notes": "{count} things to check",
   "takeDoc.notesNote":
-    "What the reading could not account for, and what the document itself does not add up. Neither stops you taking a module, though both are worth reading first.",
+    "What the reading could not account for, and what the document itself does not add up. Neither stops you taking a module, although both should be read first.",
   "takeDoc.read": "{count} modules read",
   "takeDoc.already": "{count} already in the curriculum",
   "takeDoc.topics": "{count} topics",
@@ -1994,22 +1994,22 @@ export const staff = {
   "partModules.rules": "Qualification Rules",
   "partModules.notRead": "The parent's curriculum has not been read in yet",
   "partModules.notReadNote":
-    "There is nothing to choose from until {parent} has its curriculum document read in. Do that first, and this list fills itself.",
+    "There is nothing to choose from until {parent} has its curriculum document read in. Once that is done, this list is filled in.",
   "partModules.creditsChosen": "{count} credits chosen",
   "partModules.noCredits": "No credits recorded",
   "partModules.claimed": "{count} claimed on the document",
   "partModules.noClaim":
     "No credit total is recorded for this qualification, so there is nothing to check against. Its SAQA document states one under Minimum Credits.",
-  "partModules.agree": "These agree, which is the sign the right modules are ticked.",
+  "partModules.agree": "These agree, which indicates that the right modules are ticked.",
   "partModules.disagree":
-    "These do not agree. Either a module is ticked that the SAQA document does not list, or one it lists is missing, or the credits on a module were read in wrongly. Worth checking before saving; the platform will still save what you tell it.",
+    "These do not agree. Either a module is ticked that the SAQA document does not list, or one it lists is missing, or the credits on a module were read in wrongly. Please check before saving; the platform will save what you have entered.",
   "partModules.back": "Back to the qualification",
   "partModules.save": "Save which modules this takes",
 
   // A qualification walked as a learner will meet it
   "qualPreview.title": "As a learner will see it",
   "qualPreview.intro":
-    "The whole {programme} in the order somebody enrolled on it walks it. Nothing here starts anything: no enrolment is made, no attempt is opened and no progress is recorded, so this can be read as often as you like.",
+    "The whole {programme}, in the order in which an enrolled learner works through it. Nothing here starts anything: no enrolment is made, no attempt is opened and no progress is recorded.",
   "qualPreview.unitsOne": "1 study unit",
   "qualPreview.units": "{count} study units",
   "qualPreview.stepsOne": "1 step",
@@ -2039,7 +2039,7 @@ export const staff = {
   "courseList.new": "New {course}",
   "courseList.none": "No {courses} yet",
   "courseList.noneAuthor":
-    "A course is what a learner actually works through. It hangs off a study unit or a curriculum module, so a qualification is worth loading first.",
+    "A course is what a learner actually works through. It belongs to a study unit or a curriculum module, so it is best to load a qualification first.",
   "courseList.noneReader":
     "Nothing has been published for you yet. When it has been, what you are enrolled on will be here.",
   "courseList.version": "version {number}",
@@ -2145,7 +2145,7 @@ export const staff = {
   // The order a learner walks a course in
   "spine.title": "What a learner works through",
   "spine.intro":
-    "The order this {course} is walked in, and what holds each step shut until the one before it is done. Everything here is already held against this {course}: putting it on the list is what makes a learner meet it.",
+    "The order in which this {course} is worked through, and what keeps each step closed until the one before it is done. Everything here is already held against this {course}; adding it to the list is what places it in front of a learner.",
   "spine.delivers": "Delivers {code} {title}.",
   "spine.kind.lesson": "Lesson",
   "spine.kind.assessment": "Assessment",
@@ -2170,7 +2170,7 @@ export const staff = {
   "spine.aStep": "a step",
   "spine.openFromStart": "Open from the start.",
   "spine.waitsForBefore": "Waits for the step before it to be {rule}.",
-  "spine.holdUntil": "Hold this shut until",
+  "spine.holdUntil": "Keep this closed until",
   "spine.chooseStep": "Choose a step…",
   "spine.is": "is",
   "spine.addGate": "Add the gate",
@@ -2179,7 +2179,7 @@ export const staff = {
     "Everything held against it is already on the list. Capture a workbook or file a document against it, and it will appear here.",
   "spine.meets": "What the learner meets",
   "spine.choose": "Choose…",
-  "spine.rename": "Call it something else (optional)",
+  "spine.rename": "Give it a different name (optional)",
   "spine.guidance": "One line of context (optional)",
   "spine.skippable": "A learner may skip it",
   "spine.openAtStart": "Open from the start, rather than after the step before it",
@@ -2238,7 +2238,7 @@ export const staff = {
   "courseAssess.sampleEvery": "Every decision",
   "courseAssess.sampleNone": "None",
   "courseAssess.sampleNote":
-    "A floor, not a ceiling. Cohort size raises it: a cohort of ten or fewer is moderated in full and one of twenty or fewer at half, because a quarter of eight scripts is two, and two say almost nothing about an assessor's judgement. This figure governs cohorts above twenty. Ignored for a summative assessment, where every decision is moderated, and a newly registered assessor is always moderated in full.",
+    "This is a minimum, not a maximum. Cohort size raises it: a cohort of ten or fewer is moderated in full and one of twenty or fewer at half, because a very small sample says little about an assessor's judgement. This figure governs cohorts above twenty. It does not apply to a summative assessment, where every decision is moderated, and a newly registered assessor is always moderated in full.",
   "courseAssess.creating": "Creating…",
   "courseAssess.create": "Create assessment",
 
@@ -2246,12 +2246,12 @@ export const staff = {
   "courseEnrol.title": "Who is on it",
   "courseEnrol.draft":
     "This is still a draft. It has to be published before anyone can be assigned to it: a draft has not passed the checks that confirm its content covers what it claims to.",
-  "courseEnrol.waiting": "Waiting on something ({count})",
+  "courseEnrol.waiting": "Held up ({count})",
   "courseEnrol.waitingNote":
-    "Each learner appears once, at the earliest step they cannot open. Being held up at step three is the fact worth acting on; also being held up at steps four to ten is noise.",
-  "courseEnrol.stuckAt": "Stuck at {step}",
+    "Each learner appears once, at the earliest step they cannot open, because that is the step on which to act.",
+  "courseEnrol.stuckAt": "Held up at {step}",
   "courseEnrol.enrolled": "Enrolled ({count})",
-  "courseEnrol.nobody": "Nobody is enrolled yet.",
+  "courseEnrol.nobody": "No one is enrolled yet.",
   "courseEnrol.name": "Name",
   "courseEnrol.progress": "Progress",
   "courseEnrol.due": "Due",
@@ -2279,6 +2279,16 @@ export const staff = {
     "How {name} looks to your people, and how the App reads the documents they upload. Changes apply everywhere immediately: there is nothing to rebuild or redeploy.",
   "settings.section.branding": "Branding",
   "settings.section.clock": "Clock",
+  "settings.section.dates": "Dates",
+  "dateStyle.title": "How dates are written",
+  "dateStyle.note": "Every date on the platform is written this way: on screens, in lists and in the documents it produces, apart from documents whose form a regulator prescribes.",
+  "dateStyle.option.long": "Day, month in words, year",
+  "dateStyle.option.numeric": "Day/month/year",
+  "dateStyle.option.iso": "Year-month-day",
+  "dateStyle.option.device": "Each person's own computer settings",
+  "dateStyle.deviceNote": "Each person sees dates as their own browser reports their regional setting, which normally follows their Windows or Mac settings. Two people may therefore see the same date written differently.",
+  "dateStyle.save": "Save",
+  "dateStyle.saving": "Saving…",
   "settings.section.language": "Language",
   "settings.section.mail": "Outbound mail",
   "settings.section.signingIn": "Signing in",
@@ -2297,10 +2307,10 @@ export const staff = {
     "That consent did not match the one this browser started, so nothing was connected. Start again from this page.",
   "settings.drive.nocode": "The provider sent nothing back to connect with. Try again.",
   "settings.drive.failed":
-    "The connection could not be completed. Nothing was stored. Trying again is worth doing before anything else.",
+    "The connection could not be completed, and nothing was stored. Please try again before taking any other step.",
   "settings.mail": "Outbound mail",
   "settings.mailNote":
-    "Whether learners can actually receive their sign-in details and notifications. Worth checking after anybody changes the mail settings, and the first thing to check when somebody says an email never arrived.",
+    "Whether learners can actually receive their sign-in details and notifications. Check this after the mail settings are changed, and first of all whenever someone reports that an email did not arrive.",
   "settings.sso": "Signing in with Google or Microsoft",
   "settings.ssoNote":
     "Lets your people sign in with their organisation's Google or Microsoft account instead of a password here, which keeps working beside it. It only signs in people who already have an account on this platform, matched by email address the first time; it never creates one.",
@@ -2314,13 +2324,13 @@ export const staff = {
     "now under Management, with every document the platform produces and who receives each one.",
   "settings.menu": "The menu",
   "settings.menuNote":
-    "Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. The same for everybody at this provider, because staff tell each other where things are.",
+    "Rearrange the bar at the top: rename a heading, move a page under a different one, or make a page a direct link. It is the same for everyone at this provider, so that staff can direct one another to the same place.",
   "settings.drives": "Your file stores",
   "settings.drivesNote":
     "Read a folder straight from Google Drive or OneDrive, instead of downloading it and uploading it again. Yours rather than this provider's: every member of staff connects their own.",
   "settings.extension": "Your AI extension",
   "settings.extensionNote":
-    "Against your own profile. Optional, off by default, and what it lets you do is bounded by your role exactly as everything else is.",
+    "This is set against your own profile. It is optional and off by default, and what it lets you do is limited by your role, exactly as everything else is.",
 
   // The provider's default language
   "providerLang.title": "Language",
@@ -2347,12 +2357,12 @@ export const staff = {
   "brand.logoAddress": "Or an address, if the image is already hosted elsewhere",
   "brand.signIn": "The sign-in page",
   "brand.signInNote":
-    "Optional. With nothing here the page shows your name on your own colour, which is tidy but plain. A graphic that says something true about what you do is worth more than a decorative one.",
+    "Optional. With nothing here, the page shows your name on your own colour. A graphic that reflects what you do is preferable to a purely decorative one.",
   "brand.graphic": "Graphic address",
   "brand.character": "Your character",
   "brand.characterHint": "https://… or /your-graphic.png",
   "brand.characterNote":
-    "Appears on a screen with nothing on it yet, beside the sentence explaining what would be there, and beside a button somebody has to press next, where it is there to be noticed. Small, upright, and friendlier than it is decorative. Leave it empty to use this platform's own, or nothing at all.",
+    "Appears on a screen with nothing on it yet, beside the sentence explaining what would be there, and beside a button somebody has to press next, where it is there to be noticed. Leave it empty to use this platform's own, or nothing at all.",
   "brand.strapline": "A line under it",
   "brand.straplineHint": "Lifelong curiosity",
   "brand.save": "Save appearance",
@@ -2360,7 +2370,7 @@ export const staff = {
   // What this platform is
   "shape.title": "What this platform is",
   "shape.intro":
-    "Two questions decide the shape of your platform and what its parts are called. Everything you do not choose goes away: its screens, its menu entries and its addresses.",
+    "Two questions decide the shape of your platform and what its parts are called. Everything you do not choose is hidden: its screens, its menu entries and its addresses.",
   "shape.nothingDeleted": "Nothing is deleted.",
   "shape.nothingDeletedNote":
     "Changing this hides things. Whatever has already been recorded stays where it is, and choosing it again brings the screens back with the records intact.",
@@ -2391,17 +2401,17 @@ export const staff = {
   "shape.save": "Save what this platform is",
   "shape.award.qualification_programme.label": "Qualification / Programme",
   "shape.award.qualification_programme.covers":
-    "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
+    "The qualification and the programme are one and the same. A learner is enrolled on the qualification and works through it. There is no separate bundling layer above it.",
   "shape.award.qualification_programme.when":
     "You deliver one occupational qualification as one learning programme.",
   "shape.award.qualification_and_programme.label": "Qualification and Programme, separately",
   "shape.award.qualification_and_programme.covers":
-    "Two different things. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
+    "The two are separate. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
   "shape.award.qualification_and_programme.when":
     "You run accredited qualifications and also bundle deliverables into sequences that are not one qualification each.",
   "shape.award.programmes_only.label": "Programmes only",
   "shape.award.programmes_only.covers":
-    "Programmes bundle what a learner works through. No accreditation record, no curriculum, no statements of results.",
+    "Programmes bundle what a learner works through. There is no accreditation record, curriculum or statement of results.",
   "shape.award.programmes_only.when":
     "Nothing you deliver answers to a registered qualification: induction, compliance refreshers, internal skills programmes.",
   "shape.award.standalone.label": "Neither",
@@ -2419,7 +2429,7 @@ export const staff = {
   "shape.layer.qualificationProgramme": "Qualification / Programme",
   "shape.layer.qualification": "Qualification",
   "shape.note.qualificationProgramme":
-    "One thing. A learner is put onto the qualification, and that is the programme they work through.",
+    "The qualification and the programme are one and the same: a learner is enrolled on the qualification and works through it.",
   "shape.note.qualification": "The accreditation record: its curriculum, criteria and exit level outcomes.",
   "shape.note.programmeWithQualification": "An ordered sequence, which may answer to a qualification or to none.",
   "shape.note.programmeOnly": "An ordered sequence, answering to no registered qualification.",
@@ -2433,18 +2443,18 @@ export const staff = {
   "clock.now": "It is {time} there now.",
   "clock.yours": "You are reading this at {time}.",
   "clock.both":
-    "Learners in other countries see both: your time, which is the one the record keeps, and their own alongside it, so nobody works out the difference themselves and gets it wrong. Recorded times are always yours.",
+    "Learners in other countries see both: your time, which is the one the record keeps, and their own alongside it, so that no one has to work out the difference. Recorded times are always yours.",
 
   // Testing outbound mail
   "mailTest.intro":
     "Opens a connection to the mail server and signs in, to check that learner sign-in details and notifications can actually be delivered.",
-  "mailTest.nothingSent": "No email is sent to anybody.",
+  "mailTest.nothingSent": "No email is sent.",
   "mailTest.testing": "Testing…",
   "mailTest.test": "Test the mail connection",
   "mailTest.working": "Working",
   "mailTest.notWorking": "Not working",
   "mailTest.notYours":
-    "Nothing here is something you can change on this page: the mail server belongs to the deployment. Pass the line above to whoever maintains it.",
+    "This cannot be changed on this page: the mail server belongs to the deployment. Pass the message above to whoever maintains it.",
   "mailTest.unconfigured":
     "No mail server is set up on this deployment yet, so this will report that rather than a fault with your account.",
 
@@ -2472,7 +2482,7 @@ export const staff = {
   "termsForm.one": "You call one",
   "termsForm.many": "You call several",
   "termsForm.why.platform": "the platform's word",
-  "termsForm.why.practice": "used across the sector, owned by nobody",
+  "termsForm.why.practice": "used across the sector, owned by no one",
   "termsForm.oneLabel": "What you call one {word}",
   "termsForm.manyLabel": "What you call several {words}",
   "termsForm.missing": "Some words are not on this list, and that is deliberate.",
@@ -2507,12 +2517,12 @@ export const staff = {
   "menuEdit.add": "Add a heading",
   "menuEdit.reset": "Back to the standard menu",
   "menuEdit.note":
-    "Pages cannot be hidden here. What each person sees is already decided by their role, and a second way to make something unreachable would leave nobody able to say why a page is missing. A page added to the platform later appears under its usual heading rather than disappearing because this arrangement predates it.",
+    "Pages cannot be hidden here. What each person sees is already decided by their role, and a second way to make something unreachable would make it impossible to tell why a page is missing. A page added to the platform later appears under its usual heading rather than disappearing because this arrangement predates it.",
   "menuEdit.save": "Save this arrangement",
 
   // Connected file stores
   "drives.none":
-    "No file store is set up on this deployment. Reading a folder straight from Google Drive or OneDrive needs an application registered with them by whoever maintains the platform; until then, a folder is chosen from your own computer, which works and needs nothing.",
+    "No file store is set up on this deployment. Reading a folder straight from Google Drive or OneDrive needs an application registered with them by whoever maintains the platform; until then, a folder is chosen from your own computer, which works without any further setup.",
   "drives.connectedAt": "Connected {date}",
   "drives.lastUsed": ", last used {date}",
   "drives.notUsed": ", not used yet",
@@ -2549,14 +2559,14 @@ export const staff = {
   "ext.notReady": "Not ready yet",
   "ext.keeps": "What the platform keeps.",
   "ext.keepsNote":
-    "Your {credential}, encrypted, until you discard it. It is used only for work you ask for, only while you have the switch on, and it is never shown back to you or written to any log. Available is not the same as on: every sitting starts with it off, you switch it on for a job, and signing out switches it off for you if you forget.",
+    "Your {credential}, encrypted, until you discard it. It is used only for work you ask for, only while you have the switch on, and it is never shown back to you or written to any log. Making it available does not switch it on: it is off at the start of every session, you switch it on for a task, and signing out switches it off again.",
   "ext.keptUnused":
     "Your token is kept but cannot be used. Nothing in the platform will offer AI assistance until you make it available again.",
   "ext.offNote":
-    "With this off, the platform behaves exactly as it does without an extension: the affordances are absent rather than offered and failing.",
+    "With this off, the platform behaves exactly as it does without an extension: the AI options are not shown at all.",
   "ext.tokenFrom": "Where the token comes from",
   "ext.tokenFromNote":
-    "This part happens on your own computer, not here, which is the point: your subscription is authorised by you, on your machine, and only the token it produces ever reaches this platform.",
+    "This part takes place on your own computer, not here, by design: your subscription is authorised by you, on your machine, and only the token it produces ever reaches this platform.",
   "ext.step1": "1. Install Claude Code",
   "ext.step1Rest": "if you have not already: {link}. You need a Claude subscription of your own.",
   "ext.installGuide": "the install guide",
@@ -2571,23 +2581,23 @@ export const staff = {
   "ext.step3": "3. Sign in when it opens your browser",
   "ext.step3Rest": ", then copy the token it prints (it begins {prefix}) and paste it above.",
   "ext.notApiKey":
-    "It is not an API key and there is no per-token cost: it draws on the Claude subscription you already pay for. Never give anybody your Anthropic password: this platform has no field for one and would not accept it here.",
+    "It is not an API key and there is no per-token cost: it draws on the Claude subscription you already pay for. Never give anyone your Anthropic password: this platform has no field for one and would not accept it here.",
   "ext.keyFrom": "Where the key comes from",
   "ext.notSubscription": "A subscription is not an API key.",
   "ext.geminiSeparate":
-    "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it.",
+    "Gemini Advanced and the Gemini API are separate products with separate billing. Paying for the first does not give you access to the second.",
   "ext.openaiSeparate":
-    "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you the second, and there is no way to make it.",
+    "ChatGPT Plus and the OpenAI API are separate products with separate billing. Paying for the first does not give you access to the second.",
   "ext.openaiCreate": "Create a key at {site}, under {menu}, and paste it above. It begins {prefix}.",
   "ext.apiKeys": "API keys",
   "ext.noFreeTier": "There is no free tier:",
   "ext.noFreeTierNote":
-    "unlike Gemini, every call is charged to the account the key belongs to, so expect a bill, however small.",
+    "unlike Gemini, every call is charged to the account the key belongs to, so there will be a charge, however small.",
   "ext.geminiCreate":
-    "Sign in at {site}, choose {menu}, create one, and paste it above. Google has issued keys in more than one format, so paste whatever it gives you: this platform does not second-guess it.",
+    "Sign in at {site}, choose {menu}, create one, and paste it above. Google has issued keys in more than one format, so paste whatever it gives you: this platform accepts any of them.",
   "ext.getApiKey": "Get API key",
   "ext.geminiFree":
-    "The Gemini API has a free tier, so this costs nothing to try. It limits how many requests you may make in a minute rather than charging for them; reading a large folder can hit that, and the platform will say so plainly if it does.",
+    "The Gemini API has a free tier, so this costs nothing to try. It limits how many requests you may make in a minute rather than charging for them; reading a large folder can reach that limit, and the platform will say so if it does.",
   "ext.keyYours":
     "It is yours, not the tenant's. It is encrypted, used only for work you ask for while your switch is on, never shown back to you, and never written to a log.",
 
@@ -2597,7 +2607,7 @@ export const staff = {
     "One module is written down differently in different documents: {long} in the curriculum, {short} in the alignment table, {shortest} in a summary. The long identifier, the punctuation and the capitals are handled by rule. This is where the App is told about the rest, so an upload links the module instead of reporting it missing.",
   "codes.saved": "Saved. Uploads will use these from now on.",
   "codes.none":
-    "No curriculum has been loaded yet, so there are no standards to infer. Load a qualification and this fills itself in from its module codes.",
+    "No curriculum has been loaded yet, so there are no standards to infer. Load a qualification and this is filled in from its module codes.",
   "codes.inUse": "{total} alternative spellings across {modules} modules, in use.",
   "codes.proposed": "{total} spellings proposed across {modules} modules.",
   "codes.notInUse": "Not in use until you have looked at them and confirmed.",
@@ -2625,7 +2635,7 @@ export const staff = {
   // How filenames are read
   "naming.title": "How filenames are read",
   "naming.intro":
-    "When somebody uploads a workbook or an assessment, the App reads the filename to work out what it is. Get this right and an upload arrives already filled in. Get it wrong and nothing breaks: it arrives as a blank form for somebody to complete by hand.",
+    "When a workbook or an assessment is uploaded, the App reads the filename to work out what it is. When the filename follows the rule, the upload arrives already filled in. When it does not, nothing breaks: the upload arrives as a blank form to be completed by hand.",
   "naming.rule": "The house rule, as your team should follow it",
   "naming.ruleNote":
     "Shown on the upload screen. Guidance for people, not something the App matches on: it finds the codes below wherever they appear.",
@@ -2665,7 +2675,7 @@ export const staff = {
     "What the provider issues for its own programmes. A qualification certificate comes from the QCTO, not from here.",
   "tmpl.note.workplace_statement": "What a workplace coach signs to confirm the experience a learner completed.",
   "tmpl.note.enrolment_form":
-    "The completed enrolment form, as a document. A QCTO monitor may ask for it on a visit, so it has to exist on paper, not only as a screen somebody filled in.",
+    "The completed enrolment form, as a document. A QCTO monitor may ask for it on a visit, so it has to exist on paper, not only as a completed screen.",
   "tmpl.which": "Which document",
   "tmpl.inUse": "In use now",
   "tmpl.yours": "Your own: “{name}”, version {version}.",
@@ -2685,12 +2695,12 @@ export const staff = {
   "tmpl.example": "For example: {example}",
   "tmpl.added": "What the platform adds, whatever your template says",
   "tmpl.addedNote":
-    "These are printed after your template. They are not yours to change because they are not yours: a regulator requires them, and a learner holding the document relies on them being true. You do not need to write them into your own version.",
+    "These are printed after your template and cannot be changed: a regulator requires them, and a learner holding the document relies on them being true. You do not need to write them into your own version.",
 
   // Capturing a paper
   "capture.title": "Capture a paper",
   "capture.intro":
-    "The App reads what it can, shows you what it made of it and what it could not work out, and waits. Nothing becomes an assessment until you confirm it.",
+    "The App reads what it can, shows you what it found and what it could not work out, and waits for your confirmation. Nothing becomes an assessment until you confirm it.",
   "capture.fromFolder":
     "If the workbook came in with a folder, it is already here: {link} and capture it from what is filed. There is no second upload, and the answer guide is paired for you. Use the form below only for a paper the platform does not already hold.",
   "capture.openQualification": "open the qualification",
@@ -2718,7 +2728,7 @@ export const staff = {
     "Ready. {modules} modules and {criteria} assessment criteria are in, so questions can be linked to what they evidence.",
   "capture.notReady": "This qualification is not ready for material yet.",
   "capture.notReadyNote":
-    "Do these first, in this order. Until they are done a question cannot be tagged to what it evidences, and putting that right later means re-tagging every one of them by hand.",
+    "Do these first, in this order. Until they are done a question cannot be tagged to what it evidences, and correcting that later means re-tagging every question by hand.",
   "capture.whereDocuments": "Documents are uploaded on the qualification's own page.",
   "capture.readWith": "Read with {file}.",
   "capture.noGuide": "No answer guide was uploaded.",
@@ -2731,7 +2741,7 @@ export const staff = {
   "captureReview.noAnswer": "“{stem}…” is marked by the App but has no correct answer.",
   "captureReview.addsUp": "“{section}” is printed as {printed} marks but its questions add up to {sum}.",
   "captureReview.edited":
-    "You have made corrections. What gets committed is what is on this screen now, not what was read out of the file.",
+    "You have made corrections. What is committed is what is on this screen now, not what was read out of the file.",
   "captureReview.paper": "The paper",
   "captureReview.summary": "{questions} questions · {marks} marks · {app} marked by the App",
   "captureReview.fromFilename": "From the filename: {parts}",
@@ -2764,13 +2774,13 @@ export const staff = {
     "Nothing else is listed, because everything else follows from this. Start again with the learner's paper as the paper and the assessor guide as the guide.",
   "captureReview.fixOne": "1 thing needs fixing",
   "captureReview.fix": "{count} things need fixing",
-  "captureReview.fixNote": "Correct these below, or read them and say you want to go on anyway.",
+  "captureReview.fixNote": "Correct these below, or read them and confirm that you wish to continue.",
   "captureReview.clear": "Nothing outstanding",
   "captureReview.clearNote": "Every question the App will mark has an answer, and every section adds up to what it prints.",
   "captureReview.material": "About the material itself",
   "captureReview.materialNote":
     "The document was read correctly. These are things about the paper that only its author can decide.",
-  "captureReview.worthKnowing": "Worth knowing",
+  "captureReview.worthKnowing": "Please note",
 
   // Folders that have been read
   "imports.title": "Folders that have been read",
@@ -2782,7 +2792,7 @@ export const staff = {
   "imports.switchOn": "Switch one on",
   "imports.read": "What has been read",
   "imports.readNote":
-    "Kept whether committed or discarded. What was proposed and then rejected is how anybody judges whether a reading is worth trusting.",
+    "Kept whether committed or discarded, so that the reliability of a reading can be judged from what was proposed and rejected.",
   "imports.status.reading": "Reading",
   "imports.status.proposed": "Waiting to be checked",
   "imports.status.failed": "Failed",
@@ -2803,7 +2813,7 @@ export const staff = {
   "imports.failed": "It did not work",
   "imports.proposes": "What it proposes",
   "imports.proposesNote":
-    "Everything in one place. The warnings are the part that matters: read those before anything else.",
+    "Everything is shown in one place. Please read the warnings before anything else.",
 
   // What a folder reading proposes
   "proposal.component.knowledge": "Knowledge",
@@ -2843,7 +2853,7 @@ export const staff = {
   "proposal.unknown":
     "{count} could not be recognised from their names and are filed as “other”, which is visible to everyone.",
   "proposal.unknownNote":
-    "Worth a look below before committing: an answer guide named in a way these rules do not know would be here.",
+    "Please check these below before committing: an answer guide named in a way these rules do not recognise would appear here.",
   "proposal.as": "as {kind}",
   "proposal.withheldTag": "withheld",
   "proposal.unknownTag": "not recognised · visible to all",
@@ -2851,7 +2861,7 @@ export const staff = {
   "proposal.create": "Create it: {title}",
   "proposal.createDefault": "the qualification this folder describes",
   "proposal.orAdd": "Or add it to one already here",
-  "proposal.addNote": "Adding it to one already here leaves everything that is there untouched and puts in only what is missing.",
+  "proposal.addNote": "Adding it to one already here leaves everything that is there untouched and adds only what is missing.",
   "proposal.topUp":
     "Added to the qualification you started from. The list above is everything the folder holds, not everything that will be created: whatever is already here is left exactly as it is, and only what is missing is added. You are told afterwards which modules were already held.",
   "proposal.filedCourse": "Filed against the course you started from.",
@@ -2863,7 +2873,7 @@ export const staff = {
   "proposal.commit": "Commit all of it",
   "proposal.discard": "Discard",
   "proposal.discardNote":
-    "Kept on the record. What was proposed and rejected is how anybody judges whether the extension is worth having.",
+    "Kept on the record, so that the value of the extension can be judged from what was proposed and rejected.",
 
   // Reporting
   "reports.title": "Reporting",
@@ -2883,14 +2893,14 @@ export const staff = {
   "reports.overdue": "Overdue",
   "reports.coverage": "Capability coverage",
   "reports.coverageNote":
-    "Counted from certificates, not course completions. A completion means somebody reached the end of the material; a certificate means a judgement was made and, where required, independently moderated.",
+    "Counted from certificates, not course completions. A completion means someone reached the end of the material; a certificate means a judgement was made and, where required, independently moderated.",
   "reports.export": "Export CSV",
   "reports.noCompetencies": "No competencies defined yet.",
   "reports.singleOne": "1 single point of failure",
   "reports.single": "{count} single points of failure",
   "reports.singleNote": "Held by one person only: {codes}. If that person leaves, the capability goes with them.",
   "reports.gaps": "{count} with no coverage",
-  "reports.gapsNote": "Nobody holds {codes}.",
+  "reports.gapsNote": "No one holds {codes}.",
   "reports.competency": "Competency",
   "reports.holders": "Holders",
   "reports.coverageCol": "Coverage",
@@ -2899,7 +2909,7 @@ export const staff = {
   "reports.noCoverage": "No coverage",
   "reports.singlePoint": "Single point of failure",
   "reports.byCourse": "Completion by course",
-  "reports.nobodyEnrolled": "Nobody is enrolled on anything yet.",
+  "reports.nobodyEnrolled": "No one is enrolled on anything yet.",
   "reports.course": "Course",
   "reports.enrolled": "Enrolled",
   "reports.completed": "Completed",
@@ -2915,10 +2925,10 @@ export const staff = {
   "progReport.back": "← Reports",
   "progReport.title": "The programme itself",
   "progReport.intro":
-    "Two questions that look like they are about learners and are not: what nothing assesses, and which questions are not working.",
+    "Two questions about the programme rather than the learners: what nothing assesses, and which questions are not working.",
   "progReport.untested": "What nothing tests",
   "progReport.untestedNote":
-    "A criterion no summative question assesses cannot be achieved by anybody, however well they do. It holds up every learner on the qualification, and nothing else in the platform says so.",
+    "A criterion no summative question assesses cannot be achieved by anyone, however well they do. It holds up every learner on the qualification, and nothing else in the platform says so.",
   "progReport.qualification": "Qualification",
   "progReport.show": "Show",
   "progReport.noCriteria": "This qualification has no assessment criteria captured yet.",
@@ -2937,20 +2947,20 @@ export const staff = {
   "progReport.nothing": "nothing",
   "progReport.questions": "Which questions are not working",
   "progReport.questionsNote":
-    "First attempts only, because a re-sit measures something else. Nothing is flagged below {minimum} attempts: a question two people have answered tells you about those two people.",
+    "First attempts only, because a re-sit measures something else. Nothing is flagged below {minimum} attempts, because results from very few learners say little about the question itself.",
   "progReport.noAssessments": "No published assessments yet.",
   "progReport.assessment": "Assessment",
   "progReport.workbook": "(workbook)",
   "progReport.noQuestions": "That assessment has no questions yet.",
   "progReport.nothingStands": "Nothing stands out across {count} questions.",
-  "progReport.worthLook": "{flagged} of {count} questions are worth a look.",
+  "progReport.worthLook": "{flagged} of {count} questions should be reviewed.",
   "progReport.question": "Question",
   "progReport.firstAttempts": "First attempts",
   "progReport.mean": "Mean",
   "progReport.fullZero": "Full / zero",
   "progReport.nobody":
-    "Almost nobody can answer this. Either the question is unclear or what it tests was never taught.",
-  "progReport.everybody": "Everybody gets full marks, so it distinguishes nothing.",
+    "Almost no one can answer this. Either the question is unclear or what it tests was never taught.",
+  "progReport.everybody": "Every learner scores full marks, so the question does not distinguish between them.",
 
   // Statutory reporting
   "statutory.title": "Statutory reporting",
@@ -2970,7 +2980,7 @@ export const staff = {
   "statutory.locked":
     "The files stay locked until the blocking problems below are fixed. Submitting a return that will be rejected wastes a cycle for every learner in it.",
   "statutory.mustFix": "Must be fixed before submitting",
-  "statutory.worthFixing": "Worth fixing ({count})",
+  "statutory.worthFixing": "Should be fixed ({count})",
   "statutory.worthFixingNote":
     "These do not stop the return, but the NLRD flags incomplete demographic data and a SETA may query it.",
   "statutory.more": "and {count} more.",
@@ -2996,7 +3006,7 @@ export const staff = {
   "enrolNotify.intro":
     "The QCTO has to be told that these learners were enrolled, within twenty-one working days of induction for a qualification and five for a skills programme. Public holidays do not count, and the clock runs from the induction date rather than from enrolment or payment.",
   "enrolNotify.overdue": "{count} past the deadline",
-  "enrolNotify.overdueNote": "Still submit these. A late notification with an explanation is a different problem to one nobody made.",
+  "enrolNotify.overdueNote": "Submit these regardless. A late notification with an explanation is far less serious than none at all.",
   "enrolNotify.wasDue": "was due {date}",
   "enrolNotify.daysAgo": "{count} working days ago",
   "enrolNotify.soon": "{count} due within a week",
@@ -3007,12 +3017,12 @@ export const staff = {
   "enrolNotify.noInductionNote":
     "Their clock has not started, so there is no deadline to report. Date the cohort's induction session, or give them their own below.",
   "enrolNotify.draft": "Draft a submission",
-  "enrolNotify.draftNote": "Everybody inducted on the same day goes together. A late joiner needs their own.",
+  "enrolNotify.draftNote": "Everyone inducted on the same day is submitted together. A late joiner needs a separate submission.",
   "enrolNotify.ownInduction": "A late joiner's own induction",
   "enrolNotify.ownInductionNote":
-    "Somebody who joined after the cohort started has their own induction, their own enrolment form and their own submission.",
+    "A learner who joined after the cohort started has their own induction, their own enrolment form and their own submission.",
   "enrolNotify.submissions": "Submissions",
-  "enrolNotify.notified": "{count} learners have been notified about.",
+  "enrolNotify.notified": "Notifications made for {count} learners.",
   "enrolNotify.nothingDrafted": "Nothing drafted yet.",
   "enrolNotify.individual": "Individual",
   "enrolNotify.learnerOne": "1 learner",
@@ -3027,7 +3037,7 @@ export const staff = {
   "enrolNotify.askAck": "Ask for an acknowledgement, and record it here when it comes back.",
   "enrolNotify.download": "Download the workbook",
   "enrolNotify.acknowledged": "Acknowledged · {reference}",
-  "enrolNotify.nobodyOutstanding": "Nobody is outstanding. Every learner with an induction date has been notified about.",
+  "enrolNotify.nobodyOutstanding": "No one is outstanding. A notification has been made for every learner with an induction date.",
   "enrolNotify.name": "What to call it",
   "enrolNotify.nameDefault": "Enrolment notification",
   "enrolNotify.inductionDate": "Induction date",
@@ -3039,7 +3049,7 @@ export const staff = {
   "enrolNotify.covers": "Who this covers",
   "enrolNotify.inductedThatDay": "{count} inducted on that day",
   "enrolNotify.noneThatDay":
-    "Nobody outstanding was inducted on that date. Change the date, or give a late joiner their own induction below.",
+    "No outstanding learner was inducted on that date. Change the date, or give a late joiner their own induction below.",
   "enrolNotify.drafting": "Drafting…",
   "enrolNotify.draftIt": "Draft the submission",
   "enrolNotify.recording": "Recording…",
@@ -3047,7 +3057,7 @@ export const staff = {
   "enrolNotify.reference": "Their reference",
   "enrolNotify.on": "On",
   "enrolNotify.recordAck": "Record acknowledgement",
-  "enrolNotify.nobodyWaiting": "Nobody is waiting on an induction date.",
+  "enrolNotify.nobodyWaiting": "No one is waiting for an induction date.",
   "enrolNotify.who": "Who",
   "enrolNotify.theirOwn": "Their own induction",
   "enrolNotify.setIt": "Set it",
@@ -3082,7 +3092,7 @@ export const staff = {
     "The same folder, read where it already lives. It ends in the same place: a proposal to check before anything is written.",
   "paths.sequence": "The sequence",
   "paths.noSteps": "Nothing in it yet. Add them in the order learners should take them.",
-  "paths.opensFirst": "Opens as soon as somebody joins.",
+  "paths.opensFirst": "Opens as soon as a learner joins.",
   "paths.opensAfter": "Opens when the step before it is finished.",
   "paths.opensNow": "Opens straight away, alongside the others.",
   "paths.notPublished": "This is not published.",
@@ -3096,11 +3106,11 @@ export const staff = {
   "paths.lockedNote": "Untick for one that can be taken at any point.",
   "paths.allIn": "Everything published is already in it.",
   "paths.published":
-    "This is published and people are working through it, so its steps are fixed. Changing the order underneath somebody would alter what they had already been told to do.",
+    "This is published and people are working through it, so its steps are fixed. Changing the order now would alter what learners have already been told to do.",
   "paths.checking": "Checking…",
   "paths.publish": "Publish",
   "paths.publishNote": "Everything in it has to be published first.",
-  "paths.putOn": "Put somebody on it",
+  "paths.putOn": "Add a person to it",
   "paths.choose": "Choose someone…",
   "paths.dueDate": "Due date",
   "paths.addPerson": "Add",
@@ -3127,7 +3137,7 @@ export const staff = {
   "badges.heldOne": "1 learner",
   "badges.held": "{count} learners",
   "badges.design": "Design a badge",
-  "badges.designNote": "A shape, two colours and a symbol. Nothing to upload and nobody to brief.",
+  "badges.designNote": "A shape, two colours and a symbol. No image needs to be uploaded.",
   "badges.allHave": "Everything already has a badge. Retire one to design a different badge for the same thing.",
   "badges.appear": "As it will appear",
   "badges.name": "What it is called",
@@ -3142,10 +3152,10 @@ export const staff = {
   "badges.shape.rosette": "Rosette",
   "badges.background": "Background",
   "badges.ink": "Symbol colour",
-  "badges.says": "What it says, for the learner and anybody they show it to (optional)",
+  "badges.says": "What it says, for the learner and anyone they show it to (optional)",
   "badges.saysHint": "Completed the practical module on working at heights, assessed against the curriculum criteria.",
   "badges.create": "Create this badge",
-  "badges.retireTitle": "Stop awarding {name}. Everybody who has it keeps it.",
+  "badges.retireTitle": "Stop awarding {name}. Everyone who holds it keeps it.",
   "badges.retiring": "Retiring…",
   "badges.retire": "Retire",
 
@@ -3174,7 +3184,7 @@ export const staff = {
   "templates.policies": "Policies and contracts",
   "templates.policiesNote": "your accreditation letter, policies and agreements, uploaded and retained rather than generated.",
   "templates.fisa": "FISA instruments",
-  "templates.fisaNote": "written by your own examiner and moderated before anybody sits them, so they are authored rather than templated.",
+  "templates.fisaNote": "written by your own examiner and moderated before anyone sits them, so they are authored rather than templated.",
   "templates.curriculum": "Curriculum documents",
   "templates.curriculumNote": "the published qualification documents the platform reads to build a curriculum from.",
 
@@ -3185,7 +3195,7 @@ export const staff = {
   "tracker.showRunning": "Show only what is running",
   "tracker.showAll": "Show all of them",
   "tracker.note": "Read from the records rather than kept by hand, so it cannot disagree with the platform it reports on.",
-  "tracker.none": "No cohorts yet. A cohort is what a schedule, a register and a statutory return all hang from.",
+  "tracker.none": "No cohorts yet. A schedule, a register and a statutory return all depend on a cohort.",
   "tracker.cohort": "Cohort",
   "tracker.qualification": "Qualification",
   "tracker.learners": "Learners",
@@ -3233,7 +3243,7 @@ export const staff = {
   // Feedback on a cohort
   "feedbackForm.programme": "The {programme}",
   "feedbackForm.intro":
-    "{cohort}. Answers are reported together with everybody else's, not one by one. It takes about two minutes, and it is the only thing that changes how the next cohort is run.",
+    "{cohort}. Answers are reported together with everyone else's, not individually. It takes about two minutes, and your answers shape how the next cohort is run.",
   "feedbackForm.askedBy": "Asked for by {time}.",
   "feedbackForm.yours": "Your answers",
   "feedbackForm.optional": "optional",
@@ -3250,21 +3260,21 @@ export const staff = {
   "feedbackReport.late": "{count} after the 48 hours",
   "feedbackReport.ratings": "Ratings",
   "feedbackReport.ratingsNote":
-    "Mean of 1 (strongly disagree) to 5 (strongly agree). A mean over few answers is a mood, not a measurement, so the count is beside it.",
+    "Mean of 1 (strongly disagree) to 5 (strongly agree). The number of answers is shown beside each mean, because a mean of very few answers is not reliable.",
   "feedbackReport.noRatings": "Nothing rated yet.",
   "feedbackReport.answerOne": "1 answer",
   "feedbackReport.answers": "{count} answers",
   "feedbackReport.said": "What they said",
   "feedbackReport.saidNote":
-    "Shown together and without names. Feedback about a facilitator is only honest if the learner believes it will not be read back to them one by one.",
+    "Shown together and without names. Feedback about a facilitator is candid only if the learner trusts that it will not be traced back to them.",
   "feedbackReport.noComments": "Nothing written yet.",
   "feedbackReport.outstanding": "Still to answer",
-  "feedbackReport.outstandingNote": "The one place a name appears. Chasing needs them; the answers above do not.",
+  "feedbackReport.outstandingNote": "This is the only place where names appear. They are needed for follow-up; the answers above are anonymous.",
 
   // Grievances and possible abscondment
   "conductPage.title": "Conduct",
   "conductPage.intro":
-    "Grievances raised by learners, and anybody the register says has stopped turning up. Disciplinary matters sit on the learner's own page, where the rest of their record is.",
+    "Grievances raised by learners, and learners whom the register shows to have stopped attending. Disciplinary matters sit on the learner's own page, where the rest of their record is.",
   "conductPage.overdue": "{count} not acknowledged in time",
   "conductPage.overdueNote": "A grievance is acknowledged within {days} working days. These are past that.",
   "conductPage.due": "due {date}",
@@ -3273,8 +3283,8 @@ export const staff = {
     "Raised by a learner about treatment, conditions, or anything else affecting them. Kept apart from appeals, which are about a result and go to the moderator.",
   "conductPage.absconded": "Possibly absconded",
   "conductPage.abscondedNote":
-    "Two or more consecutive training days absent with no word. Read off the register rather than stored, so correcting a mark changes the answer at once. An absence recorded as excused is communication, and breaks the run.",
-  "conductPage.nobody": "Nobody. Everybody is either turning up or has told somebody why not.",
+    "Two or more consecutive training days absent without explanation. This is read from the register rather than stored, so correcting a mark updates it at once. An absence recorded as excused is communication, and breaks the run.",
+  "conductPage.nobody": "No one. Every learner is either attending or has given a reason for being absent.",
   "conductPage.consecutive": "{count} consecutive, since {date}",
   "conductPage.actOn":
     "A list to act on, never a decision. Contacting the learner, writing to the sponsor and issuing a notice of intention to terminate are all things a person does.",
@@ -3289,14 +3299,14 @@ export const staff = {
   "grievance.ackBy": "Acknowledge by {date}",
   "grievance.decisionBy": "Decision due by {date}",
   "grievance.acknowledge": "Acknowledge",
-  "grievance.choose": "Choose somebody",
+  "grievance.choose": "Choose a person",
   "grievance.appoint": "Appoint",
   "grievance.meeting": "Meeting held",
   "grievance.decisionHint": "What was found and what will be done. This goes to the learner in writing.",
   "grievance.record": "Record the decision",
   "grievance.appointInvestigator": "Appoint an investigator",
   "grievance.impartial":
-    "The investigator must be somebody the grievance is not about. Naming one the learner has complained about is refused, because “a designated impartial person” is what the procedure promises and a short-staffed week is exactly when it gets broken.",
+    "The investigator must be someone the grievance is not about. Naming a person the learner has complained about is refused, because the procedure promises “a designated impartial person”.",
 
   // Pages for somebody who cannot go further
   "access.deniedTitle": "You do not have access to this",
@@ -3311,7 +3321,7 @@ export const staff = {
   "wpSetup.back": "← All work experience",
   "wpSetup.title": "Set up work experience",
   "wpSetup.intro":
-    "A learner does work experience at an employer, supervised by somebody that employer provides. The agreement records who that is; the logbook records what the curriculum requires them to do.",
+    "A learner does work experience at an employer, supervised by a person the employer provides. The agreement records who that is; the logbook records what the curriculum requires them to do.",
   "wpSetup.emptyOne": "1 work experience module has no requirements captured.",
   "wpSetup.empty": "{count} work experience modules have no requirements captured.",
   "wpSetup.emptyNote":
@@ -3326,7 +3336,7 @@ export const staff = {
   "wpSetup.dates": "Dates",
   "wpSetup.logbooks": "Logbooks",
   "wpSetup.noCoaches":
-    "Nobody holds the Workplace Coach role yet. Add the learner's supervisor through {people} first: they work for the employer, not for you, and they will only ever see the learners named on their own agreements.",
+    "No one holds the Workplace Coach role yet. Add the learner's supervisor through {people} first: they work for the employer, not for you, and they will only ever see the learners named on their own agreements.",
   "wpSetup.people": "People",
   "wpSetup.chooseLearner": "Choose a learner",
   "wpSetup.workplaceCoach": "Workplace coach",
@@ -3367,9 +3377,9 @@ export const staff = {
   "enrolForm.titleOther": "Enrolment form: {name}",
   "enrolForm.titleOwn": "Your enrolment form",
   "enrolForm.intro":
-    "{provider} has to send these details to the Quality Council for Trades and Occupations when you are enrolled. Most of it is already known and shown below; the rest is what nobody can answer except you. You can save as you go and come back to it.",
+    "{provider} has to send these details to the Quality Council for Trades and Occupations when you are enrolled. Most of it is already known and shown below; only you can answer the rest. You can save as you go and return to it later.",
   "enrolForm.onRecord": "What is already on record",
-  "enrolForm.onRecordNote": "Tell your coordinator if any of this is wrong; it is not yours to change here.",
+  "enrolForm.onRecordNote": "Please tell your coordinator if any of this is wrong; it cannot be changed here.",
   "enrolForm.induction": "induction {date}",
   "enrolForm.noInduction": "induction not yet dated",
   "enrolForm.doesNotAdd": "Something here does not add up",
@@ -3419,7 +3429,7 @@ export const staff = {
   "enrolForm.statssa": "STATSSA area code",
   "enrolForm.statssaHint": "Your coordinator can look this one up if you do not know it.",
   "enrolForm.flc": "Foundational Learning Competence",
-  "enrolForm.flcNote": "Only needed on a qualification at NQF level 3 or 4. Leave it blank if nobody has asked you for it.",
+  "enrolForm.flcNote": "Only needed on a qualification at NQF level 3 or 4. Leave it blank if no one has asked you for it.",
   "enrolForm.flcShort": "FLC",
   "enrolForm.flcNumber": "FLC statement number",
   "enrolForm.permission": "Your permission",
@@ -3435,26 +3445,26 @@ export const staff = {
     "The Quality Management System and its policies, accreditation letters, contracts, and statutory documents like the PAIA manual: everything the provider holds that does not belong to one learner or one qualification. Importing a qualification folder files its QMS policies here automatically.",
   "records.introManage": "It also shows what has reached the end of its retention period.",
   "records.expiring": "{count} expiring",
-  "records.expiringNote": "An expired tax clearance is the kind of thing nobody notices until the week it is needed.",
+  "records.expiringNote": "Documents such as a tax clearance are easily overlooked until they are needed.",
   "records.expired": "expired {date}",
   "records.expires": "expires {date}",
   "records.library": "The library",
   "records.libraryNote":
     "Superseded versions are kept, because the policy that governed in March is the one an audit of March asks about.",
   "records.nothing": "Nothing filed yet.",
-  "records.nothingManage": "The accreditation letter is the one worth putting in first.",
+  "records.nothingManage": "Start with the accreditation letter.",
   "records.status.superseded": "superseded",
   "records.status.withdrawn": "withdrawn",
   "records.from": "from {date}",
   "records.forLearners": "written for learners",
-  "records.everybody": "everybody can read this",
+  "records.everybody": "everyone can read this",
   "records.retention": "{count} past the retention period",
   "records.retentionNote":
     "Counted from the certification date, over the retention period on this tenant. Nothing here has been archived or destroyed: the platform says what is due and a person decides.",
   "records.certified": "certified {certified} · due {due}",
   "records.register": "Disposal register",
   "records.registerNote":
-    "Everything decided about a record past its date, with who decided it. A record that quietly disappeared is worse than one kept too long.",
+    "Every decision made about a record past its date, and who made it.",
   "records.decision.archived": "Archived",
   "records.decision.retained": "Retained",
   "records.decision.destroyed": "Destroyed",
@@ -3481,12 +3491,12 @@ export const staff = {
   "records.replacesNote":
     "The one it replaces is kept and marked superseded. The policy that governed in March is what an audit of March asks about.",
   "records.descriptionHint": "What it is, if the title does not say",
-  "records.anybody": "Anybody signed in may read this",
+  "records.anybody": "Anyone signed in may read this",
   "records.anybodyNote":
     "Applies to statutory documents. A learner guide is always shown to learners; policies, contracts, accreditation and operational documents never are.",
   "records.filing": "Filing…",
   "records.fileIt": "File it",
-  "records.archive": "Archive: move it out of the way",
+  "records.archive": "Archive it",
   "records.keep": "Keep it beyond retention",
   "records.destroy": "Destroy it",
   "records.recording": "Recording…",
@@ -3505,11 +3515,11 @@ export const staff = {
   "offline.recordNote": "Works with no signal. It waits on this phone and goes when you next have one.",
   "offline.waitingDecision": "{count} waiting for a decision",
   "offline.waitingDecisionNote":
-    "Something changed while the learner was away. Nothing has been merged or overwritten: somebody has to choose.",
-  "offline.bothDates": "Recorded on the device {captured} · reached us {received}",
+    "Something changed while the learner was away. Nothing has been merged or overwritten: a person must decide.",
+  "offline.bothDates": "Recorded on the device {captured} · received {received}",
   "offline.relaxed": "{count} captured under the looser rule",
   "offline.relaxedNote":
-    "Work recorded while this programme allowed summatives to be taken offline. If the programme is accredited later, that work does not become defensible retrospectively: this is the list, so it is a decision rather than a discovery at a monitoring visit.",
+    "Work recorded while this programme allowed summatives to be taken offline. If the programme is accredited later, that work does not become defensible retrospectively. This list allows the matter to be decided now rather than discovered at a monitoring visit.",
   "offline.recordedOn": "recorded {date}",
   "offline.more": "and {count} more.",
   "offline.bytes": "{count} bytes",
@@ -3569,12 +3579,12 @@ export const staff = {
   "mailbox.from": "From:",
   "mailbox.toLabel": "To:",
   "mailbox.envelope":
-    "The sending server identified itself as {address}, which is not the address in the From line. Ordinary for mailing lists and forwarded mail, and also what a forged sender looks like.",
+    "The sending server identified itself as {address}, which is not the address in the From line. This is normal for mailing lists and forwarded mail, but it can also indicate a forged sender.",
   "mailbox.noText": "(no text content)",
   "mailbox.attachments": "Attachments",
   "mailbox.sending": "Sending…",
   "mailbox.notSwitchedOn":
-    "Sending is not switched on yet: no mail relay is configured, so a message written here could not leave the building. Replies you receive still arrive normally.",
+    "Sending is not switched on yet: no mail relay is configured, so a message written here could not be sent. Replies you receive still arrive normally.",
   "mailbox.reply": "Reply",
   "mailbox.write": "Write a message",
   "mailbox.toField": "To",
@@ -3588,13 +3598,13 @@ export const staff = {
     "Your learners' records, in and out, as xAPI statements: the format learning record stores and most learning systems exchange. Nothing here changes a learner's results on this platform.",
   "lrs.out": "Take your records out",
   "lrs.outNote":
-    "Every enrolment, lesson completed, assessment attempted, competent or not yet competent decision, course completed, statement of results, certificate, and qualification certificate received, one statement each. Each keeps the same identity every time you export, so loading two exports into another system does not double anybody's history.",
+    "Every enrolment, lesson completed, assessment attempted, competent or not yet competent decision, course completed, statement of results, certificate, and qualification certificate received, one statement each. Each keeps the same identity every time you export, so loading two exports into another system does not duplicate anyone's history.",
   "lrs.download": "Download all learning records",
   "lrs.downloadNote":
     "The file names every learner and their email address. Keep it as you would any record of personal information.",
   "lrs.store": "Send records to your own learning record store",
   "lrs.storeNote":
-    "If you keep a learning record store, connect it here and every record above goes to it within the hour of happening, the ones already made first. Each is sent once; a statement the store already holds is left as it is. The store's secret is sealed on this platform, never shown again, and forgotten when you disconnect.",
+    "If you keep a learning record store, connect it here and every record above is sent to it within an hour of being made, starting with those already recorded. Each is sent once; a statement the store already holds is left as it is. The store's secret is sealed on this platform, never shown again, and forgotten when you disconnect.",
   "lrs.in": "Bring records in",
   "lrs.inNote":
     "A file of xAPI statements from another system: a list of statements, or what a learning record store returns. Each is matched to a learner here by email and shown on their record. It is kept as learning done elsewhere, not turned into an enrolment or a result here, because none of it was taught or assessed on this platform.",
@@ -3607,7 +3617,7 @@ export const staff = {
   "lrs.matchedOne": "1 learner matched by email. Their imported learning shows on their record under People.",
   "lrs.matched": "{count} learners matched by email. Their imported learning shows on their record under People.",
   "lrs.unmatched":
-    "Not matched to anybody here, and kept until they are: {names}. Invite them with the same email and their learning attaches.",
+    "Not matched to anyone here, and kept until they are: {names}. Invite them with the same email address and their learning will be attached.",
   "lrs.notRead": "Not read: {reasons}",
   "lrs.andMore": "…and {count} more.",
   "lrs.sendingTo": "Sending to",
@@ -3650,7 +3660,7 @@ export const staff = {
   "verifyPage.expiredNote":
     "A Statement of Results is valid for two years from the date it was issued. This one was issued on {issued} and expired on {expired}.",
   "verifyPage.expiredNote2":
-    "Nothing is wrong with the learner's achievement: it is the document that has run out. The provider named on it can issue a current one.",
+    "Nothing is wrong with the learner's achievement: the document itself has expired. The provider named on it can issue a current one.",
   "verifyPage.notFound": "No certificate found",
   "verifyPage.notFoundNote":
     "No certificate carries that reference. Check it against the document: the characters I, L, O, U, 0 and 1 are never used, so a 1 is a 7 or a J, and an O is a Q or a D.",
@@ -3670,13 +3680,13 @@ export const staff = {
   // The platform owner's view of client organisations
   "platformPage.title": "Client organisations",
   "platformPage.intro":
-    "Every organisation on the platform. You can see how much each is using and manage their configuration, but not their learners, courses or assessment records. Hosting a client's system is not the same as being entitled to read it, and the platform enforces that rather than relying on restraint.",
+    "Every organisation on the platform. You can see how much each is using and manage their configuration, but not their learners, courses or assessment records. Hosting a client's system does not entitle you to read it, and the platform enforces this.",
   "platformPage.organisations": "Organisations",
   "platformPage.people": "People",
   "platformPage.assigned": "Courses assigned",
   "platformPage.certificates": "Certificates issued",
-  "platformPage.noAdminOne": "1 organisation has no administrator. Nobody there can manage their own system.",
-  "platformPage.noAdmin": "{count} organisations have no administrator. Nobody there can manage their own system.",
+  "platformPage.noAdminOne": "1 organisation has no administrator. No one there can manage their own system.",
+  "platformPage.noAdmin": "{count} organisations have no administrator. No one there can manage their own system.",
   "platformPage.organisation": "Organisation",
   "platformPage.address": "Address",
   "platformPage.mode": "Mode",
@@ -3780,11 +3790,11 @@ export const staff = {
   "drivePick.noFolders": "No folders inside this one. If the material is here, read it.",
   "drivePick.reading": "Reading…",
   "drivePick.read": "Read “{name}”",
-  "drivePick.pressThis": "Now press this to read it. Nothing is saved yet.",
+  "drivePick.pressThis": "Press this next to read it. Nothing is saved yet.",
   "drivePick.fetching": "Fetching the files…",
   "drivePick.stillFetching":
     "Still fetching: {seconds} seconds. Every file is downloaded before anything is read, so a large folder takes a few minutes.",
-  "drivePick.nothingWritten": "Nothing is written yet: you check what it found first.",
+  "drivePick.nothingWritten": "Nothing is saved yet: you will check what it found first.",
   "drivePick.review": "Review it",
   "folderPick.needs": "Building a qualification from a folder needs an AI extension, unless the folder describes itself.",
   "folderPick.notOn":
@@ -3807,17 +3817,17 @@ export const staff = {
   "folderPick.again": "Read it again",
   "folderPick.readThis": "Read this folder",
   "folderPick.choose": "Choose a folder…",
-  "folderPick.pressThis": "Now press this to read it. Nothing is saved yet.",
+  "folderPick.pressThis": "Press this next to read it. Nothing is saved yet.",
   "folderPick.readingFolder": "Reading the folder…",
   "folderPick.stillReading": "Still reading: {seconds} seconds so far. A curriculum document takes a few minutes.",
   "folderPick.stillGoing":
-    "Still going: {minutes} min {seconds}s. This is normal for a large folder; leave the page open.",
+    "Still reading: {minutes} min {seconds}s. This is normal for a large folder; please leave the page open.",
   "folderPick.onTitle": "Your AI extension is on for this sitting.",
   "folderPick.onNote":
-    "A folder that does not include a summary of itself will have its structure worked out from the documents instead: slower, and worth checking against the curriculum document. Switch it off when you are done with it.",
+    "A folder that does not include a summary of itself will have its structure worked out from the documents instead. This is slower, and the result should be checked against the curriculum document. Switch it off when you have finished.",
   "folderPick.noneTitle": "You do not have an AI extension set up.",
   "folderPick.noneNote":
-    "It adds one thing here: working out the structure from the documents, when a folder does not include a summary of itself. Everything else on this page works without it. Settings, under your AI extension, if you want one.",
+    "It adds one thing here: working out the structure from the documents, when a folder does not include a summary of itself. Everything else on this page works without it. If you want one, set it up in Settings, under Your AI extension.",
   "folderPick.cannotTitle": "Your AI extension cannot run here.",
   "folderPick.cannotNote":
     "A folder that includes a summary of itself still imports normally; one without it cannot have its structure worked out.",
@@ -3832,7 +3842,7 @@ export const staff = {
   "qualPage.step.builtAction": "Build it",
   "qualPage.step.live": "Checked and live",
   "qualPage.step.liveDone": "Live. Learners can be enrolled on its study units.",
-  "qualPage.step.liveReady": "Ready. Look it over and make it live.",
+  "qualPage.step.liveReady": "Ready. Review it and make it live.",
   "qualPage.step.liveTodo": "{count} things to put right before it can go live.",
   "qualPage.step.liveAction": "Check and make it live",
   "qualNav.label": "This qualification",
@@ -3847,11 +3857,11 @@ export const staff = {
   "verify.title": "Check and make live",
   "verify.isLive": "This qualification is live.",
   "verify.notBuilt": "Its study units have not been built from the documents yet.",
-  "verify.ready": "Everything is in place. Look it over, then make it live.",
+  "verify.ready": "Everything is in place. Review it, then make it live.",
   "verify.holding": "{count} things hold it back. Each is listed below with a link to put it right.",
   "verify.intro":
     "The platform builds each study unit from the documents in the folder: its course, its workbooks and assessments captured and linked to the curriculum, and its steps in order. Everything stays in draft until you make it live here, once, for the whole qualification.",
-  "verify.toCheck": "{count} things are worth a look before you do. They do not hold it back.",
+  "verify.toCheck": "{count} things should be reviewed before you do. They do not hold it back.",
   "verify.build": "Build from the folder",
   "verify.buildAgain": "Build again",
   "verify.building": "Building…",
@@ -3872,7 +3882,7 @@ export const staff = {
   "material.file": "File",
   "material.fileHint": "Video (MP4 or WebM, up to 500 MB), images, audio, PDF and Office files.",
   "material.title": "Title",
-  "material.titleHint": "Left blank, the file name is used",
+  "material.titleHint": "If left blank, the file name is used",
   "material.description": "A line about it (optional)",
   "material.unit": "Use it on a study unit",
   "material.unitNone": "Not yet",
@@ -3903,7 +3913,7 @@ export const staff = {
   "verify.answerable": "{answerable} of {papers}",
   "verify.noAssessments": "No workbooks or assessments yet.",
   "verify.blocking": "Holds it back",
-  "verify.check": "Worth a look",
+  "verify.check": "To review",
   "unitGuide.title": "Built from the qualification's folder",
   "unitGuide.holds":
     "The platform builds this study unit from the documents filed against it, and it goes live together with the rest of the qualification. Steps a learner works through in order: {steps}. Workbooks and assessments captured from the folder: {assessments}.",

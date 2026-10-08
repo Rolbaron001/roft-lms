@@ -677,7 +677,7 @@ export async function learningPathsFor(
 ): Promise<LearnerPath[]> {
   if (userId !== session.userId && !can(session, "enrolment:read_all")) {
     throw new LearningPathError(
-      "That belongs to somebody else.",
+      "That belongs to someone else.",
       "not_permitted",
     );
   }

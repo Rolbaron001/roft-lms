@@ -6,7 +6,7 @@ import { scheduleSessionAction } from "@/app/cohorts/actions";
 import type { CohortActionState } from "@/app/cohorts/actions";
 import type { ScheduledSession } from "@/lib/scheduling";
 import { ProviderClockNote } from "@/components/zoned-time";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
 
 const KINDS = [
@@ -45,6 +45,7 @@ export function Rollout({
   canRegister: boolean;
 }) {
   const t = useT();
+  const { day } = useDay();
   const [state, action, pending] = useActionState<CohortActionState, FormData>(
     scheduleSessionAction,
     {},
@@ -74,7 +75,7 @@ export function Rollout({
                   <tr key={entry.id} className="border-t border-[var(--border)]">
                     <td className="py-2 pr-3 tabular-nums text-[var(--muted)]">{entry.sequence ?? "—"}</td>
                     <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
-                      {entry.scheduledDate}
+                      {day(entry.scheduledDate, { short: true })}
                       {entry.startTime ? (
                         <span className="ml-2 text-xs text-[var(--muted)]">
                           {entry.startTime}

@@ -239,7 +239,7 @@ export function classifyDocument(
     title: cleanTitle(filename),
     version: null,
     because:
-      "Not recognised by name. Filed against the qualification as 'other' rather than guessed at. Change it after it lands, or say what it is and the rule can be added.",
+      "Not recognised by name. Filed against the qualification as 'other' rather than guessed. Change it after import, or say what it is and the rule can be added.",
   };
 }
 

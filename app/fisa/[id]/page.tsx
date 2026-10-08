@@ -48,7 +48,7 @@ export default async function FisaDetailPage({
   ) {
     redirect("/not-permitted");
   }
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
 
   let view;
   try {
@@ -151,11 +151,7 @@ export default async function FisaDetailPage({
           <p className="mt-1 text-sm text-[var(--muted)]">
             {instrument.approvedAt
               ? t("fisa.approvedOn", {
-                  date: instrument.approvedAt.toLocaleDateString(dates, {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }),
+                  date: day(instrument.approvedAt),
                 })
               : t("fisa.beforeNotAfter")}
           </p>
@@ -229,7 +225,7 @@ export default async function FisaDetailPage({
                   {appointment.confidentialitySignedAt ? (
                     <p className="text-sm" style={{ color: "var(--success)" }}>
                       {t("fisa.signed", {
-                        date: appointment.confidentialitySignedAt.toLocaleDateString(dates),
+                        date: day(appointment.confidentialitySignedAt),
                       })}
                     </p>
                   ) : (

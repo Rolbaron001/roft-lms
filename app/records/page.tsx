@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requireSession, requireTenant } from "@/lib/request";
+import { pageDates, pageT, requireSession, requireTenant } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import {
   disposalRegister,
@@ -25,6 +25,7 @@ export default async function RecordsPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
   const t = await pageT();
+  const { day } = await pageDates();
 
   const canManage = session.permissions.includes("records:manage");
   const canReadAll = session.permissions.includes("records:read");
@@ -76,8 +77,8 @@ export default async function RecordsPage() {
                     }
                   >
                     {row.expiresOn && row.expiresOn < today
-                      ? t("records.expired", { date: row.expiresOn })
-                      : t("records.expires", { date: row.expiresOn ?? "" })}
+                      ? t("records.expired", { date: day(row.expiresOn) })
+                      : t("records.expires", { date: day(row.expiresOn) })}
                   </span>
                 </li>
               ))}
@@ -197,7 +198,7 @@ export default async function RecordsPage() {
                   <span className="font-medium">{maybe(t, `records.decision.${row.status}`) ?? row.status}</span>
                   <span className="text-[var(--muted)]">
                     {maybe(t, `records.subject.${row.subject}`) ?? row.subject} ·{" "}
-                    {t("records.due", { date: row.dueOn })}
+                    {t("records.due", { date: day(row.dueOn) })}
                   </span>
                   {row.firstName ? (
                     <span className="text-[var(--muted)]">

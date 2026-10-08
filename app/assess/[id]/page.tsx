@@ -20,7 +20,7 @@ export default async function AssessSubmissionPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:assess");
-  const { t, dates } = await pageLocale();
+  const { t, day, when } = await pageLocale();
 
   let detail;
   let criteria;
@@ -171,7 +171,7 @@ export default async function AssessSubmissionPage({
                       <p className="mt-0.5 text-xs text-[var(--muted)]">
                         {t("assessing.uploaded", {
                           size: Math.round(artifact.sizeBytes / 1024),
-                          date: artifact.uploadedAt.toLocaleString(dates),
+                          date: when(artifact.uploadedAt),
                         })}
                       </p>
 
@@ -223,7 +223,7 @@ export default async function AssessSubmissionPage({
                       {t("assessing.decisionBy", {
                         outcome: maybe(t, `outcome.${decision.outcome}`) ?? decision.outcome.replace(/_/g, " "),
                         name: `${decision.assessorFirstName} ${decision.assessorLastName}`,
-                        date: decision.signedAt.toLocaleDateString(dates),
+                        date: day(decision.signedAt),
                       })}
                       {decision.comments ? (
                         <span className="block text-[var(--muted)]">

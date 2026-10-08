@@ -22,8 +22,8 @@ export default async function PortfolioRecordPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
-  const { t, dates } = await pageLocale();
-  const long = (date: Date) => date.toLocaleDateString(dates, { dateStyle: "long" });
+  const { t, day, when } = await pageLocale();
+  const long = (date: Date) => day(date);
 
   let record;
   try {
@@ -64,7 +64,7 @@ export default async function PortfolioRecordPage({
             <p className="mt-1 leading-relaxed">{record.declarationText}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">
               {record.declarationAcceptedAt
-                ? t("record.accepted", { date: record.declarationAcceptedAt.toLocaleString(dates) })
+                ? t("record.accepted", { date: when(record.declarationAcceptedAt) })
                 : record.closedOnTime
                   ? t("record.timeExpired")
                   : t("record.notAccepted")}

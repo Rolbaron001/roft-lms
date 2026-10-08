@@ -82,7 +82,7 @@ const lodgeInput = z.object({
   statement: z
     .string()
     .trim()
-    .min(20, "Say what the appeal is about. One line is not an appeal."),
+    .min(20, "Please describe what the appeal is about in more detail."),
   lateAcceptanceReason: z.string().trim().max(2000).optional(),
 });
 
@@ -378,7 +378,7 @@ const resolveInput = z.object({
   outcomeReason: z
     .string()
     .trim()
-    .min(20, "Say why. An outcome with no reasoning is not a resolution, and it is the part the learner is entitled to."),
+    .min(20, "Please give the reasons. An outcome without reasons is not a resolution, and the learner is entitled to them."),
 });
 
 /**
@@ -498,7 +498,7 @@ const withdrawInput = z.object({
   reason: z
     .string()
     .trim()
-    .min(5, "Say why it was withdrawn. A withdrawal with no reason looks like pressure."),
+    .min(5, "Please give the reason for the withdrawal. Without one, it could appear that the learner was put under pressure to withdraw."),
 });
 
 export async function withdrawAppeal(
@@ -555,7 +555,7 @@ export async function addAppealNote(
 
   const note = input.note.trim();
   if (note.length < 3) {
-    throw new AppealError("An empty note is worse than none.", "invalid");
+    throw new AppealError("Please write the note before saving it.", "invalid");
   }
 
   return withTenant(session.organisationId, async (tx) => {

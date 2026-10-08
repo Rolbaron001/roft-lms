@@ -170,7 +170,7 @@ export async function addMember(
 
   if (cohort.status === "cancelled" || cohort.status === "finished") {
     throw new CohortError(
-      `That cohort is ${cohort.status}, so nobody further can join it.`,
+      `That cohort is ${cohort.status}, so no one else can join it.`,
       "invalid",
     );
   }

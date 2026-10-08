@@ -43,7 +43,7 @@ describe("modules in no study unit", () => {
   });
 
   it("still raises the alarm once a structure exists", () => {
-    expect(page).toMatch(/module no\s+study unit delivers is a module nobody teaches/);
+    expect(page).toMatch(/belongs to no study unit is not taught/);
     expect(page).toMatch(/borderColor: "var\(--danger\)"/);
   });
 });

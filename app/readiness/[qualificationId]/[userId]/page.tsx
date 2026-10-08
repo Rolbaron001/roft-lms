@@ -28,16 +28,14 @@ export default async function LearnerReadinessPage({
   const { qualificationId, userId } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
-  const { t, locale, dates } = await pageLocale();
+  const { t, locale, day } = await pageLocale();
   // Curiosa say "workplace experience sign-off" rather than "logbook", and
   // another provider says the opposite. The word is the tenant's to choose.
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const record = words.lowerOne("workplaceRecord");
 
   const formatDate = (value: Date | null): string =>
-    value
-      ? value.toLocaleDateString(dates, { day: "numeric", month: "short", year: "numeric" })
-      : "—";
+    value ? day(value, { short: true }) : "—";
 
   // The permission check lives in the engine: a learner may see their own,
   // anybody else needs enrolment:read_all.

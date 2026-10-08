@@ -11,7 +11,7 @@ import {
   type CohortActionState,
 } from "@/app/cohorts/actions";
 import { ZonedTime } from "@/components/zoned-time";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { Rich } from "@/components/rich-text";
 import { clockInZone, viewerTimeZone, zoneLabel, zonedTimeToUtc } from "@/lib/timezone";
 
@@ -78,6 +78,7 @@ export function Sitting({
   }[];
 }) {
   const t = useT();
+  const { day } = useDay();
   const [state, action] = useActionState<CohortActionState, FormData>(admitCandidateAction, {});
   const [cameraState, cameraAction] = useActionState<CohortActionState, FormData>(confirmCameraAction, {});
   const [dropState, dropAction] = useActionState<CohortActionState, FormData>(recordDropOutAction, {});
@@ -118,11 +119,11 @@ export function Sitting({
           {sitting.assessmentTitle} ·{" "}
           {sitting.startTime
             ? t("room.at", {
-                date: sitting.scheduledDate,
+                date: day(sitting.scheduledDate),
                 time: sitting.startTime,
                 zone: zoneLabel(zone, startsAt),
               })
-            : sitting.scheduledDate}
+            : day(sitting.scheduledDate)}
         </p>
 
         {elsewhere && sitting.startTime ? (

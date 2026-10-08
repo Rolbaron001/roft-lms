@@ -19,8 +19,7 @@ export default async function VerifyPage({
 }) {
   const { reference } = await searchParams;
   const tenant = await currentTenant();
-  const { t, dates } = await pageLocale();
-  const day = (value: Date | null | undefined) => value?.toLocaleDateString(dates) ?? "";
+  const { t, day } = await pageLocale();
 
   // Certificates and Statements of Results share one reference format and one
   // check, because whoever holds a printed reference has no reason to know

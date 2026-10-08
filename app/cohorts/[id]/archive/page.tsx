@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell, Card } from "@/components/app-shell";
 import { CohortNav } from "@/components/cohort-nav";
 import { ArchiveError, cohortArchiveState } from "@/lib/cohort-archive";
-import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
+import { pageDates, pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n/maybe";
 import {
   Abandon,
@@ -23,9 +23,6 @@ import {
  * order cannot be got wrong by clicking.
  */
 
-function day(value: Date | null): string {
-  return value ? value.toISOString().slice(0, 10) : "";
-}
 
 function size(bytes: number | null): string {
   if (bytes === null) return "";
@@ -42,6 +39,7 @@ export default async function CohortArchivePage({
   const tenant = await requireTenant();
   const session = await requirePermission("records:manage");
   const t = await pageT();
+  const { day } = await pageDates();
 
   let state;
   try {

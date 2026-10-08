@@ -41,7 +41,7 @@ export async function saveTerminologyAction(
     if (error instanceof PermissionDeniedError) {
       return said({
         error:
-          "Only an administrator can change what things are called, because it is the same wording for everybody at this provider.",
+          "Only an administrator can change what things are called, because it is the same wording for everyone at this provider.",
       });
     }
     throw error;
@@ -99,7 +99,7 @@ export async function saveTerminologyAction(
   return said({
     notice:
       Object.keys(overrides).length > 0
-        ? "Saved. Everybody at this provider sees this wording."
+        ? "Saved. Everyone at this provider sees this wording."
         : "Nothing differs from the standard wording, so the defaults are back.",
   });
 }

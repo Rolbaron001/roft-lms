@@ -220,7 +220,7 @@ export function outstandingFor(profile: {
   if (!profile.confirmedAt) {
     missing.push({
       field: "Confirmation",
-      why: "Nobody has confirmed these details are right. A monitor asks for the form as evidence, and an unconfirmed one is evidence of very little.",
+      why: "These details have not been confirmed. A monitor asks for the form as evidence, and an unconfirmed form carries little weight.",
     });
   }
 

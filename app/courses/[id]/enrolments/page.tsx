@@ -16,7 +16,7 @@ export default async function CourseEnrolmentsPage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
 
   let detail;
   try {
@@ -122,7 +122,7 @@ export default async function CourseEnrolmentsPage({
                         </td>
                         <td className="py-2.5 pr-4 whitespace-nowrap text-[var(--muted)]">
                           {row.dueDate
-                            ? row.dueDate.toLocaleDateString(dates)
+                            ? day(row.dueDate, { short: true })
                             : "—"}
                         </td>
                         <td className="py-2.5">

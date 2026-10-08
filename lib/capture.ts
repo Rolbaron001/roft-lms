@@ -477,7 +477,7 @@ export async function commitCapture(
   if (outstanding.length > 0 && !input.acknowledgedProblems) {
     throw new CaptureError(
       `${outstanding.length === 1 ? "One thing is" : `${outstanding.length} things are`} still outstanding on this paper. ` +
-        `Correct them, or say explicitly that you have read them and want to go on: ` +
+        `Correct ${outstanding.length === 1 ? "it" : "them"}, or confirm that you have read ${outstanding.length === 1 ? "it" : "them"} and wish to continue: ` +
         outstanding.slice(0, 3).join(" "),
       "invalid",
     );

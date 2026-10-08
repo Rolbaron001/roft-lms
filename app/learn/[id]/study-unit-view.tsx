@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Translate } from "@/lib/i18n";
 import type { AuthenticatedSession } from "@/lib/session";
+import { pageDates } from "@/lib/request";
 import { recordStepOpened, type StepView } from "@/lib/spine";
 import { learnerMaterial, readLearnerDocument, unitOverview, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
 import { listLibrary } from "@/lib/library";
@@ -59,7 +60,6 @@ export async function StudyUnitView({
   steps,
   isOwn,
   t,
-  dateLocale,
   preview = null,
 }: {
   session: AuthenticatedSession;
@@ -69,7 +69,8 @@ export async function StudyUnitView({
   steps: StepView[];
   isOwn: boolean;
   t: Translate;
-  dateLocale: string;
+  /** No longer used: dates follow the provider's date style (pageDates). */
+  dateLocale?: string;
   /**
    * An administrator looking at the unit as a learner would, with everything
    * unlocked and nothing recorded (Roland, 5 October 2026: "As administrator
@@ -142,7 +143,7 @@ export async function StudyUnitView({
             <div className="mt-1.5 h-2 rounded-full bg-[var(--border)]">
               <div className="h-2 rounded-full bg-[var(--brand-accent)]" style={{ width: `${Math.round((done / steps.length) * 100)}%` }} />
             </div>
-            {nextDue ? <p className="mt-1.5">{t("learnUnit.nextDue", { date: nextDue.toLocaleDateString(dateLocale, { dateStyle: "long" }) })}</p> : null}
+            {nextDue ? <p className="mt-1.5">{t("learnUnit.nextDue", { date: (await pageDates()).day(nextDue) })}</p> : null}
           </div>
         ) : null}
       </div>

@@ -16,7 +16,7 @@ export default async function MailMessagePage({
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requireSession();
-  const { t, dates } = await pageLocale();
+  const { t, when } = await pageLocale();
 
   let view;
   try {
@@ -56,10 +56,7 @@ export default async function MailMessagePage({
             <span className="font-mono">{message.toAddresses}</span>
           </p>
           <p>
-            {message.receivedAt.toLocaleString(dates, {
-              dateStyle: "full",
-              timeStyle: "short",
-            })}
+            {when(message.receivedAt)}
           </p>
         </div>
 

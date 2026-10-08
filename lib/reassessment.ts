@@ -203,7 +203,7 @@ export async function authoriseReassessment(
 
   if (parsed.employerConsulted && !parsed.employerRepresentative) {
     throw new ReassessmentError(
-      "Name the person at the employer who was consulted. An unnamed employer is not evidence that a consultation happened.",
+      "Name the person at the employer who was consulted. Without a name, there is no evidence that the consultation took place.",
       "invalid",
     );
   }
@@ -299,7 +299,7 @@ export async function startOralAttempt(
 
     if (authorisation.submissionId) {
       throw new ReassessmentError(
-        "That authorisation has already been used. A third attempt granted twice is not a third attempt.",
+        "That authorisation has already been used, and only one third attempt may be granted.",
         "already_used",
       );
     }
@@ -309,7 +309,7 @@ export async function startOralAttempt(
     // same reason, and this is the same conflict wearing a different hat.
     if (authorisation.reviewedById === session.userId) {
       throw new ReassessmentError(
-        "You authorised this third attempt, so somebody else must conduct it.",
+        "You authorised this third attempt, so someone else must conduct it.",
         "conflict",
       );
     }

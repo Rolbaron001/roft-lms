@@ -266,7 +266,7 @@ async function issueWith(
     return {
       ok: false,
       reasons: [
-        `The curriculum is not fully captured: ${uncaptured.join(", ")} carry nothing to achieve. A statement issued now would confirm achievement of modules nobody has transcribed.`,
+        `The curriculum is not fully captured: ${uncaptured.join(", ")} carry nothing to achieve. A statement issued now would confirm achievement of modules that have not been transcribed.`,
       ],
     };
   }
@@ -590,7 +590,7 @@ export async function revokeStatementOfResults(
 
   if (reason.trim().length < 8) {
     throw new StatementError(
-      "Give a reason. It is shown to anybody who checks the reference.",
+      "Give a reason. It is shown to anyone who checks the reference.",
       "not_permitted",
     );
   }

@@ -246,6 +246,13 @@ export const organisations = pgTable(
     timezone: text("timezone").notNull().default("Africa/Johannesburg"),
 
     /**
+     * How dates are written (lib/date-format.ts): "long" (8 October 2026),
+     * "numeric" (08/10/2026), "iso" (2026-10-08), or "device", each reader's
+     * own regional setting. Roland, 8 October 2026.
+     */
+    dateStyle: text("date_style").notNull().default("long"),
+
+    /**
      * The language this provider's people read the platform in unless they
      * choose their own (job sheet D9). A code from lib/i18n/locales.ts.
      */

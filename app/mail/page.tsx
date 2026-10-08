@@ -5,8 +5,9 @@ import { mailIsConfigured } from "@/lib/mail";
 import { AppShell, Card } from "@/components/app-shell";
 import { Rich } from "@/components/rich-text";
 import { Compose } from "./compose";
+import type { DateWriter } from "@/lib/date-format";
 
-function when(value: Date, dates: string): string {
+function when(value: Date, dates: string, day: DateWriter["day"]): string {
   const now = Date.now();
   const days = Math.floor((now - value.getTime()) / 86_400_000);
 
@@ -19,7 +20,7 @@ function when(value: Date, dates: string): string {
   if (days < 7) {
     return value.toLocaleDateString(dates, { weekday: "short" });
   }
-  return value.toLocaleDateString(dates, { day: "numeric", month: "short" });
+  return day(value, { short: true });
 }
 
 /**
@@ -34,7 +35,7 @@ function when(value: Date, dates: string): string {
 export default async function MailPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
-  const { t, dates } = await pageLocale();
+  const { t, dates, day } = await pageLocale();
 
   let mailbox;
   try {
@@ -102,7 +103,7 @@ export default async function MailPage() {
                         {message.attachments > 0
                           ? `📎 ${message.attachments} · `
                           : ""}
-                        {when(message.receivedAt, dates)}
+                        {when(message.receivedAt, dates, day)}
                       </p>
                     </div>
                     <p className={`text-sm ${unread ? "font-medium" : ""}`}>

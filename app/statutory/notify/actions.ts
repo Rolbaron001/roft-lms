@@ -30,7 +30,7 @@ export async function draftAction(
 
   const learnerIds = formData.getAll("learnerIds").map(String).filter(Boolean);
   if (learnerIds.length === 0) {
-    return said({ error: "Choose at least one learner to notify about." });
+    return said({ error: "Choose at least one learner to include." });
   }
 
   const kindRaw = String(formData.get("kind") ?? "");

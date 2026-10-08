@@ -13,6 +13,8 @@ import { VIEW_AS_COOKIE, viewAsSession } from "./view-as";
 import type { Permission } from "./rbac";
 import { can, type Capability } from "./features";
 import { dateLocale, localeFor } from "./i18n/locales";
+import { DEFAULT_DATE_STYLE, dateWriter, deviceLocale, isDateStyle, type DateStyle, type DateWriter } from "./date-format";
+import { DEFAULT_TIME_ZONE } from "./timezone";
 import { translator, type Translate } from "./i18n";
 import { sayer, sayWithin, type Say } from "./i18n/said";
 
@@ -94,10 +96,32 @@ export async function said<T>(value: T): Promise<T> {
   return sayWithin(value, sayer(await currentLocale()));
 }
 
-/** The reader's language and date format together, for a page that writes dates. */
-export async function pageLocale(): Promise<{ t: Translate; locale: string; dates: string }> {
+/**
+ * How dates are written for this reader: the provider's chosen style, months
+ * named in the reader's language, instants on the provider's clock, and for
+ * the "device" style the reader's own regional setting as their browser
+ * reports it. Roland, 8 October 2026. Passed to the browser as `dateSettings`
+ * so a component writes dates the same way (components/i18n.tsx, useDay).
+ */
+export const pageDates = cache(async (): Promise<DateWriter & { settings: DateSettings }> => {
+  const tenant = await currentTenant();
   const locale = await currentLocale();
-  return { t: translator(locale), locale, dates: dateLocale(locale) };
+  const settings: DateSettings = {
+    style: isDateStyle(tenant?.dateStyle) ? tenant.dateStyle : DEFAULT_DATE_STYLE,
+    language: dateLocale(locale),
+    device: deviceLocale((await headers()).get("accept-language")),
+    timeZone: tenant?.timezone ?? DEFAULT_TIME_ZONE,
+  };
+  return { ...dateWriter(settings.style, settings.language, settings.device, settings.timeZone), settings };
+});
+
+export type DateSettings = { style: DateStyle; language: string; device: string | null; timeZone: string };
+
+/** The reader's language and date format together, for a page that writes dates. */
+export async function pageLocale(): Promise<{ t: Translate; locale: string; dates: string } & DateWriter> {
+  const locale = await currentLocale();
+  const { day, when } = await pageDates();
+  return { t: translator(locale), locale, dates: dateLocale(locale), day, when };
 }
 
 /**

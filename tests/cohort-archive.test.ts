@@ -464,7 +464,7 @@ describe("removing and restoring", () => {
     const asked = readEvidence(admin, evidence.id);
     await expect(asked).rejects.toBeInstanceOf(UploadError);
     await expect(asked).rejects.toMatchObject({ code: "archived" });
-    await expect(asked).rejects.toThrow(/archived on \d{4}-\d{2}-\d{2}, in "ARC-26A archive/);
+    await expect(asked).rejects.toThrow(/archived on \d{1,2} [A-Z][a-z]+ \d{4}, in "ARC-26A archive/);
     await expect(readEvidence(sessionFor(["learner"], people.sipho), evidence.id)).rejects.toMatchObject({
       code: "not_permitted",
     });

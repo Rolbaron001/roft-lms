@@ -20,7 +20,7 @@ import { vocabulary } from "@/lib/terms";
 export default async function CohortsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
-  const { t, locale } = await pageLocale();
+  const { t, locale, day } = await pageLocale();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   // A cohort usually arrives as a spreadsheet of names, so the same import that
@@ -96,7 +96,7 @@ export default async function CohortsPage() {
                   <span className="ml-2 font-mono text-xs text-[var(--muted)]">{cohort.code}</span>
                 ) : null}
                 <span className="block text-xs text-[var(--muted)]">
-                  {t("cohorts.starts", { course: cohort.courseTitle, date: cohort.startDate })}
+                  {t("cohorts.starts", { course: cohort.courseTitle, date: day(cohort.startDate) })}
                 </span>
               </span>
               <span className="flex items-center gap-3">

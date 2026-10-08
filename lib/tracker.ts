@@ -22,6 +22,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { cohortCourseIds } from "./schedule";
+import { writtenDay } from "./date-format";
 
 /**
  * The tracker: what the client keeps on spreadsheets.
@@ -563,7 +564,7 @@ export async function addCohortTask(
     parsed.dueDate < parsed.startDate
   ) {
     throw new TrackerError(
-      `That task is due on ${parsed.dueDate}, before it starts on ${parsed.startDate}.`,
+      `That task is due on ${writtenDay(parsed.dueDate)}, before it starts on ${writtenDay(parsed.startDate)}.`,
       "invalid_state",
     );
   }

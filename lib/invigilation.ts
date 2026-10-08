@@ -241,7 +241,7 @@ export async function admitCandidate(
 
   if (input.outcome === "refused" && !input.reason?.trim()) {
     throw new InvigilationError(
-      "Say why they were turned away. An appeal turns on the reason, and the candidate has to be told what happened.",
+      "Please give the reason for refusing admission. An appeal turns on the reason, and the candidate must be told what happened.",
       "invalid_state",
     );
   }
@@ -267,7 +267,7 @@ export async function admitCandidate(
 
     if (sitting.status === "cancelled" || sitting.status === "closed") {
       throw new InvigilationError(
-        "This sitting is over, so nobody can be admitted to it.",
+        "This sitting is over, so no one can be admitted to it.",
         "invalid_state",
       );
     }
@@ -331,7 +331,7 @@ export async function admitCandidate(
         const localClose = clockInZone(door.closedAt, zone);
 
         throw new InvigilationError(
-          `Admission closed at ${localClose} ${zoneLabel(zone, door.closedAt)}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record them as refused with the reason instead: somebody admitted late has had longer with the paper than everybody else.`,
+          `Admission closed at ${localClose} ${zoneLabel(zone, door.closedAt)}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record them as refused, with the reason, instead: a candidate admitted late would have had longer with the paper than the others.`,
           "too_late",
         );
       }
@@ -423,7 +423,7 @@ export async function acceptSittingDeclaration(
 
     if (!candidate || candidate.outcome !== "admitted") {
       throw new InvigilationError(
-        "Admit the candidate first. A declaration from somebody who was never admitted records an agreement nobody witnessed.",
+        "Admit the candidate first. A declaration cannot be recorded for a candidate who has not been admitted.",
         "invalid_state",
       );
     }
@@ -526,7 +526,7 @@ export async function confirmCamera(
 
     if (!candidate || candidate.outcome !== "admitted") {
       throw new InvigilationError(
-        "Admit the candidate first. Confirming a camera for somebody who was never admitted records a check nobody made.",
+        "Admit the candidate first. A camera check cannot be recorded for a candidate who has not been admitted.",
         "invalid_state",
       );
     }
@@ -608,7 +608,7 @@ export async function recordIncident(
   const description = input.description.trim();
   if (description.length < 10) {
     throw new InvigilationError(
-      "Describe what happened. An incident report that says nothing is worse than none, because the record shows one was made.",
+      "Please describe what happened. An incident report must say what occurred.",
       "invalid_state",
     );
   }

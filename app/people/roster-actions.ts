@@ -59,7 +59,7 @@ export async function readRosterAction(
     const usable = proposal.rows.filter((row) => row.problems.length === 0);
     return said({
       proposal,
-      notice: `Read ${proposal.rows.length} rows, ${usable.length} of them usable. Check what it found before creating anybody.`,
+      notice: `Read ${proposal.rows.length} rows, ${usable.length} of them usable. Check what it found before anyone is created.`,
     });
   } catch (error) {
     return said(explain(error));

@@ -35,7 +35,7 @@ function fail(
   if (error instanceof PermissionDeniedError) {
     return {
       error:
-        "Your role does not include this. Recognition is held by the provider's own staff, and a judgement is moderated by somebody other than whoever made it.",
+        "Your role does not include this. Recognition is held by the provider's own staff, and a judgement is moderated by someone other than the person who made it.",
       values,
       attempt: (previous.attempt ?? 0) + 1,
     };

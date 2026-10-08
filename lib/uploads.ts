@@ -269,7 +269,7 @@ export async function uploadEvidence(
 
   if (submission.userId !== session.userId) {
     throw new UploadError(
-      "That submission belongs to somebody else.",
+      "That submission belongs to someone else.",
       "not_permitted",
     );
   }
@@ -515,7 +515,7 @@ export async function readEvidence(
   const isOwn = artifact.submissionUserId === session.userId;
   if (!isOwn && !can(session, "evidence:read_all")) {
     throw new UploadError(
-      "That evidence belongs to somebody else.",
+      "That evidence belongs to someone else.",
       "not_permitted",
     );
   }

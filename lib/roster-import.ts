@@ -227,7 +227,7 @@ export async function proposeRoster(
     // Curiosa's cohort list has none). Everybody signs in with their email.
     if (detection.mapping.firstName !== undefined && detection.mapping.lastName !== undefined) {
       throw new RosterError(
-        `The learners were found, but the sheet has no email address column. Everybody signs in with their email address, so add a column headed "Email" with each learner's address and upload the file again. The headings found were: ${headings.filter(Boolean).join(", ")}.`,
+        `The learners were found, but the sheet has no email address column. Everyone signs in with their email address, so add a column headed "Email" with each learner's address and upload the file again. The headings found were: ${headings.filter(Boolean).join(", ")}.`,
         "no_headings",
       );
     }

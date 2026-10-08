@@ -67,7 +67,7 @@ export function sittingDatesNotice(asAt: string): SittingNotice {
     return {
       year: subject,
       expected: true,
-      text: `No sittings are recorded for ${subject}. The assessment quality partner publishes the dates in December, so the letter should be out: add them and the countdown starts.`,
+      text: `No sittings are recorded for ${subject}. The assessment quality partner publishes the dates in December; please add them, and the countdown will start.`,
     };
   }
 

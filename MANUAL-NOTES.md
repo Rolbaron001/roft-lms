@@ -294,6 +294,23 @@ person going through it question by question.
   now. The change shows in its new week at once. Clearing both dates puts
   it back to waiting for a hand release.
 
+## 6d. How dates are written (8 October 2026)
+
+- **Where:** Settings, Dates. An administrator chooses one style for the
+  whole provider: day, month in words, year (8 October 2026, the
+  default); day/month/year (08/10/2026); year-month-day (2026-10-08); or
+  each person's own computer settings.
+- **"Own computer settings"** uses the regional setting each person's
+  browser reports, which normally follows their Windows or Mac settings, so
+  two people may see the same date written differently.
+- **Not affected:** documents whose form a regulator prescribes (the
+  Statement of Results, the Statement of Work Experience, the FISA
+  agreement, the enrolment form document) and certificates, which are
+  written in the holder's language. Messages the platform writes in English
+  and translates afterwards use the default style.
+- **Times** are always the 24-hour clock, on the provider's own clock
+  (Settings, Clock).
+
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 
 - **The bar at the top of every cohort page** names the steps in order: Set

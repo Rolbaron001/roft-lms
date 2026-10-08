@@ -1,18 +1,15 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageDates, requireSession, requireTenant } from "@/lib/request";
+import type { DateWriter } from "@/lib/date-format";
 import { getLogbook } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
 import { LogbookPanel } from "./logbook-panel";
 import { translator } from "@/lib/i18n";
-import { dateLocale, localeFor } from "@/lib/i18n/locales";
+import { localeFor } from "@/lib/i18n/locales";
 
-function formatDate(value: Date | null, locale: string): string {
+function formatDate(value: Date | null, day: DateWriter["day"]): string {
   if (!value) return "—";
-  return value.toLocaleDateString(dateLocale(locale), {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return day(value, { short: true });
 }
 
 export default async function LogbookPage({
@@ -88,7 +85,7 @@ export default async function LogbookPage({
             </p>
             <p>
               {logbook.coachSignedAt
-                ? formatDate(logbook.coachSignedAt, locale)
+                ? formatDate(logbook.coachSignedAt, (await pageDates()).day)
                 : t("work.notYet")}
             </p>
           </div>

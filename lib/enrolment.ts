@@ -19,6 +19,7 @@ import { recogniseCompletion } from "./completion";
 import { advanceLearningPaths } from "./learning-paths";
 import { raise } from "./notifications";
 import { awardCompletionBadgeIn } from "./badges";
+import { writtenDay } from "./date-format";
 
 /**
  * Enrolment, delivery and progress.
@@ -161,7 +162,7 @@ export async function enrolUser(
       kind: "enrolment.assigned",
       subject: `You have been assigned "${course.title}"`,
       body: parsed.dueDate
-        ? `It is due by ${new Date(parsed.dueDate).toLocaleDateString("en-ZA")}.`
+        ? `It is due by ${writtenDay(new Date(parsed.dueDate))}.`
         : "There is no due date on this one.",
       linkPath: `/learn/${created.id}`,
       entityType: "enrolment",

@@ -219,7 +219,7 @@ function explain(message: string): string {
   const lowered = (message ?? "").toLowerCase();
 
   if (lowered.includes("not logged in") || lowered.includes("/login")) {
-    return "Claude Code is installed on this machine but nobody is signed in. Open a terminal, run claude, then /login and complete the sign-in in the browser. That is a one-time step and it is done by you, not by the platform.";
+    return "Claude Code is installed on this machine but no one is signed in. Open a terminal, run claude, then /login and complete the sign-in in the browser. That is a one-time step and it is done by you, not by the platform.";
   }
   if (lowered.includes("usage limit") || lowered.includes("rate limit")) {
     return "The Claude subscription's usage limit has been reached. This will work again once the limit resets.";

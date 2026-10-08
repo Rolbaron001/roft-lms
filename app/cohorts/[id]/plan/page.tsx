@@ -16,7 +16,7 @@ export default async function CohortPlanPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
 
   let plan;
   try {
@@ -34,11 +34,11 @@ export default async function CohortPlanPage({ params }: { params: Promise<{ id:
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{t("planner.title", { cohort: plan.cohort.name })}</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {t("planner.starts", { date: plan.cohort.startDate })} · {plan.cohort.releaseMode === "open" ? t("planner.modeOpen") : t("planner.modeScheduled")}
+          {t("planner.starts", { date: day(plan.cohort.startDate) })} · {plan.cohort.releaseMode === "open" ? t("planner.modeOpen") : t("planner.modeScheduled")}
         </p>
       </div>
       <CohortNav cohortId={id} current="plan" />
-      <Planner plan={plan} canManage={session.permissions.includes("enrolment:manage")} dateLocale={dates} />
+      <Planner plan={plan} canManage={session.permissions.includes("enrolment:manage")} />
     </AppShell>
   );
 }

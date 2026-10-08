@@ -13,7 +13,7 @@ import {
   type CodeOption,
 } from "@/lib/learner-codes";
 import { saveEnrolmentFormAction, type FormState } from "./actions";
-import { useDates, useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 
 /**
  * What the learner agrees to, in the words they agree to.
@@ -153,7 +153,7 @@ export function EnrolmentForm({
   readOnlyReason: string | null;
 }) {
   const t = useT();
-  const dates = useDates();
+  const { day } = useDay();
   const [state, save, saving] = useActionState<FormState, FormData>(
     saveEnrolmentFormAction,
     {},
@@ -330,7 +330,7 @@ export function EnrolmentForm({
         {popiaAgreedAt ? (
           <p className="text-sm text-[var(--muted)]">
             {t("enrolForm.agreedOn", {
-              date: popiaAgreedAt.toLocaleDateString(dates, { day: "numeric", month: "long", year: "numeric" }),
+              date: day(popiaAgreedAt),
             })}
           </p>
         ) : (

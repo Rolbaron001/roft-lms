@@ -258,7 +258,7 @@ export async function invitePerson(
 
     if (existing) {
       throw new PeopleError(
-        "Somebody with that email address already exists here.",
+        "A person with that email address already exists here.",
         "duplicate",
       );
     }
@@ -336,7 +336,7 @@ export async function updatePerson(
 
     if (parsed.lineManagerId === userId) {
       throw new PeopleError(
-        "Somebody cannot be their own line manager.",
+        "A person cannot be their own line manager.",
         "invalid_input",
       );
     }
@@ -427,7 +427,7 @@ export async function setRoles(
     if (had.includes("tenant_admin") && !roles.includes("tenant_admin")) {
       if ((await otherAdministratorCount(tx, userId)) === 0) {
         throw new PeopleError(
-          "This is the only administrator. Give somebody else the role first, or the organisation would be left with nobody able to manage it.",
+          "This is the only administrator. Give someone else the role first, or no one would be able to manage the organisation.",
           "would_lock_out",
         );
       }
@@ -497,7 +497,7 @@ export async function setPersonStatus(
 
       if (isAdmin.length > 0) {
         throw new PeopleError(
-          "This is the only administrator; suspending them would leave nobody able to manage the organisation.",
+          "This is the only administrator; suspending them would leave no one able to manage the organisation.",
           "would_lock_out",
         );
       }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { currentLocale, requirePermission, requireTenant } from "@/lib/request";
+import { currentLocale, pageDates, requirePermission, requireTenant } from "@/lib/request";
 import { catalogueFor, translator } from "@/lib/i18n";
 import { dateLocale } from "@/lib/i18n/locales";
 import { maybe } from "@/lib/i18n/maybe";
@@ -40,6 +40,7 @@ export default async function SessionRegisterPage({
   const session = await requirePermission("attendance:record");
   const locale = await currentLocale();
   const t = translator(locale);
+  const dates = await pageDates();
 
   let register;
   try {
@@ -142,7 +143,7 @@ export default async function SessionRegisterPage({
   const kind = maybe(t, `register.kind.${register.session.kind}`);
 
   return (
-    <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)}>
+    <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)} dateSettings={dates.settings}>
     <main className="mx-auto max-w-4xl px-6 py-8">
       <Link href={`/cohorts/${id}`} className="text-sm text-[var(--muted)] hover:underline">
         {t("register.back")}
@@ -152,7 +153,7 @@ export default async function SessionRegisterPage({
         {register.session.title ?? kind ?? t("register.session")}
       </h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
-        {kind ?? register.session.kind} · {register.session.date} ·{" "}
+        {kind ?? register.session.kind} · {dates.day(register.session.date)} ·{" "}
         {t("register.marked", { marked, total: register.lines.length })}
       </p>
 

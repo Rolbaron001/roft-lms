@@ -50,6 +50,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { deleteObject, getObject, hashBytes, putObject } from "./storage";
+import { writtenDay } from "./date-format";
 
 /**
  * Archiving a cohort's evidence off the server. Job sheet 4.3.
@@ -831,13 +832,13 @@ export async function startCohortArchive(
     const state = await readState(tx, organisationId, cohortId);
     if (!state.qualification) {
       throw new ArchiveError(
-        "This cohort's course counts towards no qualification, so nobody in it can be shown to have finished.",
+        "This cohort's course counts towards no qualification, so no one in it can be shown to have finished.",
         "no_qualification",
       );
     }
     if (state.ready.length === 0) {
       throw new ArchiveError(
-        "Nobody in this cohort is ready to archive. A learner is ready once they hold a statement of results for the qualification and their qualification certificate has been recorded on their EISA readiness page.",
+        "No one in this cohort is ready to archive. A learner is ready once they hold a statement of results for the qualification and their qualification certificate has been recorded on their EISA readiness page.",
         "nobody_eligible",
       );
     }
@@ -853,7 +854,7 @@ export async function startCohortArchive(
       );
     if (busy) {
       throw new ArchiveError(
-        "Another archive is being written. One at a time, because each needs its own room on the disk. Try again when it has finished.",
+        "Another archive is being written. Only one can be written at a time, because each needs space on the disk. Please try again when it has finished.",
         "busy",
       );
     }
@@ -1509,5 +1510,5 @@ export async function archivedFileNotice(
     .from(organisations)
     .innerJoin(cohortArchives, eq(cohortArchives.organisationId, organisations.id))
     .where(eq(cohortArchives.id, archiveId));
-  return `This file was archived on ${archivedAt.toISOString().slice(0, 10)}${row ? `, in "${row.filename}"` : ""}, and is held by ${organisation?.displayName ?? "the provider"}. The record of it remains here. An administrator can restore the archive if the file is needed on the platform again.`;
+  return `This file was archived on ${writtenDay(archivedAt)}${row ? `, in "${row.filename}"` : ""}, and is held by ${organisation?.displayName ?? "the provider"}. The record of it remains here. An administrator can restore the archive if the file is needed on the platform again.`;
 }

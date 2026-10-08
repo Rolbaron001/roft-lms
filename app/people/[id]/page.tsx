@@ -48,7 +48,7 @@ export default async function PersonPage({
   const { route } = await searchParams;
   const tenant = await requireTenant();
   const session = await requirePermission("user:read");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
 
   let detail;
   try {
@@ -168,7 +168,7 @@ export default async function PersonPage({
             <p className="mt-0.5 text-sm text-[var(--muted)]">
               {person.email}
               {person.lastLoginAt
-                ? t("personPage.lastSignedIn", { date: person.lastLoginAt.toLocaleDateString(dates) })
+                ? t("personPage.lastSignedIn", { date: day(person.lastLoginAt) })
                 : t("personPage.neverSignedIn")}
             </p>
           </div>
@@ -209,10 +209,10 @@ export default async function PersonPage({
           <p className="mt-2 text-sm text-[var(--muted)]">
             {detail.certificateCount === 1
               ? t("personPage.anonymisedOne", {
-                  date: person.anonymisedAt?.toLocaleDateString(dates) ?? "",
+                  date: day(person.anonymisedAt),
                 })
               : t("personPage.anonymisedMany", {
-                  date: person.anonymisedAt?.toLocaleDateString(dates) ?? "",
+                  date: day(person.anonymisedAt),
                   count: detail.certificateCount,
                 })}
           </p>
@@ -370,7 +370,7 @@ export default async function PersonPage({
                   {t("personPage.award", {
                     number: award.certificateNumber,
                     by: award.awardedBy,
-                    date: award.awardedOn,
+                    date: day(award.awardedOn),
                   })}
                 </span>
               </li>
@@ -396,7 +396,7 @@ export default async function PersonPage({
                     ? t("personPage.notPassed")
                     : ""}
                 <span className="ml-2 text-xs text-[var(--muted)]">
-                  {row.occurredAt ? row.occurredAt.toISOString().slice(0, 10) : t("personPage.noDate")} ·{" "}
+                  {row.occurredAt ? day(row.occurredAt) : t("personPage.noDate")} ·{" "}
                   {row.source}
                 </span>
               </li>

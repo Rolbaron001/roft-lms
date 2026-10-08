@@ -14,7 +14,7 @@ import {
   type DocumentKind,
   type EnrolmentReadiness,
 } from "@/lib/enrolment-document-shape";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
@@ -48,6 +48,7 @@ export function EnrolmentDocuments({
   canManage: boolean;
 }) {
   const t = useT();
+  const { day } = useDay();
   const kindLabel = (kind: string) =>
     maybe(t, `docs.kind.${kind}`) ?? DOCUMENT_LABEL[kind as DocumentKind] ?? kind;
   const [route, setRoute] = useState(readiness.route);
@@ -104,7 +105,7 @@ export function EnrolmentDocuments({
                   : document.verification === "missing"
                     ? t("docs.notSupplied")
                     : document.expired
-                      ? t("docs.expired", { date: document.certifiedOn ?? "" })
+                      ? t("docs.expired", { date: day(document.certifiedOn) })
                       : document.verification === "refused"
                         ? document.refusedReason
                           ? t("docs.refusedBecause", { reason: document.refusedReason })

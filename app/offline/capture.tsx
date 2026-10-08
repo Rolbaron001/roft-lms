@@ -9,7 +9,7 @@ import {
   queued,
   type QueuedItem,
 } from "@/lib/device-queue";
-import { useDates, useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { readable } from "./held-on-device";
 
 const field =
@@ -44,7 +44,7 @@ export function Capture({
   kind?: string;
 }) {
   const t = useT();
-  const dates = useDates();
+  const { when } = useDay();
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [shrunk, setShrunk] = useState<{ from: number; to: number } | null>(
@@ -240,7 +240,7 @@ export function Capture({
                   item.fileName ||
                   t("offline.recordedWork")}
                 <span className="block text-xs text-[var(--muted)]">
-                  {t("offline.recordedAt", { date: new Date(item.capturedAt).toLocaleString(dates) })}
+                  {t("offline.recordedAt", { date: when(new Date(item.capturedAt)) })}
                   {item.attempts > 0
                     ? ` · ${item.attempts === 1 ? t("offline.triedOne") : t("offline.tried", { count: item.attempts })}`
                     : ""}

@@ -32,7 +32,7 @@ export default async function OfflinePage() {
   if (!tenant.offlineEnabled) notFound();
 
   const session = await requireSession();
-  const { t, dates } = await pageLocale();
+  const { t, day, when } = await pageLocale();
 
   const canSeeQueue = session.permissions.includes("enrolment:read_all");
   const packs = await offlinePacksFor(session);
@@ -106,8 +106,8 @@ export default async function OfflinePage() {
                   */}
                   <span className="block text-xs text-[var(--muted)]">
                     {t("offline.bothDates", {
-                      captured: row.capturedAt.toLocaleString(dates),
-                      received: row.receivedAt.toLocaleString(dates),
+                      captured: when(row.capturedAt),
+                      received: when(row.receivedAt),
                     })}
                   </span>
                 </li>
@@ -126,7 +126,7 @@ export default async function OfflinePage() {
                   {row.firstName} {row.lastName}
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.kind} · {t("offline.recordedOn", { date: row.capturedAt.toLocaleDateString(dates) })}
+                    · {row.kind} · {t("offline.recordedOn", { date: day(row.capturedAt) })}
                   </span>
                 </li>
               ))}

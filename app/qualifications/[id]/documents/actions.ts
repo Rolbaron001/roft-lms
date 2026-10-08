@@ -250,7 +250,7 @@ export async function uploadDocumentAction(
 
     if (matrix.unmatchedCodes.length > 0) {
       detail.push(
-        `${matrix.unmatchedCodes.length} codes in the matrix are not in the curriculum yet: ${matrix.unmatchedCodes.slice(0, 12).join(", ")}${matrix.unmatchedCodes.length > 12 ? "…" : ""}. These are usually modules nobody has transcribed.`,
+        `${matrix.unmatchedCodes.length} codes in the matrix are not in the curriculum yet: ${matrix.unmatchedCodes.slice(0, 12).join(", ")}${matrix.unmatchedCodes.length > 12 ? "…" : ""}. These are usually modules that have not been transcribed.`,
       );
     }
 

@@ -9,6 +9,7 @@ import { generateInitialPassword } from "./people";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { clearTenantCache } from "./tenant";
 import { DEFAULT_TIME_ZONE, isSupportedTimeZone } from "./timezone";
+import { isDateStyle } from "./date-format";
 
 /**
  * Provisioning client organisations — the Platform Owner's job.
@@ -425,7 +426,7 @@ export async function setTenantStatus(
 
   if (reason.trim().length < 5) {
     throw new ProvisioningError(
-      "Record why. Cutting off a client's access is not something to do unexplained.",
+      "Please record the reason. A client's access should not be suspended without one.",
       "invalid_input",
     );
   }
@@ -642,6 +643,27 @@ export async function setTenantTimeZone(
 
   clearTenantCache();
   return result;
+}
+
+/** How this provider's dates are written (lib/date-format.ts). */
+export async function setTenantDateStyle(session: AuthenticatedSession, style: string) {
+  assertSessionCan(session, "tenant:manage_settings");
+  if (!isDateStyle(style)) throw new z.ZodError([{ code: "custom", path: ["dateStyle"], message: "Choose one of the date styles offered." }]);
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx.select({ dateStyle: organisations.dateStyle }).from(organisations).where(eq(organisations.id, session.organisationId));
+    await tx.update(organisations).set({ dateStyle: style, updatedAt: new Date() }).where(eq(organisations.id, session.organisationId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.date_style_updated",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { dateStyle: before?.dateStyle ?? null },
+      after: { dateStyle: style },
+    });
+  });
+  clearTenantCache();
 }
 
 export { RESERVED_SLUGS };

@@ -6,7 +6,7 @@ import {
   recordMissedAssessmentAction,
   type SupportActionState,
 } from "@/app/people/support-actions";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
 
 const inputClass =
@@ -46,6 +46,7 @@ export function Missed({
   today: string;
 }) {
   const t = useT();
+  const { day } = useDay();
   const [state, action, saving] = useActionState<SupportActionState, FormData>(
     recordMissedAssessmentAction,
     {},
@@ -72,9 +73,9 @@ export function Missed({
             <li key={row.id} className="rounded-md border border-[var(--border)] p-3 text-sm">
               <p className="font-medium">{row.assessmentTitle}</p>
               <p className="mt-1 text-[var(--muted)]">
-                {t("missed.on", { date: row.missedOn })}
+                {t("missed.on", { date: day(row.missedOn) })}
                 {row.missedReason ? `: ${row.missedReason}` : ""}
-                {row.additionalDate ? t("missed.additional", { date: row.additionalDate }) : ""}
+                {row.additionalDate ? t("missed.additional", { date: day(row.additionalDate) }) : ""}
               </p>
               <p className="mt-1">
                 {maybe(t, `missed.outcome.${row.outcome}`) ?? row.outcome}

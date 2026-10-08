@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { dateInZone } from "@/lib/timezone";
-import { pageT, requireCapability, requirePermission, said } from "@/lib/request";
+import { pageDates, pageT, requireCapability, requirePermission, said } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import {
   listNotifications,
@@ -31,6 +31,7 @@ export default async function NotifyPage() {
   const tenant = await requireCapability("statutory_reporting");
   const session = await requirePermission("report:statutory");
   const t = await pageT();
+  const { day } = await pageDates();
 
   const today = dateInZone(new Date(), tenant.timezone);
   const [due, notifications] = await Promise.all([
@@ -72,7 +73,7 @@ export default async function NotifyPage() {
                   </span>
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.cohortName} · {t("enrolNotify.wasDue", { date: row.dueOn ?? "" })}
+                    · {row.cohortName} · {t("enrolNotify.wasDue", { date: day(row.dueOn) })}
                     {row.workingDaysLeft !== null
                       ? ` · ${t("enrolNotify.daysAgo", { count: Math.abs(row.workingDaysLeft) })}`
                       : ""}
@@ -95,7 +96,7 @@ export default async function NotifyPage() {
                   </span>
                   <span className="text-[var(--muted)]">
                     {" "}
-                    · {row.cohortName} · {t("enrolNotify.due", { date: row.dueOn ?? "" })} ·{" "}
+                    · {row.cohortName} · {t("enrolNotify.due", { date: day(row.dueOn) })} ·{" "}
                     {t("enrolNotify.daysLeft", { count: row.workingDaysLeft ?? 0 })}
                   </span>
                 </li>
@@ -157,7 +158,7 @@ export default async function NotifyPage() {
                         <span className="ml-2 font-normal text-[var(--muted)]">
                           {row.cohortName ?? t("enrolNotify.individual")} ·{" "}
                           {row.learners === 1 ? t("enrolNotify.learnerOne") : t("enrolNotify.learners", { count: row.learners })}{" "}
-                          · {t("enrolNotify.due", { date: row.dueOn ?? "" })}
+                          · {t("enrolNotify.due", { date: day(row.dueOn) })}
                         </span>
                       </p>
                       <span className="text-xs uppercase tracking-wide text-[var(--muted)]">

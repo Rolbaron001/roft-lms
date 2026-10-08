@@ -185,7 +185,7 @@ export async function setSessionStatus(
 
     if ((status === "cancelled" || status === "postponed") && !note?.trim()) {
       throw new SchedulingError(
-        "Say why the session was cancelled or postponed. A schedule with unexplained gaps in it is the thing a monitoring visit asks about.",
+        "Please say why the session was cancelled or postponed. Unexplained gaps in a schedule are what a monitoring visit asks about.",
         "invalid_state",
       );
     }
@@ -510,7 +510,7 @@ export async function takeRegister(
 
     if (target.status === "cancelled") {
       throw new SchedulingError(
-        "This session was cancelled, so there is no register to take. Nobody failed to attend a lecture that did not happen.",
+        "This session was cancelled, so there is no register to take.",
         "invalid_state",
       );
     }

@@ -375,7 +375,7 @@ describe("the programme review", () => {
         rationale: "Discussed with the employer at length.",
         employerConsulted: true,
       }),
-    ).rejects.toThrow(/unnamed employer is not evidence/);
+    ).rejects.toThrow(/no evidence that the consultation took place/);
   });
 
   it("records the employer discussion and its outcome", async () => {
@@ -463,7 +463,7 @@ describe("the oral attempt", () => {
 
     await expect(
       startOralAttempt(both, authorisation.id),
-    ).rejects.toThrow(/somebody else must conduct it/);
+    ).rejects.toThrow(/someone else must conduct it/);
   });
 
   it("cannot be opened on a review that decided otherwise", async () => {
@@ -490,7 +490,7 @@ describe("the oral attempt", () => {
     ).rejects.toThrow(ReassessmentError);
     await expect(
       startOralAttempt(assessor, authorisationId),
-    ).rejects.toThrow(/granted twice/);
+    ).rejects.toThrow(/only one third attempt may be granted/);
   });
 
   it("is the third attempt, not a separate kind of event", async () => {

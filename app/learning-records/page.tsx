@@ -4,7 +4,6 @@ import { externalRecordCounts } from "@/lib/xapi";
 import { ImportForm } from "./import-form";
 import { StoreForm } from "./store-form";
 import { recordStoreFor } from "@/lib/record-store";
-import { DEFAULT_TIME_ZONE } from "@/lib/timezone";
 
 /**
  * Moving learning records to and from another system. Job sheet A10.
@@ -12,11 +11,10 @@ import { DEFAULT_TIME_ZONE } from "@/lib/timezone";
 export default async function LearningRecordsPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("records:manage");
-  const { t, dates } = await pageLocale();
+  const { t, when: written } = await pageLocale();
   const counts = await externalRecordCounts(session);
   const store = await recordStoreFor(session);
-  const when = (at: Date) =>
-    at.toLocaleString(dates, { timeZone: DEFAULT_TIME_ZONE, dateStyle: "medium", timeStyle: "short" });
+  const when = (at: Date) => written(at, { short: true });
 
   return (
     <AppShell tenant={tenant} session={session}>

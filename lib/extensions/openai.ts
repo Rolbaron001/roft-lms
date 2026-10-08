@@ -98,7 +98,7 @@ function explain(status: number, body: unknown, token?: string): string {
       : "OpenAI's rate limit for that key has been reached. Wait a little and try again.";
   }
   if (status >= 500) {
-    return `OpenAI reported a problem on their side (${status}). This is worth simply trying again.`;
+    return `OpenAI reported a problem on their side (${status}). Please try again.`;
   }
   return message || `OpenAI returned ${status}.`;
 }

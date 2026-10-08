@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dateInZone } from "@/lib/timezone";
-import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
+import { pageDates, pageLocale, requireSession, requireTenant, said } from "@/lib/request";
 import { maybe, type MessageKey } from "@/lib/i18n";
 import { sayer } from "@/lib/i18n/said";
 import { namingConventionFor } from "@/lib/capture";
@@ -16,6 +16,8 @@ import { NamingForm } from "./naming-form";
 import { ModuleCodesForm } from "./module-codes-form";
 import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
+import { DateForm } from "./date-form";
+import { DEFAULT_DATE_STYLE, isDateStyle } from "@/lib/date-format";
 import { ProviderLanguageForm } from "./language-form";
 import { ExtensionForm } from "./extension-form";
 import { MenuEditor } from "./menu-editor";
@@ -194,6 +196,20 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <ClockForm current={tenant.timezone} />
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="dates"
+          data-settings-section={t("settings.section.dates")}
+          className="mt-6 scroll-mt-24"
+        >
+          <DateForm
+            current={isDateStyle(tenant.dateStyle) ? tenant.dateStyle : DEFAULT_DATE_STYLE}
+            timeZone={tenant.timezone}
+            device={(await pageDates()).settings.device}
+          />
         </div>
       ) : null}
 

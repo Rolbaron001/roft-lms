@@ -3,14 +3,11 @@ import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { workplaceSetupData } from "@/lib/workplace";
 import { AppShell, Card } from "@/components/app-shell";
 import { AgreementForm, LogbookForm } from "./setup-forms";
+import type { DateWriter } from "@/lib/date-format";
 
-function formatDate(value: Date | null, dates: string): string {
+function formatDate(value: Date | null, day: DateWriter["day"]): string {
   if (!value) return "—";
-  return value.toLocaleDateString(dates, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return day(value, { short: true });
 }
 
 /**
@@ -23,7 +20,7 @@ function formatDate(value: Date | null, dates: string): string {
 export default async function WorkplaceSetupPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("workplace:manage");
-  const { t, dates } = await pageLocale();
+  const { t, day } = await pageLocale();
   const { learners, coaches, modules, agreements } =
     await workplaceSetupData(session);
 
@@ -110,8 +107,8 @@ export default async function WorkplaceSetupPage() {
                       <p className="text-xs">{agreement.coachEmail}</p>
                     </td>
                     <td className="px-4 py-3 text-[var(--muted)]">
-                      {formatDate(agreement.startDate, dates)} –{" "}
-                      {formatDate(agreement.endDate, dates)}
+                      {formatDate(agreement.startDate, day)} –{" "}
+                      {formatDate(agreement.endDate, day)}
                     </td>
                     <td className="px-4 py-3 tabular-nums text-[var(--muted)]">
                       {agreement.moduleIdsOpen.length}

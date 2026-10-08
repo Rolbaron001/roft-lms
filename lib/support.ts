@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { writtenDay } from "./date-format";
 
 /**
  * Learner support and special needs.
@@ -161,7 +162,7 @@ const reviewInput = z.object({
   note: z
     .string()
     .trim()
-    .min(5, "Say what you found. A review with no finding is a date in a file."),
+    .min(5, "Please say what you found. A review must record a finding."),
   adjustment: z.string().trim().max(2000).optional(),
   nextReviewDue: z
     .string()
@@ -186,7 +187,7 @@ export async function recordSupportReview(
 
   if (!parsed.working && !parsed.adjustment) {
     throw new SupportError(
-      "If the accommodation is not working, say what is changing. A review that records a failure and adjusts nothing reads as diligence and is the opposite.",
+      "If the accommodation is not working, say what is changing. A review that records a failure but changes nothing does not help the learner.",
       "invalid",
     );
   }
@@ -236,7 +237,7 @@ export async function closeSupportNeed(
   const reason = input.reason.trim();
   if (reason.length < 5) {
     throw new SupportError(
-      "Say why the support is ending. A learner whose accommodation stops without a reason has no way to ask for it back.",
+      "Please say why the support is ending. Without a reason, the learner has no basis on which to ask for it to be restored.",
       "invalid",
     );
   }
@@ -454,7 +455,7 @@ export async function recordMissedAssessment(
 
     if (existing) {
       throw new SupportError(
-        `An additional date was already set for this assessment: ${existing.additionalDate ?? "none recorded"}, after a miss on ${existing.missedOn}. The procedure allows one. If that date was also missed, record what happened to it rather than setting another.`,
+        `An additional date was already set for this assessment: ${existing.additionalDate ? writtenDay(existing.additionalDate) : "none recorded"}, after a miss on ${writtenDay(existing.missedOn)}. The procedure allows one. If that date was also missed, record what happened to it rather than setting another.`,
         "already_granted",
       );
     }
@@ -522,7 +523,7 @@ export async function recordAdditionalDateOutcome(
 
   if (parsed.outcome === "oral_authorised" && !parsed.note) {
     throw new SupportError(
-      "Say what the medical ground was. An oral assessment authorised on an unrecorded reason is the sitting an external verifier asks about.",
+      "Please say what the medical ground was. An external verifier will ask about an oral assessment authorised for an unrecorded reason.",
       "invalid",
     );
   }

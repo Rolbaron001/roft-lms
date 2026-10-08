@@ -28,6 +28,7 @@ import {
 } from "./programme-documents";
 import { can } from "./rbac";
 import { courseUsesCohorts, scheduleForLearner } from "./schedule";
+import { writtenDay } from "./date-format";
 
 /**
  * The spine, and the gates on it.
@@ -556,12 +557,12 @@ async function computeSteps(
       blockedBy.push("Opens when your facilitator releases it to your cohort.");
     } else if (opensAt && opensAt > now) {
       blockedBy.push(
-        `Opens on ${opensAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.`,
+        `Opens on ${writtenDay(opensAt)}.`,
       );
     }
     if (closesAt && closesAt < now) {
       blockedBy.push(
-        `Closed on ${closesAt.toLocaleDateString("en-ZA", { dateStyle: "long" })}.`,
+        `Closed on ${writtenDay(closesAt)}.`,
       );
     }
 

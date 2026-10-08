@@ -11,7 +11,7 @@ import {
   type CohortActionState,
   type RolloutState,
 } from "../actions";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 
 const field =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/30";
@@ -146,6 +146,7 @@ export function ReleaseControls({
   steps: { id: string; title: string | null; kind: string; released: boolean; releasedAt: Date | null; opensAt: Date | null }[];
 }) {
   const t = useT();
+  const { day } = useDay();
   const [state, act, pending] = useActionState<CohortActionState, FormData>(setStepReleasedAction, {});
   if (steps.length === 0) return null;
   return (
@@ -157,11 +158,11 @@ export function ReleaseControls({
               <p className="text-sm">{step.title ?? step.kind}</p>
               <p className="text-xs text-[var(--muted)]">
                 {step.releasedAt
-                  ? t("cohortCtl.releasedByHand", { date: step.releasedAt.toISOString().slice(0, 10) })
+                  ? t("cohortCtl.releasedByHand", { date: day(step.releasedAt) })
                   : step.released
                     ? t("cohortCtl.releasedBySchedule")
                     : step.opensAt
-                      ? t("cohortCtl.opensOn", { date: step.opensAt.toISOString().slice(0, 10) })
+                      ? t("cohortCtl.opensOn", { date: day(step.opensAt) })
                       : t("cohortCtl.notReleased")}
               </p>
             </div>
@@ -223,6 +224,8 @@ export function ScheduleEditor({
     {},
   );
 
+  const { day: writeDay } = useDay();
+
   // Days are what gets stored; dates are what a facilitator is thinking in.
   // Showing the date beside the number as it is typed is what stops "day 45"
   // being agreed in a meeting and turning out to be the festive season.
@@ -254,7 +257,7 @@ export function ScheduleEditor({
     if (offset === null || !Number.isFinite(offset)) return null;
     if (days[`${which}-${stepId}`] === "") return null;
 
-    return describeDay(startDate, offset);
+    return writeDay(describeDay(startDate, offset), { short: true });
   }
 
   if (steps.length === 0) {

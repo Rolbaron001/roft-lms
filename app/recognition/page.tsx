@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { pageT, requireSession, requireTenant } from "@/lib/request";
+import { pageDates, pageT, requireSession, requireTenant } from "@/lib/request";
 import { rplModerationQueue } from "@/lib/recognition";
 import { listQualifications } from "@/lib/authoring";
 import { listPeople } from "@/lib/people";
@@ -34,6 +34,7 @@ export default async function RecognitionPage() {
 
   if (!canManage && !canModerate) redirect("/not-permitted");
   const t = await pageT();
+  const { day } = await pageDates();
 
   const [queue, qualifications, learners] = await Promise.all([
     canModerate ? rplModerationQueue(session) : Promise.resolve([]),
@@ -83,7 +84,7 @@ export default async function RecognitionPage() {
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {t("rpl.judged", {
                         outcome: row.competent ? t("outcome.competent") : t("outcome.not_yet_competent"),
-                        date: row.judgedOn,
+                        date: day(row.judgedOn),
                       })}
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm">

@@ -175,7 +175,7 @@ const warningInput = z.object({
     .trim()
     .min(
       20,
-      "State the rule broken, the standard expected and what happens if it recurs. A warning that does not is not one.",
+      "State the rule broken, the standard expected and what happens if it recurs. A warning must state all three.",
     ),
 });
 
@@ -377,7 +377,7 @@ export async function convenehearing(
   if (!notice.adequate) {
     const hours = Math.ceil(notice.shortBySeconds / 3600);
     throw new ConductError(
-      `A hearing needs at least ${HEARING_NOTICE_HOURS} hours' notice and this is ${hours} ${hours === 1 ? "hour" : "hours"} short. The earliest it can be held is ${notice.earliest.toISOString().slice(0, 16).replace("T", " ")}. Short notice is the defect an appeal is won on, whatever the learner did.`,
+      `A hearing needs at least ${HEARING_NOTICE_HOURS} hours' notice and this is ${hours} ${hours === 1 ? "hour" : "hours"} short. The earliest it can be held is ${notice.earliest.toISOString().slice(0, 16).replace("T", " ")}. Inadequate notice would allow an appeal to succeed whatever the facts of the case.`,
       "short_notice",
     );
   }
@@ -437,7 +437,7 @@ export async function recordHearingOutcome(
   const findings = input.findings.trim();
   if (findings.length < 20) {
     throw new ConductError(
-      "Record what was found and on what basis. A hearing whose findings are one line is a hearing that did not happen.",
+      "Please record in full what was found and on what basis.",
       "invalid",
     );
   }
@@ -479,7 +479,7 @@ const closeInput = z.object({
     .trim()
     .min(
       20,
-      "Say why. An unexplained sanction is indefensible, and this is the paragraph the learner is entitled to.",
+      "Please give the reasons. An unexplained sanction cannot be defended, and the learner is entitled to the reasons.",
     ),
 });
 
@@ -520,7 +520,7 @@ export async function closeDisciplinaryCase(
 
       if (!hearing?.heldAt) {
         throw new ConductError(
-          "Ending somebody's programme needs a hearing that was held, with its findings recorded. Convene one, record what was found, then close the case.",
+          "Ending a learner's programme needs a hearing that was held, with its findings recorded. Convene one, record what was found, then close the case.",
           "needs_hearing",
         );
       }
@@ -880,7 +880,7 @@ export async function appointInvestigator(
 
     if (named && (named.includes(full) || named.includes(person.lastName.toLowerCase()))) {
       throw new ConductError(
-        `The grievance names ${person.firstName} ${person.lastName}. Somebody the complaint is about cannot investigate it: the procedure asks for a designated impartial person. Appoint somebody else.`,
+        `The grievance names ${person.firstName} ${person.lastName}. A person the complaint is about cannot investigate it: the procedure requires a designated impartial person. Please appoint someone else.`,
         "not_impartial",
       );
     }
@@ -909,7 +909,7 @@ export async function decideGrievance(
   const decision = input.decision.trim();
   if (decision.length < 20) {
     throw new ConductError(
-      "The decision goes to the learner in writing and has to say what was found and what will be done. A line is not a decision.",
+      "The decision goes to the learner in writing and must say what was found and what will be done.",
       "invalid",
     );
   }

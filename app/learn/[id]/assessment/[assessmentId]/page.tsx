@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageDates, requireSession, requireTenant } from "@/lib/request";
 import { AssessmentError, getAssessmentForLearner } from "@/lib/assessment";
 import { DEFAULT_DECLARATION } from "@/lib/declaration";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { getFeedback, sectionComments } from "@/lib/marking";
 import { AppShell } from "@/components/app-shell";
 import { translator } from "@/lib/i18n";
-import { dateLocale, localeFor } from "@/lib/i18n/locales";
+import { localeFor } from "@/lib/i18n/locales";
 import { QuizForm } from "./quiz-form";
 import { EvidenceForm } from "./evidence-form";
 
@@ -117,11 +117,7 @@ export default async function TakeAssessmentPage({
                   <>
                     {" · "}
                     {t("assess.returned", {
-                      date: feedback.returnedAt.toLocaleDateString(dateLocale(locale), {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      }),
+                      date: (await pageDates()).day(feedback.returnedAt),
                     })}
                   </>
                 ) : null}

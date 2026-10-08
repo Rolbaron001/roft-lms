@@ -49,7 +49,7 @@ describe("the attention prompt", () => {
     // The picture is decorative and hidden from a screen reader. If the
     // sentence beside it ever goes, somebody using one is told nothing at all.
     for (const path of ROUTES) {
-      expect(source(path)).toMatch(/Now press this/);
+      expect(source(path)).toMatch(/Press this next/);
     }
   });
 

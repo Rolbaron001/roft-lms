@@ -215,7 +215,7 @@ export async function appoint(
 
       if (sameAccount || sameIdNumber) {
         throw new FisaError(
-          `That is the same person as the ${other}. A pre-moderation is worth having because a second person looked at it.`,
+          `That is the same person as the ${other}. Pre-moderation must be carried out by a second person.`,
           "same_person",
         );
       }
@@ -335,7 +335,7 @@ async function assertMayWork(
 
   if (!appointment.confidentialitySignedAt) {
     throw new FisaError(
-      "The confidentiality agreement has not been signed yet. Nobody may see or judge the contents of a FISA before signing it.",
+      "The confidentiality agreement has not been signed yet. No one may see or judge the contents of a FISA before signing it.",
       "unsigned",
     );
   }
@@ -486,7 +486,7 @@ export async function sendToModeration(
 
     if (!moderator) {
       throw new FisaError(
-        "No moderator has been appointed yet, so there is nobody to send it to.",
+        "No moderator has been appointed yet, so there is no one to send it to.",
         "invalid",
       );
     }

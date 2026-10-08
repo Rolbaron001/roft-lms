@@ -245,7 +245,7 @@ async function buildPlan(
 
     plan = await planFromDocuments(session, files);
     warnings.push(
-      "This folder had no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model will produce something plausible from a document that says nothing of the kind.",
+      "This folder had no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model may produce a plausible structure that the document does not support.",
     );
   }
 

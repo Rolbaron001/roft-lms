@@ -152,7 +152,7 @@ function explain(status: number, body: unknown, token?: string): string {
      * than Google having a bad minute, and telling somebody to try again is
      * how they spend an afternoon doing exactly that.
      */
-    return `Google reported a problem on their side (${status}). A small request is worth simply trying again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete. Import it from its documents instead, which reads the curriculum directly with no model involved.`;
+    return `Google reported a problem on their side (${status}). Please try a small request again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete. Import it from its documents instead, which reads the curriculum directly with no model involved.`;
   }
   return message || `Gemini returned ${status}.`;
 }

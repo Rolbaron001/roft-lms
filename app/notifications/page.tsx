@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { requireSession, requireTenant } from "@/lib/request";
+import { pageDates, requireSession, requireTenant } from "@/lib/request";
 import { myNotifications } from "@/lib/notifications";
 import { AppShell, Card } from "@/components/app-shell";
 import { MarkAllRead } from "./mark-all-read";
 import { translator, type Translate } from "@/lib/i18n";
-import { dateLocale, localeFor } from "@/lib/i18n/locales";
+import { localeFor } from "@/lib/i18n/locales";
 import { sayer } from "@/lib/i18n/said";
 
-function relative(date: Date, t: Translate, locale: string): string {
+function relative(date: Date, t: Translate, day: (value: Date) => string): string {
   const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
   if (minutes < 1) return t("notify.justNow");
   if (minutes < 60) return t("notify.minutesAgo", { count: minutes });
@@ -15,7 +15,7 @@ function relative(date: Date, t: Translate, locale: string): string {
   if (hours < 24) return hours === 1 ? t("notify.hourAgo") : t("notify.hoursAgo", { count: hours });
   const days = Math.round(hours / 24);
   if (days < 7) return days === 1 ? t("notify.dayAgo") : t("notify.daysAgo", { count: days });
-  return date.toLocaleDateString(dateLocale(locale));
+  return day(date);
 }
 
 export default async function NotificationsPage() {
@@ -26,6 +26,7 @@ export default async function NotificationsPage() {
   // Written in English when they were raised; read in the reader's language.
   const say = sayer(locale);
   const items = await myNotifications(session);
+  const dates = await pageDates();
 
   const unread = items.filter((item) => !item.readAt);
 
@@ -68,7 +69,7 @@ export default async function NotificationsPage() {
                     {say(item.subject)}
                   </p>
                   <span className="shrink-0 text-xs text-[var(--muted)]">
-                    {relative(item.createdAt, t, locale)}
+                    {relative(item.createdAt, t, (value) => dates.day(value, { short: true }))}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted)]">{say(item.body)}</p>

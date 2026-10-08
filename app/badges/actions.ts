@@ -100,6 +100,6 @@ export async function retireBadgeAction(
   revalidatePath("/badges");
   return said({
     notice:
-      "Retired. Nobody earns it from now on, and everybody who already holds it keeps it.",
+      "Retired. No one can earn it from now on, and everyone who already holds it keeps it.",
   });
 }

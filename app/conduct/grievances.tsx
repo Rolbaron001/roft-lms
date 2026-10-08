@@ -8,7 +8,7 @@ import {
   decideGrievanceAction,
   type ConductActionState,
 } from "./actions";
-import { useT } from "@/components/i18n";
+import { useDay, useT } from "@/components/i18n";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -44,6 +44,7 @@ export function Grievances({
   today: string;
 }) {
   const t = useT();
+  const { day } = useDay();
   const [ackState, ackAction] = useActionState<ConductActionState, FormData>(
     acknowledgeGrievanceAction,
     {},
@@ -82,7 +83,7 @@ export function Grievances({
                 {row.learnerName}
               </Link>
               <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                {t("grievance.lodged", { date: row.lodgedOn, status: row.status })}
+                {t("grievance.lodged", { date: day(row.lodgedOn), status: row.status })}
               </span>
             </p>
 

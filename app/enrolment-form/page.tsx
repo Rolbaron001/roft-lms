@@ -32,9 +32,8 @@ export default async function EnrolmentFormPage({
   const { learner: requested } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
-  const { t, dates } = await pageLocale();
-  const longDate = (value: Date) =>
-    value.toLocaleDateString(dates, { day: "numeric", month: "long", year: "numeric" });
+  const { t, day } = await pageLocale();
+  const longDate = (value: Date) => day(value);
 
   const learnerId = requested || session.userId;
 
@@ -111,7 +110,7 @@ export default async function EnrolmentFormPage({
                     · {row.cohortName}
                     {" · "}
                     {row.inductionOn
-                      ? t("enrolForm.induction", { date: row.inductionOn })
+                      ? t("enrolForm.induction", { date: day(row.inductionOn) })
                       : t("enrolForm.noInduction")}
                   </span>
                 </p>

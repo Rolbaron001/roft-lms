@@ -361,7 +361,7 @@ export function parseQualificationDocument(
   for (const outcome of result.exitLevelOutcomes) {
     if (outcome.criteria.length === 0) {
       result.notes.push(
-        `Exit Level Outcome ${outcome.number} has no associated assessment criteria. The EISA is set against these, so it is worth checking the document.`,
+        `Exit Level Outcome ${outcome.number} has no associated assessment criteria. The EISA is set against these, so please check the document.`,
       );
     }
   }

@@ -142,6 +142,6 @@ export async function setTenantStatusAction(
     notice:
       status === "active"
         ? "Reactivated. Their address works again."
-        : "Suspended. Nobody there can reach a login page now.",
+        : "Suspended. No one there can reach the sign-in page now.",
   });
 }

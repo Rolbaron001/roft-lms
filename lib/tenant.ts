@@ -34,6 +34,8 @@ export type TenantIdentity = {
   accentColour: string;
   /** The provider's own clock, as an IANA zone name. */
   timezone: string;
+  /** How dates are written (lib/date-format.ts). */
+  dateStyle: string;
   /** The language its people read the platform in unless they choose (D9). */
   defaultLocale: string;
   /** How this provider arranged their menu, or null for the built-in one. */
@@ -197,6 +199,7 @@ export async function resolveTenant(
           primaryColour: organisations.primaryColour,
           accentColour: organisations.accentColour,
           timezone: organisations.timezone,
+          dateStyle: organisations.dateStyle,
           defaultLocale: organisations.defaultLocale,
           navigation: organisations.navigation,
           terminology: organisations.terminology,

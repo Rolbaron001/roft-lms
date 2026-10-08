@@ -518,7 +518,7 @@ export async function returnFeedback(
   const comments = input.comments.trim();
   if (comments.length < 10) {
     throw new MarkingError(
-      "Say something the learner can use. Returning an empty comment looks, on the record, exactly like feedback that was given.",
+      "Please write feedback the learner can use. An empty comment would appear on the record as feedback given.",
       "invalid",
     );
   }
@@ -599,7 +599,7 @@ export async function commentOnSection(
   const comments = input.comments.trim();
   if (comments.length < 10) {
     throw new MarkingError(
-      "Say something the learner can use. Returning an empty comment looks, on the record, exactly like feedback that was given.",
+      "Please write feedback the learner can use. An empty comment would appear on the record as feedback given.",
       "invalid",
     );
   }

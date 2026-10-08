@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
-import { updateOwnBranding, setTenantTimeZone } from "@/lib/provisioning";
+import { updateOwnBranding, setTenantDateStyle, setTenantTimeZone } from "@/lib/provisioning";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -129,6 +129,24 @@ export async function updateClockAction(
   // the whole tree rather than guessing which pages show one.
   revalidatePath("/", "layout");
   return said({ notice: "Saved. Timetabled times now mean this clock." });
+}
+
+/** Saves how dates are written (lib/date-format.ts). */
+export async function updateDateStyleAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  try {
+    await setTenantDateStyle(session, String(formData.get("dateStyle") ?? ""));
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    if (error && typeof error === "object" && "issues" in error) {
+      return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
+    }
+    console.error(error);
+    return said({ error: "That could not be saved. Please try again." });
+  }
+  // Dates appear on nearly every page.
+  revalidatePath("/", "layout");
+  return said({ notice: "Saved. Dates are now written this way throughout." });
 }
 
 export type ExtensionState = { error?: string; notice?: string };

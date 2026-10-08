@@ -38,5 +38,5 @@ export async function withdrawCertificateAction(
   }
 
   revalidatePath(`/certificates/${id}`);
-  return said({ notice: "Withdrawn. Anybody checking the reference is now told so." });
+  return said({ notice: "Withdrawn. Anyone checking the reference is now told so." });
 }

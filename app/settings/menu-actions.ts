@@ -43,7 +43,7 @@ export async function saveMenuAction(
     if (error instanceof PermissionDeniedError) {
       return said({
         error:
-          "Only an administrator can rearrange the menu, because it is the same menu for everybody at this provider.",
+          "Only an administrator can rearrange the menu, because it is the same menu for everyone at this provider.",
       });
     }
     throw error;
@@ -64,7 +64,7 @@ export async function saveMenuAction(
     if (value.every((section) => section.items.length === 0)) {
       return said({
         error:
-          "That would leave every heading empty, which is a menu with nothing in it. Nothing changed.",
+          "That would leave every heading empty. Nothing was changed.",
       });
     }
   }
@@ -96,6 +96,6 @@ export async function saveMenuAction(
   return said({
     notice: reset
       ? "Back to the standard menu."
-      : "Saved. Everybody at this provider sees this arrangement.",
+      : "Saved. Everyone at this provider sees this arrangement.",
   });
 }
