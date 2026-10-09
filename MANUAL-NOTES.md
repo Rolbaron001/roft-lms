@@ -156,6 +156,24 @@ person going through it question by question.
   correct answer stops that paper being captured automatically, and it waits
   for a person.
 
+### 3.6 Marking guidance in the assessor guide (9 October 2026)
+
+- **Needed:** each written question's or task's guidance in the assessor guide
+  under a heading that names it, in the same part as the paper. Any of these
+  is read: `Question 3: ...`, `Question 3 (IAC0203): ...`, `Statement 6 [NEW]:
+  ...`, `Task 1 Model Answer: ...`, `Q1 Model Answer (...)`,
+  `SUB-SECTION A2.1: ...`, or, in a long question's rubric, a row beginning
+  `D1: ...` or `A2.1: ...`. The guidance is everything under the heading until
+  the next one.
+- **Numbered parts:** under a question that has its own heading and marks
+  (`Question C1: ... (20 Marks)`), numbered lines (`1. Draft the Job
+  Description... (10 Marks)`) are read as parts of that question, not as
+  questions of their own.
+- **Without it:** a written question with no guidance cannot be answered by
+  learners, and holds the qualification back on "Check and make live".
+- **After the guide is corrected:** upload it again and press Build on "Check
+  and make live"; papers nobody has changed by hand or sat are read again.
+
 ## 4. Verifying and making a qualification live
 
 - **What happens:** once a folder is read, the platform builds each study

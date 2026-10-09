@@ -324,6 +324,11 @@ export function parseWorkbook(text: string): ParsedPaper {
   // Inside a "Task 1:" of a practical workbook: its instructions and its
   // numbered prompts ("1. Workload Root Cause:") are part of the task.
   let inTask = false;
+  // The last "Question C1: … (20 Marks)" heading in this part, whose numbered
+  // parts ("1. Draft the Job Description… (10 Marks)") belong to it. Until 9
+  // October each part was read as a question of its own with no marks, and
+  // SU1's Section C came to 78 marks where the paper says 70 (job sheet D26).
+  let headedWithMarks: ParsedItem | null = null;
 
   const closeItem = () => {
     if (current && pending) current.items.push(pending);
@@ -418,6 +423,7 @@ export function parseWorkbook(text: string): ParsedPaper {
       closeItem();
       inStimulus = false;
       inTask = false;
+      headedWithMarks = null;
       const label = (heading[1] ?? heading[2] ?? heading[3]).trim();
       const rest = heading[4].trim();
       const marks = MARKS_IN_HEADING.exec(rest);
@@ -450,6 +456,7 @@ export function parseWorkbook(text: string): ParsedPaper {
     if (subsection) {
       closeItem();
       inStimulus = false;
+      headedWithMarks = null;
       const marks = MARKS_IN_HEADING.exec(subsection[2]);
       pending = {
         number: subsection[1],
@@ -473,6 +480,15 @@ export function parseWorkbook(text: string): ParsedPaper {
     }
 
     const numbered = Q_NUMBERED.exec(line) ?? NUMBERED.exec(line);
+    // A numbered part of a headed question that carries its own marks is
+    // more of that question: the learner answers it under the same heading,
+    // and the question's marks already cover it.
+    if (numbered && headedWithMarks && !inStimulus) {
+      closeItem();
+      headedWithMarks.stem = `${headedWithMarks.stem}\n${line}`.trim();
+      headedWithMarks.criterionCodes = [...new Set([...headedWithMarks.criterionCodes, ...criteriaOf(line)])];
+      continue;
+    }
     // "1. Workload & Systems Alignment Root Cause:" under a task is a heading
     // the learner writes beneath, part of that task.
     if (numbered && inTask && /[::]\s*$/.test(line)) {
@@ -508,6 +524,7 @@ export function parseWorkbook(text: string): ParsedPaper {
       closeItem();
       inStimulus = false;
       inTask = true;
+      headedWithMarks = null;
       const rest = task[2];
       const marks = MARKS_IN_HEADING.exec(rest);
 
@@ -572,6 +589,7 @@ export function parseWorkbook(text: string): ParsedPaper {
         markedBy: "assessor",
         headed: true,
       };
+      headedWithMarks = marks ? pending : null;
       continue;
     }
 
@@ -585,6 +603,7 @@ export function parseWorkbook(text: string): ParsedPaper {
     if (statement) {
       closeItem();
       inStimulus = false;
+      headedWithMarks = null;
       // "Statement 1: 1. …" is numbered twice in some papers.
       const stem = statement[2].replace(/^[0-9]+[.]\s*/, "").trim();
       // A statement standing on its own, with a space to write in underneath,
@@ -871,34 +890,71 @@ function byTitleOrLabel(table: Record<string, number> | undefined, title: string
  * "Task A: … [IAC0304]", "MEMORANDUM QUESTION C1: …".
  */
 const GUIDE_ITEM =
-  /^(MEMORANDUM\s+)?(?:(Question)|(?:Practical\s+)?(Task))\s+([A-Z]?\d+(?:\.\d+)*|[A-Z])\b(?:\s+Model\s+Answer)?\s*[::]/i;
-/** Where one question's guidance ends, short of the next question. */
-const GUIDE_BLOCK_ENDS = /^(?:SECTION|PART|Activity|MEMORANDUM\b|.*\b(?:RUBRIC|GRADING GRID|EVALUATION SUMMARY)\b)/i;
+  /^(MEMORANDUM\s+)?(?:(Question|Statement|SUB-?SECTION)|(?:Practical\s+)?(Task))\s+([A-Z]?\d+(?:\.\d+)*|[A-Z])\b(?:\s+Model\s+Answer)?(?:\s*\([^)]*\)|\s*\[[^\]]*\])*\s*[::]/i;
+/**
+ * The other ways Curiosa's guides head an answer (job sheet D26, 9 October
+ * 2026, from the 121151 files on live): "Q1 Model Answer (TNA & SETA Grant
+ * Recovery)" in a summative's Section C, with no colon at all.
+ */
+const GUIDE_Q_MODEL = /^Q(\d+(?:\.\d+)*)\s+Model\s+Answer\b/i;
+/**
+ * A row of a long question's rubric: "D1: L&D Strategy & WSP/ATR Compliance",
+ * "A2.1: Disciplinary & Grievance SOP". Only read inside a rubric, where a
+ * lettered label at the start of a line can only be a part of the question.
+ */
+const GUIDE_RUBRIC_ROW = /^([A-Z]\d+(?:\.\d+)*)\s*[::]\s*\S/;
+/**
+ * Where one question's guidance ends, short of the next question. A rubric
+ * heading ends it, but not "■ MODEL ANSWER & RUBRIC - PRACTICAL TASK 1",
+ * which is the first line of a task's own answer: until 9 October that line
+ * ended every practical task's guidance before it began.
+ */
+const GUIDE_BLOCK_ENDS = /^(?:SECTION|PART|Activity|MEMORANDUM\b|(?!■).*\b(?:RUBRIC|GRADING GRID|EVALUATION SUMMARY)\b)/i;
+
+/**
+ * The question or task a guide line heads, as "question 3" or "task 1", or
+ * null. `inRubric` is whether the line falls inside a long question's rubric.
+ */
+function guideHeading(line: string, inRubric: boolean): { key: string; own: boolean } | null {
+  const heading = GUIDE_ITEM.exec(line);
+  if (heading) return { key: `${heading[3] ? "task" : "question"} ${heading[4].toUpperCase()}`, own: Boolean(heading[1]) };
+  const model = GUIDE_Q_MODEL.exec(line);
+  if (model) return { key: `question ${model[1]}`, own: true };
+  const row = inRubric ? GUIDE_RUBRIC_ROW.exec(line) : null;
+  if (row) return { key: `question ${row[1].toUpperCase()}`, own: true };
+  return null;
+}
 
 /** Model answers per written question or task. See ParsedMemo.guides. */
 function guideBlocks(lines: string[]): NonNullable<ParsedMemo["guides"]> {
   const guides: NonNullable<ParsedMemo["guides"]> = {};
   let part: string | null = null;
+  let inRubric = false;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    const heading = GUIDE_ITEM.exec(line);
+    const heading = guideHeading(line, inRubric);
     if (!heading) {
       // "MEMORANDUM - SECTION C" names the paper's part; "PART 2: ASSESSOR
       // MEMORANDUM" is the guide's own division and is overridden by it.
-      if (/^(?:MEMORANDUM\s*[-–:]\s*)?(?:SECTION|PART|Activity)\b/i.test(line)) part = paperPartLabel(line) ?? part;
+      if (/^(?:MEMORANDUM\s*[-–:]\s*)?(?:SECTION|PART|Activity)\b/i.test(line)) {
+        part = paperPartLabel(line) ?? part;
+        inRubric = /\b(?:RUBRIC|LONG QUESTION)\b/i.test(line);
+      }
       continue;
     }
-    const key = `${heading[3] ? "task" : "question"} ${heading[4].toUpperCase()}`;
     const body: string[] = [];
     for (let ahead = index + 1; ahead < lines.length && body.length < 80; ahead += 1) {
       const next = lines[ahead];
-      if (GUIDE_ITEM.test(next) || GUIDE_BLOCK_ENDS.test(next)) break;
+      if (guideHeading(next, inRubric) || GUIDE_BLOCK_ENDS.test(next)) break;
       if (next) body.push(next);
     }
     // The memorandum's own copy wins over a heading that merely repeats the
     // learner's paper, which the summatives print first (SU1 SA1, Part 1).
-    if (body.length > 0 && (heading[1] || !guides[key])) {
-      guides[key] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part };
+    // Keyed by the part as well: a workbook's Part C "Statement 1" and its
+    // Part D "Question 1" are different answers (job sheet D26).
+    const stored = `${heading.key}@${part ?? ""}`;
+    if (body.length > 0 && (heading.own || !guides[stored])) {
+      guides[stored] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part };
     }
   }
   return guides;
@@ -1105,13 +1161,14 @@ export function mergeMemorandum(
     const number = item.number.toUpperCase();
     const ours = paperPartLabel(sectionTitle);
     const samePart = (part: string | null) => !part || !ours || part === ours;
-    const find = (kind: "task" | "question") =>
-      Object.entries(guides).find(
-        ([key, guide]) =>
-          key.startsWith(`${kind} `) &&
-          (key === `${kind} ${number}` || key.endsWith(`.${number}`)) &&
-          samePart(guide.part),
-      )?.[1];
+    const find = (kind: "task" | "question") => {
+      const candidates = Object.entries(guides).filter(([stored, guide]) => {
+        const key = stored.split("@")[0];
+        return key.startsWith(`${kind} `) && (key === `${kind} ${number}` || key.endsWith(`.${number}`)) && samePart(guide.part);
+      });
+      // The answer under this very part first, then one the guide did not place.
+      return (candidates.find(([, guide]) => guide.part && guide.part === ours) ?? candidates[0])?.[1];
+    };
     // A task first from a task, a question from a question; the other only
     // where the guide calls it something else and nothing else matches.
     return item.task ? (find("task") ?? find("question")) : (find("question") ?? find("task"));
