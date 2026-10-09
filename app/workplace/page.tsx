@@ -66,7 +66,8 @@ export default async function WorkplacePage() {
       {logbooks.length === 0 ? (
         <Card>
           <p className="text-sm text-[var(--muted)]">
-            {t(canManage ? "work.noneManage" : "work.none", {
+            {/* Said to the reader in their own terms (job sheet D21). */}
+            {t(canManage ? "work.noneManage" : isCoach ? "work.noneCoach" : session.permissions.includes("enrolment:read_all") ? "work.none" : "work.noneLearner", {
               records: words.lowerMany("workplaceRecord"),
             })}
           </p>

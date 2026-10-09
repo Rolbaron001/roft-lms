@@ -348,6 +348,9 @@ export const af: Catalogue = {
     "Nog geen {records} nie. Stel een hierbo op: 'n ooreenkoms wat die leerder, die werkgewer en die afrigter noem, en dan een vir elke werkservaringsmodule.",
   "work.none":
     "Nog geen {records} nie. 'n Administrateur maak een oop sodra 'n werkplekooreenkoms bestaan wat die leerder, die werkgewer en die afrigter noem.",
+  "work.noneLearner":
+    "Nog geen {records} nie. Joune word oopgemaak sodra jou plasing met jou werkgewer en jou werkplekafrigter ooreengekom is.",
+  "work.noneCoach": "Nog geen {records} nie. Hulle verskyn hier sodra 'n leerder by jou geplaas word.",
   "work.module": "Module",
   "work.learner": "Leerder",
   "work.employer": "Werkgewer",

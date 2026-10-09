@@ -3891,6 +3891,7 @@ export const staff = {
   "records.intro":
     "The Quality Management System and its policies, accreditation letters, contracts, and statutory documents like the PAIA manual: everything the provider holds that does not belong to one learner or one qualification. Importing a qualification folder files its QMS policies here automatically.",
   "records.introManage": "It also shows what has reached the end of its retention period.",
+  "records.introReader": "Policies and documents from {provider}, to read or download.",
   "records.expiring": "{count} expiring",
   "records.expiringNote": "Documents such as a tax clearance are easily overlooked until they are needed.",
   "records.expired": "expired {date}",
@@ -4323,6 +4324,8 @@ export const staff = {
   "verify.unitDraftOne": "Draft, 1 step",
   "verify.openGuide": "Open the assessor guide",
   "viewAs.start": "See the platform as {person}",
+  "viewAs.strip.title": "See the platform as …",
+  "viewAs.strip.intro": "Each button shows the platform exactly as one of your people in that role sees it. Nothing can be changed while you look; Stop viewing at the top returns you to your own.",
   "material.heading": "Learning material",
   "material.intro": "Videos, diagrams, recordings and other files learners view on a study unit's page or download to use without a signal. Each is kept once here and can be used by any number of study units. Learners never see this page; they meet each item on their study unit, once their cohort has released it.",
   "material.addTitle": "Add material",

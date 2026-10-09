@@ -46,7 +46,7 @@ async function myMailbox(session: AuthenticatedSession) {
 
   if (!me?.mailboxAddress) {
     throw new MailboxError(
-      "You do not have a mailbox on the platform yet. An administrator sets one up on your People record.",
+      "You do not have a mailbox on the platform yet. Your administrator can set one up for you.",
       "no_mailbox",
     );
   }

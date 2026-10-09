@@ -61,7 +61,9 @@ export const NAV: NavSection[] = [
   {
     label: "Learning",
     items: [
-      { href: "/courses", label: "Courses", term: "course", permission: "course:read" },
+      // The authoring list, drafts and all: staff only. A learner's courses are
+      // on their own home page (job sheet D21, 9 October 2026).
+      { href: "/courses", label: "Courses", term: "course", anyPermission: ["course:author", "enrolment:read_all"] },
       {
         href: "/paths",
         label: "Programmes",

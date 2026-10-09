@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { listCourses } from "@/lib/authoring";
 import { AppShell, StatusBadge } from "@/components/app-shell";
@@ -11,6 +12,9 @@ export default async function CoursesPage() {
   const { t, locale } = await pageLocale();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
   const session = await requirePermission("course:read");
+  // The authoring list is for staff. A learner, or a line manager, has their
+  // own courses on their home page (job sheet D21).
+  if (!session.permissions.includes("course:author") && !session.permissions.includes("enrolment:read_all")) redirect("/");
   const courses = await listCourses(session);
 
   const canAuthor = session.permissions.includes("course:author");

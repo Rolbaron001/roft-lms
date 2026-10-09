@@ -1,7 +1,7 @@
 import { pageLocale, requirePermission, requireTenant } from "@/lib/request";
 import { maybe } from "@/lib/i18n";
 import { vocabulary } from "@/lib/terms";
-import { definedBadges, defaultBadge } from "@/lib/badges";
+import { definedBadges, defaultBadge, learnerBadges } from "@/lib/badges";
 import { listCourses, listQualifications } from "@/lib/authoring";
 import { listLearningPaths } from "@/lib/learning-paths";
 import { AppShell, Card } from "@/components/app-shell";
@@ -26,10 +26,63 @@ import { RetireBadge } from "./retire";
 export default async function BadgesPage() {
   const tenant = await requireTenant();
   const session = await requirePermission("course:read");
-  const { t, locale } = await pageLocale();
+  const { t, locale, day } = await pageLocale();
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
 
   const canAuthor = session.permissions.includes("course:author");
+
+  // A learner's own page: what they have earned and what they can earn,
+  // written for them (job sheet D21, Heidi, 8 October 2026: the designer's
+  // page "is not right for a learner to see").
+  if (!canAuthor && !session.permissions.includes("enrolment:read_all")) {
+    const [earned, all] = await Promise.all([learnerBadges(session, session.userId), definedBadges(session)]);
+    const available = all.filter((badge) => badge.active && !earned.some((held) => held.name === badge.name));
+    return (
+      <AppShell tenant={tenant} session={session}>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold">{t("badges.mine.title")}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("badges.mine.intro")}</p>
+        </div>
+        <div className="space-y-6">
+          <Card title={t("badges.mine.earned")}>
+            {earned.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">{t("badges.mine.none")}</p>
+            ) : (
+              <ul className="flex flex-wrap gap-3">
+                {earned.map((badge) => (
+                  <li key={badge.id} className="rounded-lg border border-[var(--border)] px-4 py-3">
+                    <p className="text-sm font-medium">
+                      <span className="mr-2" aria-hidden>{badge.glyph}</span>
+                      {badge.name}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{day(badge.earnedOn)} · {badge.reference}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          {available.length > 0 ? (
+            <Card title={t("badges.mine.toEarn")}>
+              <ul className="space-y-3">
+                {available.map((badge) => (
+                  <li key={badge.id} className="flex items-center gap-4">
+                    <BadgeMedal glyph={badge.glyph} shape={badge.shape as BadgeShape} background={badge.background} ink={badge.ink} size={40} title={badge.name} />
+                    <div>
+                      <p className="text-sm font-medium">{badge.name}</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {badge.qualificationTitle ?? badge.pathTitle ?? badge.courseTitle ??
+                          (badge.moduleTitle ? `${badge.moduleCode ?? ""} ${badge.moduleTitle}`.trim() : t("badges.mine.anything"))}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+        </div>
+      </AppShell>
+    );
+  }
 
   const [defined, fallback, courses, paths, qualifications] = await Promise.all([
     definedBadges(session),

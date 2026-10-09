@@ -16,6 +16,7 @@ import { PersonEditor } from "./person-editor";
 import { PageNav } from "@/components/page-nav";
 import { mayViewAs } from "@/lib/view-as";
 import { startViewAsAction } from "../view-as-actions";
+import { EyeIcon } from "@/components/eye-icon";
 import { EnrolmentDocuments } from "./documents";
 import { Appeals } from "./appeals";
 import { Support } from "./support";
@@ -178,7 +179,14 @@ export default async function PersonPage({
             {mayViewAs(session) && person.id !== session.userId && person.status === "active" ? (
               <form action={startViewAsAction}>
                 <input type="hidden" name="userId" value={person.id} />
-                <button type="submit" className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--brand-accent)]/10">
+                {/* Prominent on purpose (job sheet D21, Roland, 8 October:
+                    the View-as buttons "don't really stand out enough"). */}
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                  style={{ background: "var(--brand-primary)" }}
+                >
+                  <EyeIcon />
                   {t("viewAs.start", { person: person.firstName })}
                 </button>
               </form>

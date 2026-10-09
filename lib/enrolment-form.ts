@@ -188,7 +188,8 @@ export function outstandingFor(profile: {
   need(
     profile.provinceCode,
     "Province of work",
-    "The province the learner works in, which is not always where they live.",
+    // Read by the learner and by staff alike (job sheet D21), so said for both.
+    "The province of the workplace, which is not always the province of home.",
   );
   need(
     profile.statssaAreaCode,
@@ -213,14 +214,14 @@ export function outstandingFor(profile: {
   if (!learner.consentGivenAt) {
     missing.push({
       field: "POPIA agreement",
-      why: "The return asks whether the learner agreed, and on what date.",
+      why: "The return asks whether consent was given for these details to be used, and on what date.",
     });
   }
 
   if (!profile.confirmedAt) {
     missing.push({
       field: "Confirmation",
-      why: "These details have not been confirmed. A monitor asks for the form as evidence, and an unconfirmed form carries little weight.",
+      why: "These details have not yet been confirmed as correct. The confirmed form is kept as the record of enrolment.",
     });
   }
 

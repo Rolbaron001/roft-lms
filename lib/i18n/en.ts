@@ -480,6 +480,15 @@ export const en = {
     "No {records} yet. Set one up above: an agreement naming the learner, the employer and the coach, then one for each work experience module.",
   "work.none":
     "No {records} yet. An administrator opens one once a workplace agreement is in place naming the learner, the employer and the coach.",
+  "badges.mine.title": "Your badges",
+  "badges.mine.intro": "A badge marks the day you finish a piece of work, long before a certificate arrives. Each one has its own reference, so anyone you show it to can check it.",
+  "badges.mine.earned": "Earned",
+  "badges.mine.none": "None yet. Your first arrives the day you finish a course or study unit that carries one.",
+  "badges.mine.toEarn": "Still to earn",
+  "badges.mine.anything": "Finishing any course",
+  "work.noneLearner":
+    "No {records} yet. Yours is opened once your placement is agreed with your employer and your workplace coach.",
+  "work.noneCoach": "No {records} yet. They appear here once a learner is placed with you.",
   "work.module": "Module",
   "work.learner": "Learner",
   "work.employer": "Employer",

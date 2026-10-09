@@ -473,6 +473,17 @@ person going through it question by question.
 - **Platform owner:** every client organisation with its usage, any without an
   administrator, and totals across the platform.
 
+## 6k. Seeing the platform as someone else (9 October 2026)
+
+- **People, "See the platform as …":** one button per role, each opening the
+  platform exactly as the first active person in that role sees it. A
+  person's own page has the same button for that person.
+- **Nothing can be changed while looking.** "Stop viewing" at the top returns
+  to the administrator's own view; it also ends on its own after two hours.
+  Every look is recorded in the audit trail.
+- **What it depends on:** at least one active person in the role; a role
+  with nobody in it has no button.
+
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 
 - **The bar at the top of every cohort page** names the steps in order: Set

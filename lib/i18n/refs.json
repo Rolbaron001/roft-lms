@@ -5511,5 +5511,20 @@
   "rd.l.join": 5510,
   "rd.l.results": 5511,
   "rd.l.resultsNone": 5512,
-  "rd.l.feedbackFrom": 5513
+  "rd.l.feedbackFrom": 5513,
+  "records.introReader": 5514,
+  "viewAs.strip.title": 5515,
+  "viewAs.strip.intro": 5516,
+  "badges.mine.title": 5517,
+  "badges.mine.intro": 5518,
+  "badges.mine.earned": 5519,
+  "badges.mine.none": 5520,
+  "badges.mine.toEarn": 5521,
+  "badges.mine.anything": 5522,
+  "work.noneLearner": 5523,
+  "work.noneCoach": 5524,
+  "said.enrolment-form.28e7101c": 5525,
+  "said.enrolment-form.6657deba": 5526,
+  "said.enrolment-form.ba679d02": 5527,
+  "said.mailbox.78f542c4": 5528
 }

@@ -55,7 +55,9 @@ export default async function RecordsPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{t("records.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          {t("records.intro")}
+          {/* A learner reads the policies; the account of how the library
+              is kept is for staff (job sheet D21). */}
+          {canReadAll ? t("records.intro") : t("records.introReader", { provider: tenant.displayName })}
           {canManage ? ` ${t("records.introManage")}` : ""}
         </p>
       </div>
@@ -87,7 +89,7 @@ export default async function RecordsPage() {
         </div>
       ) : null}
 
-      <Card section={{ id: "library", label: t("records.library") }} title={t("records.library")} description={t("records.libraryNote")}>
+      <Card section={{ id: "library", label: t("records.library") }} title={t("records.library")} description={canReadAll ? t("records.libraryNote") : undefined}>
         {documents.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
             {t("records.nothing")}

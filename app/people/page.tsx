@@ -7,6 +7,9 @@ import { InviteForm } from "./invite-form";
 import { RosterForm } from "./roster-form";
 import { extensionOffered, extensionState } from "@/lib/extensions";
 import { Card as UiCard } from "@/components/ui";
+import { mayViewAs } from "@/lib/view-as";
+import { startViewAsAction } from "./view-as-actions";
+import { EyeIcon } from "@/components/eye-icon";
 
 export default async function PeoplePage({
   searchParams,
@@ -37,6 +40,15 @@ export default async function PeoplePage({
   );
   const awaiting = people.filter((person) => person.awaitingEnrolment);
 
+  // The first active person in each role, for the "See the platform as" strip.
+  const ROLE_ORDER = ["learner", "instructor", "assessor", "moderator", "workplace_coach", "line_manager", "skills_development_facilitator", "external_verifier"] as const;
+  const viewAsByRole = mayViewAs(session)
+    ? ROLE_ORDER.flatMap((role) => {
+        const person = people.find((one) => one.status === "active" && one.id !== session.userId && one.roles.includes(role));
+        return person ? [{ role, person }] : [];
+      })
+    : [];
+
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
@@ -66,6 +78,34 @@ export default async function PeoplePage({
           </span>{" "}
           {t("people.missingWhy")}
         </p>
+      ) : null}
+
+      {/* One button per role, each showing the platform as somebody in it
+          sees it (job sheet D21): the quickest way to check, or to show,
+          what each role is given. */}
+      {viewAsByRole.length > 0 ? (
+        <section className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <EyeIcon />
+            {t("viewAs.strip.title")}
+          </h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">{t("viewAs.strip.intro")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {viewAsByRole.map(({ role, person }) => (
+              <form key={role} action={startViewAsAction}>
+                <input type="hidden" name="userId" value={person.id} />
+                <button
+                  type="submit"
+                  className="flex flex-col items-start rounded-md px-3 py-2 text-left text-white shadow-sm"
+                  style={{ background: "var(--brand-primary)" }}
+                >
+                  <span className="text-sm font-semibold">{maybe(t, `role.${role}`) ?? role}</span>
+                  <span className="text-xs opacity-80">{person.firstName} {person.lastName}</span>
+                </button>
+              </form>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <form method="get" className="mb-4 flex gap-2">
