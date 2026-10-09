@@ -18,6 +18,8 @@ import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
 import { DateForm } from "./date-form";
 import { LeisaTargetForm } from "./leisa-target-form";
+import { FeedbackQuestionsForm } from "./feedback-questions-form";
+import { activeQuestionnaire } from "@/lib/feedback";
 import { DEFAULT_DATE_STYLE, isDateStyle } from "@/lib/date-format";
 import { ProviderLanguageForm } from "./language-form";
 import { ExtensionForm } from "./extension-form";
@@ -97,6 +99,7 @@ export default async function SettingsPage({
   const convention = canManageSettings
     ? await namingConventionFor(session)
     : null;
+  const questionnaire = canManageSettings ? await activeQuestionnaire(session) : null;
   const sso = canManageSettings ? await ssoSettingsFor(session) : [];
   const ssoCallbacks = await Promise.all(SSO_KINDS.map((kind) => callbackAddress(kind)));
   const moduleCodes = canManageSettings
@@ -221,6 +224,19 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <LeisaTargetForm current={tenant.leisaTargetHours} />
+        </div>
+      ) : null}
+
+      {canManageSettings && questionnaire ? (
+        <div
+          id="feedback"
+          data-settings-section={t("settings.section.feedback")}
+          className="mt-6 scroll-mt-24"
+        >
+          <FeedbackQuestionsForm
+            questions={questionnaire.questions.map((question) => ({ prompt: question.prompt, kind: question.kind, required: question.required }))}
+            scale={questionnaire.questions.find((question) => question.kind === "rating" && question.scale)?.scale ?? []}
+          />
         </div>
       ) : null}
 

@@ -322,6 +322,8 @@ export async function cohortFileView(session: AuthenticatedSession, cohortId: st
 
     const lectures = sessions.filter((row) => row.kind === "lecture" && row.status !== "cancelled");
     const plans = files.filter((file) => file.kind === "facilitation_plan");
+    // A session whose plan has been written on the platform (job sheet D20).
+    const written = (row: (typeof sessions)[number]) => Boolean(row.agenda || row.proceedings);
     const inductions = sessions.filter((row) => row.kind === "induction");
     const qualificationHref = qualificationId ? `/qualifications/${qualificationId}` : undefined;
 
@@ -374,13 +376,22 @@ export async function cohortFileView(session: AuthenticatedSession, cohortId: st
       },
       {
         key: "facilitationPlans",
-        count: plans.length,
-        items: fileItems("facilitationPlans").map((item) => {
-          const plan = plans.find((one) => one.id === item.fileId);
-          const of = sessions.find((row) => row.id === plan?.sessionId);
-          return of ? { ...item, note: sessionLabel(of) } : item;
-        }),
-        missing: lectures.filter((row) => !plans.some((plan) => plan.sessionId === row.id)).map((row) => `plan:${sessionLabel(row)}`),
+        count: plans.length + lectures.filter((row) => written(row)).length,
+        items: [
+          // The plan written on the platform, from the session and its register.
+          ...lectures
+            .filter((row) => written(row))
+            .map((row) => ({ label: sessionLabel(row), href: `${base}/sessions/${row.id}/plan`, note: "generated" })),
+          ...fileItems("facilitationPlans").map((item) => {
+            const plan = plans.find((one) => one.id === item.fileId);
+            const of = sessions.find((row) => row.id === plan?.sessionId);
+            return of ? { ...item, note: sessionLabel(of) } : item;
+          }),
+        ],
+        // A lecture held with neither a plan written here nor one filed.
+        missing: lectures
+          .filter((row) => row.scheduledDate <= today && !written(row) && !plans.some((plan) => plan.sessionId === row.id))
+          .map((row) => `plan:${sessionLabel(row)}`),
       },
       {
         key: "learnerEvidence",

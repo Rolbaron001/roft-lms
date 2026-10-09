@@ -11,8 +11,10 @@ import { RegisterForm } from "./register-form";
 import { Sitting } from "./sitting";
 import { SetUpSitting, SittingStatus } from "./set-up-sitting";
 import { withTenant } from "@/db/client";
+import { PlanNotes } from "./plan-notes";
 import {
   assessments,
+  cohortSessions,
   cohorts,
   invigilatedSittings,
   userRoles,
@@ -62,6 +64,13 @@ export default async function SessionRegisterPage({
       .where(eq(invigilatedSittings.sessionId, sessionId));
     return row?.id ?? null;
   });
+
+  const [notes] = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ agenda: cohortSessions.agenda, resources: cohortSessions.resources, proceedings: cohortSessions.proceedings })
+      .from(cohortSessions)
+      .where(eq(cohortSessions.id, sessionId)),
+  );
 
   const supervised = sittingId
     ? await sittingRegister(session, sittingId)
@@ -210,6 +219,14 @@ export default async function SessionRegisterPage({
       <div className="mt-6">
         <Card title={t("register.title")} description={t("register.intro")}>
           <RegisterForm cohortId={id} sessionId={sessionId} lines={register.lines} />
+        </Card>
+      </div>
+
+      {/* The facilitation plan (job sheet D20): the facilitator writes the
+          agenda, resources and proceedings; the rest comes from the record. */}
+      <div className="mt-6">
+        <Card title={t("plan.title")} description={t("plan.intro")}>
+          <PlanNotes cohortId={id} sessionId={sessionId} agenda={notes?.agenda ?? null} resources={notes?.resources ?? null} proceedings={notes?.proceedings ?? null} />
         </Card>
       </div>
     </main>

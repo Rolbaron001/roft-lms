@@ -47,7 +47,12 @@ export function AnswerForm({
 
           {question.kind === "rating" ? (
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-              {SCALE.map((point) => (
+              {/* The provider's own points where it has set them (job sheet
+                  D20), else the platform's five. */}
+              {(question.scale && question.scale.length >= 2
+                ? question.scale.map((label, index) => ({ point: index + 1, label }))
+                : SCALE.map((point) => ({ point, label: t(`feedbackForm.scale.${point}`) }))
+              ).map(({ point, label }) => (
                 <label
                   key={point}
                   className="flex items-center gap-2 text-sm"
@@ -58,7 +63,7 @@ export function AnswerForm({
                     value={point}
                     required={question.required}
                   />
-                  {t(`feedbackForm.scale.${point}`)}
+                  {label}
                 </label>
               ))}
             </div>

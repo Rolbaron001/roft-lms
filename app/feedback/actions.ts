@@ -6,6 +6,7 @@ import { requirePermission, requireSession, said } from "@/lib/request";
 import {
   FeedbackError,
   activeQuestionnaire,
+  feedbackOwedBy,
   requestFeedback,
   submitFeedback,
 } from "@/lib/feedback";
@@ -61,10 +62,13 @@ export async function submitFeedbackAction(
   const requestId = field(formData, "requestId");
 
   // The questionnaire decides what is collected, so the form is read against
-  // it rather than against whatever the browser chose to send.
-  const questionnaire = await activeQuestionnaire(session);
+  // it rather than against whatever the browser chose to send. The one this
+  // request asked, not today's: a provider may have changed its questions
+  // since the request went out (job sheet D20, 9 October 2026).
+  const asked = (await feedbackOwedBy(session, session.userId)).find((row) => row.id === requestId);
+  const questions = asked?.questions ?? (await activeQuestionnaire(session)).questions;
   const answers: Record<string, string | number> = {};
-  for (const question of questionnaire.questions) {
+  for (const question of questions) {
     const raw = field(formData, question.key);
     if (raw === "") continue;
     answers[question.key] = question.kind === "rating" ? Number(raw) : raw;

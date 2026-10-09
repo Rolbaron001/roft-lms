@@ -473,6 +473,28 @@ person going through it question by question.
 - **Platform owner:** every client organisation with its usage, any without an
   administrator, and totals across the platform.
 
+## 6l. Facilitation plans and feedback questions (9 October 2026)
+
+- **Facilitation plan:** on each class session's page, under the register,
+  the facilitator writes the agenda, the resources and the proceedings. "Open
+  the plan" prints it, or saves it as PDF, with the rest filled in from the
+  record: the programme, cohort, date and time, facilitator, venue or meeting
+  link, study unit and its modules, the workbooks handed out or in, learners
+  in attendance, apologies (from the register's Excused marks and their
+  reasons), and the next lecture.
+- **In the cohort file:** each lecture with a plan written on the platform is
+  listed under Facilitation Plans; a lecture held with neither a written nor a
+  filed plan is listed as missing.
+- **What it depends on:** the register taken; the session's study unit and
+  workbooks set on the class session; the facilitator named on the session or
+  the cohort.
+- **Programme feedback questions:** Settings, "Programme feedback". The
+  provider's own questions, each answered by a rating or in writing, and its
+  own rating scale, lowest point first (for example four points from
+  "Strongly disagree" to "Strongly agree"). Saving makes a new version: forms
+  already sent keep the questions they asked, and a question whose wording is
+  unchanged keeps its answers together across versions.
+
 ## 6k. Seeing the platform as someone else (9 October 2026)
 
 - **People, "See the platform as …":** one button per role, each opening the

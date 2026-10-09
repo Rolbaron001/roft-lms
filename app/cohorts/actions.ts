@@ -40,6 +40,7 @@ import {
   recordIncident,
 } from "@/lib/invigilation";
 import { PermissionDeniedError } from "@/lib/rbac";
+import { FacilitationPlanError, savePlanNotes } from "@/lib/facilitation-plan";
 
 export type CohortActionState = { error?: string; done?: string };
 
@@ -64,6 +65,7 @@ async function run(
       error instanceof SchedulingError ||
       error instanceof TrackerError ||
       error instanceof InvigilationError ||
+      error instanceof FacilitationPlanError ||
       error instanceof PermissionDeniedError
     ) {
       return { error: error.message };
@@ -452,6 +454,21 @@ export async function takeRegisterAction(
     () => takeRegister(session, sessionId, marks),
     `Register taken: ${marks.length} marked.`,
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
+  ));
+}
+
+/** The facilitator's parts of a session's facilitation plan (job sheet D20). */
+export async function savePlanNotesAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("attendance:record");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+  return said(run(
+    () => savePlanNotes(session, { sessionId, agenda: field(formData, "agenda"), resources: field(formData, "resources"), proceedings: field(formData, "proceedings") }),
+    "Facilitation plan saved.",
+    [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}/sessions/${sessionId}/plan`, `/cohorts/${cohortId}/file`],
   ));
 }
 

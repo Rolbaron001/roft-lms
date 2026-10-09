@@ -60,7 +60,87 @@ export type FeedbackQuestion = {
   prompt: string;
   kind: "rating" | "text";
   required: boolean;
+  /** A rating's points, lowest first, in the provider's words. Five by default. */
+  scale?: string[];
 };
+
+/** How many points a rating question has. */
+export function pointsOf(question: { scale?: string[] }): number {
+  return question.scale && question.scale.length >= 2 ? question.scale.length : 5;
+}
+
+const questionnaireInput = z.object({
+  questions: z
+    .array(
+      z.object({
+        prompt: z.string().trim().min(3, "Each question needs some words.").max(300),
+        kind: z.enum(["rating", "text"]),
+        required: z.boolean(),
+      }),
+    )
+    .min(1, "Give at least one question.")
+    .max(20, "Twenty questions at most."),
+  /** Lowest first. Empty keeps the platform's five points. */
+  scale: z.array(z.string().trim().min(1).max(60)).max(10, "Ten points at most."),
+});
+
+/**
+ * A key that belongs to its wording: the same question keeps its key from one
+ * version to the next, so its answers can be read together, and a different
+ * question can never take over an old one's (the rule on the table).
+ */
+function questionKey(prompt: string, kind: string): string {
+  const slug = prompt.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
+  let hash = 0;
+  for (const char of `${kind}:${prompt.trim().toLowerCase()}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return `${slug}_${hash.toString(36)}`;
+}
+
+/**
+ * The provider's own questions and rating scale (job sheet D20, 8 October
+ * 2026: Curiosa's form rates satisfaction and relevance on four-point scales,
+ * "so the questions and scale become the provider's own to set").
+ *
+ * Saved as a new version rather than over the old one: a request already sent
+ * keeps the questions it asked, and its answers keep meaning what they meant.
+ */
+export async function saveQuestionnaire(session: AuthenticatedSession, input: z.input<typeof questionnaireInput>) {
+  assertSessionCan(session, "tenant:manage_settings");
+  const parsed = questionnaireInput.parse(input);
+  if (parsed.scale.length === 1) {
+    throw new FeedbackError("A scale needs at least two points, or none to keep the platform's five.", "invalid");
+  }
+  const scale = parsed.scale.length >= 2 ? parsed.scale : undefined;
+  const questions: FeedbackQuestion[] = parsed.questions.map((question) => ({
+    key: questionKey(question.prompt, question.kind),
+    prompt: question.prompt,
+    kind: question.kind,
+    required: question.required,
+    ...(question.kind === "rating" && scale ? { scale } : {}),
+  }));
+  if (new Set(questions.map((question) => question.key)).size !== questions.length) {
+    throw new FeedbackError("The same question is there twice.", "invalid");
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx.select({ id: feedbackQuestionnaires.id }).from(feedbackQuestionnaires).where(eq(feedbackQuestionnaires.active, true));
+    await tx.update(feedbackQuestionnaires).set({ active: false }).where(eq(feedbackQuestionnaires.active, true));
+    const [created] = await tx
+      .insert(feedbackQuestionnaires)
+      .values({ organisationId: session.organisationId, name: "Programme feedback", questions, active: true })
+      .returning();
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "feedback.questionnaire_saved",
+      entityType: "feedback_questionnaire",
+      entityId: created.id,
+      before: before ? { questionnaireId: before.id } : undefined,
+      after: { questions: questions.length, scale: scale ?? null },
+    });
+    return created;
+  });
+}
 
 /**
  * The question set a tenant gets before it has written its own.
@@ -340,7 +420,7 @@ export type FeedbackSummary = {
   late: number;
   questions: FeedbackQuestion[];
   /** Mean per rating question, to one decimal, and how many answered it. */
-  ratings: { key: string; prompt: string; mean: number; count: number }[];
+  ratings: { key: string; prompt: string; mean: number; count: number; points: number }[];
   /** Free text, unattributed and in no particular order. */
   comments: { key: string; prompt: string; text: string }[];
   /** Who has not answered. Names, because chasing needs them. */
@@ -413,6 +493,7 @@ export async function feedbackSummary(
         return {
           key: question.key,
           prompt: question.prompt,
+          points: pointsOf(question),
           count: values.length,
           mean:
             values.length === 0

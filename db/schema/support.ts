@@ -499,6 +499,13 @@ export const feedbackQuestionnaires = pgTable(
           prompt: string;
           kind: "rating" | "text";
           required: boolean;
+          /**
+           * A rating question's points, lowest first, in the provider's own
+           * words (job sheet D20: Curiosa rate on four-point scales). Absent
+           * on questionnaires written before 9 October 2026, which use the
+           * platform's five points.
+           */
+          scale?: string[];
         }[]
       >()
       .notNull(),

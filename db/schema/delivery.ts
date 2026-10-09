@@ -712,6 +712,16 @@ export const cohortSessions = pgTable(
     /** Why a session was cancelled or postponed. */
     statusNote: text("status_note"),
 
+    /**
+     * The facilitator's own parts of the session's facilitation plan (job
+     * sheet D20): what was planned, what was used, and what happened. The
+     * rest of the plan is read from the record: the programme, the modules,
+     * the workbooks, the register and the next session.
+     */
+    agenda: text("agenda"),
+    resources: text("resources"),
+    proceedings: text("proceedings"),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

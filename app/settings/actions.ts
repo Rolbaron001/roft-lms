@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
 import { updateOwnBranding, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
+import { FeedbackError, saveQuestionnaire } from "@/lib/feedback";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -147,6 +148,34 @@ export async function updateDateStyleAction(_previous: ClockState, formData: For
   // Dates appear on nearly every page.
   revalidatePath("/", "layout");
   return said({ notice: "Saved. Dates are now written this way throughout." });
+}
+
+/** Saves the provider's own programme feedback questions and scale (D20). */
+export async function saveQuestionnaireAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  let questions: { prompt: string; kind: "rating" | "text"; required: boolean }[] = [];
+  try {
+    questions = JSON.parse(String(formData.get("questions") ?? "[]"));
+  } catch {
+    return said({ error: "The questions could not be read. Please try again." });
+  }
+  const scale = String(formData.get("scale") ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  try {
+    await saveQuestionnaire(session, { questions, scale });
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    if (error instanceof FeedbackError) return said({ error: error.message });
+    if (error && typeof error === "object" && "issues" in error) {
+      return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
+    }
+    console.error(error);
+    return said({ error: "That could not be saved. Please try again." });
+  }
+  revalidatePath("/settings");
+  return said({ notice: "Saved. The next feedback form sent uses these questions." });
 }
 
 /** Saves the provider's own LEISA target (D19). */

@@ -110,7 +110,7 @@ export default async function FeedbackPage({
                   <div className="flex items-baseline justify-between gap-4 text-sm">
                     <span>{rating.prompt}</span>
                     <span className="tabular-nums whitespace-nowrap">
-                      {rating.count === 0 ? "—" : rating.mean.toFixed(1)}
+                      {rating.count === 0 ? "—" : t("feedbackReport.outOf", { mean: rating.mean.toFixed(1), points: rating.points })}
                       <span className="ml-2 text-xs text-[var(--muted)]">
                         {rating.count === 1
                           ? t("feedbackReport.answerOne")
@@ -121,7 +121,7 @@ export default async function FeedbackPage({
                   <div className="mt-1 h-1.5 rounded bg-[var(--border)]">
                     <div
                       className="h-1.5 rounded bg-[var(--brand-primary)]"
-                      style={{ width: `${(rating.mean / 5) * 100}%` }}
+                      style={{ width: `${(rating.mean / rating.points) * 100}%` }}
                     />
                   </div>
                 </li>
