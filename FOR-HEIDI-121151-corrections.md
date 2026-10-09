@@ -19,7 +19,10 @@ them are not in your documents at all:
 | What the 22 items turned out to be | How many | Who acts |
 |---|---|---|
 | The platform misreading documents that are correct | 18 | ROFT. Nothing is needed from you. |
-| Something in the documents themselves | 4 | You, below. |
+| Something in the documents themselves | 4 | You, items 1 to 4 below. |
+
+While checking, two further faults turned up that do not appear among the 22
+but need your attention, one of them urgently: items 5 and 6.
 
 The 18 come from your assessor guides labelling things differently from the
 question papers: "Task 1 Model Answer" in the guide where the paper has
@@ -96,6 +99,33 @@ KM0301 Assessor Guide & Model Answer Memorandum", the same topic as workbook 1.
 * Upload a workbook and an assessor guide for **KM0302**, named CA 121151 SU3
   WB2.docx and CA 121151 SU3 WB2 AG.docx, or let me know if KM0302 is assessed
   somewhere else.
+
+## Two more things found while checking
+
+These do not hold the qualification back on the page, but the first matters
+more than anything above.
+
+### 5. The SU2 summative papers contain their own memorandum
+
+**CA 121151 SU2 SA2 V1.docx** and **CA 121151 SU2 SA2 V2.docx** are the
+learners' question papers, and each carries the full marking guide from about
+two thirds of the way through: "MEMORANDUM & MARKING GUIDE (ASSESSOR USE ONLY)"
+in Version 1, and "MEMORANDUM & MARKING GUIDE - VERSION 2 (ASSESSOR USE ONLY)"
+in Version 2, followed by the model answers. A learner given either file would
+have the answers. The separate assessor guides, CA 121151 SU2 SA2 V1 AG.docx and
+V2 AG.docx, already hold the same material.
+
+**To correct:** delete everything from the memorandum heading onwards in both
+learner papers, and upload them again.
+
+### 6. SU4 workbooks 2 and 3: every multiple-choice answer is B
+
+In **CA 121151 SU4 WB2 AG.docx** and **CA 121151 SU4 WB3 AG.docx**, all five
+multiple-choice questions in Part A have B as the correct option. A learner who
+notices can score full marks without reading the questions.
+
+**To correct:** shuffle the options in the workbooks, and update the letters in
+the two guides to match.
 
 ## A small tidy-up while you are there
 
