@@ -29,11 +29,16 @@ export function NewCohort({
   courses,
   qualifications = [],
   words,
+  facilitators = [],
+  named = {},
 }: {
   courses: CourseOption[];
   /** Qualifications a cohort can walk end to end (Roland, 5 October 2026). */
   qualifications?: { id: string; title: string; credits?: number | null }[];
   words: { cohort: string; course: string; courses: string; Course: string };
+  /** Everyone who may facilitate, and those each programme names (job sheet D27). */
+  facilitators?: { id: string; name: string }[];
+  named?: Record<string, string[]>;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -131,6 +136,31 @@ export function NewCohort({
               </p>
             ) : null}
           </fieldset>
+
+          {facilitators.length > 0 ? (
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="block text-sm font-medium">
+                {t("cohorts.facilitator")}{" "}
+                <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
+              </span>
+              {/* Keyed by the programme, so the choice resets to its own people. */}
+              <select key={walks} name="facilitatorId" defaultValue={named[walks]?.[0] ?? ""} className={field}>
+                <option value="">{t("cohorts.facilitatorNone")}</option>
+                {(named[walks] ?? []).length > 0 ? (
+                  <optgroup label={t("cohorts.facilitatorNamed")}>
+                    {facilitators.filter((person) => named[walks]?.includes(person.id)).map((person) => (
+                      <option key={person.id} value={person.id}>{person.name}</option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <optgroup label={t("cohorts.facilitatorOthers")}>
+                  {facilitators.filter((person) => !named[walks]?.includes(person.id)).map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          ) : null}
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("cohorts.name")}</span>

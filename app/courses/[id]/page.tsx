@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
+import { StaffCard } from "@/components/staff-card";
 import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
@@ -210,6 +211,18 @@ export default async function CoursePage({
           </Card>
         </div>
       ) : null}
+
+      {/* Who delivers, assesses and moderates it (job sheet D27): a study
+          unit's people where this course is one, else the course's own. */}
+      <div className="mb-6">
+        <StaffCard
+          session={session}
+          scope={detail.course.studyUnitId ? { studyUnitId: detail.course.studyUnitId } : { courseId: id }}
+          path={`/courses/${id}`}
+          t={t}
+          intro={detail.course.studyUnitId ? t("staff.introUnit") : t("staff.introCourse")}
+        />
+      </div>
 
       {detail.course.status === "published" ? (
         <Card>

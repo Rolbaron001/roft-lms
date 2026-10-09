@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { pageT, requireAnyPermission, requireCapability, said } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
+import { StaffCard } from "@/components/staff-card";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LABELS,
@@ -841,6 +842,11 @@ export default async function QualificationPage({
               </div>
             </section>
           ) : null}
+
+          {/* Who delivers, assesses and moderates it (job sheet D27). */}
+          <div className="mb-8">
+            <StaffCard session={session} scope={{ qualificationId: id }} path={`/qualifications/${id}`} t={t} intro={t("staff.introQualification")} />
+          </div>
 
           <section id="documents" data-page-section={t("qualPage.nav.documents")} className="mb-8 scroll-mt-24">
             <h2 className="mb-2 font-semibold">{t("qualPage.documents")}</h2>

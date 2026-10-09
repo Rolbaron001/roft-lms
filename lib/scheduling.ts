@@ -14,6 +14,7 @@ import {
   sessionWorkbooks,
   stepReleases,
   studyUnits,
+  userRoles,
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
@@ -21,6 +22,7 @@ import { cohortCourseIds } from "./schedule";
 import { matchAttendance, readAttendanceExport } from "./attendance-import";
 import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { facilitatorsForCohort } from "./programme-staff";
 
 /**
  * The dated occasions a cohort meets, and who was there.
@@ -836,6 +838,13 @@ export type SessionChoices = {
   workbooks: { assessmentId: string; studyUnitId: string | null; title: string; summative: boolean }[];
   /** The number the next lecture would carry. */
   nextLecture: number;
+  /**
+   * Who may take the session (job sheet D27): everyone holding the
+   * facilitator role, those the programme names marked, and the cohort's own
+   * facilitator offered first.
+   */
+  facilitators: { id: string; name: string; named: boolean }[];
+  defaultFacilitator: string | null;
 };
 
 /**
@@ -845,9 +854,19 @@ export type SessionChoices = {
  */
 export async function sessionChoices(session: AuthenticatedSession, cohortId: string): Promise<SessionChoices> {
   assertSessionCan(session, "enrolment:read_all");
+  const named = new Set((await facilitatorsForCohort(session, cohortId)).map((row) => row.userId));
   return withTenant(session.organisationId, async (tx) => {
     const [cohort] = await tx.select().from(cohorts).where(eq(cohorts.id, cohortId));
     if (!cohort) throw new SchedulingError("Cohort not found.", "not_found");
+    const people = await tx
+      .select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+      .from(userRoles)
+      .innerJoin(users, eq(users.id, userRoles.userId))
+      .where(and(eq(userRoles.role, "instructor"), isNull(userRoles.revokedAt), eq(users.status, "active")))
+      .orderBy(asc(users.lastName), asc(users.firstName));
+    const facilitators = people
+      .map((person) => ({ id: person.id, name: `${person.firstName} ${person.lastName}`, named: named.has(person.id) }))
+      .sort((a, b) => Number(b.named) - Number(a.named));
     const courseIds = await cohortCourseIds(tx, cohort);
     const units = courseIds.length
       ? await tx
@@ -879,6 +898,8 @@ export async function sessionChoices(session: AuthenticatedSession, cohortId: st
         summative: row.purpose === "summative",
       })),
       nextLecture: (last?.top ?? 0) + 1,
+      facilitators,
+      defaultFacilitator: cohort.facilitatorId ?? facilitators.find((one) => one.named)?.id ?? null,
     };
   });
 }

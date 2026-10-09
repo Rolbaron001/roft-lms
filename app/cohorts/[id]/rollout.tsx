@@ -250,6 +250,23 @@ export function Rollout({
             <input name="title" className={inputClass} />
           </label>
 
+          {/* Who takes it (job sheet D27): the cohort's facilitator first, then
+              those the programme names, then everyone else who facilitates. */}
+          {choices.facilitators.length > 0 ? (
+            <label className="block space-y-1.5">
+              <span className="block text-sm font-medium">{t("rollout.facilitator")}</span>
+              <select name="facilitatorId" defaultValue={choices.defaultFacilitator ?? ""} className={inputClass}>
+                <option value="">{t("cohorts.facilitatorNone")}</option>
+                {choices.facilitators.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.name}
+                    {person.named ? ` · ${t("rollout.facilitatorNamed")}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <div className="sm:col-span-3">
             {state.error ? <p className="mb-2 text-sm text-[var(--danger,#b00020)]">{state.error}</p> : null}
             {state.done ? <p className="mb-2 text-sm text-[var(--muted)]">{state.done}</p> : null}

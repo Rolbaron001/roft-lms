@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduling";
 import { cohortLeisa } from "@/lib/statutory-notification";
 import { CohortLeisa } from "./leisa";
+import { CohortFacilitator } from "./cohort-facilitator";
 import { cohortGrid, cohortTaskList, taskProgress } from "@/lib/tracker";
 import { cohortWem } from "@/lib/wem-tracker";
 import { CohortTasks } from "./tasks";
@@ -142,6 +143,14 @@ export default async function CohortPage({
         {detail.qualificationTitle ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.walksQualification", { qualification: detail.qualificationTitle })}</p>
         ) : null}
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          <CohortFacilitator
+            cohortId={detail.cohort.id}
+            current={detail.cohort.facilitatorId ?? null}
+            facilitators={choices.facilitators}
+            canChange={canManage}
+          />
+        </p>
         {!scheduled ? (
           <p className="mt-1 text-sm text-[var(--muted)]">{t("cohort.openAll")}</p>
         ) : null}

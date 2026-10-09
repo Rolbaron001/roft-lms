@@ -32,6 +32,7 @@ import type { AuthenticatedSession } from "./session";
 import { blockedLearners, stepsForLearner } from "./spine";
 import { cohortLeisa, notificationDue } from "./statutory-notification";
 import { myLogbooks } from "./workplace";
+import { coursesOf } from "./programme-staff";
 
 /**
  * Every role's dashboard but the administrator's (job sheet D25), as designed
@@ -143,11 +144,25 @@ export async function facilitatorDashboard(session: AuthenticatedSession, { t, d
 
   const all = (await listCohorts(session)).filter((row) => row.status !== "cancelled" && row.status !== "finished");
   const running = all.filter((row) => row.startDate <= today && (!row.endDate || row.endDate >= today));
-  // The cohorts this facilitator takes sessions for; all running ones if none is named.
-  const theirs = await withTenant(session.organisationId, (tx) =>
+  // The cohorts this facilitator is facilitator of, takes sessions for, or
+  // whose programme names them (job sheet D27); all running ones if none.
+  const sessionsTaken = await withTenant(session.organisationId, (tx) =>
     tx.selectDistinct({ cohortId: cohortSessions.cohortId }).from(cohortSessions).where(eq(cohortSessions.facilitatorId, session.userId)),
   );
-  const scope = theirs.length ? all.filter((row) => theirs.some((one) => one.cohortId === row.id)) : running;
+  const namedOn = await coursesOf(session, session.userId, "facilitator");
+  const facilitatorOf = await withTenant(session.organisationId, (tx) =>
+    tx.select({ id: cohorts.id }).from(cohorts).where(eq(cohorts.facilitatorId, session.userId)),
+  );
+  const courseLists = await withTenant(session.organisationId, async (tx) => {
+    const map = new Map<string, string[]>();
+    for (const row of all) map.set(row.id, await cohortCourseIds(tx, row));
+    return map;
+  });
+  const isTheirs = (row: (typeof all)[number]) =>
+    sessionsTaken.some((one) => one.cohortId === row.id) ||
+    facilitatorOf.some((one) => one.id === row.id) ||
+    (courseLists.get(row.id) ?? []).some((courseId) => namedOn.has(courseId));
+  const scope = all.some(isTheirs) ? all.filter(isTheirs) : running;
   const ids = scope.map((row) => row.id);
   const nameOf = (cohortId: string) => scope.find((row) => row.id === cohortId)?.name ?? "";
 
@@ -317,14 +332,23 @@ export async function assessorDashboard(session: AuthenticatedSession, { t, day,
     return { referred, sittings, decided: decided.n };
   });
   const authorised = held.filter((row) => row.awaitingOral);
-  const summatives = queue.filter((row) => row.purpose === "summative");
-  const workbooks = queue.filter((row) => row.purpose !== "summative");
+  // The assessor's own programmes first (job sheet D27); nothing is hidden.
+  const mine = await coursesOf(session, session.userId, "assessor");
+  const courseOf = await withTenant(session.organisationId, async (tx) => {
+    const ids = [...new Set(queue.map((row) => row.assessmentId))];
+    const rows = ids.length ? await tx.select({ id: assessments.id, courseId: assessments.courseId }).from(assessments).where(inArray(assessments.id, ids)) : [];
+    return new Map(rows.map((row) => [row.id, row.courseId]));
+  });
+  const isMine = (row: (typeof queue)[number]) => mine.has(courseOf.get(row.assessmentId) ?? "");
+  const ownFirst = (rows: typeof queue) => [...rows.filter(isMine), ...rows.filter((row) => !isMine(row))];
+  const summatives = ownFirst(queue.filter((row) => row.purpose === "summative"));
+  const workbooks = ownFirst(queue.filter((row) => row.purpose !== "summative"));
 
   const queueRow = (row: (typeof queue)[number]): DashRow => {
     const age = waited(t, row.submittedAt, now);
     return {
       primary: `${row.learnerFirstName} ${row.learnerLastName} · ${row.assessmentTitle}${row.attemptNumber > 1 ? `, ${t("rd.attempt", { n: row.attemptNumber })}` : ""}`,
-      secondary: [row.courseTitle, row.submittedAt ? t("rd.handedIn", { date: day(row.submittedAt) }) : null].filter(Boolean).join(" · "),
+      secondary: [isMine(row) ? t("rd.yours") : null, row.courseTitle, row.submittedAt ? t("rd.handedIn", { date: day(row.submittedAt) }) : null].filter(Boolean).join(" · "),
       right: age.text,
       tone: age.tone,
       href: row.purpose === "summative" ? `/assess/${row.submissionId}` : `/assess/${row.submissionId}/mark`,
@@ -381,7 +405,22 @@ export async function assessorDashboard(session: AuthenticatedSession, { t, day,
 // ---------------------------------------------------------------------------
 
 export async function moderatorDashboard(session: AuthenticatedSession, { t, day, now }: Kit): Promise<RoleDashboard> {
-  const queue = await listModerationQueue(session);
+  const sampled = await listModerationQueue(session);
+  // The moderator's own programmes first (job sheet D27); nothing is hidden.
+  const mine = await coursesOf(session, session.userId, "moderator");
+  const courseOf = await withTenant(session.organisationId, async (tx) => {
+    const ids = sampled.map((row) => row.submissionId);
+    const rows = ids.length
+      ? await tx
+          .select({ id: assessmentSubmissions.id, courseId: assessments.courseId })
+          .from(assessmentSubmissions)
+          .innerJoin(assessments, eq(assessments.id, assessmentSubmissions.assessmentId))
+          .where(inArray(assessmentSubmissions.id, ids))
+      : [];
+    return new Map(rows.map((row) => [row.id, row.courseId]));
+  });
+  const isMine = (row: (typeof sampled)[number]) => mine.has(courseOf.get(row.submissionId) ?? "");
+  const queue = [...sampled.filter(isMine), ...sampled.filter((row) => !isMine(row))];
   const papers = (await listInstruments(session)).filter((row) => row.status === "in_moderation" || row.status === "draft");
   const appeals = can(session, "appeal:manage") ? (await openAppeals(session)).filter((row) => row.ground === "result") : [];
   const packs = await withTenant(session.organisationId, (tx) =>
@@ -413,7 +452,7 @@ export async function moderatorDashboard(session: AuthenticatedSession, { t, day
         empty: t("rd.m.sampledNone"),
         rows: queue.map((row) => ({
           primary: `${row.assessmentTitle}${row.courseTitle ? ` · ${row.courseTitle}` : ""}`,
-          secondary: t("rd.m.assessedBy", { name: `${row.assessorFirstName} ${row.assessorLastName}`, reason: row.samplingReason }),
+          secondary: [isMine(row) ? t("rd.yours") : null, t("rd.m.assessedBy", { name: `${row.assessorFirstName} ${row.assessorLastName}`, reason: row.samplingReason })].filter(Boolean).join(" · "),
           right: day(row.queuedAt, { short: true }),
           href: `/moderate#decision-${row.decisionId}`,
         })),

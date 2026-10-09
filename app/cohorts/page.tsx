@@ -10,6 +10,7 @@ import { RosterForm } from "@/app/people/roster-form";
 import { Card, Guide } from "@/components/ui";
 import { extensionState } from "@/lib/extensions";
 import { vocabulary } from "@/lib/terms";
+import { eligibleStaff, programmeStaffFor } from "@/lib/programme-staff";
 
 /**
  * The cohorts a provider is running.
@@ -35,6 +36,17 @@ export default async function CohortsPage() {
   const canManage = session.permissions.includes("enrolment:manage");
   const courses = canManage ? await listCourses(session) : [];
   const walkable = canManage ? await qualificationsForCohorts(session) : [];
+  // Who may facilitate, and whom each programme names (job sheet D27).
+  const facilitators = canManage && session.permissions.includes("user:read") ? (await eligibleStaff(session)).facilitator : [];
+  const named: Record<string, string[]> = {};
+  if (facilitators.length) {
+    for (const qualification of walkable) {
+      named[`qualification:${qualification.id}`] = (await programmeStaffFor(session, { qualificationId: qualification.id })).filter((row) => row.capacity === "facilitator").map((row) => row.userId);
+    }
+    for (const course of courses.filter((one) => one.status === "published")) {
+      named[`course:${course.id}`] = (await programmeStaffFor(session, { courseId: course.id })).filter((row) => row.capacity === "facilitator").map((row) => row.userId);
+    }
+  }
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -75,6 +87,8 @@ export default async function CohortsPage() {
               version: course.version,
             }))}
             qualifications={walkable}
+            facilitators={facilitators}
+            named={named}
           />
         </div>
       ) : null}

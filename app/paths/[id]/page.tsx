@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageLocale, requirePermission, requireTenant, said } from "@/lib/request";
+import { StaffCard } from "@/components/staff-card";
 import { vocabulary } from "@/lib/terms";
 import { extensionState } from "@/lib/extensions";
 import { FolderPicker } from "@/components/folder-picker";
@@ -98,6 +99,10 @@ export default async function PathPage({
         canPublish={session.permissions.includes("course:publish")}
         canEnrol={canEnrol}
       />
+      {/* Who delivers, assesses and moderates it (job sheet D27). */}
+      <div className="my-6">
+        <StaffCard session={session} scope={{ learningPathId: id }} path={`/paths/${id}`} t={t} intro={t("staff.introProgramme")} />
+      </div>
       {canAuthorHere ? (
         <div className="mb-6">
           <Card title={t("paths.folder")} description={t("paths.folderNote")}>

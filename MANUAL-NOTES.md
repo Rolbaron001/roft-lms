@@ -473,6 +473,22 @@ person going through it question by question.
 - **Platform owner:** every client organisation with its usage, any without an
   administrator, and totals across the platform.
 
+## 6m. People on each programme (9 October 2026)
+
+- **Where:** "People on this programme" on a qualification's page, on each
+  study unit's course page, on a course and on a programme. An administrator
+  names facilitators, assessors and moderators there, with an assessor's or
+  moderator's registration number and its expiry for that programme.
+- **Inheritance:** a study unit uses the qualification's people for each role
+  until it names its own for that role.
+- **What it depends on:** the person holding the role first (People: the
+  Facilitator, Assessor or Moderator role). Only people holding it are
+  offered.
+- **What it changes:** the new-cohort form and the class-session form offer
+  the programme's facilitators first; the cohort page shows its facilitator,
+  with Change; a facilitator's dashboard covers their cohorts; an assessor's
+  and a moderator's dashboards list their own programmes' work first.
+
 ## 6l. Facilitation plans and feedback questions (9 October 2026)
 
 - **Facilitation plan:** on each class session's page, under the register,

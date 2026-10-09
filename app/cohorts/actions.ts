@@ -102,6 +102,7 @@ export async function createCohortAction(
         code: field(formData, "code") || undefined,
         startDate: field(formData, "startDate"),
         endDate: field(formData, "endDate") || undefined,
+        facilitatorId: field(formData, "facilitatorId") || undefined,
       });
     },
     "Cohort created.",
@@ -349,6 +350,7 @@ export async function scheduleSessionAction(
         studyUnitId: field(formData, "studyUnitId") || undefined,
         handoutAssessmentId: field(formData, "handoutAssessmentId") || undefined,
         handinAssessmentId: field(formData, "handinAssessmentId") || undefined,
+        facilitatorId: field(formData, "facilitatorId") || undefined,
       }),
     "Session added to the schedule.",
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
