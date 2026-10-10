@@ -15,6 +15,7 @@ import {
   HOW_OPTIONS,
 } from "./how-chooser";
 import { extensionOffered, extensionState } from "@/lib/extensions";
+import { AssignedNote } from "@/components/assigned-note";
 
 export default async function QualificationsPage({
   searchParams,
@@ -76,6 +77,7 @@ export default async function QualificationsPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <AssignedNote session={session} />
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{t("quals.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("quals.intro")}</p>

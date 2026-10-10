@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { pageLocale, requireSession, requireTenant, said } from "@/lib/request";
+import { pageLocale, requireInReach, requireSession, requireTenant, said } from "@/lib/request";
 import {
   EnrolmentFormError,
   getEnrolmentForm,
@@ -36,6 +36,8 @@ export default async function EnrolmentFormPage({
   const longDate = (value: Date) => day(value);
 
   const learnerId = requested || session.userId;
+  // Staff see only learners on the programmes they are assigned to (lib/staff-scope.ts).
+  await requireInReach({ learnerId });
 
   let view;
   try {

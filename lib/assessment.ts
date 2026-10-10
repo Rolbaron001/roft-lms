@@ -36,6 +36,7 @@ import { enrolments, organisations } from "@/db/schema";
 import { raise, usersWithRole } from "./notifications";
 import { assertOralRecorded } from "./reassessment";
 import { getMarkedPaper, proposeCriterionOutcomes } from "./marking";
+import { coursesWithin, reachWithin, submissionCourse, submissionInReach } from "./staff-scope";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -1124,8 +1125,10 @@ export async function submitEvidence(
 export async function listAssessorQueue(session: AuthenticatedSession) {
   assertSessionCan(session, "assessment:assess");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    // Only the programmes this person assesses (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session, "assessor");
+    return tx
       .select({
         submissionId: assessmentSubmissions.id,
         assessmentId: assessments.id,
@@ -1148,9 +1151,9 @@ export async function listAssessorQueue(session: AuthenticatedSession) {
       )
       .leftJoin(courses, eq(courses.id, assessments.courseId))
       .innerJoin(users, eq(users.id, assessmentSubmissions.userId))
-      .where(eq(assessmentSubmissions.status, "submitted"))
-      .orderBy(asc(assessmentSubmissions.submittedAt)),
-  );
+      .where(and(eq(assessmentSubmissions.status, "submitted"), coursesWithin(reach, submissionCourse)))
+      .orderBy(asc(assessmentSubmissions.submittedAt));
+  });
 }
 
 /** A submission with everything an assessor needs to judge it. */
@@ -1176,6 +1179,13 @@ export async function getSubmissionForAssessment(
     ) {
       throw new AssessmentError(
         "That submission belongs to someone else.",
+        "not_permitted",
+      );
+    }
+    // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+    if (!isOwn && !(await submissionInReach(tx, await reachWithin(tx, session), submissionId))) {
+      throw new AssessmentError(
+        "This is not one of the programmes you are assigned to.",
         "not_permitted",
       );
     }
@@ -1567,6 +1577,10 @@ export async function recordAssessorDecision(
         "not_permitted",
       );
     }
+    // Only on a programme this person assesses (lib/staff-scope.ts).
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "assessor"), parsed.submissionId))) {
+      throw new AssessmentError("This is not one of the programmes you assess.", "not_permitted");
+    }
 
     // An oral third attempt leaves no evidence of its own. Refused here rather
     // than only on the screen, because the screen is not the only way in and
@@ -1832,8 +1846,10 @@ async function awardBadgesForLearner(
 export async function listModerationQueue(session: AuthenticatedSession) {
   assertSessionCan(session, "assessment:moderate");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    // Only the programmes this person moderates (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session, "moderator");
+    return tx
       .select({
         queueId: moderationQueue.id,
         decisionId: assessmentDecisions.id,
@@ -1862,9 +1878,9 @@ export async function listModerationQueue(session: AuthenticatedSession) {
         eq(assessments.id, assessmentSubmissions.assessmentId),
       )
       .leftJoin(courses, eq(courses.id, assessments.courseId))
-      .where(isNull(moderationQueue.resolvedAt))
-      .orderBy(asc(moderationQueue.queuedAt)),
-  );
+      .where(and(isNull(moderationQueue.resolvedAt), coursesWithin(reach, submissionCourse)))
+      .orderBy(asc(moderationQueue.queuedAt));
+  });
 }
 
 export const moderationInput = z.object({
@@ -1905,6 +1921,10 @@ export async function recordModeration(
         "You assessed this submission, so you cannot moderate it.",
         "not_permitted",
       );
+    }
+    // Only on a programme this person moderates (lib/staff-scope.ts).
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "moderator"), decision.submissionId))) {
+      throw new AssessmentError("This is not one of the programmes you moderate.", "not_permitted");
     }
 
     const [existing] = await tx

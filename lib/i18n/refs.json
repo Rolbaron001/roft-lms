@@ -5621,5 +5621,16 @@
   "said.programme-staff.4bff2ecf": 5620,
   "said.programme-staff.68520750": 5621,
   "said.programme-staff.ae3f2f69": 5622,
-  "said.staff-actions.80b8ecbe": 5623
+  "said.staff-actions.80b8ecbe": 5623,
+  "person.roleNote.tenant_viewer": 5624,
+  "reports.scope.assigned": 5625,
+  "access.notAssigned": 5626,
+  "viewOnly.banner": 5627,
+  "viewOnly.refused": 5628,
+  "role.tenant_viewer": 5629,
+  "said.assessment.327d231f": 5630,
+  "said.assessment.8d87b62d": 5631,
+  "said.assessment.c3fce99c": 5632,
+  "scope.assignedOnly": 5633,
+  "scope.assignedNone": 5634
 }

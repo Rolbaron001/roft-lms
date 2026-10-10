@@ -210,6 +210,7 @@ export async function markRead(
           eq(notifications.userId, session.userId),
         ),
       ),
+    { ownSitting: true },
   );
 }
 
@@ -225,6 +226,7 @@ export async function markAllRead(session: AuthenticatedSession) {
           isNull(notifications.readAt),
         ),
       ),
+    { ownSitting: true },
   );
 }
 

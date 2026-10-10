@@ -92,7 +92,7 @@ export default async function PeoplePage({
           <p className="mt-1 text-xs text-[var(--muted)]">{t("viewAs.strip.intro")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {viewAsByRole.map(({ role, person }) => (
-              <form key={role} action={startViewAsAction}>
+              <form key={role} action={startViewAsAction} data-own-sitting>
                 <input type="hidden" name="userId" value={person.id} />
                 <button
                   type="submit"

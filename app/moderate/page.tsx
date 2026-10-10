@@ -3,6 +3,7 @@ import { listModerationQueue } from "@/lib/assessment";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell, Card } from "@/components/app-shell";
 import { ModerationList } from "./moderation-list";
+import { AssignedNote } from "@/components/assigned-note";
 
 export default async function ModerationQueuePage() {
   const tenant = await requireTenant();
@@ -12,6 +13,7 @@ export default async function ModerationQueuePage() {
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <AssignedNote session={session} />
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{t("moderating.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("moderating.intro")}</p>

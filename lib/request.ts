@@ -233,6 +233,28 @@ export async function requirePermission(
  * call so that widening it is a decision somebody makes and can be seen in a
  * diff, rather than a default that drifts.
  */
+/**
+ * Refuses a page about a programme, cohort or learner the person is not
+ * assigned to (lib/staff-scope.ts). Called from the layout of each such
+ * page, so every page beneath it is covered, including ones added later.
+ * Somebody who sees the whole provider passes straight through.
+ */
+export async function requireInReach(
+  target: { courseId?: string; cohortId?: string; qualificationId?: string; learningPathId?: string; submissionId?: string; learnerId?: string },
+): Promise<void> {
+  const session = await requireSession();
+  const { isAssignedOnly, reachWithin, inReach, submissionInReach, learnerInReach } = await import("./staff-scope");
+  if (!isAssignedOnly(session)) return;
+  const { withTenant } = await import("@/db/client");
+  const allowed = await withTenant(session.organisationId, async (tx) => {
+    const reach = await reachWithin(tx, session);
+    if (target.submissionId) return submissionInReach(tx, reach, target.submissionId);
+    if (target.learnerId) return target.learnerId === session.userId || learnerInReach(tx, reach, target.learnerId);
+    return inReach(reach, target);
+  });
+  if (!allowed) redirect("/not-permitted?reason=assigned");
+}
+
 export async function requireAnyPermission(
   permissions: Permission[],
 ): Promise<AuthenticatedSession> {

@@ -22,6 +22,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { cohortCourseIds } from "./schedule";
+import { cohortsWithin, reachWithin } from "./staff-scope";
 import { writtenDay } from "./date-format";
 
 /**
@@ -98,6 +99,8 @@ export async function activeProgrammes(
   options: { includeFinished?: boolean } = {},
 ): Promise<ActiveProgramme[]> {
   return withTenant(session.organisationId, async (tx) => {
+    // Staff see only the cohorts of programmes they are assigned to (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session);
     const rows = await tx
       .select({
         cohortId: cohorts.id,
@@ -135,6 +138,7 @@ export async function activeProgrammes(
         unitQualification,
         eq(unitQualification.id, studyUnits.qualificationId),
       )
+      .where(cohortsWithin(reach, cohorts.id))
       .orderBy(asc(cohorts.startDate));
 
     const wanted = options.includeFinished

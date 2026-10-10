@@ -83,3 +83,17 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/*
+ * "Administrator View" (lib/rbac.ts): every button that would save something
+ * is shown and cannot be pressed. The database refuses the change anyway
+ * (db/client.ts); this only spares the person pressing a button that will
+ * fail. Searches and filters (method="get") and the person's own account,
+ * language and notifications (data-own-sitting) stay usable.
+ */
+main[data-view-only] form:not([method="get" i]):not([data-own-sitting]) button:not([type="button"]),
+main[data-view-only] form:not([method="get" i]):not([data-own-sitting]) input[type="submit"] {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}

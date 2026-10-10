@@ -5,6 +5,7 @@ import { readDocxText, OfficeReadError } from "./office";
 import { buildStorageKey, putObject } from "./storage";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { reachWithin } from "./staff-scope";
 import {
   mergeMemorandum,
   parseMemorandum,
@@ -312,9 +313,13 @@ export async function getCaptureJob(
 export async function listCaptureJobs(session: AuthenticatedSession) {
   assertSessionCan(session, "assessment:author");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx.select().from(captureJobs).orderBy(captureJobs.uploadedAt),
-  );
+  return withTenant(session.organisationId, async (tx) => {
+    // Staff see captures for the programmes they are assigned to, and their
+    // own (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session);
+    const jobs = await tx.select().from(captureJobs).orderBy(captureJobs.uploadedAt);
+    return jobs.filter((job) => reach.whole || job.uploadedById === session.userId || (job.qualificationId && reach.qualifications.has(job.qualificationId)));
+  });
 }
 
 // ---------------------------------------------------------------------------

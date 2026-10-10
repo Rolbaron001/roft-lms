@@ -129,6 +129,7 @@ export function PersonFields({
 
 const ROLES = [
   "tenant_admin",
+  "tenant_viewer",
   "instructor",
   "assessor",
   "moderator",

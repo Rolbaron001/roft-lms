@@ -27,6 +27,7 @@ import { recordAudit } from "./audit";
 import { raise } from "./notifications";
 import { ensureStudyUnitCompetency } from "./unit-competency";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { coursesWithin, qualificationsWithin, reachWithin } from "./staff-scope";
 
 /**
  * Course and curriculum authoring.
@@ -194,8 +195,10 @@ export async function createQualification(
 export async function listQualifications(session: AuthenticatedSession) {
   assertSessionCan(session, "course:read");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session);
+    return tx
       .select({
         id: qualifications.id,
         title: qualifications.title,
@@ -231,8 +234,9 @@ export async function listQualifications(session: AuthenticatedSession) {
         )`,
       })
       .from(qualifications)
-      .orderBy(asc(qualifications.title)),
-  );
+      .where(qualificationsWithin(reach, qualifications.id))
+      .orderBy(asc(qualifications.title));
+  });
 }
 
 export const curriculumModuleInput = z.object({
@@ -781,8 +785,10 @@ export async function createCourse(
 export async function listCourses(session: AuthenticatedSession) {
   assertSessionCan(session, "course:read");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session);
+    return tx
       .select({
         id: courses.id,
         title: courses.title,
@@ -818,8 +824,9 @@ export async function listCourses(session: AuthenticatedSession) {
       )
       .leftJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
       .leftJoin(qualifications, eq(qualifications.id, studyUnits.qualificationId))
-      .orderBy(asc(courses.title)),
-  );
+      .where(coursesWithin(reach, courses.id))
+      .orderBy(asc(courses.title));
+  });
 }
 
 export async function getCourse(

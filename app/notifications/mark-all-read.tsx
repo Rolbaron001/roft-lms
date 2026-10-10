@@ -6,7 +6,7 @@ import { useT } from "@/components/i18n";
 export function MarkAllRead() {
   const t = useT();
   return (
-    <form action={markAllReadAction}>
+    <form action={markAllReadAction} data-own-sitting>
       <button
         type="submit"
         className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium"

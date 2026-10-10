@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
@@ -13,6 +13,7 @@ import {
 import { recordAudit } from "./audit";
 import { raise, usersWithRole } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { learnersWithin, reachWithin } from "./staff-scope";
 import { dateInZone } from "./timezone";
 import { addWorkingDays } from "./working-days";
 import { holidaysForTenant } from "./tenant-holidays";
@@ -970,13 +971,17 @@ export async function openGrievances(session: AuthenticatedSession) {
       .from(grievances)
       .innerJoin(users, eq(users.id, grievances.learnerId))
       .where(
-        inArray(grievances.status, [
-          "lodged",
-          "acknowledged",
-          "under_investigation",
-          "decided",
-          "appealed",
-        ]),
+        and(
+          inArray(grievances.status, [
+            "lodged",
+            "acknowledged",
+            "under_investigation",
+            "decided",
+            "appealed",
+          ]),
+          // Staff see only learners on the programmes they are assigned to (lib/staff-scope.ts).
+          learnersWithin(tx, await reachWithin(tx, session), grievances.learnerId),
+        ),
       )
       .orderBy(grievances.acknowledgeBy),
   );

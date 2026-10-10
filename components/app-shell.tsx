@@ -5,6 +5,7 @@ import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
 import { arrangeNavigation } from "@/lib/navigation";
 import { can } from "@/lib/features";
+import { isViewOnly } from "@/lib/rbac";
 import { vocabulary } from "@/lib/terms";
 import { OfflineRegistration } from "./offline-registration";
 import { TenantLogo } from "./tenant-logo";
@@ -35,6 +36,7 @@ export async function AppShell({
   // Read here rather than on each page, so every screen shows the same count
   // and no page can forget to.
   const unread = await unreadCount(session);
+  const viewOnly = !session.viewAs && isViewOnly(session);
 
   // The AI switch belongs in the header for the same reason. Somebody switches
   // it on for one job and off again afterwards, which only works if it is
@@ -191,6 +193,14 @@ export async function AppShell({
           </div>
         ) : null}
 
+        {/* "Administrator View" (lib/rbac.ts): said on every page, since the
+            database refuses every change the person tries. */}
+        {viewOnly ? (
+          <div className="bg-white/95 px-6 py-2 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
+            {t("viewOnly.banner")}
+          </div>
+        ) : null}
+
         {/*
           Grouped rather than listed. px-6 matches the header above and the
           main column below, so the first item lines up with the logo and the
@@ -210,7 +220,7 @@ export async function AppShell({
         url={tenant.illustrationUrl ?? platformIllustration()}
       >
         <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)} dateSettings={(await pageDates()).settings}>
-          <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+          <main className="mx-auto max-w-5xl px-6 py-8" data-view-only={viewOnly ? "" : undefined}>{children}</main>
         </I18nProvider>
       </TenantIllustrationProvider>
     </div>

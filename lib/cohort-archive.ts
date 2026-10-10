@@ -4,7 +4,7 @@ import { mkdir, open, rename, rm, stat, statfs } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { and, asc, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { Unzip, UnzipPassThrough } from "fflate";
-import { withTenant, type TenantDatabase } from "@/db/client";
+import { transactionIsReadOnly, withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentDecisions,
@@ -274,6 +274,10 @@ export type CohortArchiveState = {
  * leaves the row saying "building" for ever unless something says otherwise.
  */
 async function sweepStaleBuilds(tx: TenantDatabase, organisationId: string) {
+  // Housekeeping, not something the reader asked for: left for the next
+  // reader who may write, rather than refusing the page to "View as" or
+  // "Administrator View" (db/client.ts).
+  if (await transactionIsReadOnly(tx)) return;
   const stale = await tx
     .update(cohortArchives)
     .set({

@@ -6,6 +6,7 @@ import { AppShell, StatusBadge } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import { vocabulary } from "@/lib/terms";
 import { maybe } from "@/lib/i18n";
+import { AssignedNote } from "@/components/assigned-note";
 
 export default async function CoursesPage() {
   const tenant = await requireTenant();
@@ -21,6 +22,7 @@ export default async function CoursesPage() {
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <AssignedNote session={session} />
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">{words.many("course")}</h1>
         {canAuthor ? (

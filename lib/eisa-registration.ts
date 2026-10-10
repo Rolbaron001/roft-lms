@@ -1,4 +1,4 @@
-import { asc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { withTenant } from "@/db/client";
 import {
@@ -13,6 +13,7 @@ import {
 import { recordAudit } from "./audit";
 import { qualificationReadiness } from "./eisa";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { cohortsWithin, reachWithin } from "./staff-scope";
 import { addWorkingDays } from "./working-days";
 import { holidaysForTenant } from "./tenant-holidays";
 
@@ -319,7 +320,8 @@ export async function registrationDue(
       .from(cohorts)
       .leftJoin(cohortMembers, eq(cohortMembers.cohortId, cohorts.id))
       .leftJoin(enrolments, eq(enrolments.userId, cohortMembers.userId))
-      .where(inArray(cohorts.status, ["running", "planned"])),
+      // Staff see only the cohorts they are assigned to (lib/staff-scope.ts).
+      .where(and(inArray(cohorts.status, ["running", "planned"]), cohortsWithin(await reachWithin(tx, session), cohorts.id))),
   );
 
   // Ten working days is the point at which somebody has to start rather than

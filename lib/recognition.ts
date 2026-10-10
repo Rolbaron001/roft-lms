@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { qualificationsWithin, reachWithin } from "./staff-scope";
 import { writtenDay } from "./date-format";
 
 /**
@@ -754,7 +755,13 @@ export async function rplModerationQueue(session: AuthenticatedSession) {
         curriculumModules,
         eq(curriculumModules.id, rplJudgements.curriculumModuleId),
       )
-      .where(isNull(rplJudgements.moderatedAt))
+      .where(
+        and(
+          isNull(rplJudgements.moderatedAt),
+          // Only the programmes this person moderates (lib/staff-scope.ts).
+          qualificationsWithin(await reachWithin(tx, session, "moderator"), rplApplications.qualificationId),
+        ),
+      )
       .orderBy(rplJudgements.judgedOn),
   );
 }

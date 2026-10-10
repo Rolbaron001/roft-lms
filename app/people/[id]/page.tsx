@@ -177,7 +177,7 @@ export default async function PersonPage({
             {/* "View as" (lib/view-as.ts): the platform exactly as this person
                 sees it, read-only, for an administrator checking it works. */}
             {mayViewAs(session) && person.id !== session.userId && person.status === "active" ? (
-              <form action={startViewAsAction}>
+              <form action={startViewAsAction} data-own-sitting>
                 <input type="hidden" name="userId" value={person.id} />
                 {/* Prominent on purpose (job sheet D21, Roland, 8 October:
                     the View-as buttons "don't really stand out enough"). */}

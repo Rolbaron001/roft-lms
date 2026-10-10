@@ -77,7 +77,9 @@ export default async function ReportsPage({
             ? t("reports.scope.tenant")
             : scope.kind === "team"
               ? t("reports.scope.team")
-              : t("reports.scope.self")}
+              : scope.kind === "assigned"
+                ? t("reports.scope.assigned")
+                : t("reports.scope.self")}
         </p>
 
         {scope.kind === "tenant" ? (

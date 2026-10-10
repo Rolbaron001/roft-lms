@@ -25,7 +25,10 @@ import {
   userRoles,
   users,
 } from "@/db/schema";
-import { createCourse } from "@/lib/authoring";
+import { createCourse as createCourseUnassigned } from "@/lib/authoring";
+import { assignStaffEverywhere, withStaffAssigned } from "./helpers/assign-staff";
+// Staff are named on each course as it is made (tests/helpers/assign-staff.ts).
+const createCourse = withStaffAssigned(createCourseUnassigned);
 import {
   createAssessment,
   publishAssessment,
@@ -833,6 +836,7 @@ describe("from a marked question to readiness", () => {
       ["moderator"],
       await createPerson(`moderator-${suffix()}@mark.test`, ["moderator"]),
     );
+    await assignStaffEverywhere(organisationId);
     const { recordModeration } = await import("@/lib/assessment");
     await recordModeration(moderator, {
       decisionId: decision.decision.id,

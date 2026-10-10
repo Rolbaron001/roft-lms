@@ -225,6 +225,17 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 
   /**
+   * "Administrator View" (Roland, 10 October 2026): every screen an
+   * administrator can open, and no change to anything. The permissions are
+   * the administrator's so that every page opens; what stops a change is not
+   * this list but the database, which refuses every write the person's
+   * requests attempt (lib/view-only.ts, db/client.ts). The role is a lock on
+   * the whole person: held alongside any other role, it still makes them
+   * read-only. Not `extension:use`, which would store their credential.
+   */
+  tenant_viewer: [],
+
+  /**
    * The learner's supervisor at the host employer. Deliberately the narrowest
    * role on the platform: they sign work experience logbooks for the learners
    * they have an agreement with, and can do nothing else. They are not the
@@ -340,6 +351,26 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 };
 
+/**
+ * The administrator's, less three. `extension:use` would store the person's
+ * credential. `support:read` opens the health, disability or financial
+ * circumstance behind a learner's accommodation, special personal information
+ * under POPIA that nobody needs in order to see the platform working; the
+ * accommodation itself stays visible through `support:act`. `conduct:manage`
+ * marks who runs a disciplinary matter, and who is told of one.
+ */
+ROLE_PERMISSIONS.tenant_viewer = ROLE_PERMISSIONS.tenant_admin.filter(
+  (permission) => !["extension:use", "support:read", "conduct:manage"].includes(permission),
+);
+
+/** The roles that make a person read-only everywhere, whatever else they hold. */
+export const VIEW_ONLY_ROLES: Role[] = ["tenant_viewer"];
+
+/** Whether this person may look at everything and change nothing. */
+export function isViewOnly(subject: PermissionSubject): boolean {
+  return subject.roles.some((role) => VIEW_ONLY_ROLES.includes(role));
+}
+
 export type PermissionSubject = {
   roles: Role[];
 };
@@ -381,6 +412,19 @@ export class PermissionDeniedError extends Error {
   constructor(public readonly permission: Permission) {
     super(`Permission denied: ${permission}`);
     this.name = "PermissionDeniedError";
+  }
+}
+
+/**
+ * A change refused by the database because the person holds "Administrator
+ * View" (db/client.ts). A kind of permission refusal, so every action that
+ * already answers "Your role does not allow that" says so here too.
+ */
+export class ViewOnlyError extends PermissionDeniedError {
+  constructor() {
+    super("tenant:manage_settings");
+    this.message = "Administrator View can see this but not change it.";
+    this.name = "ViewOnlyError";
   }
 }
 

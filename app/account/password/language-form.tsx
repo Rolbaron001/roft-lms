@@ -20,7 +20,7 @@ export function LanguageForm({
   const [state, action, pending] = useActionState<LanguageState, FormData>(chooseLanguageAction, {});
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3" data-own-sitting>
       <p className="text-xs text-[var(--muted)]">{t("account.languageIntro")}</p>
       <select
         name="locale"

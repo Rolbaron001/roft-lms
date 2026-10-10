@@ -17,6 +17,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { coursesWithin, reachWithin, submissionCourse, submissionInReach } from "./staff-scope";
 
 /**
  * Marking a paper, and what marking it means.
@@ -90,6 +91,10 @@ export async function markItem(
         "You cannot mark your own work.",
         "not_permitted",
       );
+    }
+    // Only on a programme this person assesses (lib/staff-scope.ts).
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "assessor"), input.submissionId))) {
+      throw new MarkingError("This is not one of the programmes you assess.", "not_permitted");
     }
 
     if (submission.status === "draft") {
@@ -273,9 +278,13 @@ export async function getMarkedPaper(
 ): Promise<MarkedPaper> {
   assertSessionCan(session, "assessment:assess");
 
-  return withTenant(session.organisationId, (tx) =>
-    readMarkedPaper(tx, submissionId),
-  );
+  return withTenant(session.organisationId, async (tx) => {
+    // Only on a programme this person assesses (lib/staff-scope.ts).
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "assessor"), submissionId))) {
+      throw new MarkingError("This is not one of the programmes you assess.", "not_permitted");
+    }
+    return readMarkedPaper(tx, submissionId);
+  });
 }
 
 async function readMarkedPaper(
@@ -810,6 +819,8 @@ export async function markingQueue(session: AuthenticatedSession) {
   assertSessionCan(session, "assessment:assess");
 
   return withTenant(session.organisationId, async (tx) => {
+    // Only the programmes this person assesses (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session, "assessor");
     const waiting = await tx
       .select({
         submissionId: assessmentSubmissions.id,
@@ -829,6 +840,7 @@ export async function markingQueue(session: AuthenticatedSession) {
         and(
           inArray(assessmentSubmissions.status, ["submitted", "finalised"]),
           eq(assessments.status, "published"),
+          coursesWithin(reach, submissionCourse),
         ),
       )
       .orderBy(asc(assessmentSubmissions.submittedAt));

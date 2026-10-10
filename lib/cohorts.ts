@@ -16,6 +16,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { enrolUser } from "./enrolment";
 import { cohortCourseIds, dayFrom } from "./schedule";
 import { resolveTitles } from "./spine";
+import { cohortsWithin, inReach, qualificationsWithin, reachWithin } from "./staff-scope";
 
 // Re-exported so callers keep one import for everything about a cohort.
 export { dayFrom, scheduleForLearner, type ScheduledStep } from "./schedule";
@@ -73,6 +74,9 @@ export async function createCohort(
     } else {
       const [qualification] = await tx.select({ id: qualifications.id }).from(qualifications).where(eq(qualifications.id, input.qualificationId!));
       if (!qualification) throw new CohortError("No such qualification.", "not_found");
+    }
+    if (!inReach(await reachWithin(tx, session), { courseId: input.courseId, qualificationId: input.qualificationId })) {
+      throw new CohortError("This is not one of the programmes you are assigned to.", "not_permitted");
     }
 
     const [cohort] = await tx
@@ -447,8 +451,9 @@ export async function setStepReleased(
 export async function listCohorts(session: AuthenticatedSession) {
   assertSessionCan(session, "enrolment:read_all");
 
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    const reach = await reachWithin(tx, session);
+    return tx
       .select({
         id: cohorts.id,
         name: cohorts.name,
@@ -465,20 +470,23 @@ export async function listCohorts(session: AuthenticatedSession) {
       .from(cohorts)
       .leftJoin(courses, eq(courses.id, cohorts.courseId))
       .leftJoin(qualifications, eq(qualifications.id, cohorts.qualificationId))
-      .orderBy(asc(cohorts.startDate)),
-  );
+      .where(cohortsWithin(reach, cohorts.id))
+      .orderBy(asc(cohorts.startDate));
+  });
 }
 
 /** Qualifications a cohort can walk end to end: those with study units. */
 export async function qualificationsForCohorts(session: AuthenticatedSession) {
   assertSessionCan(session, "enrolment:read_all");
-  return withTenant(session.organisationId, (tx) =>
-    tx
+  return withTenant(session.organisationId, async (tx) => {
+    const reach = await reachWithin(tx, session);
+    return tx
       .selectDistinct({ id: qualifications.id, title: qualifications.title, credits: qualifications.totalCredits })
       .from(qualifications)
       .innerJoin(studyUnits, eq(studyUnits.qualificationId, qualifications.id))
-      .orderBy(asc(qualifications.title)),
-  );
+      .where(qualificationsWithin(reach, qualifications.id))
+      .orderBy(asc(qualifications.title));
+  });
 }
 
 /** The steps a cohort's schedule covers: one course's, or every study unit's of its qualification. */
@@ -497,6 +505,10 @@ export async function getCohort(session: AuthenticatedSession, cohortId: string)
       .from(cohorts)
       .where(eq(cohorts.id, cohortId));
     if (!cohort) throw new CohortError("No such cohort.", "not_found");
+    // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+    if (!inReach(await reachWithin(tx, session), { cohortId })) {
+      throw new CohortError("This is not one of the programmes you are assigned to.", "not_permitted");
+    }
 
     const members = await tx
       .select({

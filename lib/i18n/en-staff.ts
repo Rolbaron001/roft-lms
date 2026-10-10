@@ -672,6 +672,7 @@ export const staff = {
   "person.roleNote.moderator": "Cannot moderate own decisions",
   "person.roleNote.external_verifier": "Read-only",
   "person.roleNote.workplace_coach": "The employer's supervisor: sees only their own learners",
+  "person.roleNote.tenant_viewer": "Sees everything an administrator sees and can change nothing. Makes the person read-only whatever else they hold.",
   "person.registration": "{role} registration number",
   "roster.reading": "Reading…",
   "roster.read": "Read the spreadsheet",
@@ -3391,6 +3392,7 @@ export const staff = {
   "reports.scope.tenant": "Across the whole organisation.",
   "reports.scope.team": "Your direct reports.",
   "reports.scope.self": "Your own record.",
+  "reports.scope.assigned": "The learners on the programmes and cohorts you are assigned to.",
   "reports.programme": "The programme itself: what nothing tests, which questions are not working",
   "reports.team": "Team",
   "reports.allTeams": "All teams",
@@ -3838,6 +3840,11 @@ export const staff = {
   "access.deniedTitle": "You do not have access to this",
   "access.deniedNote":
     "You are signed in, but this is not yours to see: either it belongs to someone else, or it needs a role your account does not hold. If you think that is wrong, ask your administrator to check.",
+  "scope.assignedOnly": "You see the programmes and cohorts you are assigned to.",
+  "scope.assignedNone":
+    "You are not assigned to any programme yet, so nothing of anybody else's is shown here. An administrator assigns facilitators, assessors and moderators on each programme's page, under People on this programme.",
+  "access.notAssigned":
+    "This belongs to a programme you are not assigned to. Facilitators, assessors and moderators see only the programmes and cohorts they are assigned to; an administrator assigns them on the programme's page, under People on this programme.",
   "access.home": "Back to your home page",
   "access.unknownTitle": "This address is not in use",
   "access.unknownNote":

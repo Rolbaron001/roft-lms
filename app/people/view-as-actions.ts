@@ -31,7 +31,9 @@ export async function startViewAsAction(formData: FormData): Promise<void> {
       after: { name: `${row.firstName} ${row.lastName}` },
     });
     return row;
-  });
+    // Administrator View may look as somebody too: the look is read-only
+    // either way, and this records only that it began.
+  }, { ownSitting: true });
   if (!person) redirect(`/people/${userId}`);
 
   (await cookies()).set(VIEW_AS_COOKIE, person.id, {

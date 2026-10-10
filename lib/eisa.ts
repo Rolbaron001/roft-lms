@@ -17,6 +17,7 @@ import {
   workplaceLogbooks,
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { qualificationsWithin, reachWithin } from "./staff-scope";
 import { modulesOfCondition } from "./part-qualifications";
 
 /**
@@ -907,6 +908,8 @@ export async function cohortReadiness(
         and(
           isNotNull(enrolments.qualificationId),
           eq(users.status, "active"),
+          // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+          qualificationsWithin(await reachWithin(tx, session), enrolments.qualificationId),
         ),
       );
 

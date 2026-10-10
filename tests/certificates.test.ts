@@ -22,10 +22,13 @@ import {
 import {
   addLesson,
   addSection,
-  createCourse,
+  createCourse as createCourseUnassigned,
   publishCourse,
   tagCourseCompetency,
 } from "@/lib/authoring";
+import { withStaffAssigned } from "./helpers/assign-staff";
+// Staff are named on each course as it is made (tests/helpers/assign-staff.ts).
+const createCourse = withStaffAssigned(createCourseUnassigned);
 import { enrolUser, getEnrolmentForDelivery, markLessonComplete } from "@/lib/enrolment";
 import {
   addAssessmentItem,

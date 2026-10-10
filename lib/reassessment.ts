@@ -16,6 +16,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { coursesWithin, reachWithin, submissionCourse } from "./staff-scope";
 
 /**
  * The third attempt.
@@ -596,7 +597,9 @@ export async function listHeldAndAuthorised(session: AuthenticatedSession) {
         assessments,
         eq(assessments.id, assessmentSubmissions.assessmentId),
       )
-      .innerJoin(users, eq(users.id, assessmentSubmissions.userId));
+      .innerJoin(users, eq(users.id, assessmentSubmissions.userId))
+      // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+      .where(coursesWithin(await reachWithin(tx, session), submissionCourse));
 
     // Grouped in memory rather than in SQL: the counting rule is "the latest
     // decision on each attempt", which is awkward to express in one query and

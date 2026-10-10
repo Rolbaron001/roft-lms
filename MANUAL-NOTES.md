@@ -488,6 +488,25 @@ person going through it question by question.
   the programme's facilitators first; the cohort page shows its facilitator,
   with Change; a facilitator's dashboard covers their cohorts; an assessor's
   and a moderator's dashboards list their own programmes' work first.
+- **Staff see only what they are assigned to (10 October 2026).** A person
+  whose staff roles are only Facilitator, Assessor or Moderator sees only the
+  programmes they are named on here, the courses beneath them, the cohorts
+  running them, and the learners on those. This covers every list (courses,
+  qualifications, cohorts, the tracker, readiness, EISA, FISA, appeals,
+  grievances, reassessments, reports, captures) and every page of one
+  programme, cohort, submission or learner: typing an address does not get
+  round it.
+  - An assessor's queue holds only the programmes they are named on as
+    assessor; a moderator's only those named as moderator.
+  - A facilitator also reaches the cohorts they facilitate or take a class
+    session for, without being named on the programme, and any course they
+    made themselves.
+  - Anyone who also holds Administrator, Administrator View, Skills
+    Development Facilitator or External Verifier sees the whole provider.
+  - **What it depends on:** every facilitator, assessor and moderator named
+    on their programmes before they start work. Somebody named on nothing
+    sees nothing of anybody else's, and a page they cannot open says why.
+    Their own learning is untouched.
 
 ## 6l. Facilitation plans and feedback questions (9 October 2026)
 
@@ -521,6 +540,24 @@ person going through it question by question.
   Every look is recorded in the audit trail.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
+
+## 6n. Administrator View (10 October 2026)
+
+- **What it is:** a role, chosen on a person's page under Roles, for somebody
+  who needs to see the platform working and must not change it, such as a
+  hosting contact or an owner checking quality. They see every screen an
+  administrator sees, including "See the platform as …".
+- **Nothing can be changed.** A line at the top of every page says so, and
+  every save button is shown greyed out. The refusal is the database's own,
+  so it holds on every screen, including ones added later.
+- **What they can still do:** sign in and out, change their own password and
+  language, and mark their own notifications read.
+- **What they do not see:** the health, disability or financial reasons
+  behind a learner's support arrangement (the arrangement itself is shown),
+  and they are not told of disciplinary matters. They cannot switch on the AI
+  extension.
+- **Held with another role,** it still makes the person read-only. Give it
+  on its own.
 
 ## 6c. The steps of a cohort, and finding your way (8 October 2026)
 

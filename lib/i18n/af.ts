@@ -16,6 +16,8 @@ export const af: Catalogue = {
   "shell.account": "Jou rekening: wagwoord en taal",
   "shell.signOut": "Teken uit",
   "viewAs.stop": "Hou op kyk",
+  "viewOnly.banner": "Administrateur (slegs kyk): jy kan alles hier sien en niks verander nie.",
+  "viewOnly.refused": "Administrateur (slegs kyk) kan dit sien maar nie verander nie.",
   "viewAs.noAttempt": "Om hierdie vraestel oop te maak sou 'n poging vir hierdie leerder begin, wat nie gedoen word terwyl jy as hulle kyk nie. Die vraestel self kan by die kwalifikasie se Sien dit as 'n leerder gesien word.",
   "viewAs.banner": "Jy sien die platform soos {person} ({roles}) dit sien. Niks kan verander word terwyl jy kyk nie. Bekyk deur {by}.",
 
@@ -183,6 +185,7 @@ export const af: Catalogue = {
   "role.skills_development_facilitator": "Vaardigheidsontwikkelingsfasiliteerder",
   "role.external_verifier": "Eksterne verifieerder",
   "role.workplace_coach": "Werkplekafrigter",
+  "role.tenant_viewer": "Administrateur (slegs kyk)",
   "status.assigned": "Toegeken",
   "status.in_progress": "Aan die gang",
   "status.completed": "Voltooi",

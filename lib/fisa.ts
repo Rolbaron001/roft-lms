@@ -18,6 +18,7 @@ import {
 import { recordAudit } from "./audit";
 import { raise, usersWithRole } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { qualificationsWithin, reachWithin } from "./staff-scope";
 import { canAny, PermissionDeniedError } from "./rbac";
 
 /**
@@ -760,6 +761,8 @@ export async function listInstruments(session: AuthenticatedSession) {
         qualifications,
         eq(qualifications.id, fisaInstruments.qualificationId),
       )
+      // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+      .where(qualificationsWithin(await reachWithin(tx, session), fisaInstruments.qualificationId))
       .orderBy(asc(fisaInstruments.title)),
   );
 }

@@ -420,5 +420,5 @@ export async function finishSignIn(
     }
 
     return openSession(tx, organisationId, user, context, pending.kind);
-  });
+  }, { ownSitting: true });
 }

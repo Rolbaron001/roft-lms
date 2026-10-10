@@ -34,8 +34,9 @@ export default async function ProgrammeReportsPage({
     reportableAssessments(session),
   ]);
 
-  const chosenQualification = qualification ?? qualifications[0]?.id;
-  const chosenAssessment = assessment ?? assessments[0]?.id;
+  // Only from the lists, which hold what this person may see (lib/staff-scope.ts).
+  const chosenQualification = qualifications.find((row) => row.id === qualification)?.id ?? qualifications[0]?.id;
+  const chosenAssessment = assessments.find((row) => row.id === assessment)?.id ?? assessments[0]?.id;
 
   const [coverage, questions] = await Promise.all([
     chosenQualification

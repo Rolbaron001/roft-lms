@@ -21,6 +21,7 @@ import {
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { modulesOfCondition } from "./part-qualifications";
+import { coursesWithin, reachWithin } from "./staff-scope";
 
 /**
  * The three reports a provider acts on.
@@ -526,7 +527,7 @@ export async function stepTimings(
 export async function reportableAssessments(session: AuthenticatedSession) {
   assertSessionCan(session, "report:tenant");
 
-  return withTenant(session.organisationId, (tx) =>
+  return withTenant(session.organisationId, async (tx) =>
     tx
       .select({
         id: assessments.id,
@@ -534,7 +535,8 @@ export async function reportableAssessments(session: AuthenticatedSession) {
         purpose: assessments.purpose,
       })
       .from(assessments)
-      .where(eq(assessments.status, "published"))
+      // Staff see only the programmes they are assigned to (lib/staff-scope.ts).
+      .where(and(eq(assessments.status, "published"), coursesWithin(await reachWithin(tx, session), assessments.courseId)))
       .orderBy(asc(assessments.title)),
   );
 }

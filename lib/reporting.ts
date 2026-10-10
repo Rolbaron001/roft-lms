@@ -9,6 +9,7 @@ import {
 } from "@/db/schema";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { isAssignedOnly, reachOf } from "./staff-scope";
 
 /**
  * Reporting.
@@ -34,7 +35,9 @@ export type ReportFilters = {
 export type ReportScope =
   | { kind: "tenant" }
   | { kind: "team"; managerId: string }
-  | { kind: "self"; userId: string };
+  | { kind: "self"; userId: string }
+  /** A facilitator, assessor or moderator: the learners on what they are assigned to (lib/staff-scope.ts). */
+  | { kind: "assigned"; courseIds: string[]; cohortIds: string[] };
 
 /**
  * What this person is allowed to report on.
@@ -44,12 +47,24 @@ export type ReportScope =
  * that stops a reporting screen becoming a way around role restrictions.
  */
 export function scopeFor(session: AuthenticatedSession): ReportScope {
+  if (isAssignedOnly(session)) return { kind: "assigned", courseIds: [], cohortIds: [] };
   if (can(session, "report:tenant")) return { kind: "tenant" };
   if (can(session, "report:team")) {
     return { kind: "team", managerId: session.userId };
   }
   return { kind: "self", userId: session.userId };
 }
+
+/** The scope with an assigned person's courses and cohorts filled in. */
+async function resolvedScope(session: AuthenticatedSession): Promise<ReportScope> {
+  const first = scopeFor(session);
+  if (first.kind !== "assigned") return first;
+  const reach = await reachOf(session);
+  if (reach.whole) return { kind: "tenant" };
+  return { kind: "assigned", courseIds: [...reach.courses], cohortIds: [...reach.cohorts] };
+}
+
+const uuidList = (ids: string[]) => sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `);
 
 /** SQL restricting a query on `users` to the people in scope. */
 function peopleInScope(scope: ReportScope, filters: ReportFilters) {
@@ -59,6 +74,12 @@ function peopleInScope(scope: ReportScope, filters: ReportFilters) {
     clauses.push(eq(users.lineManagerId, scope.managerId));
   } else if (scope.kind === "self") {
     clauses.push(eq(users.id, scope.userId));
+  } else if (scope.kind === "assigned") {
+    const parts = [
+      ...(scope.courseIds.length ? [sql`${users.id} in (select e.user_id from enrolments e where e.course_id in (${uuidList(scope.courseIds)}))`] : []),
+      ...(scope.cohortIds.length ? [sql`${users.id} in (select m.user_id from cohort_members m where m.cohort_id in (${uuidList(scope.cohortIds)}))`] : []),
+    ];
+    clauses.push(parts.length ? sql`(${sql.join(parts, sql` or `)})` : sql`false`);
   }
 
   if (filters.team) clauses.push(eq(users.team, filters.team));
@@ -82,7 +103,7 @@ export async function headlineNumbers(
   filters: ReportFilters = {},
 ): Promise<Headline> {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const people = await tx
@@ -152,7 +173,7 @@ export async function courseCompletion(
   filters: ReportFilters = {},
 ): Promise<CourseCompletionRow[]> {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const ids = (
@@ -216,7 +237,7 @@ export async function capabilityCoverage(
   filters: ReportFilters = {},
 ): Promise<CapabilityRow[]> {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const ids = (
@@ -288,7 +309,7 @@ export async function overdueTraining(
   filters: ReportFilters = {},
 ): Promise<OverdueRow[]> {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const ids = (
@@ -336,7 +357,7 @@ export async function overdueTraining(
 /** Distinct teams and sites, for the filter controls. */
 export async function filterOptions(session: AuthenticatedSession) {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const rows = await tx
@@ -378,7 +399,7 @@ export function toCsv(
 /** Direct reports and their training status, for a line manager. */
 export async function teamStatus(session: AuthenticatedSession) {
   assertSessionCan(session, "report:own");
-  const scope = scopeFor(session);
+  const scope = await resolvedScope(session);
 
   return withTenant(session.organisationId, async (tx) => {
     const people = await tx

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
@@ -105,29 +106,99 @@ export type TenantDatabase = Parameters<
  * else (lib/view-as.ts). Read from the request's cookie; outside a request
  * (scripts, the scheduled jobs, tests) there is none.
  */
-async function viewingAsSomebody(): Promise<boolean> {
+async function requestCookies(): Promise<{ viewAs: boolean; sessionToken: string | null }> {
   try {
     const { cookies } = await import("next/headers");
-    return Boolean((await cookies()).get("roft_view_as")?.value);
+    const store = await cookies();
+    return {
+      viewAs: Boolean(store.get("roft_view_as")?.value),
+      sessionToken: store.get("roft_lms_session")?.value ?? null,
+    };
   } catch {
-    return false;
+    return { viewAs: false, sessionToken: null };
   }
+}
+
+/**
+ * Whether the session behind this cookie belongs to somebody holding
+ * "Administrator View" (lib/rbac.ts, `tenant_viewer`). Asked inside the
+ * transaction, after the tenant is set, so the row-level policies apply to
+ * the question as to everything else. Remembered for half a minute per
+ * session, since a page opens several transactions.
+ */
+const viewOnlyRemembered = new Map<string, { viewOnly: boolean; until: number }>();
+
+async function sessionIsViewOnly(tx: TenantDatabase, token: string): Promise<boolean> {
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const known = viewOnlyRemembered.get(tokenHash);
+  if (known && known.until > Date.now()) return known.viewOnly;
+  const rows = await tx.execute(sql`
+    select 1 from sessions s
+    join user_roles r on r.user_id = s.user_id and r.revoked_at is null
+    where s.token_hash = ${tokenHash} and r.role = 'tenant_viewer'
+    limit 1`);
+  const viewOnly = rows.length > 0;
+  if (viewOnlyRemembered.size > 5000) viewOnlyRemembered.clear();
+  viewOnlyRemembered.set(tokenHash, { viewOnly, until: Date.now() + 30_000 });
+  return viewOnly;
+}
+
+/**
+ * Whether this transaction may not write: "View as" or "Administrator View".
+ * For housekeeping a page does as it renders, which waits for a reader who
+ * may write rather than refusing the page.
+ */
+export async function transactionIsReadOnly(tx: TenantDatabase): Promise<boolean> {
+  const [row] = await tx.execute(sql`select current_setting('transaction_read_only') as read_only`);
+  return (row as { read_only?: string } | undefined)?.read_only === "on";
+}
+
+/** Forgets what was remembered above, for a test that changes somebody's roles. */
+export function forgetViewOnly(): void {
+  viewOnlyRemembered.clear();
 }
 
 export async function withTenant<T>(
   organisationId: string,
   work: (tx: TenantDatabase) => Promise<T>,
+  options: {
+    /**
+     * Writes that belong to the person's own sitting rather than to the
+     * provider's records: signing in and out, their own password, their
+     * language, switching the extension, marking a notification read. These
+     * stay possible under "Administrator View", which would otherwise lock
+     * somebody out of signing out. Never while viewing as somebody else.
+     */
+    ownSitting?: boolean;
+  } = {},
 ): Promise<T> {
-  const readOnly = await viewingAsSomebody();
-  return db.transaction(async (tx) => {
-    // While viewing as somebody else nothing may be written, by any page or
-    // action, however it was written: PostgreSQL refuses it for us.
-    if (readOnly) await tx.execute(sql`set transaction read only`);
-    await tx.execute(
-      sql`select set_config('app.current_organisation', ${organisationId}, true)`,
-    );
-    return work(tx);
-  });
+  const request = await requestCookies();
+  let viewOnly = false;
+  try {
+    return await db.transaction(async (tx) => {
+      // While viewing as somebody else nothing may be written, by any page or
+      // action, however it was written: PostgreSQL refuses it for us.
+      if (request.viewAs) await tx.execute(sql`set transaction read only`);
+      await tx.execute(
+        sql`select set_config('app.current_organisation', ${organisationId}, true)`,
+      );
+      // The same lock for "Administrator View", decided by the database's own
+      // record of who holds the role, never by anything the browser sends.
+      if (!request.viewAs && !options.ownSitting && request.sessionToken && (await sessionIsViewOnly(tx, request.sessionToken))) {
+        viewOnly = true;
+        await tx.execute(sql`set transaction read only`);
+      }
+      return work(tx);
+    });
+  } catch (error) {
+    // PostgreSQL's read_only_sql_transaction, said as the refusal it is.
+    const code = (error as { cause?: { code?: string }; code?: string }).cause?.code ?? (error as { code?: string }).code;
+    if (viewOnly && code === "25006") {
+      const { ViewOnlyError } = await import("@/lib/rbac");
+      throw new ViewOnlyError();
+    }
+    throw error;
+  }
 }
 
 /**

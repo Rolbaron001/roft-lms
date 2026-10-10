@@ -22,7 +22,7 @@ export async function setOwnLocale(session: AuthenticatedSession, code: string |
   if (code !== null && !isLocale(code)) throw new LanguageError("That is not a language this platform offers.");
   await withTenant(session.organisationId, async (tx) => {
     await tx.update(users).set({ locale: code }).where(eq(users.id, session.userId));
-  });
+  }, { ownSitting: true });
 }
 
 /** The provider's default, for everybody who has not chosen their own. */

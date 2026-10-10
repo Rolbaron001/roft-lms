@@ -16,6 +16,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { dateInZone } from "./timezone";
 import { withinWorkingDays } from "./working-days";
 import { holidaysForTenant } from "./tenant-holidays";
+import { cohortsWithin, reachWithin } from "./staff-scope";
 
 /**
  * Appeals.
@@ -637,7 +638,14 @@ async function rows(
       .innerJoin(users, eq(users.id, appeals.learnerId))
       .innerJoin(cohorts, eq(cohorts.id, appeals.cohortId))
       .leftJoin(assessments, eq(assessments.id, appeals.assessmentId))
-      .where(where)
+      .where(
+        and(
+          where,
+          // Staff see appeals from the cohorts they are assigned to, and their
+          // own (lib/staff-scope.ts).
+          or(eq(appeals.learnerId, session.userId), cohortsWithin(await reachWithin(tx, session), appeals.cohortId)),
+        ),
+      )
       .orderBy(desc(appeals.lodgedAt));
 
     // The moderator's name in a second pass rather than a second join on the

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui";
 import { vocabulary } from "@/lib/terms";
 import { maybe } from "@/lib/i18n";
 import { AppShell } from "@/components/app-shell";
+import { AssignedNote } from "@/components/assigned-note";
 
 /**
  * Every programme that is running, and the dates it turns on.
@@ -34,6 +35,7 @@ export default async function TrackerPage({
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <AssignedNote session={session} />
       <h1 className="text-xl font-semibold">{t("tracker.title")}</h1>
       <p className="mt-1 text-sm text-[var(--muted)]">
         {includeFinished ? t("tracker.all") : t("tracker.running")}{" "}

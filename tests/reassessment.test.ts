@@ -22,7 +22,10 @@ import {
   userRoles,
   users,
 } from "@/db/schema";
-import { createCourse } from "@/lib/authoring";
+import { createCourse as createCourseUnassigned } from "@/lib/authoring";
+import { withStaffAssigned } from "./helpers/assign-staff";
+// Staff are named on each course as it is made (tests/helpers/assign-staff.ts).
+const createCourse = withStaffAssigned(createCourseUnassigned);
 import {
   createAssessment,
   publishAssessment,

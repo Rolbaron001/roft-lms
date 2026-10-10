@@ -53,6 +53,13 @@ export const userRole = pgEnum("user_role", [
    * why they hold almost no permissions and see only their own learners.
    */
   "workplace_coach",
+  /**
+   * "Administrator View": sees everything an administrator sees and changes
+   * nothing. Roland, 10 October 2026, for somebody such as the hosting
+   * contact who needs to see the platform working. Holding it makes every
+   * request the person makes read-only in the database (lib/view-only.ts).
+   */
+  "tenant_viewer",
 ]);
 
 export const userStatus = pgEnum("user_status", [

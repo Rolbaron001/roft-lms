@@ -24,6 +24,8 @@ export const en = {
   "shell.account": "Your account: password and language",
   "shell.signOut": "Sign out",
   "viewAs.stop": "Stop viewing",
+  "viewOnly.banner": "Administrator View: you can see everything here and change nothing.",
+  "viewOnly.refused": "Administrator View can see this but not change it.",
   "viewAs.noAttempt": "Opening this paper would start an attempt for this learner, which is not done while you are viewing as them. The paper itself can be seen from the qualification's See it as a learner.",
   "viewAs.banner": "You are seeing the platform as {person} ({roles}). Nothing can be changed while you look. Viewed by {by}.",
 
@@ -262,6 +264,7 @@ export const en = {
   "role.skills_development_facilitator": "Skills Development Facilitator",
   "role.external_verifier": "External Verifier",
   "role.workplace_coach": "Workplace Coach",
+  "role.tenant_viewer": "Administrator View",
   "status.assigned": "Assigned",
   "status.in_progress": "In progress",
   "status.completed": "Completed",

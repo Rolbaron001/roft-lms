@@ -30,7 +30,7 @@ export function PasswordForm({ forced }: { forced: boolean }) {
   );
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4" data-own-sitting>
       {state.error ? (
         <p
           role="alert"

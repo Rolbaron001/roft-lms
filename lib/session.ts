@@ -157,7 +157,7 @@ export async function signIn(
     }
 
     return openSession(tx, organisationId, user, context, "password");
-  });
+  }, { ownSitting: true });
 }
 
 /**
@@ -312,7 +312,9 @@ export async function resolveSession(
       aiOn: row.aiOnSince !== null,
       locale: row.locale,
     };
-  });
+    // Keeping the sitting alive is the person's own business, under
+    // "Administrator View" as for anybody (db/client.ts).
+  }, { ownSitting: true });
 }
 
 /**
@@ -347,7 +349,7 @@ export async function setSessionAi(
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
-  });
+  }, { ownSitting: true });
 }
 
 export async function signOut(
@@ -410,7 +412,7 @@ export async function signOut(
         userAgent: context.userAgent,
       });
     }
-  });
+  }, { ownSitting: true });
 }
 
 /**
@@ -455,7 +457,10 @@ export async function revokeAllSessionsForUser(
     }
 
     return revoked.length;
-  });
+  },
+  // Ending one's own other sittings, after changing one's own password, is
+  // the person's own business; ending somebody else's is not.
+  { ownSitting: actorId === userId });
 }
 
 /** Clears expired and long-revoked sessions. Safe to run on a schedule. */

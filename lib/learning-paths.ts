@@ -11,6 +11,7 @@ import {
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
+import { reachWithin } from "./staff-scope";
 import { awardCompletionBadgeIn } from "./badges";
 
 /**
@@ -109,10 +110,15 @@ export async function listLearningPaths(session: AuthenticatedSession) {
       )
       .orderBy(asc(learningPathCourses.sortOrder));
 
-    return paths.map((path) => ({
-      ...path,
-      steps: steps.filter((step) => step.learningPathId === path.id),
-    }));
+    // Staff see the programmes they are assigned to, and those holding one of
+    // their courses (lib/staff-scope.ts).
+    const reach = await reachWithin(tx, session);
+    return paths
+      .map((path) => ({
+        ...path,
+        steps: steps.filter((step) => step.learningPathId === path.id),
+      }))
+      .filter((path) => reach.whole || reach.paths.has(path.id) || path.steps.some((step) => reach.courses.has(step.courseId)));
   });
 }
 

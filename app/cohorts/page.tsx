@@ -11,6 +11,7 @@ import { Card, Guide } from "@/components/ui";
 import { extensionState } from "@/lib/extensions";
 import { vocabulary } from "@/lib/terms";
 import { eligibleStaff, programmeStaffFor } from "@/lib/programme-staff";
+import { AssignedNote } from "@/components/assigned-note";
 
 /**
  * The cohorts a provider is running.
@@ -50,6 +51,7 @@ export default async function CohortsPage() {
 
   return (
     <AppShell tenant={tenant} session={session}>
+      <AssignedNote session={session} />
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{words.many("cohort")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("cohorts.intro")}</p>

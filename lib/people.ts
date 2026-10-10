@@ -64,6 +64,7 @@ const ROLE_VALUES = [
   "skills_development_facilitator",
   "external_verifier",
   "workplace_coach",
+  "tenant_viewer",
 ] as const;
 
 /**
@@ -622,7 +623,7 @@ export async function changeOwnPassword(
       entityType: "user",
       entityId: session.userId,
     });
-  });
+  }, { ownSitting: true });
 
   // Every other session for this person ends. If the password is being changed
   // because somebody else knew it — which is exactly the case after an
