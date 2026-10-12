@@ -77,22 +77,22 @@ export function CreateForm({
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("fisa.callIt")}</span>
-          <input name="title" className={field} placeholder={t("fisa.callItHint")} />
+          <input name="title" className={field} placeholder={t("fisa.callItHint")} data-suggest />
         </label>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("fisa.durationMinutes")}</span>
-          <input name="durationMinutes" type="number" min="1" className={field} placeholder="120" />
+          <input name="durationMinutes" type="number" min="1" className={field} placeholder="120" data-suggest />
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("fisa.totalMarks")}</span>
-          <input name="totalMarks" type="number" min="1" className={field} placeholder="80" />
+          <input name="totalMarks" type="number" min="1" className={field} placeholder="80" data-suggest />
         </label>
         <label className="block space-y-1.5">
           <span className="block text-sm font-medium">{t("fisa.passPercent")}</span>
-          <input name="passMarkPercent" type="number" min="1" max="100" className={field} placeholder="70" />
+          <input name="passMarkPercent" type="number" min="1" max="100" className={field} placeholder="70" data-suggest />
           <span className="block text-xs text-[var(--muted)]">{t("fisa.passNote")}</span>
         </label>
       </div>
@@ -105,6 +105,7 @@ export function CreateForm({
             name="practicalNote"
             className={`${field} mt-1.5`}
             placeholder={t("fisa.practicalHint")}
+            data-suggest
           />
         </span>
       </label>

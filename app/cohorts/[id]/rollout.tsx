@@ -218,12 +218,12 @@ export function Rollout({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("rollout.starts")}</span>
-            <input name="startTime" placeholder="18:30" className={inputClass} />
+            <input name="startTime" placeholder="18:30" data-suggest className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("rollout.ends")}</span>
-            <input name="endTime" placeholder="20:30" className={inputClass} />
+            <input name="endTime" placeholder="20:30" data-suggest className={inputClass} />
           </label>
 
           <label className="block space-y-1.5">

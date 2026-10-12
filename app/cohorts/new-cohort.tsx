@@ -164,7 +164,7 @@ export function NewCohort({
 
           <label className="block space-y-1.5">
             <span className="block text-sm font-medium">{t("cohorts.name")}</span>
-            <input name="name" required minLength={2} placeholder={t("cohorts.nameHint")} className={field} />
+            <input name="name" required minLength={2} placeholder={t("cohorts.nameHint")} data-suggest className={field} />
           </label>
 
           <label className="block space-y-1.5">
@@ -172,7 +172,7 @@ export function NewCohort({
               {t("cohorts.code")}{" "}
               <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
             </span>
-            <input name="code" placeholder={t("cohorts.codeHint")} className={field} />
+            <input name="code" placeholder={t("cohorts.codeHint")} data-suggest className={field} />
           </label>
 
           <label className="block space-y-1.5">

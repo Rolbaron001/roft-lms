@@ -94,6 +94,7 @@ export function TemplateForm({ templates }: { templates: TemplateRow[] }) {
             name="name"
             defaultValue={showing?.name ?? ""}
             placeholder={t("tmpl.nameHint")}
+            data-suggest
             maxLength={120}
             className={inputClass}
           />

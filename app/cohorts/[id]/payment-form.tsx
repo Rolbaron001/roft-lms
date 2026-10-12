@@ -61,6 +61,7 @@ export function PaymentForm({
             name="reference"
             defaultValue={reference ?? ""}
             placeholder="INV-2026-0041"
+            data-suggest
             className={`${field} w-full`}
           />
           <span className="block text-xs text-[var(--muted)]">{t("payment.referenceNote")}</span>

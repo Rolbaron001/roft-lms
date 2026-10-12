@@ -156,6 +156,7 @@ export function AgreementForm({
             name="coachDesignation"
             type="text"
             placeholder={t("wpSetup.designationHint")}
+            data-suggest
             className={FIELD}
           />
           <p className="text-xs text-[var(--muted)]">{t("wpSetup.designationNote")}</p>

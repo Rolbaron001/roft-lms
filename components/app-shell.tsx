@@ -16,6 +16,7 @@ import type { AuthenticatedSession } from "@/lib/session";
 import type { TenantIdentity } from "@/lib/tenant";
 import { DeploymentBanner } from "./deployment-banner";
 import { I18nProvider } from "./i18n";
+import { SuggestionTab } from "./suggestion-tab";
 import { catalogueFor, maybe, translator } from "@/lib/i18n";
 import { localeFor, pageDates } from "@/lib/request";
 import { dateLocale } from "@/lib/i18n/locales";
@@ -221,6 +222,7 @@ export async function AppShell({
       >
         <I18nProvider messages={catalogueFor(locale)} dates={dateLocale(locale)} dateSettings={(await pageDates()).settings}>
           <main className="mx-auto max-w-5xl px-6 py-8" data-view-only={viewOnly ? "" : undefined}>{children}</main>
+          <SuggestionTab />
         </I18nProvider>
       </TenantIllustrationProvider>
     </div>

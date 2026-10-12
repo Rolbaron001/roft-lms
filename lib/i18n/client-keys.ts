@@ -1776,6 +1776,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "staff.registration",
   "staff.registrationField",
   "staff.remove",
+  "suggest.tab",
   "support.accommodation",
   "support.accommodationHint",
   "support.changing",

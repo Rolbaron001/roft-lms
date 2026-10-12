@@ -15,6 +15,7 @@ export const af: Catalogue = {
   "shell.notificationsUnread": "Kennisgewings, {count} ongelees",
   "shell.account": "Jou rekening: wagwoord en taal",
   "shell.signOut": "Teken uit",
+  "suggest.tab": "Druk Tab om die voorstel te gebruik.",
   "viewAs.stop": "Hou op kyk",
   "viewOnly.banner": "Administrateur (slegs kyk): jy kan alles hier sien en niks verander nie.",
   "viewOnly.refused": "Administrateur (slegs kyk) kan dit sien maar nie verander nie.",

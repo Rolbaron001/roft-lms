@@ -122,7 +122,7 @@ export function EvidenceForm({
             name="files"
             multiple
             required
-            className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-[var(--border)] file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            className="block w-full text-sm"
           />
         </label>
         <p className="mt-1 text-xs text-[var(--muted)]">

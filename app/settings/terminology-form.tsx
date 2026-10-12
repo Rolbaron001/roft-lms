@@ -71,6 +71,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
                     name={`${term.key}.one`}
                     defaultValue={term.currentOne}
                     placeholder={term.defaultOne}
+                    data-suggest
                     maxLength={40}
                     className={`${inputClass} w-full`}
                     aria-label={t("termsForm.oneLabel", { word: term.defaultOne.toLowerCase() })}
@@ -81,6 +82,7 @@ export function TerminologyForm({ terms }: { terms: TermRow[] }) {
                     name={`${term.key}.many`}
                     defaultValue={term.currentMany}
                     placeholder={term.defaultMany}
+                    data-suggest
                     maxLength={40}
                     className={`${inputClass} w-full`}
                     aria-label={t("termsForm.manyLabel", { words: term.defaultMany.toLowerCase() })}

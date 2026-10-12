@@ -26,7 +26,7 @@ export function SittingForm() {
   return (
     <form action={action} className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <input name="name" required placeholder={t("eisa.sittingName")} className={inputClass} />
+        <input name="name" required placeholder={t("eisa.sittingName")} data-suggest className={inputClass} />
         <label className="text-sm">
           <span className="mr-2 text-[var(--muted)]">{t("eisa.sitting")}</span>
           <DateField name="sittingDate" required className={inputClass} />

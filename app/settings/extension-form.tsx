@@ -292,6 +292,7 @@ export function ExtensionForm({ current }: { current: ExtensionView }) {
               // here. This listed gemini-2.5-flash for a fortnight after
               // Google stopped serving it.
               placeholder={chosen?.defaultModel ?? ""}
+              data-suggest
               className={`${inputClass} mt-1 block w-full max-w-md`}
             />
           </label>

@@ -131,6 +131,7 @@ export function SetUpSitting({
           rows={2}
           maxLength={2000}
           placeholder={t("sitting.materialsHint")}
+          data-suggest
           className={`${inputClass} mt-1 block w-full`}
         />
       </label>

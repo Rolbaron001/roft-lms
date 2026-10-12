@@ -36,6 +36,7 @@ export function NewPathForm({ heading }: { heading: string }) {
             required
             minLength={3}
             placeholder={t("paths.newTitleHint")}
+            data-suggest
             className={inputClass}
           />
         </label>

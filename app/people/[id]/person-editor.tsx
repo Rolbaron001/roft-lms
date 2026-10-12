@@ -178,6 +178,7 @@ export function PersonEditor({
               type="email"
               defaultValue={mailboxAddress ?? ""}
               placeholder={proposedMailbox}
+              data-suggest
               className="mt-1 w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
             />
             <p className="mt-1 text-xs text-[var(--muted)]">

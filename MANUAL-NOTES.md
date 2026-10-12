@@ -541,6 +541,22 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6o. Accepting a suggestion with Tab (12 October 2026)
+
+- **What it does:** where a field shows a suggested value in grey, pressing
+  **Tab** in the empty field fills it in. Press Tab again to move on. Hovering
+  over the field says so.
+- **Where:** the payment reference, class session start and end times, a
+  FISA's title, duration, marks, pass mark and practical component, a new
+  cohort's name and code, an EISA sitting's name, what may be brought into a
+  supervised sitting, a new programme's title, a template's name, a workplace
+  coach's designation, a person's suggested mailbox address, the AI model, and
+  each standard word on What you call things.
+- **Where not:** grey text that is an instruction ("Reason, if refusing") or
+  an invented example of a code or address ("KM0101", "https://…"). Type those.
+- **Check what Tab fills:** an example such as the payment reference is filled
+  exactly as shown. Change it to the real value.
+
 ## 6n. Administrator View (10 October 2026)
 
 - **What it is:** a role, chosen on a person's page under Roles, for somebody

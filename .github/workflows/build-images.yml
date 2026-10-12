@@ -73,5 +73,9 @@ jobs:
           tags: |
             ${{ env.IMAGE_BASE }}-${{ matrix.suffix }}:${{ github.sha }}
             ${{ env.IMAGE_BASE }}-${{ matrix.suffix }}:latest
+          # Stamps the build with its commit, so a tab left open across a
+          # release reloads on its next click instead of failing (Dockerfile).
+          build-args: |
+            NEXT_DEPLOYMENT_ID=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}

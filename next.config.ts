@@ -9,6 +9,17 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   /**
+   * Version skew protection. Every release replaces the code a browser tab
+   * was loaded with; without this, the first click in a tab opened before the
+   * release asks for pieces of the old build that are gone, and the page fails
+   * with "This page couldn't load" until it is reloaded (Roland, 12 October
+   * 2026). With an identifier per build, Next.js notices the mismatch and
+   * reloads the page itself. The build workflow passes the commit; a local
+   * build has none and behaves as before.
+   */
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID || undefined,
+
+  /**
    * pdf.js is loaded at run time rather than bundled. Bundling it rewrites the
    * dynamic imports it uses to reach its own worker and font data, and the
    * reader then fails to construct — which surfaces as every PDF being

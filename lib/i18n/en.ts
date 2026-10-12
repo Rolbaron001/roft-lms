@@ -23,6 +23,7 @@ export const en = {
   "shell.notificationsUnread": "Notifications, {count} unread",
   "shell.account": "Your account: password and language",
   "shell.signOut": "Sign out",
+  "suggest.tab": "Press Tab to use the suggestion.",
   "viewAs.stop": "Stop viewing",
   "viewOnly.banner": "Administrator View: you can see everything here and change nothing.",
   "viewOnly.refused": "You can view this but not change it.",

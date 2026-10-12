@@ -23,6 +23,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# The commit this image is built from, passed by the build workflow. Next.js
+# stamps the build with it, so a browser tab still running the previous
+# release reloads itself on its next click instead of failing with "This page
+# couldn't load" (next.config.ts, deploymentId).
+ARG NEXT_DEPLOYMENT_ID
+
 # Next.js emits a self-contained server under .next/standalone.
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
