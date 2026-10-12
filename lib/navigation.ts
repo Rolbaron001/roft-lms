@@ -28,6 +28,12 @@ export type NavItem = {
   /** Shown when the person holds any one of these. */
   anyPermission?: Permission[];
   /**
+   * Hidden when the person holds this. For a learner's own page that staff
+   * reach a fuller version of elsewhere: a learner's "Appeals and concerns"
+   * beside the coordinator's "Appeals".
+   */
+  notWith?: Permission;
+  /**
    * A capability the tenant has to have switched on.
    *
    * Separate from permission, because they answer different questions: a
@@ -155,6 +161,8 @@ export const NAV: NavSection[] = [
         permission: "enrolment:read_all",
       },
       { href: "/appeals", label: "Appeals", permission: "appeal:manage" },
+      // A learner's own appeals and concerns (12 October 2026).
+      { href: "/my-appeals", label: "Appeals and concerns", permission: "appeal:lodge", notWith: "appeal:manage" },
       // Recognition of prior learning and credit transfer. Under either
       // permission: the person who records a judgement and the person who
       // moderates it are deliberately different people.

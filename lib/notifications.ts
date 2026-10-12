@@ -62,6 +62,11 @@ export type NotificationKind =
   | "workplace.returned"
   | "appeal.lodged"
   | "grievance.lodged"
+  /** To the learner, about their own appeal or grievance (12 October 2026). */
+  | "appeal.acknowledged"
+  | "appeal.resolved"
+  | "grievance.acknowledged"
+  | "grievance.decided"
   | "statutory.due_soon"
   | "statutory.overdue"
   /** A scheduled session a week ahead, and one called off after being announced. */

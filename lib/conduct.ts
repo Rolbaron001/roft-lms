@@ -758,6 +758,8 @@ export async function lodgeGrievance(
 ) {
   assertSessionCan(session, "grievance:lodge");
   const parsed = grievanceInput.parse(input);
+  // In the learner's own name only, unless the person lodging manages grievances.
+  if (parsed.learnerId !== session.userId) assertSessionCan(session, "grievance:manage");
   const today = dateInZone(new Date(), timeZone);
 
   return withTenant(session.organisationId, async (tx) => {
@@ -831,6 +833,18 @@ export async function acknowledgeGrievance(
       .returning();
 
     if (!updated) throw new ConductError("Grievance not found.", "not_found");
+
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: updated.learnerId,
+      kind: "grievance.acknowledged",
+      subject: "Your concern has been acknowledged",
+      body: "Your concern is received and being dealt with.",
+      linkPath: "/my-appeals",
+      entityType: "grievance",
+      entityId: grievanceId,
+      dedupeKey: `grievance.acknowledged:${grievanceId}`,
+    });
     return updated;
   });
 }
@@ -945,6 +959,18 @@ export async function decideGrievance(
       entityType: "grievance",
       entityId: input.grievanceId,
       after: { decidedOn: updated.decidedOn, dueBy: updated.decisionDueBy },
+    });
+
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: updated.learnerId,
+      kind: "grievance.decided",
+      subject: "A decision has been made on your concern",
+      body: "Open Appeals and concerns to read it.",
+      linkPath: "/my-appeals",
+      entityType: "grievance",
+      entityId: input.grievanceId,
+      dedupeKey: `grievance.decided:${input.grievanceId}`,
     });
 
     return updated;

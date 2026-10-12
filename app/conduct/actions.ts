@@ -261,7 +261,7 @@ export async function lodgeGrievanceAction(
         desiredOutcome: values.desiredOutcome || undefined,
       }),
     "Lodged. It is acknowledged within two working days.",
-    ["/conduct", `/people/${learnerId}`],
+    ["/conduct", `/people/${learnerId}`, "/my-appeals"],
     { previous, values },
   ));
 }

@@ -602,6 +602,8 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
         id: "results",
         title: t("rd.l.results"),
         empty: t("rd.l.resultsNone"),
+        // Where a learner appeals a result or raises a concern (12 October 2026).
+        more: { label: t("rd.l.appealsLink"), href: "/my-appeals" },
         rows: [
           ...data.returned.map((row) => ({ primary: row.title, secondary: t("rd.l.feedbackFrom"), right: t("rd.new"), tone: "warning" as DashTone, href: resultHref(row) })),
           ...data.decided.map((row) => ({ primary: row.title, secondary: outcomeWord(row.outcome), right: day(row.at, { short: true }), tone: (row.outcome === "competent" ? "good" : "plain") as DashTone, href: resultHref(row) })),

@@ -99,10 +99,12 @@ export async function lodgeAppealAction(
     lateAcceptanceReason: field(formData, "lateAcceptanceReason"),
   };
 
+  const learnerId = field(formData, "learnerId") || session.userId;
+  const own = learnerId === session.userId;
   return said(run(
     () =>
       lodgeAppeal(session, timezone, {
-        learnerId: field(formData, "learnerId") || session.userId,
+        learnerId,
         cohortId: values.cohortId,
         ground: values.ground as "result" | "assessor_conduct",
         assessmentId: values.assessmentId || undefined,
@@ -110,8 +112,10 @@ export async function lodgeAppealAction(
         statement: values.statement,
         lateAcceptanceReason: values.lateAcceptanceReason || undefined,
       }),
-    "Appeal lodged. Acknowledge it within the deadline, which starts now.",
-    ["/appeals"],
+    own
+      ? "Appeal lodged. You are notified when it is acknowledged and when it is decided."
+      : "Appeal lodged. Acknowledge it within the deadline, which starts now.",
+    ["/appeals", "/my-appeals"],
     { previous, values },
   ));
 }

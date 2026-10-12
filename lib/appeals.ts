@@ -4,6 +4,7 @@ import { withTenant } from "@/db/client";
 import {
   appealNotes,
   appeals,
+  assessmentDecisions,
   assessmentSubmissions,
   assessments,
   cohortMembers,
@@ -107,6 +108,9 @@ export async function lodgeAppeal(
 ) {
   assertSessionCan(session, "appeal:lodge");
   const parsed = lodgeInput.parse(input);
+  // A learner lodges in their own name only. Lodging for somebody else, as a
+  // coordinator taking an appeal down for a learner, takes the right to manage.
+  if (parsed.learnerId !== session.userId) assertSessionCan(session, "appeal:manage");
 
   if (parsed.ground === "result" && !parsed.assessmentId) {
     throw new AppealError(
@@ -300,6 +304,18 @@ export async function acknowledgeAppeal(
       after: { acknowledgedAt: updated.acknowledgedAt },
     });
 
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: updated.learnerId,
+      kind: "appeal.acknowledged",
+      subject: "Your appeal has been acknowledged",
+      body: "Your appeal is received and being dealt with.",
+      linkPath: "/my-appeals",
+      entityType: "appeal",
+      entityId: appealId,
+      dedupeKey: `appeal.acknowledged:${appealId}`,
+    });
+
     return updated;
   });
 }
@@ -443,6 +459,18 @@ export async function resolveAppeal(
       entityId: parsed.appealId,
       before: { status: before.status },
       after: { status: "resolved", outcome: updated.outcome },
+    });
+
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: updated.learnerId,
+      kind: "appeal.resolved",
+      subject: "A decision has been made on your appeal",
+      body: "Open Appeals and concerns to read the outcome and the reasons.",
+      linkPath: "/my-appeals",
+      entityType: "appeal",
+      entityId: parsed.appealId,
+      dedupeKey: `appeal.resolved:${parsed.appealId}`,
     });
 
     return updated;
@@ -828,5 +856,81 @@ export async function assessmentsForLearner(
       .orderBy(assessments.title);
 
     return found;
+  });
+}
+
+export type ResultToAppeal = {
+  assessmentId: string;
+  title: string;
+  outcome: "competent" | "not_yet_competent";
+  /** The day the decision was recorded, on the provider's clock: where the two days to appeal run from. */
+  decidedOn: string;
+  cohortId: string | null;
+};
+
+/**
+ * The learner's own decided results, newest first, for appealing one from
+ * their own page (Roland, 12 October 2026). One line per assessment: its
+ * latest decision.
+ */
+export async function resultsToAppeal(
+  session: AuthenticatedSession,
+  timeZone: string,
+): Promise<ResultToAppeal[]> {
+  assertSessionCan(session, "appeal:lodge");
+  return withTenant(session.organisationId, async (tx) => {
+    const decided = await tx
+      .select({
+        assessmentId: assessments.id,
+        title: assessments.title,
+        outcome: assessmentDecisions.outcome,
+        signedAt: assessmentDecisions.signedAt,
+      })
+      .from(assessmentDecisions)
+      .innerJoin(assessmentSubmissions, eq(assessmentSubmissions.id, assessmentDecisions.submissionId))
+      .innerJoin(assessments, eq(assessments.id, assessmentSubmissions.assessmentId))
+      .where(eq(assessmentSubmissions.userId, session.userId))
+      .orderBy(desc(assessmentDecisions.signedAt));
+
+    const memberOf = await tx
+      .select({ id: cohorts.id })
+      .from(cohortMembers)
+      .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+      .where(and(eq(cohortMembers.userId, session.userId), or(eq(cohorts.status, "running"), eq(cohorts.status, "planned"))));
+    const onlyCohort = memberOf.length === 1 ? memberOf[0].id : null;
+
+    const seen = new Set<string>();
+    const results: ResultToAppeal[] = [];
+    for (const row of decided) {
+      if (seen.has(row.assessmentId)) continue;
+      seen.add(row.assessmentId);
+      results.push({
+        assessmentId: row.assessmentId,
+        title: row.title,
+        outcome: row.outcome,
+        decidedOn: dateInZone(row.signedAt, timeZone),
+        cohortId: onlyCohort,
+      });
+    }
+    return results;
+  });
+}
+
+/** The notes on the learner's own appeals that staff marked for them to read. */
+export async function notesForLearner(
+  session: AuthenticatedSession,
+  appealIds: string[],
+): Promise<Record<string, { note: string; createdAt: Date }[]>> {
+  if (appealIds.length === 0) return {};
+  return withTenant(session.organisationId, async (tx) => {
+    const found = await tx
+      .select({ appealId: appealNotes.appealId, note: appealNotes.note, createdAt: appealNotes.createdAt })
+      .from(appealNotes)
+      .innerJoin(appeals, eq(appeals.id, appealNotes.appealId))
+      .where(and(inArray(appealNotes.appealId, appealIds), eq(appeals.learnerId, session.userId), eq(appealNotes.visibleToLearner, true)))
+      .orderBy(appealNotes.createdAt);
+    const byAppeal: Record<string, { note: string; createdAt: Date }[]> = {};
+    for (const row of found) (byAppeal[row.appealId] ??= []).push({ note: row.note, createdAt: row.createdAt });
+    return byAppeal;
   });
 }

@@ -77,6 +77,7 @@ export async function AppShell({
                 session.permissions.includes(permission),
               ),
         )
+        .filter((item) => !item.notWith || !session.permissions.includes(item.notWith))
         .map((item) => ({
           href: item.href,
           // An item named after a provider term already reads in the

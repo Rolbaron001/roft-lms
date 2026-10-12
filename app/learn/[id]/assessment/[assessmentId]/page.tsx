@@ -102,6 +102,14 @@ export default async function TakeAssessmentPage({
                 ? t("assess.moderated")
                 : t("assess.recorded")}
           </p>
+          {/* A decided summative can be appealed from here (12 October 2026). */}
+          {view.assessment.purpose === "summative" && latest.status !== "submitted" && latest.status !== "draft" && session.permissions.includes("appeal:lodge") ? (
+            <p className="mt-2 text-sm">
+              <Link href={`/my-appeals?assessment=${view.assessment.id}`} className="font-medium text-[var(--brand-primary)] underline underline-offset-2">
+                {t("assess.appealThis")}
+              </Link>
+            </p>
+          ) : null}
 
           {feedback ? (
             <div className="mt-4 border-t border-[var(--border)] pt-4">

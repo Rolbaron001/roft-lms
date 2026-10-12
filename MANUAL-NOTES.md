@@ -541,6 +541,24 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6p. A learner's appeals and concerns (12 October 2026)
+
+- **Where:** **Assessment → Appeals and concerns**, the link under Results and
+  feedback on a learner's home page, and **Appeal this result** on each decided
+  summative result.
+- **What a learner can do:** appeal a result (the result, its date and the
+  cohort are filled in), appeal an assessor's conduct, or raise a concern
+  (a grievance). Each lists its status, and the outcome and reasons once
+  given, with any note staff mark as visible to the learner.
+- **Deadlines:** an appeal is lodged within two working days of receiving the
+  result; after that the learner gives a reason for the late appeal. A
+  concern is acknowledged within two working days.
+- **Notifications:** administrators are told when one is lodged. The learner is
+  told when it is acknowledged and when it is decided.
+- **What it depends on:** the learner being on a running or planned cohort;
+  appeals are filed against a cohort. A learner lodges in their own name only;
+  staff lodge for a learner from the learner's page under People.
+
 ## 6o. Accepting a suggestion with Tab (12 October 2026)
 
 - **What it does:** where a field shows a suggested value in grey, pressing
