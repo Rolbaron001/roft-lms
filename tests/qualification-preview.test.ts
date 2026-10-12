@@ -78,11 +78,11 @@ describe("it is for the people who build programmes", () => {
 
 describe("it reports what a learner would not find", () => {
   it("names a study unit with nothing behind it", () => {
-    expect(library).toMatch(/Nothing has been built for this study unit yet/);
+    expect(library).toMatch(/Nothing is built for this study unit yet/);
   });
 
   it("names a course with no steps", () => {
-    expect(library).toMatch(/no steps in it/);
+    expect(library).toMatch(/course has no steps/);
   });
 
   it("names an assessment still in draft", () => {

@@ -319,9 +319,9 @@ async function offerableSteps(
      */
     const warning =
       assessment.status !== "published"
-        ? "This is still a draft. It can go on the spine now, and a learner will not be offered it until it is published."
+        ? "This is a draft. You can add it now; learners see it once it is published."
         : own.length > 0 && published.length === 0
-          ? "Published, but none of its papers are. A learner would find nothing to answer."
+          ? "Published, but none of its papers are."
           : null;
 
     choices.push({

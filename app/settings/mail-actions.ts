@@ -48,7 +48,7 @@ export async function testMailAction(): Promise<MailTestState> {
     return said({
       ok: false,
       message:
-        "No mail server is set up on this deployment, so nothing can be sent yet.",
+        "No mail server is set up on this deployment.",
       detail:
         "Whoever maintains the platform needs to set MAIL_HOST and MAIL_FROM.",
     });
@@ -60,15 +60,15 @@ export async function testMailAction(): Promise<MailTestState> {
     return said({
       ok: true,
       message:
-        "The mail server accepted the connection. Learners can be sent their sign-in details and notifications.",
+        "The mail server accepted the connection. Sign-in details and notifications can be sent.",
     });
   }
 
   return said({
     ok: false,
     message: result.retryable
-      ? "The mail server could not be reached just now. This may be temporary; try again shortly."
-      : "The mail server refused the connection, so nothing can be sent.",
+      ? "The mail server could not be reached. Try again shortly."
+      : "The mail server refused the connection.",
     detail: result.error,
   });
 }

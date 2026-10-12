@@ -33,7 +33,7 @@ function describe(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 function readTenantFields(formData: FormData): TenantInput {
@@ -142,6 +142,6 @@ export async function setTenantStatusAction(
     notice:
       status === "active"
         ? "Reactivated. Their address works again."
-        : "Suspended. No one there can reach the sign-in page now.",
+        : "Suspended. Their sign-in page is no longer available.",
   });
 }

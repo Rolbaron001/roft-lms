@@ -34,7 +34,7 @@ export async function removeQualificationAction(
   if (typed !== title) {
     return said({
       error:
-        "That is not the title. Type it exactly as it appears above to confirm which qualification you mean.",
+        "That is not the title. Type it exactly as it appears above.",
     });
   }
 

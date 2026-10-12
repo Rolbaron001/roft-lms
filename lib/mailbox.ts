@@ -256,7 +256,7 @@ export async function sendFromMailbox(
 
   if (!recipient) {
     throw new MailboxError(
-      "That is not a mailbox at this provider. Platform mail is for correspondence inside the platform, where it stays on the learner's record. To write to an outside address, use your own email.",
+      "That is not a mailbox at this provider. Use your own email to write to an outside address.",
       "not_found",
     );
   }

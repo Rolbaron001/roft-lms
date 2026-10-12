@@ -213,7 +213,7 @@ describe("files that lie about themselves", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reason).toContain("scripts");
+    expect(result.reason).toContain("SVG and HTML files are not accepted");
   });
 
   it("refuses an SVG, which can carry script", () => {

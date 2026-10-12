@@ -236,7 +236,7 @@ export async function captureFiledDocument(
 
   if (!chosen) {
     throw new Error(
-      "That document is not one of this qualification's papers, so there is nothing to capture from it.",
+      "That document is not one of this qualification's papers.",
     );
   }
 
@@ -348,7 +348,7 @@ export async function courseForStudyUnit(
   );
 
   if (!unit) {
-    throw new Error("That study unit does not exist, so nothing can deliver it.");
+    throw new Error("That study unit does not exist.");
   }
 
   /*

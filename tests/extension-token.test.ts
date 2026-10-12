@@ -254,7 +254,7 @@ describe("set up is not switched on", () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("not switched on");
+    expect(result.error).toContain("off for this session");
   });
 
   it("will not run when the person has disabled it, token or not", async () => {

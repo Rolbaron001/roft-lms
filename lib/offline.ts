@@ -149,7 +149,7 @@ export function offlineAllows(
   if ((NEVER_OFFLINE as readonly string[]).includes(kind)) {
     return {
       allowed: false,
-      why: "This needs a second person, so it cannot be done on a device with no signal.",
+      why: "This needs a second person and cannot be done offline.",
     };
   }
 
@@ -164,7 +164,7 @@ export function offlineAllows(
 
   return {
     allowed: false,
-    why: "Summative assessments are invigilated on this programme. One taken unsupervised on a phone is not defensible at a monitoring visit.",
+    why: "Summative assessments on this programme are invigilated and cannot be taken offline.",
   };
 }
 

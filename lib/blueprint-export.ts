@@ -170,7 +170,7 @@ export function blueprintFrom(
 
   if (outline.studyUnits.length > 0) {
     notes.push(
-      `The ${outline.studyUnits.length} study units are not in the file. A curriculum publishes modules and says nothing about how a provider groups them, so study units stay with the alignment document and the folder's own filenames.`,
+      `The ${outline.studyUnits.length} study units are not in the file. Study units come from the alignment document and the folder's file names.`,
     );
   }
 
@@ -194,7 +194,7 @@ export function blueprintFrom(
   );
   if (kinds.size > 1) {
     notes.push(
-      "This curriculum distinguishes more than one kind of topic element (applied knowledge, supporting evidence and so on). A blueprint carries one list per topic, so re-importing from it would label them all by the module's component. The wording of every line is carried exactly.",
+      "This curriculum has more than one kind of topic element (applied knowledge, supporting evidence and so on). A blueprint holds one list per topic, so re-importing from it labels them all by the module's component. The wording of every line is kept exactly.",
     );
   }
 

@@ -335,9 +335,9 @@ export async function applyAlignmentDocument(
 
       applied.notes.push(
         held.length === 0
-          ? `The document names ${wanted.length} modules (${wanted.join(", ")}) and this qualification has no curriculum yet. Import the curriculum first; the study units and their outcomes are recorded either way, and uploading this document again afterwards will link them.`
+          ? `The document names ${wanted.length} modules (${wanted.join(", ")}), but this qualification has no curriculum yet. The study units are recorded. Import the curriculum, then upload this document again to link them.`
           : applied.modulesLinked + applied.modulesAlreadyPlaced === 0
-            ? `None of the ${wanted.length} modules this document names could be matched, so nothing has been placed under a study unit. The document names ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Matching ignores spaces and hyphens, so the two schemes genuinely differ. Correct the codes on either side and upload the document again.`
+            ? `None of the ${wanted.length} modules in this document could be matched, so nothing was placed. The document names ${wanted.join(", ")}; this curriculum holds ${held.join(", ")}. Correct the codes and upload the document again.`
             : `${wanted.length} of the modules this document names could not be matched: ${wanted.join(", ")}. This curriculum holds ${held.join(", ")}. Everything else was linked.`,
       );
     }

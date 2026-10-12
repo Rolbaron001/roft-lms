@@ -183,7 +183,7 @@ async function grantExemption(
 
     if (limit.exceeds) {
       throw new RecognitionError(
-        `Exempting ${module.title} would take this learner to ${limit.wouldBePercent} per cent of the qualification recognised without being taught, and the limit on this qualification is ${limit.maxPercent}. The rest has to be done as ordinary learning, or the limit changed on the qualification with a reason for it.`,
+        `Exempting ${module.title} would take this learner to ${limit.wouldBePercent} per cent of the qualification recognised; the limit is ${limit.maxPercent}. Complete the rest as ordinary learning, or change the limit on the qualification with a reason.`,
         "over_limit",
       );
     }
@@ -280,7 +280,7 @@ export async function recordAdvisory(
   const advice = input.adviceGiven.trim();
   if (advice.length < 30) {
     throw new RecognitionError(
-      "Record what the candidate was told to gather. If the candidate is refused, this is the paragraph they will dispute, so it must be specific.",
+      "Record specifically what the candidate was told to gather.",
       "invalid",
     );
   }
@@ -312,7 +312,7 @@ const judgementInput = z.object({
     .trim()
     .min(
       30,
-      "Say what the evidence was and why it satisfies the module. This paragraph is the whole of the judgement, and the first thing an external verifier reads.",
+      "State the evidence and why it satisfies the module.",
     ),
   judgedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -347,7 +347,7 @@ export async function recordRplJudgement(
     }
     if (!application.advisedOn) {
       throw new RecognitionError(
-        "This candidate has not had an advisory session. Without advice on the requirements, a candidate may assemble the wrong evidence. Please record the advice first.",
+        "This candidate has not had an advisory session. Record the advice first.",
         "needs_advice",
       );
     }
@@ -400,7 +400,7 @@ export async function moderateRplJudgement(
   const comment = input.comment.trim();
   if (comment.length < 10) {
     throw new RecognitionError(
-      "Please say what you looked at and whether you agree. A moderation must include a comment.",
+      "State what you checked and whether you agree.",
       "invalid",
     );
   }
@@ -512,7 +512,7 @@ const transferInput = z.object({
     .trim()
     .min(
       30,
-      "Say how the outcomes of what they hold cover this module's. That paragraph is the whole of the decision; without it, the transfer cannot be checked.",
+      "State how the outcomes of what they hold cover this module's.",
     ),
   approvedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -544,7 +544,7 @@ export async function recordCreditTransfer(
     !withinCreditTransferWindow(parsed.awardedOn, parsed.approvedOn)
   ) {
     throw new RecognitionError(
-      `That was awarded on ${writtenDay(parsed.awardedOn)}, more than ${CAT_YEARS} years before this approval. Credit Accumulation and Transfer covers completions within ${CAT_YEARS} years; beyond that the route is Recognition of Prior Learning, which assesses what the learner can still do rather than what they once passed. Open an RPL application instead.`,
+      `That was awarded on ${writtenDay(parsed.awardedOn)}, more than ${CAT_YEARS} years before this approval. Credit Accumulation and Transfer covers completions within ${CAT_YEARS} years. Open an RPL application instead.`,
       "too_old_for_cat",
     );
   }

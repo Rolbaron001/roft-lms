@@ -94,7 +94,7 @@ const defineInput = z
       }
       return Boolean((value as Record<string, unknown>)[field]);
     },
-    { message: "Say what earns the badge." },
+    { message: "Choose what earns the badge." },
   );
 
 export async function defineBadge(

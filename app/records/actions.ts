@@ -28,7 +28,7 @@ function explain(error: unknown): RecordsActionState {
     };
   }
   console.error(error);
-  return { error: "That could not be saved. Please try again." };
+  return { error: "That could not be saved. Try again." };
 }
 
 export async function fileDocumentAction(

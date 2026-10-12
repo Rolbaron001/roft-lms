@@ -134,7 +134,7 @@ export async function createInstrument(
 
     if (programme.kind !== "skills_programme") {
       throw new FisaError(
-        "A FISA is set by the provider for its own skills programme. A full or part qualification is assessed externally by the Assessment Quality Partner, so the provider does not set that paper.",
+        "Set a FISA for a skills programme only. Full and part qualifications are assessed externally by the Assessment Quality Partner.",
         "invalid",
       );
     }
@@ -216,7 +216,7 @@ export async function appoint(
 
       if (sameAccount || sameIdNumber) {
         throw new FisaError(
-          `That is the same person as the ${other}. Pre-moderation must be carried out by a second person.`,
+          `That is the same person as the ${other}. Pre-moderation needs a second person.`,
           "same_person",
         );
       }
@@ -336,7 +336,7 @@ async function assertMayWork(
 
   if (!appointment.confidentialitySignedAt) {
     throw new FisaError(
-      "The confidentiality agreement has not been signed yet. No one may see or judge the contents of a FISA before signing it.",
+      "The confidentiality agreement is not signed yet. The FISA cannot be seen or judged until it is.",
       "unsigned",
     );
   }
@@ -372,7 +372,7 @@ export async function answerItem(
 
     if (instrument?.status === "approved" || instrument?.status === "retired") {
       throw new FisaError(
-        "This FISA has been signed off. Open a new version rather than changing a paper that may already have been sat.",
+        "This FISA is signed off. Open a new version to make changes.",
         "wrong_state",
       );
     }
@@ -487,7 +487,7 @@ export async function sendToModeration(
 
     if (!moderator) {
       throw new FisaError(
-        "No moderator has been appointed yet, so there is no one to send it to.",
+        "Appoint a moderator first.",
         "invalid",
       );
     }
@@ -621,7 +621,7 @@ export async function mayBeSat(
     if (instrument.status !== "approved" || !instrument.approvedAt) {
       return {
         allowed: false as const,
-        why: "This FISA has not been signed off by a moderator yet. A paper that has not been pre-moderated cannot be sat: that is what the moderation is for.",
+        why: "This FISA is not yet signed off by a moderator, so it cannot be sat.",
       };
     }
 
@@ -791,7 +791,7 @@ export async function newVersion(
 
     if (existing.status !== "approved") {
       throw new FisaError(
-        "Only a signed-off FISA needs a new version; this one can still be edited.",
+        "This FISA is not signed off. Edit it directly.",
         "wrong_state",
       );
     }
@@ -974,7 +974,7 @@ export async function recordQctoSubmission(
 
     if (!instrument.approvedAt) {
       throw new FisaError(
-        "Pre-moderate it first. Sending the QCTO a paper your own moderator has not signed off is the wrong way round.",
+        "Pre-moderate it before sending it to the QCTO.",
         "wrong_state",
       );
     }
@@ -1011,7 +1011,7 @@ export async function recordQctoApproval(
 
   if (!reference.trim()) {
     throw new FisaError(
-      "An approval needs the reference the QCTO issued. Without it there is nothing to show a monitor.",
+      "Enter the reference the QCTO issued.",
       "invalid",
     );
   }

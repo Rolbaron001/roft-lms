@@ -231,20 +231,20 @@ export async function installScormPackage(
       filter: (file) => {
         unpackedBytes += file.originalSize;
         if (unpackedBytes > MAX_UNPACKED_BYTES) {
-          throw new ScormError("The package unpacks to more than a gigabyte, which is more than a course needs.");
+          throw new ScormError("The package unpacks to more than a gigabyte.");
         }
         return !file.name.endsWith("/");
       },
     });
   } catch (error) {
     if (error instanceof ScormError) throw error;
-    throw new ScormError("The zip could not be opened. It may be damaged; export it again from the authoring tool.");
+    throw new ScormError("The zip could not be opened. Export it again from the authoring tool.");
   }
 
   const manifestName = Object.keys(entries).find((name) => name.toLowerCase() === "imsmanifest.xml");
   if (!manifestName) {
     if (Object.keys(entries).some((name) => name.toLowerCase().endsWith("cmi5.xml"))) {
-      throw new ScormError("This is a cmi5 package. The platform plays SCORM 1.2 and SCORM 2004 packages; most authoring tools can publish as either.");
+      throw new ScormError("This is a cmi5 package. Only SCORM 1.2 and SCORM 2004 packages are supported; publish it in one of these formats.");
     }
     return null;
   }
@@ -262,7 +262,7 @@ export async function installScormPackage(
   const storagePrefix = `${organisationId}/scorm/${lessonId}/${randomUUID()}/`;
   for (const [name, bytes] of files) {
     const path = normalise(name);
-    if (!path) throw new ScormError(`The zip holds "${name}", a path that would leave the package.`);
+    if (!path) throw new ScormError(`The zip contains "${name}", a path outside the package.`);
     await putObject(storagePrefix + path, bytes, contentTypeFor(path));
   }
 

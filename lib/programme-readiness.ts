@@ -53,17 +53,17 @@ const REQUIRED_DOCUMENTS = [
   {
     kind: "qualification_document" as const,
     label: "Qualification Document",
-    why: "It carries the exit level outcomes and the rules of combination that everything else is checked against.",
+    why: "It has the exit level outcomes and the rules of combination.",
   },
   {
     kind: "curriculum_document" as const,
     label: "Curriculum Document",
-    why: "It is the authority for every module, topic and assessment criterion. Without it the platform has nothing to link a question to.",
+    why: "It defines every module, topic and assessment criterion.",
   },
   {
     kind: "assessment_specification" as const,
     label: "Assessment Specification",
-    why: "It states how the external assessment is conducted, which is what a Statement of Results admits a learner to.",
+    why: "It states how the external assessment is conducted.",
   },
 ];
 
@@ -166,15 +166,15 @@ export async function programmeReadiness(
     // complete on a shelf and is useless to everything downstream.
     if (modules.length === 0) {
       gaps.push({
-        what: "The curriculum has not been read into the App.",
-        why: "The file being uploaded is not the same as its modules, topics and criteria being in the database. Until they are, a question cannot be tagged to anything and nothing can check coverage.",
+        what: "The curriculum has not been imported.",
+        why: "Uploading the file does not import its modules, topics and criteria. Import the curriculum so questions can be linked and coverage checked.",
         action:
-          "Import the curriculum so its modules and criteria exist, then come back.",
+          "Import the curriculum first.",
       });
     } else if (criteria.length === 0) {
       gaps.push({
         what: `The curriculum has ${modules.length} modules but no assessment criteria.`,
-        why: "Criteria are what a question evidences. Without them the alignment matrix has nothing to report and readiness cannot be calculated.",
+        why: "Questions are linked to assessment criteria, and readiness is calculated from them.",
         action:
           "Check the curriculum file was transcribed down to its internal assessment criteria, and import it again.",
       });

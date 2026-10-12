@@ -266,7 +266,7 @@ async function issueWith(
     return {
       ok: false,
       reasons: [
-        `The curriculum is not fully captured: ${uncaptured.join(", ")} carry nothing to achieve. A statement issued now would confirm achievement of modules that have not been transcribed.`,
+        `The curriculum is not fully captured: ${uncaptured.join(", ")} have no criteria. Capture them before issuing a statement.`,
       ],
     };
   }
@@ -279,7 +279,7 @@ async function issueWith(
     return {
       ok: false,
       reasons: [
-        "There are no modules in scope for this statement, so there is nothing for it to confirm.",
+        "No modules are in scope for this statement.",
       ],
     };
   }
@@ -341,8 +341,8 @@ async function issueWith(
     if (existing) {
       throw new StatementError(
         scope
-          ? `This learner already holds a Statement of Results for ${scope.code}. Withdraw it before issuing another, so two documents making the same claim are never in circulation.`
-          : "This learner already holds a Statement of Results for this qualification. Withdraw it before issuing another, so two documents making the same claim are never in circulation.",
+          ? `This learner already holds a Statement of Results for ${scope.code}. Withdraw it before issuing another.`
+          : "This learner already holds a Statement of Results for this qualification. Withdraw it before issuing another.",
         "already_issued",
       );
     }

@@ -126,7 +126,7 @@ async function textFrom(file: SourceFile): Promise<string> {
   const result = await readPdfText(file.bytes);
   if (result.looksScanned) {
     throw new QualificationImportError(
-      `"${file.filename}" looks like a scan: ${result.pages} pages with almost no text in them. The platform cannot read it, so nothing can be indexed from it. Upload a digital copy.`,
+      `"${file.filename}" looks like a scan: ${result.pages} pages with almost no text. It cannot be read. Upload a digital copy.`,
       "unreadable",
     );
   }
@@ -177,11 +177,9 @@ export async function readQualificationSources(
   if (withContent.length === 0) {
     const named = curriculum.modules.length;
     throw new QualificationImportError(
-      `No curriculum modules were found in "${documents.curriculum.filename}". ` +
-        (named > 0
-          ? `It names ${named} module${named === 1 ? "" : "s"} but sets out no topics or assessment criteria for any of them, which is what the Qualification Document looks like. `
-          : "") +
-        "Check it is the Curriculum Document rather than the Qualification Document or the Assessment Specification.",
+      `No curriculum modules were found in "${documents.curriculum.filename}". ${(named > 0
+          ? `It names ${named} module${named === 1 ? "" : "s"} with no topics or assessment criteria, as a Qualification Document does. `
+          : "")}Check that it is the Curriculum Document.`,
       "not_a_curriculum",
     );
   }
@@ -223,12 +221,12 @@ export async function readQualificationSources(
 
   if (!documents.qualification) {
     notes.push(
-      "No Qualification Document was supplied, so there is no SAQA ID and no Exit Level Outcomes. Both can be added later, but the EISA is set against the outcomes.",
+      "No Qualification Document was supplied, so there is no SAQA ID and no Exit Level Outcomes. You can add both later.",
     );
   }
   if (!documents.assessmentSpecification) {
     notes.push(
-      "No Assessment Specification was supplied. It is one of the three documents required before material can be authored against this qualification.",
+      "No Assessment Specification was supplied. It is required before material is authored against this qualification.",
     );
   }
 
@@ -289,7 +287,7 @@ export async function readQualificationSources(
 
     if (!parent) {
       notes.push(
-        "This is a part qualification, but the full qualification it comes from is not on the platform yet. Import that one first: a part carries no curriculum of its own, so there is nothing to attach it to until the parent exists.",
+        "This is a part qualification, and its full qualification is not on the platform yet. Import the full qualification first.",
       );
     } else {
       /**
@@ -323,7 +321,7 @@ export async function readQualificationSources(
       const missing = part.modules.filter((entry) => !entry.found);
       if (listed.length === 0) {
         notes.push(
-          "Its Qualification Rules section named no modules, so nothing can be selected automatically. Choose them by hand once it exists.",
+          "Its Qualification Rules section names no modules. Choose the modules by hand once it is created.",
         );
       } else if (missing.length > 0) {
         notes.push(
@@ -472,7 +470,7 @@ async function createPartFromDocuments(
       elements: 0,
       criteria: 0,
       warnings: [
-        `Created as a part of "${part.parent.title}", taking ${ids.length} of its ${parentModules.length} modules. Its curriculum is the parent's; nothing was copied, so a learner's work against a module counts once wherever they met it.`,
+        `Created as a part of "${part.parent.title}", taking ${ids.length} of its ${parentModules.length} modules. It uses the parent's curriculum.`,
         ...warnings,
       ],
     },
@@ -516,14 +514,14 @@ export async function createQualificationFromDocuments(
 
   if (reading.details.kind !== "full") {
     throw new QualificationImportError(
-      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, but the full qualification it comes from is not on the platform. Import that one first: this one shares its curriculum and has none of its own.`,
+      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, and its full qualification is not on the platform. Import the full qualification first.`,
       "not_a_curriculum",
     );
   }
 
   if (reading.existing) {
     throw new QualificationImportError(
-      `"${reading.existing.title}" already carries the code ${reading.details.curriculumCode}. Importing again here would replace its whole curriculum, and anything tagged to a criterion would go with it. Open that qualification instead.`,
+      `"${reading.existing.title}" already has the code ${reading.details.curriculumCode}. Open that qualification instead.`,
       "already_exists",
     );
   }

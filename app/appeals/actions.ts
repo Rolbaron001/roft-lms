@@ -76,7 +76,7 @@ async function run(
       });
     }
     console.error(error);
-    return refused({ error: "That could not be saved. Please try again." });
+    return refused({ error: "That could not be saved. Try again." });
   }
 
   for (const path of paths) revalidatePath(path);
@@ -110,7 +110,7 @@ export async function lodgeAppealAction(
         statement: values.statement,
         lateAcceptanceReason: values.lateAcceptanceReason || undefined,
       }),
-    "Appeal lodged. The clock on acknowledging it starts now.",
+    "Appeal lodged. Acknowledge it within the deadline, which starts now.",
     ["/appeals"],
     { previous, values },
   ));

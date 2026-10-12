@@ -108,7 +108,7 @@ export async function saveQuestionnaire(session: AuthenticatedSession, input: z.
   assertSessionCan(session, "tenant:manage_settings");
   const parsed = questionnaireInput.parse(input);
   if (parsed.scale.length === 1) {
-    throw new FeedbackError("A scale needs at least two points, or none to keep the platform's five.", "invalid");
+    throw new FeedbackError("A scale needs at least two points. Leave it empty for the standard five.", "invalid");
   }
   const scale = parsed.scale.length >= 2 ? parsed.scale : undefined;
   const questions: FeedbackQuestion[] = parsed.questions.map((question) => ({
@@ -267,7 +267,7 @@ export async function requestFeedback(
 
     if (already && parsed.assessmentId) {
       throw new FeedbackError(
-        "This cohort has already been asked about that assessment. Asking again would restart a deadline that has run and split the answers across two reports.",
+        "This cohort has already been asked about that assessment.",
         "already_asked",
       );
     }

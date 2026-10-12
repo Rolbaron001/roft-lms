@@ -301,7 +301,7 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
    */
   if (looksLikeWord(bytes)) {
     throw new AlignmentMatrixError(
-      "That is a Word document. The document itself is kept, filed and searchable. What could not happen is reading it, because the alignment matrix is read as a spreadsheet: one row per curriculum line, with a column headed something like “Topic Elements”. Save the matrix as a spreadsheet and upload that as well, and each line of the curriculum will show what covers it.",
+      "That is a Word document. It is filed and searchable, but not read: the alignment matrix is read from a spreadsheet, with one row per curriculum line and a column headed such as “Topic Elements”. Save the matrix as a spreadsheet and upload that as well.",
     );
   }
 
@@ -316,13 +316,13 @@ export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
 
   if (sheets.length === 0) {
     throw new AlignmentMatrixError(
-      "No alignment matrix found in this workbook. One column must be headed something like “Topic Elements”, so the rows can be matched to the curriculum.",
+      "No alignment matrix found in this workbook. One column needs a heading such as “Topic Elements”.",
     );
   }
 
   if (sheets.every((sheet) => sheet.columns.length === 0)) {
     throw new AlignmentMatrixError(
-      "The matrix has no resource columns that could be recognised: nothing headed Workbook, Assessment, Theory Guide, Legislation and so on.",
+      "No resource columns were recognised in the matrix, such as Workbook, Assessment, Theory Guide or Legislation.",
     );
   }
 
@@ -443,7 +443,7 @@ const ELEMENT_KIND_BY_COMPONENT: Record<string, "knowledge_topic" | "practical_a
 function reasonFor(provenance: string | null): string {
   if (!provenance) return "In the matrix, not in the curriculum as read.";
   if (/^published/i.test(provenance)) {
-    return "The matrix says the curriculum publishes this; the curriculum as read does not have it.";
+    return "In the matrix, but not in the curriculum as read.";
   }
   return provenance;
 }
@@ -613,7 +613,7 @@ export async function importAlignmentMatrix(
 
     if (curriculum.modules.length === 0) {
       throw new AlignmentMatrixError(
-        "Import the curriculum document before the alignment matrix: there is nothing yet for its rows to attach to.",
+        "Import the curriculum document before the alignment matrix.",
       );
     }
 

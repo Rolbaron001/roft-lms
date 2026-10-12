@@ -129,7 +129,7 @@ export async function errorResponse(error: unknown): Promise<Response> {
 
   console.error(error);
   return Response.json(
-    await said({ error: "That could not be handled. Please try again." }),
+    await said({ error: "That could not be processed. Try again." }),
     { status: 500 },
   );
 }

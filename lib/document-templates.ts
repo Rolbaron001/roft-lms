@@ -72,7 +72,7 @@ function check(input: SaveTemplateInput) {
   }
   if (body.length < 20) {
     throw new DocumentTemplateError(
-      "There is nothing in this template yet. A document rendered from it would be blank.",
+      "This template is empty.",
       "invalid",
     );
   }
@@ -88,7 +88,7 @@ function check(input: SaveTemplateInput) {
   const unknown = unknownPlaceholders(input.kind, body);
   if (unknown.length > 0) {
     throw new DocumentTemplateError(
-      `This template uses ${unknown.length === 1 ? "a field" : "fields"} the platform cannot fill: ${unknown.join(", ")}. Check the spelling against the list of what is available: a field it does not recognise is left blank on the finished document rather than reported.`,
+      `This template uses ${unknown.length === 1 ? "a field" : "fields"} that cannot be filled: ${unknown.join(", ")}. Check the spelling against the list of available fields. Unrecognised fields are left blank.`,
       "unknown_field",
     );
   }

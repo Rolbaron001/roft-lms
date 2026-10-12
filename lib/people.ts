@@ -428,7 +428,7 @@ export async function setRoles(
     if (had.includes("tenant_admin") && !roles.includes("tenant_admin")) {
       if ((await otherAdministratorCount(tx, userId)) === 0) {
         throw new PeopleError(
-          "This is the only administrator. Give someone else the role first, or no one would be able to manage the organisation.",
+          "This is the only administrator. Give someone else the role first.",
           "would_lock_out",
         );
       }
@@ -498,7 +498,7 @@ export async function setPersonStatus(
 
       if (isAdmin.length > 0) {
         throw new PeopleError(
-          "This is the only administrator; suspending them would leave no one able to manage the organisation.",
+          "This is the only administrator and cannot be suspended.",
           "would_lock_out",
         );
       }
@@ -666,7 +666,7 @@ export async function anonymisePerson(
 
   if (reason.trim().length < 5) {
     throw new PeopleError(
-      "Record why this was done; the audit log keeps it permanently.",
+      "Give the reason. It is kept permanently in the audit log.",
       "invalid_input",
     );
   }

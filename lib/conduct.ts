@@ -93,7 +93,7 @@ const caseInput = z.object({
     .trim()
     .min(
       15,
-      "Say what is alleged, specifically. A learner cannot answer 'poor attitude', and neither can a hearing.",
+      "State the specific allegation.",
     ),
   occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
@@ -176,7 +176,7 @@ const warningInput = z.object({
     .trim()
     .min(
       20,
-      "State the rule broken, the standard expected and what happens if it recurs. A warning must state all three.",
+      "State the rule broken, the standard expected and what happens if it recurs.",
     ),
 });
 
@@ -334,14 +334,14 @@ const hearingInput = z.object({
     .trim()
     .min(
       15,
-      "The notice has to state the specific allegations. A hearing about unstated allegations cannot be answered.",
+      "State the specific allegations in the notice.",
     ),
   sanctionsAdvised: z
     .string()
     .trim()
     .min(
       5,
-      "Say what sanctions are possible, including termination where it is. A learner deciding whether to bring assistance needs to know what is at stake.",
+      "State the possible sanctions, including termination where it applies.",
     ),
   rightsAdvised: z.boolean(),
 });
@@ -364,7 +364,7 @@ export async function convenehearing(
 
   if (!parsed.rightsAdvised) {
     throw new ConductError(
-      "The notice must tell the learner they may be assisted by a fellow learner, present their case, and call and question witnesses. Send a notice that does, then record it here.",
+      "The notice must tell the learner they may be assisted by a fellow learner, present their case, and call and question witnesses. Send such a notice, then record it here.",
       "invalid",
     );
   }
@@ -378,7 +378,7 @@ export async function convenehearing(
   if (!notice.adequate) {
     const hours = Math.ceil(notice.shortBySeconds / 3600);
     throw new ConductError(
-      `A hearing needs at least ${HEARING_NOTICE_HOURS} hours' notice and this is ${hours} ${hours === 1 ? "hour" : "hours"} short. The earliest it can be held is ${notice.earliest.toISOString().slice(0, 16).replace("T", " ")}. Inadequate notice would allow an appeal to succeed whatever the facts of the case.`,
+      `A hearing needs at least ${HEARING_NOTICE_HOURS} hours' notice; this is ${hours} ${hours === 1 ? "hour" : "hours"} short. The earliest date is ${notice.earliest.toISOString().slice(0, 16).replace("T", " ")}.`,
       "short_notice",
     );
   }
@@ -438,7 +438,7 @@ export async function recordHearingOutcome(
   const findings = input.findings.trim();
   if (findings.length < 20) {
     throw new ConductError(
-      "Please record in full what was found and on what basis.",
+      "Record in full what was found and on what basis.",
       "invalid",
     );
   }
@@ -480,7 +480,7 @@ const closeInput = z.object({
     .trim()
     .min(
       20,
-      "Please give the reasons. An unexplained sanction cannot be defended, and the learner is entitled to the reasons.",
+      "Give the reasons. The learner sees them.",
     ),
 });
 
@@ -521,7 +521,7 @@ export async function closeDisciplinaryCase(
 
       if (!hearing?.heldAt) {
         throw new ConductError(
-          "Ending a learner's programme needs a hearing that was held, with its findings recorded. Convene one, record what was found, then close the case.",
+          "To end a learner's programme, hold a hearing and record its findings first, then close the case.",
           "needs_hearing",
         );
       }
@@ -742,7 +742,7 @@ const grievanceInput = z.object({
   nature: z
     .string()
     .trim()
-    .min(20, "Say what the grievance is about, in the learner's own words where possible."),
+    .min(20, "Describe the grievance, in the learner's own words where possible."),
   individualsInvolved: z.string().trim().max(500).optional(),
   occurredOn: z
     .string()
@@ -804,7 +804,7 @@ export async function lodgeGrievance(
         userId: managerId,
         kind: "grievance.lodged",
         subject: "A grievance has been lodged",
-        body: `It has to be acknowledged by ${created.acknowledgeBy}.`,
+        body: `Acknowledge it by ${created.acknowledgeBy}.`,
         linkPath: "/conduct",
         entityType: "grievance",
         entityId: created.id,
@@ -881,7 +881,7 @@ export async function appointInvestigator(
 
     if (named && (named.includes(full) || named.includes(person.lastName.toLowerCase()))) {
       throw new ConductError(
-        `The grievance names ${person.firstName} ${person.lastName}. A person the complaint is about cannot investigate it: the procedure requires a designated impartial person. Please appoint someone else.`,
+        `The grievance names ${person.firstName} ${person.lastName}, who cannot investigate it. Appoint someone else.`,
         "not_impartial",
       );
     }
@@ -910,7 +910,7 @@ export async function decideGrievance(
   const decision = input.decision.trim();
   if (decision.length < 20) {
     throw new ConductError(
-      "The decision goes to the learner in writing and must say what was found and what will be done.",
+      "State what was found and what will be done. The learner receives this in writing.",
       "invalid",
     );
   }

@@ -29,7 +29,7 @@ function describe(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 export async function createPathAction(
@@ -121,7 +121,7 @@ export async function publishPathAction(
       return said({ error: `Not ready to publish. ${result.reasons.join(" ")}` });
     }
 
-    return said({ notice: "Published. It can be assigned now." });
+    return said({ notice: "Published. You can assign it now." });
   } catch (error) {
     return said({ error: describe(error) });
   }
@@ -147,5 +147,5 @@ export async function enrolOnPathAction(
   }
 
   revalidatePath(`/paths/${pathId}`);
-  return said({ notice: "Added to the programme. Their first course is open now." });
+  return said({ notice: "Added to the programme. Their first course is open." });
 }

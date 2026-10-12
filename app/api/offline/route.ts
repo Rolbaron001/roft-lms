@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     return Response.json(
       await said({
         error:
-          "Too many at once. Please send them in batches of fifty.",
+          "Too many at once. Send them in batches of fifty.",
       }),
       { status: 400 },
     );

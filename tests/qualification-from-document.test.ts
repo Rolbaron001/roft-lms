@@ -341,7 +341,7 @@ describe("creating it", () => {
           nqfLevel: 5,
         },
       ),
-    ).rejects.toThrow(/already carries the code/);
+    ).rejects.toThrow(/already has the code/);
   });
 
   it("reports the clash on the reading, before anybody presses create", async () => {

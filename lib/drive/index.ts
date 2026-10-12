@@ -111,7 +111,7 @@ export async function recordConnection(
 
   if (!sealingAvailable()) {
     throw new DriveError(
-      "This deployment cannot store a credential safely, so a drive cannot be connected. Whoever maintains it needs to set the sealing key.",
+      "A drive cannot be connected: this deployment has no sealing key set. Contact whoever maintains it.",
     );
   }
 
@@ -210,7 +210,7 @@ export async function accessTokenFor(
 
   if (!row) {
     throw new DriveError(
-      `You have not connected ${provider.label}. Connect it in Settings, and the folder can be read from there.`,
+      `You have not connected ${provider.label}. Connect it in Settings.`,
     );
   }
 

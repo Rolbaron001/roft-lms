@@ -310,7 +310,7 @@ export function parseWorkbook(text: string): ParsedPaper {
   const guideHeading = GUIDE_HEADING.exec(opening);
   if (guideHeading && !LEARNER_HEADING.test(opening)) {
     problems.push(
-      `This reads like a marking guide, not the learner's paper: its heading says "${guideHeading[1]}". Check the paper and its guide have not been given each other's names.`,
+      `This reads like a marking guide: its heading says "${guideHeading[1]}". Check that the paper and guide are not named the wrong way round.`,
     );
   }
 
@@ -344,7 +344,7 @@ export function parseWorkbook(text: string): ParsedPaper {
     if (!guideHeading && sections.length > 0 && GUIDE_STARTS.test(line)) {
       closeItem();
       problems.push(
-        `The learner's paper carries its own marking guide, from "${line.slice(0, 80)}" on. A learner given this document has the answers. Take that part out of the learner's copy; the App has read only the questions before it.`,
+        `The learner's paper contains the marking guide, from "${line.slice(0, 80)}" on. Remove that part from the learner's copy. Only the questions before it were read.`,
       );
       break;
     }
@@ -746,7 +746,7 @@ export function parseWorkbook(text: string): ParsedPaper {
 
   if (sections.length === 0) {
     problems.push(
-      "No activities or sections were recognised. Check that headings read like “Activity 1.1: …” or “SECTION A: …”.",
+      "No activities or sections were recognised. Use headings such as “Activity 1.1: …” or “SECTION A: …”.",
     );
   }
 
@@ -997,7 +997,7 @@ export function parseMemorandum(text: string): ParsedMemo {
   const opening = lines.slice(0, 40).join(" ");
   if (LEARNER_HEADING.test(opening) && !GUIDE_HEADING.test(opening)) {
     problems.push(
-      `The guide reads like the learner's paper, not a marking guide: it carries "Instructions to Learners" and no assessor's heading. Check the paper and its guide have not been given each other's names.`,
+      "The guide reads like the learner's paper: it has \"Instructions to Learners\" and no assessor's heading. Check that the paper and guide are not named the wrong way round.",
     );
   }
 
@@ -1087,7 +1087,7 @@ export function parseMemorandum(text: string): ParsedMemo {
 
   if (answers.length === 0) {
     problems.push(
-      "No answers were found in the guide. Check that it carries a table of question numbers and correct options.",
+      "No answers were found in the guide. Check that it has a table of question numbers and correct options.",
     );
   }
 
@@ -1122,7 +1122,7 @@ export function mergeMemorandum(
   // on every paper of that kind, and false alarms are how somebody learns to
   // scroll past the real ones.
   const noAnswerKey =
-    "No answers were found in the guide. Check that it carries a table of question numbers and correct options.";
+    "No answers were found in the guide. Check that it has a table of question numbers and correct options.";
 
   const problems = [
     ...paper.problems,
@@ -1134,7 +1134,7 @@ export function mergeMemorandum(
 
   if (everyItemIsAssessorMarked && memo.problems.includes(noAnswerKey)) {
     notes.push(
-      "The guide carries no answer key, which is correct for this paper: every task is written work an assessor reads.",
+      "The guide has no answer key. Every task in this paper is written work for an assessor.",
     );
   }
 
@@ -1353,7 +1353,7 @@ export function mergeMemorandum(
       if (item.correctIndex !== null) continue;
       if (reportedMissing.has(item)) continue;
       problems.push(
-        `"${short(item.stem)}" in "${section.title}" is set to be marked by the App, but no correct answer was found for it. Give it one, or mark it as assessor-marked.`,
+        `"${short(item.stem)}" in "${section.title}" is set to be marked by the App, but has no correct answer. Add one, or set it to be marked by an assessor.`,
       );
     }
   }
@@ -1378,7 +1378,7 @@ export function mergeMemorandum(
       if (positions.size === 1) {
         const letter = String.fromCharCode(65 + keyed[0].correctIndex!);
         problems.push(
-          `Every one of the ${keyed.length} answered questions in "${section.title}" has ${letter} as the correct answer. A learner who notices scores full marks without reading them. Shuffle the options.`,
+          `All ${keyed.length} answered questions in "${section.title}" have ${letter} as the correct answer. Shuffle the options.`,
         );
       }
     }
@@ -1392,7 +1392,7 @@ export function mergeMemorandum(
       seen.set(key, count);
       if (count === 2) {
         problems.push(
-          `"${short(item.stem)}" appears twice in "${section.title}". One of them is probably a copy that was never edited.`,
+          `"${short(item.stem)}" appears twice in "${section.title}".`,
         );
       }
     }
@@ -1401,14 +1401,14 @@ export function mergeMemorandum(
     // has nothing to share out, so they all come back unmarked.
     if (section.markTotal === 0) {
       problems.push(
-        `"${section.title}" is printed as worth 0 marks, so none of its ${section.items.length} questions can carry any. Give the section a mark total.`,
+        `"${section.title}" is printed as worth 0 marks, so its ${section.items.length} questions have none. Give the section a mark total.`,
       );
     }
 
     for (const item of section.items) {
       if (item.points !== null && item.points === 0) {
         problems.push(
-          `"${short(item.stem)}" is worth no marks. Either give it marks or remove it.`,
+          `"${short(item.stem)}" has no marks. Give it marks or remove it.`,
         );
       }
 
@@ -1433,7 +1433,7 @@ export function mergeMemorandum(
         const longest = Math.max(...others);
         if (correct > longest * 1.8 && correct > 40) {
           notes.push(
-            `In "${short(item.stem)}" the correct answer is much longer than the others, which can give the answer away. Consider making the options similar in length.`,
+            `In "${short(item.stem)}" the correct answer is much longer than the others. Make the options similar in length.`,
           );
         }
       }
@@ -1451,7 +1451,7 @@ export function mergeMemorandum(
     // the two figures do not disagree — one of them simply is not there. Saying
     // "the sections add up to 0" invites somebody to look for the missing 100.
     problems.push(
-      `The guide gives a total of ${memo.total} marks, but the workbook prints no marks against any of its ${sections.reduce((n, section) => n + section.items.length, 0)} tasks. Put the mark for each task on the task, or the App cannot share the total out.`,
+      `The guide gives a total of ${memo.total} marks, but none of the workbook's ${sections.reduce((n, section) => n + section.items.length, 0)} tasks shows a mark. Add the mark to each task.`,
     );
   } else if (memo.total !== null && grandTotal !== memo.total) {
     problems.push(

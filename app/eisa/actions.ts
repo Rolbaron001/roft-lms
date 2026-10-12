@@ -39,9 +39,9 @@ export async function recordSittingAction(
       });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
 
   revalidatePath("/eisa");
-  return said({ notice: "Recorded. The countdown to registration starts now." });
+  return said({ notice: "Recorded. The registration countdown starts now." });
 }

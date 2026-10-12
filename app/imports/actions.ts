@@ -39,7 +39,7 @@ function explain(error: unknown): ImportActionState {
     error:
       error instanceof Error
         ? error.message
-        : "That could not be done. Please try again.",
+        : "That could not be done. Try again.",
   };
 }
 
@@ -135,7 +135,7 @@ export async function readFolderAction(
   }
 
   return said({
-    notice: "Read. Check what it found before committing any of it.",
+    notice: "Read. Check what was found before you commit.",
     jobId: job.id,
   });
 }
@@ -213,7 +213,7 @@ export async function commitPlanAction(
       afterBuild = ` ${buildSummary(build)}`;
     } catch (error) {
       console.error("qualification build after commit failed", error);
-      afterBuild = " The study units could not be built automatically; build them from the qualification page.";
+      afterBuild = "The study units could not be built automatically. Build them from the qualification page.";
     }
   }
 

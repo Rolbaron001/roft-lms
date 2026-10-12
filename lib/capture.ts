@@ -87,7 +87,7 @@ export async function setNamingConvention(
 
   if (codes.length === 0) {
     throw new CaptureError(
-      "Keep at least one artefact code. With none, no upload can be recognised at all.",
+      "Keep at least one artefact code.",
       "invalid",
     );
   }
@@ -95,7 +95,7 @@ export async function setNamingConvention(
   for (const [code] of codes) {
     if (!/^[A-Z0-9]{1,10}$/.test(code)) {
       throw new CaptureError(
-        `"${code}" cannot be an artefact code. Use letters and digits only, up to ten of them: it has to be readable as one word in a filename.`,
+        `"${code}" cannot be an artefact code. Use up to ten letters and digits.`,
         "invalid",
       );
     }
@@ -104,7 +104,7 @@ export async function setNamingConvention(
   const marker = convention.memorandumMarker.trim().toUpperCase();
   if (!/^[A-Z0-9]{1,10}$/.test(marker)) {
     throw new CaptureError(
-      "The memorandum marker has to be letters and digits, up to ten of them.",
+      "Use up to ten letters and digits for the memorandum marker.",
       "invalid",
     );
   }
@@ -114,7 +114,7 @@ export async function setNamingConvention(
   // guide", and the classifier would have to guess.
   if (codes.some(([code]) => code === marker)) {
     throw new CaptureError(
-      `"${marker}" is both the memorandum marker and an artefact code. One filename token cannot mean both.`,
+      `"${marker}" is both the memorandum marker and an artefact code. Use it for one only.`,
       "invalid",
     );
   }
@@ -218,7 +218,7 @@ export async function proposeCapture(
       ...parsed,
       problems: [
         ...parsed.problems,
-        "No answer guide was uploaded, so no correct answers, marks or criteria could be read. Every question will need them by hand.",
+        "No answer guide was uploaded. Add correct answers, marks and criteria to every question by hand.",
       ],
     };
   }

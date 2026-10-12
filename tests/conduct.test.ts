@@ -339,7 +339,7 @@ describe("convening a hearing", () => {
         outcomeReason:
           "The allegation was found to be substantiated on the evidence given.",
       }),
-    ).rejects.toThrow(/hearing that was held/);
+    ).rejects.toThrow(/hold a hearing and record its findings/);
   });
 
   it("allows termination once findings are recorded", async () => {

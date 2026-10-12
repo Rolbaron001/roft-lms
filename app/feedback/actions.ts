@@ -31,7 +31,7 @@ function explain(error: unknown): FeedbackActionState {
     };
   }
   console.error(error);
-  return { error: "That could not be saved. Please try again." };
+  return { error: "That could not be saved. Try again." };
 }
 
 export async function requestFeedbackAction(
@@ -51,7 +51,7 @@ export async function requestFeedbackAction(
   }
 
   revalidatePath(`/cohorts/${cohortId}`);
-  return said({ notice: "Asked. They have 48 hours." });
+  return said({ notice: "Sent. Learners have 48 hours to answer." });
 }
 
 export async function submitFeedbackAction(

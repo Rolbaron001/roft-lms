@@ -276,7 +276,7 @@ export async function uploadEvidence(
 
   if (submission.status !== "draft" && submission.status !== "submitted") {
     throw new UploadError(
-      "This submission has already been assessed, so evidence cannot be added to it.",
+      "This submission is assessed. You cannot add evidence.",
       "not_permitted",
     );
   }
@@ -375,7 +375,7 @@ export async function uploadLogbookEvidence(
 
   if (entry.status !== "draft" && entry.status !== "returned_by_coach") {
     throw new UploadError(
-      "This logbook has been submitted, so evidence cannot be added to it.",
+      "This logbook is submitted. You cannot add evidence.",
       "not_permitted",
     );
   }
@@ -610,7 +610,7 @@ export async function uploadTenantLogo(
   }
   if (file.bytes.byteLength > LOGO_MAX_BYTES) {
     throw new UploadError(
-      `That image is ${describeSize(file.bytes.byteLength)}. A logo is displayed small, so the limit is ${describeSize(LOGO_MAX_BYTES)}. A PNG with a transparent background works best.`,
+      `That image is ${describeSize(file.bytes.byteLength)}; the limit for a logo is ${describeSize(LOGO_MAX_BYTES)}. Use a PNG with a transparent background.`,
       "too_large",
     );
   }

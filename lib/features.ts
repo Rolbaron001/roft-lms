@@ -81,7 +81,7 @@ export const AWARD_CHOICES: Choice<Award>[] = [
     value: "qualification_programme",
     label: "Qualification / Programme",
     covers:
-      "One thing. A learner is put onto the qualification and that is what they work through. There is no separate bundling layer above it.",
+      "One thing. A learner is enrolled on the qualification and works through it. There is no separate layer above it.",
     chooseWhen:
       "You deliver one occupational qualification as one learning programme.",
   },
@@ -89,7 +89,7 @@ export const AWARD_CHOICES: Choice<Award>[] = [
     value: "qualification_and_programme",
     label: "Qualification and Programme, separately",
     covers:
-      "Two different things. A qualification holds the accreditation and the curriculum; a programme bundles what a learner works through, and may answer to a qualification or to none.",
+      "Two separate things. A qualification holds the accreditation and the curriculum. A programme groups what a learner works through, with or without a qualification.",
     chooseWhen:
       "You run accredited qualifications and also bundle deliverables into sequences that are not one qualification each.",
   },
@@ -97,7 +97,7 @@ export const AWARD_CHOICES: Choice<Award>[] = [
     value: "programmes_only",
     label: "Programmes only",
     covers:
-      "Programmes bundle what a learner works through. No accreditation record, no curriculum, no statements of results.",
+      "Programmes group what a learner works through. There is no accreditation record, curriculum or Statement of Results.",
     chooseWhen:
       "Nothing you deliver answers to a registered qualification: induction, compliance refreshers, internal skills programmes.",
   },
@@ -319,7 +319,7 @@ export function platformShape(
   if (structure.award === "qualification_programme") {
     layers.push({
       name: "Qualification / Programme",
-      note: "One thing. A learner is put onto the qualification, and that is the programme they work through.",
+      note: "One thing. A learner is enrolled on the qualification, which is the programme they work through.",
     });
   }
 

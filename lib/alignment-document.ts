@@ -185,7 +185,7 @@ export function readAlignmentDocument(text: string): AlignmentReading {
 
   if (studyUnits.length === 0) {
     throw new AlignmentDocumentError(
-      "No study units were found in that document. One heading has to read like “Study Unit 1 – Organisational Architecture”, with the modules it covers listed under it.",
+      "No study units were found in that document. Each study unit needs a heading such as “Study Unit 1 – Organisational Architecture”, with its modules listed under it.",
     );
   }
 

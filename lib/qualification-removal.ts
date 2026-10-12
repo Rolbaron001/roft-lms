@@ -262,7 +262,7 @@ export async function deleteQualification(
     throw new QualificationInUseError(
       `This qualification cannot be removed: ${usage.holds
         .map((hold) => `${hold.count} ${hold.what}`)
-        .join(", ")}. Those are records of what learners have done, and the platform keeps them.`,
+        .join(", ")}.`,
       usage.holds,
     );
   }

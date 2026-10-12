@@ -100,6 +100,6 @@ describe("what a drive is asked to do", () => {
     // The same check an uploaded folder gets. Arriving by a different road is
     // no reason to skip it.
     expect(actions).toContain("proposed");
-    expect(actions).toContain("Check what it found before committing");
+    expect(actions).toContain("Check what was found before you commit");
   });
 });

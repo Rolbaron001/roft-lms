@@ -55,7 +55,7 @@ async function run(
       });
     }
     console.error(error);
-    return refused({ error: "That could not be saved. Please try again." });
+    return refused({ error: "That could not be saved. Try again." });
   }
 
   for (const path of paths) revalidatePath(path);
@@ -260,7 +260,7 @@ export async function lodgeGrievanceAction(
         occurredOn: values.occurredOn || undefined,
         desiredOutcome: values.desiredOutcome || undefined,
       }),
-    "Lodged. It will be acknowledged within two working days.",
+    "Lodged. It is acknowledged within two working days.",
     ["/conduct", `/people/${learnerId}`],
     { previous, values },
   ));

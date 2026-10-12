@@ -87,18 +87,18 @@ function explain(status: number, body: unknown, token?: string): string {
     token && token.length >= 8 ? raw.split(token).join("[key removed]") : raw;
 
   if (status === 401) {
-    return "OpenAI refused that key. It may have been revoked, or it may never have been valid. Note that a ChatGPT Plus subscription does not include API access: an API key is a separate thing, created at platform.openai.com. Nothing is wrong with the platform and nothing was lost.";
+    return "OpenAI refused the key. It may be revoked or invalid. A ChatGPT Plus subscription does not include API access; create an API key at platform.openai.com. Nothing was lost.";
   }
   if (status === 403) {
-    return "OpenAI refused that key for this model. The account it belongs to may not have access to the model named in your settings.";
+    return "OpenAI refused the key for this model. The account may not have access to the model in your settings.";
   }
   if (status === 429) {
     return /quota|billing/i.test(message)
-      ? "That OpenAI account has no credit left. Unlike Gemini, the OpenAI API has no free tier: it is charged against the account the key belongs to."
-      : "OpenAI's rate limit for that key has been reached. Wait a little and try again.";
+      ? "The OpenAI account has no credit left. The OpenAI API has no free tier."
+      : "OpenAI's rate limit for this key has been reached. Wait and try again.";
   }
   if (status >= 500) {
-    return `OpenAI reported a problem on their side (${status}). Please try again.`;
+    return `OpenAI reported a problem (${status}). Try again.`;
   }
   return message || `OpenAI returned ${status}.`;
 }
@@ -107,7 +107,7 @@ export const openAiProvider: AiProvider = {
   name: "openai",
   label: "OpenAI (API key)",
   description:
-    "Uses your own OpenAI API key, created at platform.openai.com. Not a ChatGPT Plus subscription: that is a separate product and does not include API access. Unlike Gemini there is no free tier, so calls are charged to the account the key belongs to.",
+    "Uses your own OpenAI API key from platform.openai.com. A ChatGPT Plus subscription does not include API access. There is no free tier; calls are charged to the key's account.",
   writesFiles: false,
   credentialFormat: {
     word: "API key",
@@ -164,7 +164,7 @@ export const openAiProvider: AiProvider = {
       return {
         ok: false,
         error:
-          "No OpenAI API key is stored for you. Add one in Settings. It comes from platform.openai.com, and is not the same as a ChatGPT subscription.",
+          "No OpenAI API key is stored for you. Add one from platform.openai.com in Settings. A ChatGPT subscription is not an API key.",
       };
     }
 
@@ -182,7 +182,7 @@ export const openAiProvider: AiProvider = {
     if (staged.truncated) {
       return {
         ok: false,
-        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead: the curriculum document alone is read directly, with no model involved.`,
+        error: `Those documents exceed ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, the limit for one request. Import the qualification from its documents instead, which uses no AI model.`,
         durationMs: Date.now() - started,
       };
     }
@@ -236,7 +236,7 @@ export const openAiProvider: AiProvider = {
         return {
           ok: false,
           error:
-            "OpenAI answered with nothing. That usually means the model name is wrong, or the request was refused.",
+            "OpenAI returned nothing. The model name may be wrong, or the request may have been refused.",
           durationMs: Date.now() - started,
         };
       }
@@ -259,8 +259,8 @@ export const openAiProvider: AiProvider = {
       return {
         ok: false,
         error: aborted
-          ? "OpenAI did not answer in time. A large folder can take several minutes; trying again with fewer documents in it usually works."
-          : "OpenAI could not be reached. Check that this machine has a network connection.",
+          ? "OpenAI did not answer in time. Try again with fewer documents."
+          : "OpenAI could not be reached. Check the server's network connection.",
         durationMs: Date.now() - started,
       };
     } finally {

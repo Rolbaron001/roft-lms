@@ -46,5 +46,5 @@ export async function withdrawStatementAction(
 
   revalidatePath(`/statements/${id}`);
   revalidatePath("/readiness");
-  return said({ notice: "Withdrawn. The reference still resolves, and says so." });
+  return said({ notice: "Withdrawn. The reference shows that it is withdrawn." });
 }

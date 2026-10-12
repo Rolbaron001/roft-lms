@@ -209,7 +209,7 @@ describe("an alignment matrix that is not a spreadsheet", () => {
     expect(() => readAlignmentMatrix(asWord)).toThrow(/spreadsheet/i);
     // And says the document itself is not lost, which it is not: the caller
     // files it before it reads it, so only the reading failed.
-    expect(() => readAlignmentMatrix(asWord)).toThrow(/itself is kept/i);
+    expect(() => readAlignmentMatrix(asWord)).toThrow(/filed and searchable/i);
   });
 });
 

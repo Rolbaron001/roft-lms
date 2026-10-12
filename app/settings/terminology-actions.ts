@@ -41,7 +41,7 @@ export async function saveTerminologyAction(
     if (error instanceof PermissionDeniedError) {
       return said({
         error:
-          "Only an administrator can change what things are called, because it is the same wording for everyone at this provider.",
+          "Only an administrator can change this wording.",
       });
     }
     throw error;
@@ -77,7 +77,7 @@ export async function saveTerminologyAction(
       );
       if (clash) {
         return said({
-          error: `"${word}" is defined by a regulator, so it cannot be used for something else. Renaming one of your own words to it would put a claim on a learner's screen that the record does not support.`,
+          error: `"${word}" is defined by a regulator and cannot be used for something else.`,
         });
       }
     }
@@ -100,7 +100,7 @@ export async function saveTerminologyAction(
     notice:
       Object.keys(overrides).length > 0
         ? "Saved. Everyone at this provider sees this wording."
-        : "Nothing differs from the standard wording, so the defaults are back.",
+        : "Back to the standard wording.",
   });
 }
 

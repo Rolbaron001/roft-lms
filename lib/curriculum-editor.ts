@@ -58,7 +58,7 @@ function assertCode(value: string, what: string): string {
   const code = value.trim();
   if (!CODE.test(code)) {
     throw new CurriculumError(
-      `"${code}" is not usable as a ${what} code. Use letters, digits, and . _ / - only, as the curriculum document prints it.`,
+      `"${code}" cannot be used as a ${what} code. Use letters, digits and . _ / - only, as printed in the curriculum document.`,
       "invalid",
     );
   }
@@ -166,7 +166,7 @@ export async function removeModule(
       const uses = await criterionUses(tx, criterion.id);
       if (uses.length > 0) {
         throw new CurriculumError(
-          `That module cannot be removed: ${uses.join(" ")} Remove or retag those first.`,
+          `That module cannot be removed: ${uses.join(" ")} Remove or re-tag those first.`,
           "in_use",
         );
       }

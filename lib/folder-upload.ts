@@ -116,7 +116,7 @@ export function shapeUpload(
 
     if (files.length >= MAX_FILES) {
       warnings.push(
-        `More than ${MAX_FILES} files were offered and the rest were left out. Pick the qualification's own folder rather than the drive it sits on.`,
+        `More than ${MAX_FILES} files were selected; the rest were left out. Choose the qualification's own folder.`,
       );
       break;
     }

@@ -350,7 +350,7 @@ async function issueWithin(
       return {
         ok: false as const,
         reasons: [
-          "A study unit earns a Statement of Results and a badge rather than a certificate. The certificate of competence for the qualification comes from the QCTO after the EISA.",
+          "A study unit earns a Statement of Results and a badge, not a certificate. The QCTO issues the qualification certificate after the EISA.",
         ],
       };
     }
@@ -389,7 +389,7 @@ async function issueWithin(
       userId: eligibility.enrolment.userId,
       kind: "certificate.issued",
       subject: `Your certificate for "${course.title}"`,
-      body: `Reference ${created.verificationReference}. Anyone can confirm it with that reference, without needing an account.`,
+      body: `Reference ${created.verificationReference}. Anyone can verify it with this reference, without an account.`,
       linkPath: `/certificates/${created.id}`,
       entityType: "certificate",
       entityId: created.id,
@@ -415,7 +415,7 @@ export async function revokeCertificate(
 
   if (reason.trim().length < 5) {
     throw new CertificateError(
-      "Give a reason for withdrawing the certificate; it is shown to anyone who verifies it.",
+      "Give a reason for withdrawing the certificate. It is shown to anyone who verifies it.",
       "not_permitted",
     );
   }

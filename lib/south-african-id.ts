@@ -109,7 +109,7 @@ export function validateSouthAfricanId(
   if (!luhnIsValid(digits)) {
     return {
       valid: false,
-      reason: "The check digit does not match; the number was likely mistyped.",
+      reason: "The check digit does not match. Check the number.",
     };
   }
 

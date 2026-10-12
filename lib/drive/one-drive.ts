@@ -52,13 +52,13 @@ function explain(status: number, body: unknown): string {
     : raw;
 
   if (status === 401) {
-    return "Microsoft no longer accepts that connection. It may have been withdrawn from your account. Connect the drive again in Settings.";
+    return "Microsoft no longer accepts this connection. Connect the drive again in Settings.";
   }
   if (status === 403) {
-    return `Microsoft refused that request. The account you connected may not have access to that folder. ${message}`;
+    return `Microsoft refused the request. The connected account may not have access to that folder. ${message}`;
   }
   if (status === 404) {
-    return "That folder is not there, or the account you connected cannot see it.";
+    return "That folder was not found, or the connected account cannot see it.";
   }
   return message || `Microsoft returned ${status}.`;
 }
@@ -82,7 +82,7 @@ export const oneDriveProvider: DriveProvider = {
   name: "one_drive",
   label: "OneDrive",
   description:
-    "Read a folder straight from your OneDrive. Read-only: the platform can list and download, and cannot create, change or delete anything. You can withdraw it here or from your Microsoft account at any time.",
+    "Read a folder straight from your OneDrive. Read-only: files are listed and downloaded, never created, changed or deleted. Disconnect here or in your Microsoft account at any time.",
 
   configured(): boolean {
     return Boolean(clientId() && clientSecret());
@@ -130,7 +130,7 @@ export const oneDriveProvider: DriveProvider = {
 
     if (!tokens.refresh_token) {
       throw new Error(
-        "Microsoft did not return a way to renew the connection. The application may not be asking for offline access.",
+        "Microsoft did not return a way to renew the connection. The application may not be requesting offline access.",
       );
     }
 

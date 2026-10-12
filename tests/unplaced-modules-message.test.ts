@@ -32,7 +32,7 @@ describe("modules in no study unit", () => {
 
   it("calls it the next step where nothing has been grouped yet", () => {
     expect(page).toContain("The next step: group these modules into study units.");
-    expect(page).toMatch(/expected, not a fault in the import/);
+    expect(page).toMatch(/Grouping modules into study units is your decision/);
   });
 
   it("names the document that does it", () => {
@@ -43,7 +43,7 @@ describe("modules in no study unit", () => {
   });
 
   it("still raises the alarm once a structure exists", () => {
-    expect(page).toMatch(/belongs to no study unit is not taught/);
+    expect(page).toMatch(/in no study unit is not taught/);
     expect(page).toMatch(/borderColor: "var\(--danger\)"/);
   });
 });

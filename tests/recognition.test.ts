@@ -372,7 +372,7 @@ describe("credit transfer", () => {
           "Unit standards 8648 and 110023 of the source qualification cover every internal assessment criterion in this module, at the same NQF level.",
         approvedOn: "2026-03-21",
       }),
-    ).rejects.toThrow(/Recognition of Prior Learning/);
+    ).rejects.toThrow(/Open an RPL application instead/);
   });
 
   /**
@@ -416,7 +416,7 @@ describe("credit transfer", () => {
           "The outcomes of the source qualification are argued to cover this module's criteria in full.",
         approvedOn: "2026-03-22",
       }),
-    ).rejects.toThrow(/limit on this qualification is 50/);
+    ).rejects.toThrow(/the limit is 50/);
   });
 
   /**

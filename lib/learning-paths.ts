@@ -318,7 +318,7 @@ async function assertPathIsEditable(tx: TenantDatabase, pathId: string) {
 
   if (path.status !== "draft") {
     throw new LearningPathError(
-      "This programme is published and people are working through it. Its steps cannot be changed.",
+      "This programme is published and in use. Its steps cannot be changed.",
       "invalid_state",
     );
   }

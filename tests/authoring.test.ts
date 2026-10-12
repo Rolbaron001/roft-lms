@@ -355,7 +355,7 @@ describe("the publish gate", () => {
     const result = await publishCourse(author, course.id);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.reasons.join(" ")).toContain("not tagged to any competency");
+    expect(result.reasons.join(" ")).toContain("at least one competency");
   });
 
   it("publishes a standalone course once it has lessons and a competency", async () => {

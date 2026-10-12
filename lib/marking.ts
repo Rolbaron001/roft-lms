@@ -99,7 +99,7 @@ export async function markItem(
 
     if (submission.status === "draft") {
       throw new MarkingError(
-        "That has not been handed in yet, so there is nothing to mark.",
+        "That has not been handed in yet.",
         "invalid",
       );
     }
@@ -457,7 +457,7 @@ export async function proposeCriterionOutcomes(
     // the paper simply evidenced no criteria.
     if (paper.purpose !== "summative") {
       throw new MarkingError(
-        "This is a workbook. It is developmental, so it produces feedback rather than a competence decision, and nothing it contains reaches the criterion ledger.",
+        "This is a workbook. Return feedback; no competence decision is recorded.",
         "refused",
       );
     }
@@ -527,7 +527,7 @@ export async function returnFeedback(
   const comments = input.comments.trim();
   if (comments.length < 10) {
     throw new MarkingError(
-      "Please write feedback the learner can use. An empty comment would appear on the record as feedback given.",
+      "Write feedback for the learner.",
       "invalid",
     );
   }
@@ -608,7 +608,7 @@ export async function commentOnSection(
   const comments = input.comments.trim();
   if (comments.length < 10) {
     throw new MarkingError(
-      "Please write feedback the learner can use. An empty comment would appear on the record as feedback given.",
+      "Write feedback for the learner.",
       "invalid",
     );
   }
@@ -651,7 +651,7 @@ export async function commentOnSection(
 
     if (belongs.length === 0) {
       throw new MarkingError(
-        "That section belongs to a different assessment, so a comment on it would appear against work it was never about.",
+        "That section belongs to a different assessment.",
         "invalid",
       );
     }

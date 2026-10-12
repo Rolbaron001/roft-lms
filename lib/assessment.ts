@@ -335,7 +335,7 @@ export async function setItemCriteria(
     if (!item) throw new AssessmentError("Question not found.", "not_found");
     if (item.status !== "draft") {
       throw new AssessmentError(
-        "This assessment is published, so its questions are fixed. Make a new version to change what they assess.",
+        "This assessment is published, so its questions are fixed. Create a new version to change them.",
         "invalid_state",
       );
     }
@@ -436,7 +436,7 @@ export async function addAssessmentItem(
     }
     if (parsed.correctIndexes.length === 0) {
       throw new AssessmentError(
-        "Mark at least one option as correct, or the question can never be passed.",
+        "Mark at least one option as correct.",
         "invalid_state",
       );
     }
@@ -909,7 +909,7 @@ export async function submitQuiz(
     // learner's own. Found by the walk of 26 September.
     if (awaitingAssessor && !input.declarationAccepted) {
       throw new AssessmentError(
-        "Confirm the declaration before handing in. It is what makes this your work on the record.",
+        "Confirm the declaration to hand in.",
         "invalid_state",
       );
     }
@@ -1600,8 +1600,7 @@ export async function recordAssessorDecision(
 
       if (assessment?.purpose === "formative") {
         throw new AssessmentError(
-          `"${assessment.title}" is developmental, so it cannot record competence against criteria. ` +
-            `Return feedback on it instead.`,
+          `"${assessment.title}" is developmental and records no competence. Return feedback instead.`,
           "not_permitted",
         );
       }
@@ -1622,8 +1621,8 @@ export async function recordAssessorDecision(
 
       if (unexplained.length > 0) {
         throw new AssessmentError(
-          `You have changed ${unexplained.length === 1 ? "a criterion" : `${unexplained.length} criteria`} from what the marks proposed. ` +
-            `Say why: practical performance and workplace evidence do not reach the platform, and the reason has to.`,
+          `You changed ${unexplained.length === 1 ? "a criterion" : `${unexplained.length} criteria`} from what the marks proposed. ` +
+            `Give your reason.`,
           "invalid_state",
         );
       }
@@ -2011,7 +2010,7 @@ export async function recordModeration(
         subject: "Your assessment result has been confirmed",
         body:
           parsed.outcome === "overridden"
-            ? "A moderator reviewed your assessment and revised the outcome. Your record shows the result that stands."
+            ? "A moderator reviewed your assessment and revised the outcome. Your record shows the final result."
             : "A moderator has independently reviewed and confirmed your assessment result.",
         entityType: "assessment_submission",
         entityId: decision.submissionId,

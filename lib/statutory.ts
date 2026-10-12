@@ -142,7 +142,7 @@ export async function buildNlrdDataset(
         subject: organisation.legalName,
         field: "accreditation number",
         message:
-          "The provider accreditation number is missing. Every record in the return is filed against it.",
+          "The provider accreditation number is missing.",
       });
     }
 
@@ -153,7 +153,7 @@ export async function buildNlrdDataset(
         subject: organisation.legalName,
         field: "ward code",
         message:
-          "No municipal ward code recorded. The Provider Record is validated down to ward level.",
+          "No municipal ward code recorded.",
       });
     }
 
@@ -383,7 +383,7 @@ export async function buildNlrdDataset(
           subject: `${name}: ${module.code}`,
           field: "assessor registration",
           message:
-            "The assessor has no registration number recorded. The NLRD verifies assessor registration against the achievement.",
+            "The assessor has no registration number recorded.",
         });
       }
 

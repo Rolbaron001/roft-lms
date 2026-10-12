@@ -198,7 +198,7 @@ describe("what may be done with no signal", () => {
 
     expect(verdict.allowed).toBe(false);
     if (!verdict.allowed) {
-      expect(verdict.why).toContain("not defensible");
+      expect(verdict.why).toContain("cannot be taken offline");
     }
   });
 

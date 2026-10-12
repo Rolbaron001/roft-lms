@@ -244,7 +244,7 @@ describe("what it will not do", () => {
   it("refuses a parent that is itself a part", async () => {
     await expect(
       reclassify(admin, stray, { kind: "part", parentId: alsoPart }),
-    ).rejects.toThrow(/itself a part/i);
+    ).rejects.toThrow(/is a part qualification/i);
   });
 
   /**

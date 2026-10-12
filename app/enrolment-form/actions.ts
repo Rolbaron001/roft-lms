@@ -74,7 +74,7 @@ export async function saveEnrolmentFormAction(
 
   return said({
     notice: confirm
-      ? "Confirmed, and the date recorded. Change anything here later and it will ask you to confirm again."
-      : "Saved. You can come back and finish it later.",
+      ? "Confirmed, with today's date. If you change anything later, you confirm again."
+      : "Saved. You can finish it later.",
   });
 }

@@ -133,7 +133,7 @@ export async function commitPlan(
 
     if (!details?.title?.trim()) {
       throw new IngestError(
-        "This folder was read as a new qualification, but no title was found in it, so there is nothing to create. Choose an existing qualification to add it to instead.",
+        "No qualification title was found in this folder. Choose an existing qualification to add it to.",
         "no_plan",
       );
     }
@@ -148,7 +148,7 @@ export async function commitPlan(
 
       if (clash) {
         throw new IngestError(
-          `"${clash.title}" already carries the curriculum code ${details.curriculumCode}. Two qualifications on one code is an ambiguity nothing downstream can resolve. Choose it above to add this folder to it instead.`,
+          `"${clash.title}" already has the curriculum code ${details.curriculumCode}. Choose it above to add this folder to it.`,
           "no_plan",
         );
       }

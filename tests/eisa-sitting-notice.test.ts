@@ -23,9 +23,9 @@ describe("when no sittings are held at all", () => {
     const notice = sittingDatesNotice("2026-07-14");
 
     expect(notice.year).toBe(2026);
-    expect(notice.text).toContain("change every year");
+    expect(notice.text).toContain("assessment quality partner's letter");
     // The mid-year notice explains; it does not instruct.
-    expect(notice.text).not.toContain("please add them");
+    expect(notice.text).not.toContain("Add them to start");
   });
 
   it("asks for the dates to be added, in December", () => {
@@ -34,7 +34,7 @@ describe("when no sittings are held at all", () => {
     // December talks about the year ahead, which is what the letter covers.
     expect(notice.year).toBe(2027);
     expect(notice.text).toContain("2027");
-    expect(notice.text).toContain("please add them");
+    expect(notice.text).toContain("Add them to start the countdown");
   });
 
   it("still says what the absence costs, so it is not shrugged off", () => {
@@ -50,7 +50,7 @@ describe("when no sittings are held at all", () => {
     const notice = sittingDatesNotice("not-a-date");
 
     expect(notice.expected).toBe(false);
-    expect(notice.text).toContain("once a year");
+    expect(notice.text).toContain("annual letter");
   });
 });
 

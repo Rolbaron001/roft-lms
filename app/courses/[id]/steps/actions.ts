@@ -84,7 +84,7 @@ export async function removeStepAction(
   }
 
   revalidatePath(`/courses/${courseId}/steps`);
-  return said({ notice: "Taken off the list. What it pointed at is untouched." });
+  return said({ notice: "Removed from the list. The item itself is unchanged." });
 }
 
 /**

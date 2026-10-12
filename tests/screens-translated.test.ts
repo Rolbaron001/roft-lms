@@ -148,7 +148,7 @@ describe("reading a moved screen's English back for older tests", () => {
     expect(withPhrases('placeholder={t("people.search")}')).toBe("placeholder=Search by name or email");
     expect(withPhrases('const label = t("people.search");')).toBe('const label = "Search by name or email";');
     expect(withPhrases('t("people.intro", { provider })')).toBe(
-      't("Everyone in {provider}, their roles, and whether their record carries what a statutory return needs.", { provider })',
+      't("Everyone in {provider}, their roles, and whether their record has the details a statutory return needs.", { provider })',
     );
     expect(withPhrases('{maybe(t, `x.${y}`)}')).toBe("{maybe(t, `x.${y}`)}");
   });

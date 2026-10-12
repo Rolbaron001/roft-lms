@@ -569,7 +569,7 @@ export async function createSittingAction(
         permittedMaterials: field(formData, "permittedMaterials") || undefined,
         declarationText: field(formData, "declarationText") || undefined,
       }),
-    "Sitting set up. It is scheduled until you open it.",
+    "Sitting set up. It stays scheduled until you open it.",
     [`/cohorts/${cohortId}/sessions/${sessionId}`, `/cohorts/${cohortId}`],
   ));
 }

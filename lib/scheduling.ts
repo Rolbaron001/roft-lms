@@ -87,7 +87,7 @@ export const sessionInput = z.object({
     .trim()
     .max(1000)
     .transform((value) => (value && !/^[a-z]+:\/\//i.test(value) ? `https://${value}` : value))
-    .pipe(z.string().url("That does not look like a meeting link. Paste it as it appears in the invitation."))
+    .pipe(z.string().url("That is not a meeting link. Paste it as it appears in the invitation."))
     .optional(),
   /** The workbook handed out at this session, which then opens on its date (D17). */
   handoutAssessmentId: z.string().uuid().optional(),
@@ -247,7 +247,7 @@ export async function setSessionStatus(
 
     if ((status === "cancelled" || status === "postponed") && !note?.trim()) {
       throw new SchedulingError(
-        "Please say why the session was cancelled or postponed. Unexplained gaps in a schedule are what a monitoring visit asks about.",
+        "Give the reason the session was cancelled or postponed.",
         "invalid_state",
       );
     }
@@ -572,7 +572,7 @@ export async function takeRegister(
 
     if (target.status === "cancelled") {
       throw new SchedulingError(
-        "This session was cancelled, so there is no register to take.",
+        "This session was cancelled.",
         "invalid_state",
       );
     }
@@ -596,7 +596,7 @@ export async function takeRegister(
     const stranger = marks.find((mark) => !allowed.has(mark.userId));
     if (stranger) {
       throw new SchedulingError(
-        "That person is not a current member of this cohort, so they cannot be marked on its register.",
+        "That person is not a current member of this cohort.",
         "invalid_state",
       );
     }
@@ -655,7 +655,7 @@ export async function proposeAttendance(
   assertSessionCan(session, "attendance:record");
   const attendees = readAttendanceExport(filename, bytes);
   if (attendees.length === 0) {
-    throw new SchedulingError("No participants were found in that file. It should be the attendance export from the meeting, with a column of names.", "invalid_state");
+    throw new SchedulingError("No participants were found in that file. Use the meeting's attendance export, with a column of names.", "invalid_state");
   }
   const learners = await withTenant(session.organisationId, async (tx) => {
     const [target] = await tx.select({ cohortId: cohortSessions.cohortId }).from(cohortSessions).where(eq(cohortSessions.id, sessionId));
@@ -821,7 +821,7 @@ export function suggestCohortName(
 
   if (Number.isNaN(date.getTime())) {
     throw new SchedulingError(
-      "That induction date cannot be read, so a cohort name cannot be built from it.",
+      "That induction date cannot be read.",
       "invalid_state",
     );
   }

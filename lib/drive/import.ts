@@ -68,20 +68,20 @@ export async function importFromDrive(
 
   if (listed.length === 0) {
     throw new DriveError(
-      "That folder has nothing in it the platform can read. Documents, spreadsheets and presentations are all read, including Google's own, so an empty result means the folder really is empty, or holds only things like Forms and shortcuts.",
+      "That folder has nothing that can be read. Documents, spreadsheets and presentations, including Google's own, are read; forms and shortcuts are not.",
     );
   }
 
   if (listed.length > MAX_FILES) {
     throw new DriveError(
-      `That folder holds ${listed.length} files, which is more than can be read in one go. Choose the folder for one qualification rather than the drive it sits in.`,
+      `That folder holds ${listed.length} files, which is too many to read at once. Choose the folder for one qualification.`,
     );
   }
 
   const known = listed.reduce((total, one) => total + (one.bytes ?? 0), 0);
   if (known > MAX_TOTAL_BYTES) {
     throw new DriveError(
-      `That folder comes to about ${Math.round(known / 1024 / 1024)} MB, which is more than can be read in one go. Choose the folder for one qualification rather than the drive it sits in.`,
+      `That folder is about ${Math.round(known / 1024 / 1024)} MB, which is too large to read at once. Choose the folder for one qualification.`,
     );
   }
 

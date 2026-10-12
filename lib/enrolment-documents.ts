@@ -207,8 +207,8 @@ export async function recordEnrolmentDocument(
   ) {
     throw new DocumentError(
       parsed.certifiedOn
-        ? `That copy was certified on ${writtenDay(parsed.certifiedOn)}, which is more than ${CERTIFICATION_VALID_DAYS} days ago. A certified copy has to be current when it is supplied.`
-        : "Give the date this copy was certified. A copy whose certification date is unknown cannot be shown to be current.",
+        ? `That copy was certified on ${writtenDay(parsed.certifiedOn)}, more than ${CERTIFICATION_VALID_DAYS} days ago. A certified copy must be current.`
+        : "Enter the date this copy was certified.",
       "invalid_state",
     );
   }
@@ -277,7 +277,7 @@ export async function verifyEnrolmentDocument(
 
   if (outcome === "refused" && !reason?.trim()) {
     throw new DocumentError(
-      "Say why it was refused. The learner has to be told what to correct, and a refusal with no reason sends them back with nothing to act on.",
+      "Give the reason for refusing it, so the learner knows what to correct.",
       "invalid_state",
     );
   }

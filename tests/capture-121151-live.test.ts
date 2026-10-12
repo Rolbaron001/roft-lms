@@ -105,18 +105,18 @@ describe("the 121151 papers on live", () => {
 describe("the faults in the 121151 documents, said until they are corrected", () => {
   it("SU5 SA5 Version 2: the paper and its guide have each other's names", () => {
     const merged = read("CA 121151 SU5 SA5 V2.docx");
-    expect(merged.problems.join(" ")).toContain("given each other's names");
+    expect(merged.problems.join(" ")).toContain("named the wrong way round");
   });
 
   it("SU2 SA2: the learners' papers carry the memorandum", () => {
     for (const paper of ["CA 121151 SU2 SA2 V1.docx", "CA 121151 SU2 SA2 V2.docx"]) {
-      expect(read(paper).problems.join(" ")).toContain("carries its own marking guide");
+      expect(read(paper).problems.join(" ")).toContain("contains the marking guide");
     }
   });
 
   it("SU4 workbooks 2 and 3: every multiple-choice answer is B", () => {
     for (const paper of ["CA 121151 SU4 WB2.docx", "CA 121151 SU4 WB3.docx"]) {
-      expect(read(paper).problems.join(" ")).toContain("has B as the correct answer");
+      expect(read(paper).problems.join(" ")).toContain("have B as the correct answer");
     }
   });
 

@@ -209,10 +209,7 @@ async function extractText(
         return {
           text: pdf.text.length > 0 ? pdf.text.slice(0, 500_000) : null,
           notice:
-            `This looks like a scan: ${pdf.pages} pages with almost no text in them. ` +
-            "The file is stored and can be downloaded, but the platform cannot read it, " +
-            "so it cannot help you build the curriculum from it. If there is a digital " +
-            "copy of this document, upload that instead.",
+            `This looks like a scan: ${pdf.pages} pages with almost no text. It is stored and can be downloaded, but cannot be read. Upload a digital copy if you have one.`,
         };
       }
 

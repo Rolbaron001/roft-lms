@@ -66,7 +66,7 @@ export async function defineBadgeAction(
     // A unique index refusing a second badge for the same thing, most likely.
     const message =
       error instanceof Error && /duplicate|unique/i.test(error.message)
-        ? "That already has a badge. Retire the existing one first, or choose something else."
+        ? "That already has a badge. Retire the existing badge first, or choose something else."
         : error instanceof Error
           ? error.message
           : "That could not be saved.";
@@ -79,7 +79,7 @@ export async function defineBadgeAction(
   }
 
   revalidatePath("/badges");
-  return said({ notice: "Badge created. It is earned from now on." });
+  return said({ notice: "Badge created. Learners earn it from now on." });
 }
 
 export async function retireBadgeAction(
@@ -100,6 +100,6 @@ export async function retireBadgeAction(
   revalidatePath("/badges");
   return said({
     notice:
-      "Retired. No one can earn it from now on, and everyone who already holds it keeps it.",
+      "Retired. No one can earn it from now on. Current holders keep it.",
   });
 }

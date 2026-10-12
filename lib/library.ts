@@ -125,7 +125,7 @@ export async function removeLibraryItem(session: AuthenticatedSession, itemId: s
   assertSessionCan(session, "course:author");
   await withTenant(session.organisationId, async (tx) => {
     const [used] = await tx.select({ id: libraryLinks.id }).from(libraryLinks).where(eq(libraryLinks.itemId, itemId)).limit(1);
-    if (used) throw new UploadError("That item is still used by a study unit. Take it off every study unit first.", "rejected");
+    if (used) throw new UploadError("That item is used by a study unit. Remove it from every study unit first.", "rejected");
     const [item] = await tx.delete(libraryItems).where(eq(libraryItems.id, itemId)).returning({ title: libraryItems.title });
     if (item) {
       await recordAudit(tx, {

@@ -626,7 +626,7 @@ export async function sweepTenant(
           userId,
           kind: "statutory.overdue",
           subject: `${overdue.length} QCTO enrolment ${overdue.length === 1 ? "notification is" : "notifications are"} overdue`,
-          body: "Submit them regardless. A late notification with an explanation is far less serious than none at all.",
+          body: "Submit them now, with an explanation.",
           linkPath: "/statutory/notify",
           // One a week, not one a night: an overdue item stays overdue, and a
           // nightly repeat of the same bad news teaches people to ignore it.
@@ -642,7 +642,7 @@ export async function sweepTenant(
           userId,
           kind: "statutory.due_soon",
           subject: `${soon.length} QCTO enrolment ${soon.length === 1 ? "notification is" : "notifications are"} due within a week`,
-          body: "The clock runs from induction, and public holidays do not count.",
+          body: "The deadline counts working days from induction, excluding public holidays.",
           linkPath: "/statutory/notify",
           dedupeKey: `statutory.due_soon:${weekBucket(now)}:${userId}`,
           channels: ["in_app", "email"],

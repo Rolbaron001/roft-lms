@@ -183,7 +183,7 @@ export async function sendToModerationAction(
   }
 
   revalidatePath(`/fisa/${formData.get("instrumentId")}`);
-  return said({ notice: "Sent to the moderator, and they have been told." });
+  return said({ notice: "Sent to the moderator, who has been notified." });
 }
 
 export async function signOffAction(

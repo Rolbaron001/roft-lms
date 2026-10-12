@@ -601,8 +601,8 @@ export async function recordDisposal(
   if (parsed.status !== "archived" && !parsed.reason) {
     throw new RecordsError(
       parsed.status === "destroyed"
-        ? "Destroying a record is irreversible, and a verifier may later ask why it is no longer held. Please give the reason."
-        : "Please say why this is being kept beyond its retention period. The reason belongs in the file, to show that this was a decision rather than an oversight.",
+        ? "Destroying a record cannot be undone. Give the reason."
+        : "Give the reason for keeping this beyond its retention period.",
       "needs_reason",
     );
   }

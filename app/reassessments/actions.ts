@@ -119,7 +119,7 @@ export async function recordOralAction(
   if (exchanges.length === 0) {
     return said({
       error:
-        "Write down at least one question and the answer given. An oral pass with no record of the exchange is not evidence.",
+        "Record at least one question and the answer given.",
     });
   }
 

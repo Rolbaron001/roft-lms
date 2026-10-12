@@ -97,7 +97,7 @@ export async function submitQuizAction(
       return said({ error: error.message });
     }
     console.error(error);
-    return said({ error: "That could not be submitted. Please try again." });
+    return said({ error: "That could not be submitted. Try again." });
   }
 }
 
@@ -116,7 +116,7 @@ export async function markLessonCompleteAction(
       return said({ error: error.message });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
 
   revalidatePath(`/learn/${enrolmentId}`);
@@ -146,7 +146,7 @@ export async function openStepAction(
       return said({ error: error.message });
     }
     console.error(error);
-    return said({ error: "That could not be opened. Please try again." });
+    return said({ error: "That could not be opened. Try again." });
   }
 
   revalidatePath(`/learn/${enrolmentId}`);

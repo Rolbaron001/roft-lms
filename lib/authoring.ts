@@ -1428,7 +1428,7 @@ export async function coursePublishChecks(
 
   if (report.competencyCount === 0) {
     reasons.push(
-      "The course is not tagged to any competency, so completing it could not be reported as capability coverage.",
+      "Tag the course to at least one competency.",
     );
   }
 
@@ -1534,7 +1534,7 @@ async function publishCheckedCourse(
           userId: learner.userId,
           kind: "course.new_version",
           subject: `${published.title} has been updated`,
-          body: `You are part-way through an earlier version. Version ${published.version} is now the current one, and you may be asked to move across to it.`,
+          body: `You are working on an earlier version. Version ${published.version} is now current, and you may be asked to move to it.`,
           linkPath: `/learn/${courseId}`,
           entityType: "course",
           entityId: courseId,
@@ -1587,7 +1587,7 @@ export async function createNewVersion(
 
     if (existing.status !== "published") {
       throw new AuthoringError(
-        "Only a published course needs a new version; this one can be edited directly.",
+        "This course is not published. Edit it directly.",
         "invalid_state",
       );
     }

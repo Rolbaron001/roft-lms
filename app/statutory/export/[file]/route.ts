@@ -40,7 +40,7 @@ export async function GET(
 
   if (!dataset.submittable) {
     return new Response(
-      await said("This return has problems that must be fixed before the files can be produced. See the statutory reporting page."),
+      await said("Fix the problems on the statutory reporting page before the files can be produced."),
       { status: 409, headers: { "content-type": "text/plain; charset=utf-8" } },
     );
   }

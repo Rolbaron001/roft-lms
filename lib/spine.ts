@@ -862,14 +862,14 @@ export async function addStep(
         RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind)
       ) {
         throw new SpineError(
-          "That document is kept from learners, so it cannot be a step on their path. A summative paper reaches them as a captured assessment instead.",
+          "That document is withheld from learners and cannot be a step. Learners receive summative papers as captured assessments.",
           "invalid",
         );
       }
 
       if (document && NOT_A_LEARNER_STEP.has(document.kind as DocumentKind)) {
         throw new SpineError(
-          "That document is written for staff rather than for learners to work through, so it cannot be a step on their path.",
+          "That document is for staff and cannot be a step.",
           "invalid",
         );
       }
@@ -963,15 +963,13 @@ export async function addPrerequisite(
 
         if (assessment?.purpose === "formative") {
           throw new SpineError(
-            `"${assessment.title}" is formative, so it never produces a competence decision, so ` +
-              `a gate waiting for one would never open. Wait for it to be handed in or marked instead.`,
+            `"${assessment.title}" is formative and has no competence decision. Wait for it to be handed in or marked instead.`,
             "invalid",
           );
         }
       } else if (required.kind === "lesson" || required.kind === "document") {
         throw new SpineError(
-          "A lesson or a document is not assessed, so it cannot be judged competent. " +
-            "Wait for it to be opened instead.",
+          "A lesson or document is not assessed. Wait for it to be opened instead.",
           "invalid",
         );
       }
@@ -979,7 +977,7 @@ export async function addPrerequisite(
 
     if (input.rule === "signed_off" && required.kind !== "workplace") {
       throw new SpineError(
-        "Only a work experience module is signed off. Pick another rule.",
+        "Only work experience modules are signed off. Choose another rule.",
         "invalid",
       );
     }
@@ -993,7 +991,7 @@ export async function addPrerequisite(
     );
     if (wouldCycle) {
       throw new SpineError(
-        "That would make two steps wait for each other, and neither would ever open.",
+        "That would make two steps wait for each other.",
         "invalid",
       );
     }
@@ -1142,7 +1140,7 @@ export async function grantOverride(
   const reason = input.reason.trim();
   if (reason.length < 10) {
     throw new SpineError(
-      "Say why this learner is being let past. It is shown on their record and in the moderation pack.",
+      "Give the reason for letting this learner past. It is shown on their record and in the moderation pack.",
       "invalid",
     );
   }

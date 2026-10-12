@@ -96,13 +96,13 @@ describe("a paper and its guide with each other's names", () => {
   it("says only that, when the guide is really a learner's paper", () => {
     const merged = mergeMemorandum(parseWorkbook(V1), parseMemorandum(V2));
     expect(merged.problems).toHaveLength(1);
-    expect(merged.problems[0]).toMatch(/reads like the learner's paper.*each other's names/);
+    expect(merged.problems[0]).toMatch(/reads like the learner's paper.*named the wrong way round/);
   });
 
   it("says so when the paper is really a marking guide", () => {
     const merged = mergeMemorandum(parseWorkbook(V2_GUIDE), parseMemorandum(V2));
     expect(merged.problems.some((p) => /reads like a marking guide/.test(p))).toBe(true);
-    expect(merged.problems.every((p) => /each other's names/.test(p))).toBe(true);
+    expect(merged.problems.every((p) => /named the wrong way round/.test(p))).toBe(true);
   });
 
   it("is the only thing the review screen shows", () => {

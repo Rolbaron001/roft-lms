@@ -132,7 +132,7 @@ describe("an answer that ran out of room", () => {
       });
 
       expect(result.ok).toBe(false);
-      expect(result.error).toMatch(/ran out of room/i);
+      expect(result.error).toMatch(/was cut off/i);
       // And it says what to do instead, rather than only what went wrong.
       expect(result.error).toMatch(/from its documents/i);
       // The half-answer must not travel on as if it were whole.

@@ -419,7 +419,7 @@ async function readState(
       state.waiting.push({
         userId: member.userId,
         name: fullName(member),
-        reason: "This cohort's course counts towards no qualification, so there is no certificate to wait for.",
+        reason: "This cohort's course counts towards no qualification.",
       });
     }
     return state;
@@ -839,13 +839,13 @@ export async function startCohortArchive(
     const state = await readState(tx, organisationId, cohortId);
     if (!state.qualification) {
       throw new ArchiveError(
-        "This cohort's course counts towards no qualification, so no one in it can be shown to have finished.",
+        "This cohort's course counts towards no qualification.",
         "no_qualification",
       );
     }
     if (state.ready.length === 0) {
       throw new ArchiveError(
-        "No one in this cohort is ready to archive. A learner is ready once they hold a statement of results for the qualification and their qualification certificate has been recorded on their EISA readiness page.",
+        "No one in this cohort is ready to archive. A learner is ready once they hold a Statement of Results for the qualification and their qualification certificate is recorded on their EISA readiness page.",
         "nobody_eligible",
       );
     }
@@ -861,7 +861,7 @@ export async function startCohortArchive(
       );
     if (busy) {
       throw new ArchiveError(
-        "Another archive is being written. Only one can be written at a time, because each needs space on the disk. Please try again when it has finished.",
+        "Another archive is being written. Try again when it finishes.",
         "busy",
       );
     }
@@ -904,7 +904,7 @@ export async function startCohortArchive(
   const free = Number(disk.bavail) * Number(disk.bsize);
   if (free < estimate + DISK_HEADROOM_BYTES) {
     throw new ArchiveError(
-      `The server has ${(free / 1024 ** 3).toFixed(1)} GB free and this archive needs about ${((estimate + DISK_HEADROOM_BYTES) / 1024 ** 3).toFixed(1)} GB, counting room left for everything else. Archive fewer learners at once, or ask for more disk.`,
+      `The server has ${(free / 1024 ** 3).toFixed(1)} GB free and this archive needs about ${((estimate + DISK_HEADROOM_BYTES) / 1024 ** 3).toFixed(1)} GB. Archive fewer learners at once, or ask for more disk space.`,
       "no_space",
     );
   }
@@ -1089,7 +1089,7 @@ async function* entriesFor(
           bytes = await getObject(file.source.storageKey);
         } catch {
           throw new ArchiveError(
-            `The cohort's file "${file.path.split("/").pop()}" could not be read from storage, so the archive was not finished and nothing was removed. The file needs to be found, or removed from the cohort file, before the cohort can be archived.`,
+            `The cohort file "${file.path.split("/").pop()}" could not be read from storage. The archive was not finished and nothing was removed. Find the file, or remove it from the cohort file, then archive again.`,
             "not_found",
           );
         }
@@ -1117,7 +1117,7 @@ async function* entriesFor(
             bytes = await getObject(file.source.storageKey);
           } catch {
             throw new ArchiveError(
-              `${learner.name}'s file "${file.path.split("/").pop()}" could not be read from storage, so the archive was not finished and nothing was removed. The file needs to be found or its record corrected before this learner can be archived.`,
+              `${learner.name}'s file "${file.path.split("/").pop()}" could not be read from storage. The archive was not finished and nothing was removed. Find the file or correct its record, then archive again.`,
               "not_found",
             );
           }
@@ -1169,7 +1169,7 @@ export async function archiveForDownload(session: AuthenticatedSession, archiveI
   const row = await withTenant(session.organisationId, (tx) => loadArchive(tx, archiveId));
   if (!row.workingPath || (row.status !== "built" && row.status !== "verified")) {
     throw new ArchiveError(
-      "This archive is not on the server to download. Only a built archive that has not had its files removed can be downloaded.",
+      "This archive is not available to download.",
       "wrong_state",
     );
   }
@@ -1214,8 +1214,8 @@ export async function confirmArchiveCopy(
     if (!matches) {
       throw new ArchiveError(
         copy.bytes !== row.sizeBytes
-          ? `The file you chose is ${copy.bytes.toLocaleString("en-ZA")} bytes; the archive is ${(row.sizeBytes ?? 0).toLocaleString("en-ZA")}. It may be a different file, or a download that did not finish. Nothing has been removed. Download the archive again and check that copy.`
-          : "The file you chose is the right size but its contents differ from the archive. It has been damaged since it was downloaded. Nothing has been removed. Download the archive again and check that copy.",
+          ? `The file you chose is ${copy.bytes.toLocaleString("en-ZA")} bytes; the archive is ${(row.sizeBytes ?? 0).toLocaleString("en-ZA")}. Nothing was removed. Download the archive again and check that copy.`
+          : "The file you chose is the right size but its contents differ from the archive. Nothing was removed. Download the archive again and check that copy.",
         "mismatch",
       );
     }
@@ -1272,7 +1272,7 @@ export async function removeArchivedFiles(session: AuthenticatedSession, archive
     const archive = await loadArchive(tx, archiveId);
     if (archive.status !== "verified") {
       throw new ArchiveError(
-        "Files are removed only once the provider's saved copy has been checked against the archive. Check the copy first.",
+        "Check your saved copy against the archive before you remove the files.",
         "wrong_state",
       );
     }
@@ -1393,13 +1393,13 @@ export async function appendRestoreChunk(
     await rm(path, { force: true });
   } else if (offset !== received) {
     throw new ArchiveError(
-      `The upload is out of step: ${received} bytes have arrived and this piece starts at ${offset}. Carry on from ${received}.`,
+      `The upload is out of step: ${received} bytes have arrived and this piece starts at ${offset}. Continue from ${received}.`,
       "upload",
     );
   }
   if (offset + bytes.byteLength > (row.sizeBytes ?? 0)) {
     throw new ArchiveError(
-      "This file is larger than the archive being restored. It is not the same archive.",
+      "This file is larger than the archive being restored, so it is a different archive.",
       "upload",
     );
   }
@@ -1574,5 +1574,5 @@ export async function archivedFileNotice(
     .from(organisations)
     .innerJoin(cohortArchives, eq(cohortArchives.organisationId, organisations.id))
     .where(eq(cohortArchives.id, archiveId));
-  return `This file was archived on ${writtenDay(archivedAt)}${row ? `, in "${row.filename}"` : ""}, and is held by ${organisation?.displayName ?? "the provider"}. The record of it remains here. An administrator can restore the archive if the file is needed on the platform again.`;
+  return `This file was archived on ${writtenDay(archivedAt)}${row ? `, in "${row.filename}"` : ""} and is held by ${organisation?.displayName ?? "the provider"}. An administrator can restore the archive if the file is needed again.`;
 }

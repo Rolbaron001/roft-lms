@@ -157,7 +157,7 @@ export async function ingestUpload(
   const shaped = shapeUpload(incoming);
   if (shaped.files.length === 0) {
     throw new IngestError(
-      "That folder had nothing in it the platform could read.",
+      "That folder has nothing that can be read.",
       "empty",
     );
   }
@@ -237,15 +237,15 @@ async function buildPlan(
     if (!usable) {
       throw new IngestError(
         state.on
-          ? `This folder does not include a summary of itself (a _control/blueprint.json), so its structure has to be worked out from the documents, and that is the one part that needs an AI extension. Yours is switched on but cannot run here: ${state.availability?.reason ?? "it is not available on this machine."} Everything else about importing a folder works without it.`
-          : "This folder does not include a summary of itself (a _control/blueprint.json, which your programme development system writes), so its structure has to be worked out from the documents, and that is the one part that needs an AI extension. Yours is not switched on: use the AI switch at the top of the page, then read the folder again. A folder that includes a summary imports with no extension at all.",
+          ? `This folder has no summary of itself (a _control/blueprint.json), so its structure must be worked out by an AI extension. Yours cannot run here: ${state.availability?.reason ?? "it is not available on this machine."}`
+          : "This folder has no summary of itself (a _control/blueprint.json), so its structure must be worked out by an AI extension. Switch yours on at the top of the page, then read the folder again.",
         "needs_extension",
       );
     }
 
     plan = await planFromDocuments(session, files);
     warnings.push(
-      "This folder had no blueprint.json, so the structure below was read from the documents by the model. Check it against the curriculum document before committing: a model may produce a plausible structure that the document does not support.",
+      "This folder has no blueprint.json, so the structure below was read from the documents by the AI model. Check it against the curriculum document before you commit.",
     );
   }
 
@@ -457,7 +457,7 @@ async function planFromDocuments(
 
     if (staged === 0) {
       throw new IngestError(
-        "Nothing in that folder describes a qualification. Expected a curriculum document, a qualification document or an assessment specification.",
+        "Nothing in that folder describes a qualification. Include a curriculum document, a qualification document or an assessment specification.",
         "unreadable",
       );
     }
@@ -498,7 +498,7 @@ async function planFromDocuments(
 
     if (!raw) {
       throw new IngestError(
-        "The extension ran but wrote nothing that could be read as a plan.",
+        "The extension returned nothing that could be read as a plan.",
         "no_plan",
       );
     }

@@ -136,13 +136,13 @@ function explain(status: number, body: unknown, token?: string): string {
     token && token.length >= 8 ? raw.split(token).join("[key removed]") : raw;
 
   if (status === 400 && /api key not valid/i.test(message)) {
-    return "That Gemini API key is not valid. Check it was copied whole from Google AI Studio. It is not the same thing as a Gemini Advanced subscription, which does not include API access.";
+    return "That Gemini API key is not valid. Check that you copied all of it from Google AI Studio. A Gemini Advanced subscription does not include API access.";
   }
   if (status === 401 || status === 403) {
-    return "Google refused that key. It may have been revoked, or the Generative Language API may not be enabled on the project it belongs to. Nothing is wrong with the platform and nothing was lost.";
+    return "Google refused the key. It may be revoked, or the Generative Language API may not be enabled on its project. Nothing was lost.";
   }
   if (status === 429) {
-    return "Google's rate limit for that key has been reached. The free tier allows a limited number of requests a minute; wait and try again, or use a key with billing enabled.";
+    return "Google's rate limit for this key has been reached. Wait and try again, or use a key with billing enabled.";
   }
   if (status >= 500) {
     /*
@@ -152,7 +152,7 @@ function explain(status: number, body: unknown, token?: string): string {
      * than Google having a bad minute, and telling somebody to try again is
      * how they spend an afternoon doing exactly that.
      */
-    return `Google reported a problem on their side (${status}). Please try a small request again. If this was a whole qualification and it has now failed more than once, the request is most likely too large for the model to complete. Import it from its documents instead, which reads the curriculum directly with no model involved.`;
+    return `Google reported a problem (${status}). Try a smaller request. If a whole qualification fails more than once, import it from its documents instead, which uses no AI model.`;
   }
   return message || `Gemini returned ${status}.`;
 }
@@ -161,7 +161,7 @@ export const geminiProvider: AiProvider = {
   name: "gemini",
   label: "Google Gemini (API key)",
   description:
-    "Uses your own Google AI Studio API key. Not a Gemini Advanced subscription: that is a separate product and does not include API access. The API has a free tier, so this can be used without buying anything, within its rate limits.",
+    "Uses your own Google AI Studio API key. A Gemini Advanced subscription does not include API access. The API has a free tier, within its rate limits.",
   writesFiles: false,
   credentialFormat: {
     word: "API key",
@@ -253,7 +253,7 @@ export const geminiProvider: AiProvider = {
       return {
         ok: false,
         error:
-          "No Gemini API key is stored for you. Add one in Settings. It comes from Google AI Studio, and is not the same as a Gemini subscription.",
+          "No Gemini API key is stored for you. Add one from Google AI Studio in Settings. A Gemini subscription is not an API key.",
       };
     }
 
@@ -275,7 +275,7 @@ export const geminiProvider: AiProvider = {
     if (staged.truncated) {
       return {
         ok: false,
-        error: `Those documents come to more than ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, which is more than can be sent in one request. Import the qualification from its documents instead: the curriculum document alone is read directly, with no model involved.`,
+        error: `Those documents exceed ${Math.round(MAX_INPUT_CHARS / 1000)},000 characters, the limit for one request. Import the qualification from its documents instead, which uses no AI model.`,
         durationMs: Date.now() - started,
       };
     }
@@ -355,7 +355,7 @@ export const geminiProvider: AiProvider = {
         return {
           ok: false,
           error:
-            "Gemini ran out of room before it finished answering, so what came back is part of a curriculum rather than all of it, and a partial one looks exactly like a complete one. Nothing was kept. A whole qualification is a great deal to ask for in a single reply; import it from its documents instead, which reads the curriculum directly with no model involved and no limit of this kind.",
+            "Gemini's answer was cut off, so only part of the curriculum came back. Nothing was kept. Import the qualification from its documents instead, which uses no AI model.",
           durationMs: Date.now() - started,
         };
       }
@@ -364,7 +364,7 @@ export const geminiProvider: AiProvider = {
         return {
           ok: false,
           error:
-            "Gemini answered with nothing. That usually means the request was refused by a safety filter, or the model name is wrong.",
+            "Gemini returned nothing. A safety filter may have refused the request, or the model name may be wrong.",
           durationMs: Date.now() - started,
         };
       }
@@ -388,8 +388,8 @@ export const geminiProvider: AiProvider = {
       return {
         ok: false,
         error: aborted
-          ? "Gemini did not answer in time. A large folder can take several minutes; trying again with fewer documents in it usually works."
-          : "Gemini could not be reached. Check that this machine has a network connection to Google.",
+          ? "Gemini did not answer in time. Try again with fewer documents."
+          : "Gemini could not be reached. Check the server's network connection to Google.",
         durationMs: Date.now() - started,
       };
     } finally {

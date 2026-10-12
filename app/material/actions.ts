@@ -32,7 +32,7 @@ export async function linkMaterialAction(_previous: MaterialState, formData: For
 
 export async function unlinkMaterialAction(_previous: MaterialState, formData: FormData): Promise<MaterialState> {
   const session = await requirePermission("course:author");
-  return run(() => unlinkLibraryItem(session, String(formData.get("linkId") ?? "")), "Taken off the study unit.");
+  return run(() => unlinkLibraryItem(session, String(formData.get("linkId") ?? "")), "Removed from the study unit.");
 }
 
 export async function removeMaterialAction(_previous: MaterialState, formData: FormData): Promise<MaterialState> {

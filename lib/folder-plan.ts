@@ -203,7 +203,7 @@ export function classifyDocument(
         studyUnitCode: null,
         title: cleanTitle(filename),
         version: null,
-        because: `Matched "${rule.match.source}": it governs the provider rather than one qualification, so it goes to the document library.`,
+        because: `Matched "${rule.match.source}": a provider-wide document, filed in the document library.`,
       };
     }
   }
@@ -239,7 +239,7 @@ export function classifyDocument(
     title: cleanTitle(filename),
     version: null,
     because:
-      "Not recognised by name. Filed against the qualification as 'other' rather than guessed. Change it after import, or say what it is and the rule can be added.",
+      "Not recognised by name. Filed against the qualification as 'other'. Change it after import.",
   };
 }
 
@@ -360,7 +360,7 @@ export function readBlueprint(files: UploadedFile[]): IngestionPlan | null {
   if (modules.length === 0) return null;
 
   const warnings: string[] = [
-    "Read from the folder's own blueprint.json rather than by a model reading the documents. The structure below is what that file says, exactly, and nothing in it has been inferred.",
+    "Read from the folder's blueprint.json. The structure below is exactly what that file says.",
   ];
 
   // The client's own build records what it could not reconcile. Surfacing it

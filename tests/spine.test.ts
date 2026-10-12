@@ -529,7 +529,7 @@ describe("exceptions", () => {
         userId: learner.userId,
         reason: "ok",
       }),
-    ).rejects.toThrow(/Say why/);
+    ).rejects.toThrow(/Give the reason for letting this learner past/);
   });
 
   it("keeps the record after an override is withdrawn", async () => {

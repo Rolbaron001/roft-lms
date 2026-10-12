@@ -74,7 +74,7 @@ export async function ensureStudyUnitCompetency(
         organisationId,
         name: unit.qualificationTitle,
         description:
-          "What each study unit of this qualification achieves: its exit level outcome, or the unit itself where it serves none. Made by the platform from the qualification's own documents.",
+          "What each study unit of this qualification achieves: its exit level outcome, or the unit itself where it has none. Built from the qualification's documents.",
         source,
       })
       .returning({ id: competencyFrameworks.id });

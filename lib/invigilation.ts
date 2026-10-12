@@ -131,7 +131,7 @@ export async function createSitting(
     // intended and a set of rules nobody announced.
     if (event.kind !== "summative" && event.kind !== "mock_eisa") {
       throw new InvigilationError(
-        "A sitting can only be run at a summative or mock EISA session. Change the session's kind first, so the schedule says what is happening.",
+        "A sitting can only run at a summative or mock EISA session. Change the session's kind first.",
         "invalid_state",
       );
     }
@@ -241,7 +241,7 @@ export async function admitCandidate(
 
   if (input.outcome === "refused" && !input.reason?.trim()) {
     throw new InvigilationError(
-      "Please give the reason for refusing admission. An appeal turns on the reason, and the candidate must be told what happened.",
+      "Give the reason for refusing admission.",
       "invalid_state",
     );
   }
@@ -267,7 +267,7 @@ export async function admitCandidate(
 
     if (sitting.status === "cancelled" || sitting.status === "closed") {
       throw new InvigilationError(
-        "This sitting is over, so no one can be admitted to it.",
+        "This sitting is over.",
         "invalid_state",
       );
     }
@@ -285,7 +285,7 @@ export async function admitCandidate(
 
     if (member.length === 0) {
       throw new InvigilationError(
-        "That person is not on this cohort, so they cannot be admitted to its sitting.",
+        "That person is not on this cohort.",
         "invalid_state",
       );
     }
@@ -306,7 +306,7 @@ export async function admitCandidate(
     // to prevent, and by then nobody remembers who left when.
     if (input.outcome === "admitted" && already?.droppedOffAt) {
       throw new InvigilationError(
-        "That candidate dropped out of this sitting and cannot be readmitted. Record what happened as an incident instead.",
+        "That candidate dropped out and cannot be readmitted. Record an incident instead.",
         "invalid_state",
       );
     }
@@ -331,7 +331,7 @@ export async function admitCandidate(
         const localClose = clockInZone(door.closedAt, zone);
 
         throw new InvigilationError(
-          `Admission closed at ${localClose} ${zoneLabel(zone, door.closedAt)}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record them as refused, with the reason, instead: a candidate admitted late would have had longer with the paper than the others.`,
+          `Admission closed at ${localClose} ${zoneLabel(zone, door.closedAt)}, ${Math.round(door.lateBySeconds / 60)} minutes ago. Record the candidate as refused, with the reason.`,
           "too_late",
         );
       }
@@ -406,7 +406,7 @@ export async function acceptSittingDeclaration(
 
     if (!sitting.declarationText?.trim()) {
       throw new InvigilationError(
-        "This sitting has no declaration wording, so there is nothing for a candidate to accept. Set it on the sitting first.",
+        "This sitting has no declaration wording. Add it to the sitting first.",
         "invalid_state",
       );
     }
@@ -423,7 +423,7 @@ export async function acceptSittingDeclaration(
 
     if (!candidate || candidate.outcome !== "admitted") {
       throw new InvigilationError(
-        "Admit the candidate first. A declaration cannot be recorded for a candidate who has not been admitted.",
+        "Admit the candidate first.",
         "invalid_state",
       );
     }
@@ -471,7 +471,7 @@ export async function acknowledgeScript(
 
     if (candidate.outcome !== "admitted") {
       throw new InvigilationError(
-        "That candidate was not admitted, so there is no script of theirs to receive.",
+        "That candidate was not admitted.",
         "invalid_state",
       );
     }
@@ -526,7 +526,7 @@ export async function confirmCamera(
 
     if (!candidate || candidate.outcome !== "admitted") {
       throw new InvigilationError(
-        "Admit the candidate first. A camera check cannot be recorded for a candidate who has not been admitted.",
+        "Admit the candidate before recording a camera check.",
         "invalid_state",
       );
     }
@@ -608,7 +608,7 @@ export async function recordIncident(
   const description = input.description.trim();
   if (description.length < 10) {
     throw new InvigilationError(
-      "Please describe what happened. An incident report must say what occurred.",
+      "Describe what happened.",
       "invalid_state",
     );
   }

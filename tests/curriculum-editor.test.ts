@@ -509,7 +509,7 @@ describe("a curriculum built in the App", () => {
     // them. This is the distinction the gate exists to make.
     const withDocuments = await programmeReadiness(author, qualification.id);
     expect(withDocuments.ready).toBe(false);
-    expect(withDocuments.gaps[0].what).toContain("not been read into the App");
+    expect(withDocuments.gaps[0].what).toContain("has not been imported");
 
     // Now build the curriculum by hand, the way a provider would.
     const knowledge = await addCurriculumModule(author, {

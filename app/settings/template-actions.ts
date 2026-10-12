@@ -45,8 +45,8 @@ export async function saveTemplateAction(
 
     return said({
       notice: activate
-        ? `Saved as version ${saved.version}, and now in use. Documents of this kind are produced from it from now on; ones already issued keep the version that produced them.`
-        : `Saved as version ${saved.version}, as a draft. It is not in use until you put it in use.`,
+        ? `Saved as version ${saved.version} and in use. New documents of this kind use it; documents already issued are unchanged.`
+        : `Saved as version ${saved.version}, as a draft. It is not in use yet.`,
     });
   } catch (error) {
     if (error instanceof DocumentTemplateError) return said({ error: error.message });
@@ -71,7 +71,7 @@ export async function revertTemplateAction(
 
     return said({
       notice: reverted
-        ? "Back to the platform's own layout. Your template is kept, not deleted, so you can put it back."
+        ? "Back to the platform's own layout. Your template is kept."
         : "There was no template in use for that document.",
     });
   } catch (error) {

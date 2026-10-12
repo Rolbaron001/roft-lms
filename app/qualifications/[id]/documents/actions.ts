@@ -154,14 +154,14 @@ export async function uploadDocumentAction(
           ? `${applied.outcomesRecorded} exit level outcomes recorded. ${placed} modules are under their study units: ${applied.modulesLinked} placed now, ${applied.modulesAlreadyPlaced} already there.`
           : `${applied.outcomesRecorded} exit level outcomes recorded, ${applied.modulesLinked} modules placed under a study unit.`,
         ...(applied.modulesNamed === 0
-          ? ["The document names no module codes under its study units, so there was nothing to place. Each study unit's modules need to be listed by code, for example KM-01 or PM-03."]
+          ? ["The document lists no module codes under its study units. List each study unit's modules by code, for example KM-01 or PM-03."]
           : []),
         ...applied.notes,
       ];
 
       if (result.reclassified) {
         detail.unshift(
-          "Filed as a curriculum alignment matrix rather than the kind chosen: it names study units and exit level outcomes, so it is one.",
+          "Filed as a curriculum alignment matrix, because it names study units and exit level outcomes.",
         );
       }
 
@@ -173,7 +173,7 @@ export async function uploadDocumentAction(
       ) {
         return said({
           error:
-            "That document was filed, but no study units came out of it. It reads as an alignment document, so either the modules it names are not in the curriculum under those codes, or the study units are already there. The detail is in the document library entry.",
+            "The document was filed, but no study units were created. Its module codes may not match the curriculum, or the study units may already exist. See the document library entry for details.",
         });
       }
 
@@ -222,7 +222,7 @@ export async function uploadDocumentAction(
         message: `${title || file.name} uploaded.`,
         // Said plainly, because "uploaded" reads as though something happened.
         detail: [
-          `Filed as ${DOCUMENT_KIND_LABELS[result.kind]}. Nothing was read out of it: only an alignment document or an alignment matrix is read.`,
+          `Filed as ${DOCUMENT_KIND_LABELS[result.kind]}. Only alignment documents and alignment matrices are read.`,
         ],
         links: [
           {

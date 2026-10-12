@@ -128,7 +128,7 @@ export function readRollout(bytes: Uint8Array): ParsedRollout {
     }
     return result;
   }
-  throw new Error("No roll-out schedule was found: no sheet has a Dates column with hand-out or submission columns beside it.");
+  throw new Error("No roll-out schedule was found. The sheet needs a Dates column with hand-out or submission columns beside it.");
 }
 
 export type RolloutPlan = {

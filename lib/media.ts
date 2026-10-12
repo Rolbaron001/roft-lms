@@ -221,7 +221,7 @@ export function detectMedia(
     return {
       ok: false,
       reason:
-        "SVG and HTML files are not accepted, because they can carry scripts that would run for whoever opens them. Export it as PNG or PDF instead.",
+        "SVG and HTML files are not accepted. Export it as PNG or PDF instead.",
     };
   }
 
@@ -247,7 +247,7 @@ export function detectMedia(
     if (!format) {
       return {
         ok: false,
-        reason: `That looks like a compressed file, but "${extension || "no extension"}" is not one this platform handles.`,
+        reason: `"${extension || "no extension"}" files are not accepted.`,
       };
     }
 

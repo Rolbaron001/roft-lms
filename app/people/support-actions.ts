@@ -38,7 +38,7 @@ async function run(
       };
     }
     console.error(error);
-    return { error: "That could not be saved. Please try again." };
+    return { error: "That could not be saved. Try again." };
   }
 
   for (const path of paths) revalidatePath(path);
@@ -70,7 +70,7 @@ export async function recordSupportNeedAction(
           field(formData, "employerRepresentative") || undefined,
         reviewDue: field(formData, "reviewDue") || undefined,
       }),
-    "Recorded. Whoever is teaching this learner will see the accommodation.",
+    "Recorded. The learner's facilitators see the accommodation.",
     [`/people/${learnerId}`],
   ));
 }
@@ -131,7 +131,7 @@ export async function recordMissedAssessmentAction(
         missedReason: field(formData, "missedReason") || undefined,
         additionalDate: field(formData, "additionalDate"),
       }),
-    "Additional date set. The procedure allows one, so there will not be another.",
+    "Additional date set. No further date can be set.",
     [`/people/${learnerId}`],
   ));
 }

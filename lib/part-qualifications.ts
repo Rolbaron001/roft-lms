@@ -166,14 +166,14 @@ export async function selectModules(
 
     if (entry.kind === "full") {
       throw new PartQualificationError(
-        "A full qualification is assessed against its own curriculum, so it does not select modules.",
+        "A full qualification uses its own curriculum and does not select modules.",
         "wrong_kind",
       );
     }
 
     if (!entry.parentId) {
       throw new PartQualificationError(
-        "This has no parent qualification to draw modules from. A part qualification is drawn from a full one; a skills programme that stands alone carries its own curriculum instead.",
+        "This has no parent qualification. A part qualification is drawn from a full one; a stand-alone skills programme has its own curriculum.",
         "wrong_kind",
       );
     }
@@ -194,7 +194,7 @@ export async function selectModules(
 
     if (belong.length !== wanted.length) {
       throw new PartQualificationError(
-        "Some of those modules do not belong to the parent qualification's curriculum. A part qualification can only take modules its parent has.",
+        "Some of those modules are not in the parent qualification's curriculum.",
         "not_in_parent",
       );
     }
@@ -329,7 +329,7 @@ export async function reclassify(
 
   if (wantsParent && !parentId) {
     throw new PartQualificationError(
-      "A part qualification or skills programme draws its modules from a parent, so it needs one named.",
+      "Choose a parent qualification.",
       "wrong_kind",
     );
   }
@@ -361,7 +361,7 @@ export async function reclassify(
     // module codes.
     if (parent.kind !== "full") {
       throw new PartQualificationError(
-        "A part draws from a full qualification. The one named is itself a part.",
+        "Choose a full qualification as the parent. The one named is a part qualification.",
         "wrong_kind",
       );
     }

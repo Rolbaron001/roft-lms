@@ -56,13 +56,13 @@ function explain(status: number, body: unknown): string {
     : raw;
 
   if (status === 401) {
-    return "Google no longer accepts that connection. It may have been withdrawn from your Google account. Connect the drive again in Settings.";
+    return "Google no longer accepts this connection. Connect the drive again in Settings.";
   }
   if (status === 403) {
-    return `Google refused that request. If it mentions a quota, the deployment's Drive API limit has been reached for now. ${message}`;
+    return `Google refused the request. If it mentions a quota, the Drive API limit has been reached. ${message}`;
   }
   if (status === 404) {
-    return "That folder is not there, or the account you connected cannot see it. A folder shared with you has to be opened in Drive at least once before it can be read.";
+    return "That folder was not found, or the connected account cannot see it. Open a shared folder in Drive at least once before reading it.";
   }
   return message || `Google returned ${status}.`;
 }
@@ -103,7 +103,7 @@ export const googleDriveProvider: DriveProvider = {
   name: "google_drive",
   label: "Google Drive",
   description:
-    "Read a folder straight from your Google Drive. Read-only: the platform can list and download, and cannot create, change or delete anything. You can withdraw it here or from your Google account at any time.",
+    "Read a folder straight from your Google Drive. Read-only: files are listed and downloaded, never created, changed or deleted. Disconnect here or in your Google account at any time.",
 
   configured(): boolean {
     return Boolean(clientId() && clientSecret());
@@ -156,7 +156,7 @@ export const googleDriveProvider: DriveProvider = {
 
     if (!tokens.refresh_token) {
       throw new Error(
-        "Google did not return a way to renew the connection, which usually means this account had already granted it. Remove the platform's access in your Google account under Third-party apps, then connect again.",
+        "Google did not return a way to renew the connection. Remove the platform's access in your Google account under Third-party apps, then connect again.",
       );
     }
 
@@ -326,7 +326,7 @@ export const googleDriveProvider: DriveProvider = {
         // limit is about 10 MB of exported content - and the error it returns
         // says only "export size limit exceeded", which is true and gives
         // nobody anything to do.
-        exportTooLarge: `"${file.name}" is too large for Google to export in one piece. Download that one document from Drive as ${file.exportAs.extension} and add it on its own afterwards; everything else in the folder reads normally.`,
+        exportTooLarge: `"${file.name}" is too large for Google to export. Download it from Drive as ${file.exportAs.extension} and add it separately. The rest of the folder is read normally.`,
       });
 
       return new Uint8Array(await response.arrayBuffer());

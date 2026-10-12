@@ -142,7 +142,7 @@ describe("recording the qualification certificate", () => {
   });
 
   it("is removed only with a reason", async () => {
-    await expect(removeQualificationAward(people.admin, ids.award, "")).rejects.toThrow(/Say why/);
+    await expect(removeQualificationAward(people.admin, ids.award, "")).rejects.toThrow(/Give the reason for removing it/);
     await removeQualificationAward(people.admin, ids.award, "Wrong number typed");
     expect(await awardsFor(people.admin, ids.learner)).toEqual([]);
   });

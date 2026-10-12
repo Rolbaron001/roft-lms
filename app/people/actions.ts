@@ -41,7 +41,7 @@ function describe(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 function readPersonFields(formData: FormData) {
@@ -131,7 +131,7 @@ export async function setRolesAction(
   }
 
   revalidatePath(`/people/${userId}`);
-  return said({ notice: "Roles updated. They take effect on the person's next page." });
+  return said({ notice: "Roles updated. They apply from the person's next page." });
 }
 
 export async function setStatusAction(
@@ -153,7 +153,7 @@ export async function setStatusAction(
   return said({
     notice:
       status === "suspended"
-        ? "Suspended. Any session they had open has ended."
+        ? "Suspended. Their open sessions have ended."
         : "Reactivated.",
   });
 }
@@ -250,7 +250,7 @@ function describeDocument(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 export async function recordDocumentAction(

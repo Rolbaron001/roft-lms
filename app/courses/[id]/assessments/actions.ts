@@ -26,7 +26,7 @@ function describe(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 export async function createAssessmentAction(

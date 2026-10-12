@@ -153,7 +153,7 @@ describe("recording a disposal", () => {
         dueOn: "2031-03-10",
         status: "retained",
       }),
-    ).rejects.toThrow(/why this is being kept/i);
+    ).rejects.toThrow(/reason for keeping this/i);
   });
 
   it("accepts either with one", async () => {

@@ -113,7 +113,7 @@ export async function saveRecordStore(
   const parsed = connectionInput.parse(input);
 
   if (parsed.secret && !sealingAvailable()) {
-    throw new RecordStoreError("This platform has no key to seal secrets with, so it cannot keep the store's key.");
+    throw new RecordStoreError("This platform has no sealing key, so the store's key cannot be kept.");
   }
 
   return withTenant(session.organisationId, async (tx) => {
@@ -192,7 +192,7 @@ function explain(status: number, body: string): string {
   if (status === 401 || status === 403) {
     return `The store refused the key (${status}). Check the key's name and secret on the Learning records page.`;
   }
-  if (status === 404) return "The store's address was not found (404). Check it is the xAPI address, the one ending before /statements.";
+  if (status === 404) return "The store's address was not found (404). Use the xAPI address that ends before /statements.";
   return `The store answered ${status}${body ? `: ${body.slice(0, 200)}` : ""}.`;
 }
 

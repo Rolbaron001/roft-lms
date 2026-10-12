@@ -196,7 +196,7 @@ export async function assistCapture(
 
   return {
     assisted: true,
-    note: `Read by the AI extension: the usual reading found no questions in this paper. ${count} ${count === 1 ? "question was" : "questions were"} proposed and every one is set to be marked by an assessor. Check them against the paper before committing.`,
+    note: `Read by the AI extension, because the standard reading found no questions. ${count} ${count === 1 ? "question is" : "questions are"} proposed, to be marked by an assessor. Check against the paper before you commit.`,
     paper: {
       ...paper,
       sections,

@@ -88,7 +88,7 @@ export const tenantInput = z.object({
     .max(40)
     .regex(
       /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
-      "Use lower-case letters, numbers and hyphens; it becomes part of the web address.",
+      "Use lower-case letters, numbers and hyphens. It forms part of the web address.",
     ),
   legalName: z.string().trim().min(2).max(300),
   displayName: z.string().trim().min(2).max(200),
@@ -426,7 +426,7 @@ export async function setTenantStatus(
 
   if (reason.trim().length < 5) {
     throw new ProvisioningError(
-      "Please record the reason. A client's access should not be suspended without one.",
+      "Give the reason for suspending access.",
       "invalid_input",
     );
   }

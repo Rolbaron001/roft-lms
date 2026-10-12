@@ -133,7 +133,7 @@ export async function previewQualification(
 
     if (units.length === 0) {
       gaps.push(
-        "This qualification has no study units, so there is nothing for a learner to walk through. Study units come from the alignment document.",
+        "This qualification has no study units. Upload the alignment document to create them.",
       );
       return {
         qualification,
@@ -166,7 +166,7 @@ export async function previewQualification(
 
       if (!courseId) {
         unitGaps.push(
-          "Nothing has been built for this study unit yet, so a learner enrolled on the qualification would find it empty.",
+          "Nothing is built for this study unit yet.",
         );
         built.push({ ...unit, courseId: null, steps: [], gaps: unitGaps });
         continue;
@@ -178,7 +178,7 @@ export async function previewQualification(
 
       if (steps.length === 0) {
         unitGaps.push(
-          "This study unit has a course with no steps in it, so a learner would open it and find nothing to do.",
+          "This study unit's course has no steps.",
         );
       }
 

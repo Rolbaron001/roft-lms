@@ -20,7 +20,7 @@ function describe(error: unknown): string {
     return error.message;
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 export async function recordDecisionAction(

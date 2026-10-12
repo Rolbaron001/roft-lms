@@ -82,19 +82,19 @@ export const REFUSAL_REASONS: { forKinds: DocumentKind[] | "any"; text: string }
   [
     {
       forKinds: ["certified_id"],
-      text: "The ID has more than one certification date on it. Please supply a copy certified once, recently.",
+      text: "The ID copy has more than one certification date. Supply a recently certified copy with one date.",
     },
     {
       forKinds: "any",
-      text: "The copy is not legible. Please scan or photograph it again, flat and in good light.",
+      text: "The copy is not legible. Scan or photograph it again, flat and in good light.",
     },
     {
       forKinds: ["certified_id", "highest_qualification"],
-      text: "This is not a certified copy. Please have it certified and send it again.",
+      text: "This is not a certified copy. Have it certified and send it again.",
     },
     {
       forKinds: ["certified_id", "highest_qualification"],
-      text: "The certification is older than the period allowed. Please have a fresh copy certified.",
+      text: "The certification is older than allowed. Have a new copy certified.",
     },
     {
       forKinds: "any",

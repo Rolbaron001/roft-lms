@@ -60,7 +60,7 @@ export async function confirmCopyAction(
   const session = await requireSession();
   return said(attempt(cohortId, async () => {
     await confirmArchiveCopy(session, archiveId, copy);
-    return "Your copy matches the archive exactly. The files can now be removed from the platform.";
+    return "Your copy matches the archive. You can now remove the files from the platform.";
   }));
 }
 
@@ -73,7 +73,7 @@ export async function removeFilesAction(
   const archiveId = String(formData.get("archiveId") ?? "");
   return said(attempt(cohortId, async () => {
     await removeArchivedFiles(session, archiveId);
-    return "The files have been removed from the platform. Every record of them remains, and says which archive holds them.";
+    return "The files are removed from the platform. Each record shows which archive holds them.";
   }));
 }
 
@@ -86,7 +86,7 @@ export async function abandonAction(
   const archiveId = String(formData.get("archiveId") ?? "");
   return said(attempt(cohortId, async () => {
     await abandonArchive(session, archiveId);
-    return "Set aside. Nothing was removed, and its learners can be archived again.";
+    return "Set aside. Nothing was removed. Its learners can be archived again.";
   }));
 }
 

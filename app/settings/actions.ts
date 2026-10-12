@@ -40,7 +40,7 @@ export async function updateBrandingAction(
       });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
 
   // Branding shows in the header of every page, so refresh the whole tree.
@@ -123,13 +123,13 @@ export async function updateClockAction(
       });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
 
   // Times appear on the schedule, the register and the sitting, so refresh
   // the whole tree rather than guessing which pages show one.
   revalidatePath("/", "layout");
-  return said({ notice: "Saved. Timetabled times now mean this clock." });
+  return said({ notice: "Saved. Timetabled times now use this clock." });
 }
 
 /** Saves how dates are written (lib/date-format.ts). */
@@ -143,7 +143,7 @@ export async function updateDateStyleAction(_previous: ClockState, formData: For
       return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
   // Dates appear on nearly every page.
   revalidatePath("/", "layout");
@@ -157,7 +157,7 @@ export async function saveQuestionnaireAction(_previous: ClockState, formData: F
   try {
     questions = JSON.parse(String(formData.get("questions") ?? "[]"));
   } catch {
-    return said({ error: "The questions could not be read. Please try again." });
+    return said({ error: "The questions could not be read. Try again." });
   }
   const scale = String(formData.get("scale") ?? "")
     .split(/\r?\n/)
@@ -172,7 +172,7 @@ export async function saveQuestionnaireAction(_previous: ClockState, formData: F
       return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
   revalidatePath("/settings");
   return said({ notice: "Saved. The next feedback form sent uses these questions." });
@@ -190,7 +190,7 @@ export async function updateLeisaTargetAction(_previous: ClockState, formData: F
       return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
   revalidatePath("/cohorts", "layout");
   return said({ notice: typed === "" ? "Saved. Only the regulator's limit is shown." : "Saved. Each cohort's LEISA now shows your target beside the regulator's limit." });
@@ -256,13 +256,13 @@ export async function updateMyExtensionAction(
 
     if (forget) {
       revalidatePath("/settings");
-      return said({ notice: "Token discarded. Nothing of it is kept." });
+      return said({ notice: "Token discarded." });
     }
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
       return said({
         error:
-          "Your role does not include model assistance. It is held by the provider's own staff rather than by learners or by an employer's workplace coach.",
+          "Your role does not include model assistance.",
       });
     }
     console.error(error);
@@ -270,7 +270,7 @@ export async function updateMyExtensionAction(
       error:
         error instanceof Error
           ? error.message
-          : "That could not be saved. Please try again.",
+          : "That could not be saved. Try again.",
     });
   }
 
@@ -279,6 +279,6 @@ export async function updateMyExtensionAction(
   revalidatePath("/", "layout");
   return said({
     notice:
-      "Saved. It is available but not switched on. Use the AI switch at the top of any page when you want it for a job.",
+      "Saved. It is available but off. Use the AI switch at the top of any page to switch it on.",
   });
 }

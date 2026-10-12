@@ -104,7 +104,7 @@ export async function commitCaptureAction(
       } catch {
         return said({
           error:
-            "The corrections could not be read. Reload the page and try again. Nothing has been committed.",
+            "Your corrections could not be read. Nothing was committed. Reload the page and try again.",
         });
       }
     }

@@ -166,30 +166,30 @@ export function outstandingFor(profile: {
     if (!value || !value.trim()) missing.push({ field, why });
   };
 
-  need(profile.homeLanguageCode, "Home language", "The return asks for it.");
+  need(profile.homeLanguageCode, "Home language", "Required for the return.");
   need(
     profile.citizenResidentStatusCode,
     "Citizenship or residence",
-    "The return asks for it.",
+    "Required for the return.",
   );
   need(
     profile.socioeconomicStatusCode,
     "Employment status",
-    "The return asks for it.",
+    "Required for the return.",
   );
-  need(profile.immigrantStatus, "Immigrant status", "The return asks for it.");
-  need(profile.homeAddress1, "Home address", "The return asks for it.");
+  need(profile.immigrantStatus, "Immigrant status", "Required for the return.");
+  need(profile.homeAddress1, "Home address", "Required for the return.");
   need(
     profile.homeAddressPostalCode,
     "Home postal code",
-    "The return asks for it.",
+    "Required for the return.",
   );
-  need(profile.cellPhoneNumber, "Cell phone number", "The return asks for it.");
+  need(profile.cellPhoneNumber, "Cell phone number", "Required for the return.");
   need(
     profile.provinceCode,
     "Province of work",
     // Read by the learner and by staff alike (job sheet D21), so said for both.
-    "The province of the workplace, which is not always the province of home.",
+    "The province of the workplace, which may differ from the province of home.",
   );
   need(
     profile.statssaAreaCode,
@@ -207,21 +207,21 @@ export function outstandingFor(profile: {
   ) {
     missing.push({
       field: "Disability rating",
-      why: "A disability was recorded, and the QCTO then requires how much difficulty it causes.",
+      why: "A disability is recorded, so the QCTO requires the level of difficulty it causes.",
     });
   }
 
   if (!learner.consentGivenAt) {
     missing.push({
       field: "POPIA agreement",
-      why: "The return asks whether consent was given for these details to be used, and on what date.",
+      why: "The return requires whether consent was given for these details to be used, and the date.",
     });
   }
 
   if (!profile.confirmedAt) {
     missing.push({
       field: "Confirmation",
-      why: "These details have not yet been confirmed as correct. The confirmed form is kept as the record of enrolment.",
+      why: "These details are not yet confirmed. The confirmed form is the record of enrolment.",
     });
   }
 
@@ -448,7 +448,7 @@ export function identityDisagreements(learner: {
     if (recorded === "M" || recorded === "F") {
       if (recorded !== fromId) {
         problems.push(
-          "The gender recorded does not match the one in the identity number. The QCTO checks this, so one of the two is mistyped.",
+          "The gender recorded does not match the identity number. Correct whichever is wrong.",
         );
       }
     }

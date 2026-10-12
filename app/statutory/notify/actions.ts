@@ -55,7 +55,7 @@ export async function draftAction(
   const fromCohort = String(formData.get("cohortId") ?? "");
   if (fromCohort) revalidatePath(`/cohorts/${fromCohort}`);
   return said({
-    notice: `Drafted, covering ${learnerIds.length} ${learnerIds.length === 1 ? "learner" : "learners"}. Download the workbook, check it, then record that it went.`,
+    notice: `Drafted for ${learnerIds.length} ${learnerIds.length === 1 ? "learner" : "learners"}. Download the workbook, check it, then record it as sent.`,
   });
 }
 
@@ -73,7 +73,7 @@ export async function submitAction(
   }
 
   revalidatePath("/statutory/notify");
-  return said({ notice: "Recorded as sent. Add the acknowledgement when it comes back." });
+  return said({ notice: "Recorded as sent. Add the acknowledgement when it arrives." });
 }
 
 /** Records the reference the QCTO issued, and the date. */
@@ -130,7 +130,7 @@ export async function ownInductionAction(
   revalidatePath("/statutory/notify");
   return said({
     notice: on
-      ? "Their own induction date is recorded, and their deadline now runs from it."
+      ? "Their own induction date is recorded. Their deadline now counts from it."
       : "Back to the cohort's own induction date.",
   });
 }

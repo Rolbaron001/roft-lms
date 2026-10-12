@@ -84,7 +84,7 @@ describe("a learner's paper that carries its own answers", () => {
 
   it("stops at the memorandum and says so", () => {
     expect(merged.problems).toHaveLength(1);
-    expect(merged.problems[0]).toMatch(/^The learner's paper carries its own marking guide, from "MEMORANDUM/);
+    expect(merged.problems[0]).toMatch(/^The learner's paper contains the marking guide, from "MEMORANDUM/);
   });
 
   it("reads the four sections before it, and none of the answers as questions", () => {

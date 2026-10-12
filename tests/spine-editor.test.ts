@@ -125,7 +125,7 @@ describe("what it offers to add", () => {
     // ...and refused on the way in, because a filter on a list that a posted
     // identifier walks past is not a restriction.
     expect(spine).toMatch(/RESTRICTED_TO_ASSESSORS\.has\(document\.kind as DocumentKind\)/);
-    expect(spine).toMatch(/kept from learners, so it cannot be a step/);
+    expect(spine).toMatch(/withheld from learners and cannot be a step/);
   });
 
   /*
@@ -153,7 +153,7 @@ describe("what it offers to add", () => {
   });
 
   it("warns before adding something a learner could not use", () => {
-    expect(reader).toMatch(/This is still a draft/);
+    expect(reader).toMatch(/This is a draft\. You can add it now/);
     expect(reader).toMatch(/none of its papers are/);
   });
 

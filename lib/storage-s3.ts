@@ -63,7 +63,7 @@ export function s3ConfigFromEnv(
     throw new StorageError(
       `STORAGE_DRIVER is "s3" but ${missing.join(", ")} ${
         missing.length === 1 ? "is" : "are"
-      } not set. Evidence cannot be stored until they are.`,
+      } not set. Evidence cannot be stored until this is fixed.`,
     );
   }
 

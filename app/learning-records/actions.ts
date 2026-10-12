@@ -51,7 +51,7 @@ export async function saveStoreAction(_previous: StoreState, formData: FormData)
     return said({ error: storeProblem(error) });
   }
   revalidatePath("/learning-records");
-  return said({ notice: "Saved. Records go to the store every hour; send them now to check the connection." });
+  return said({ notice: "Saved. Records are sent every hour. Send them now to check the connection." });
 }
 
 export async function sendNowAction(): Promise<StoreState> {

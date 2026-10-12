@@ -558,7 +558,7 @@ describe("faults in the material rather than the parse", () => {
 
     expect(
       merged.problems.some((problem) =>
-        /has B as the correct answer/.test(problem),
+        /have B as the correct answer/.test(problem),
       ),
     ).toBe(true);
   });

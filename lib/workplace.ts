@@ -628,7 +628,7 @@ export async function coachSignOff(
 
     if (outstanding.length > 0) {
       throw new WorkplaceError(
-        `This logbook is not complete, so it cannot be signed: ${outstanding.slice(0, 8).join(", ")}${outstanding.length > 8 ? `, and ${outstanding.length - 8} more` : ""}.`,
+        `This logbook is not complete and cannot be signed: ${outstanding.slice(0, 8).join(", ")}${outstanding.length > 8 ? `, and ${outstanding.length - 8} more` : ""}.`,
         "incomplete",
       );
     }

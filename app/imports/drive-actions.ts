@@ -34,7 +34,7 @@ function explain(error: unknown): string {
   console.error(error);
   return error instanceof Error
     ? error.message
-    : "That could not be done. Please try again.";
+    : "That could not be done. Try again.";
 }
 
 /**
@@ -127,7 +127,7 @@ export async function importFromDriveAction(
     }
 
     return said({
-      notice: "Read. Check what it found before committing any of it.",
+      notice: "Read. Check what was found before you commit.",
       jobId: job.id,
     });
   } catch (error) {

@@ -602,7 +602,7 @@ describe("the assessor's own call", () => {
           proposals.map((p) => [p.criterionId, "competent" as const]),
         ),
       }),
-    ).rejects.toThrow(/Say why/);
+    ).rejects.toThrow(/Give your reason/);
   });
 
   it("does not ask for a reason where the assessor agrees", async () => {
@@ -637,7 +637,7 @@ describe("the wall", () => {
 
     await expect(
       proposeCriterionOutcomes(assessor, submissionId),
-    ).rejects.toThrow(/developmental/);
+    ).rejects.toThrow(/This is a workbook/);
   });
 
   /** The hole this closes: reaching the ledger through the decision path. */
@@ -704,7 +704,7 @@ describe("returning a workbook", () => {
 
     await expect(
       returnFeedback(assessor, { submissionId, comments: "Fine." }),
-    ).rejects.toThrow(/write feedback the learner can use/);
+    ).rejects.toThrow(/Write feedback for the learner/);
   });
 
   it("writes nothing a decision could be mistaken for", async () => {

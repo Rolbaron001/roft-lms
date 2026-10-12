@@ -80,7 +80,7 @@ export async function proposalForQualification(
         modules: [],
         notes: [],
         blocked:
-          "No curriculum document has been uploaded for this qualification yet. Upload it first and the platform will read what it can from it.",
+          "No curriculum document is uploaded for this qualification yet. Upload it first.",
       };
     }
 
@@ -96,7 +96,7 @@ export async function proposalForQualification(
         modules: [],
         notes: [],
         blocked:
-          "The curriculum document is stored but no text could be read from it. If it is a scan, the platform cannot read it. Upload a digital copy and this page will fill in.",
+          "The curriculum document is stored, but no text could be read from it. Scanned documents cannot be read. Upload a digital copy.",
       };
     }
 

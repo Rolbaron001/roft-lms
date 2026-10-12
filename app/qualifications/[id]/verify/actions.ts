@@ -24,7 +24,7 @@ export async function buildQualificationAction(_previous: VerifyState, formData:
   } catch (error) {
     if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
     console.error("qualification build failed", error);
-    return said({ error: "The build stopped part of the way through. What was done is kept; press Build again to carry on." });
+    return said({ error: "The build stopped part-way. The work done is kept; select Build again to continue." });
   }
 }
 
@@ -39,7 +39,7 @@ export async function verifyQualificationAction(_previous: VerifyState, formData
     revalidatePath("/courses");
     if (!result.ok) {
       return said({
-        error: "Nothing was made live. These still need putting right first:",
+        error: "Nothing was made live. Correct these first:",
         problems: result.blocking.map((finding) => finding.what),
       });
     }

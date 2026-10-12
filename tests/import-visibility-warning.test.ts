@@ -124,7 +124,7 @@ describe("where the review screen says a plan came from", () => {
   });
 
   it("says plainly that no model was involved", () => {
-    expect(proposal).toMatch(/No blueprint and no model were involved/);
+    expect(proposal).toMatch(/without a blueprint or AI model/);
   });
 
   /**

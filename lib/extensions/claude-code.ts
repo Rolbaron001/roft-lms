@@ -219,10 +219,10 @@ function explain(message: string): string {
   const lowered = (message ?? "").toLowerCase();
 
   if (lowered.includes("not logged in") || lowered.includes("/login")) {
-    return "Claude Code is installed on this machine but no one is signed in. Open a terminal, run claude, then /login and complete the sign-in in the browser. That is a one-time step and it is done by you, not by the platform.";
+    return "Claude Code is installed but not signed in. Open a terminal, run claude, then /login, and complete the sign-in in the browser. You do this once.";
   }
   if (lowered.includes("usage limit") || lowered.includes("rate limit")) {
-    return "The Claude subscription's usage limit has been reached. This will work again once the limit resets.";
+    return "Your Claude subscription's usage limit has been reached. Try again after it resets.";
   }
 
   /*
@@ -271,7 +271,7 @@ export const claudeCodeProvider: AiProvider = {
   name: "claude_code",
   label: "Claude Code (subscription)",
   description:
-    "Uses your own Claude subscription, through a token you generate on your own computer with `claude setup-token`. Not an API key: no per-token cost, and it draws on the subscription you already pay for rather than a shared one.",
+    "Uses your own Claude subscription, through a token you generate on your computer with `claude setup-token`. This is not an API key and has no per-token cost.",
   writesFiles: true,
   credentialFormat: {
     word: "token",

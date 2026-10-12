@@ -166,7 +166,7 @@ export async function removeCohortFile(session: AuthenticatedSession, fileId: st
     const [file] = await tx.select().from(cohortFiles).where(eq(cohortFiles.id, fileId));
     if (!file) throw new CohortFileError("No such file.", "not_found");
     // Its record is what says where the archived copy went.
-    if (file.archivedAt) throw new CohortFileError("This file is in the cohort's archive. Its record stays so that the archive can be restored.", "archived");
+    if (file.archivedAt) throw new CohortFileError("This file is in the cohort's archive.", "archived");
     await tx.delete(cohortFiles).where(eq(cohortFiles.id, fileId));
     await recordAudit(tx, {
       organisationId: session.organisationId,

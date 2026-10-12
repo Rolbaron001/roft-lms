@@ -177,7 +177,7 @@ export async function proposeRoster(
 
   if (headerIndex > 0) {
     warnings.push(
-      `The column headings were taken from line ${headerIndex + 1}, not line 1: everything above it looked like a title rather than headings.`,
+      `Column headings were read from line ${headerIndex + 1}. The lines above were treated as a title.`,
     );
   }
 
@@ -227,12 +227,12 @@ export async function proposeRoster(
     // Curiosa's cohort list has none). Everybody signs in with their email.
     if (detection.mapping.firstName !== undefined && detection.mapping.lastName !== undefined) {
       throw new RosterError(
-        `The learners were found, but the sheet has no email address column. Everyone signs in with their email address, so add a column headed "Email" with each learner's address and upload the file again. The headings found were: ${headings.filter(Boolean).join(", ")}.`,
+        `The sheet has no email address column. Add a column headed "Email" with each learner's address and upload the file again. Headings found: ${headings.filter(Boolean).join(", ")}.`,
         "no_headings",
       );
     }
     throw new RosterError(
-      `No column was found for: ${missing.join(", ")}. A person cannot be created without those three. The headings found were: ${headings.filter(Boolean).join(", ")}.`,
+      `No column was found for: ${missing.join(", ")}. All three are required. Headings found: ${headings.filter(Boolean).join(", ")}.`,
       "no_headings",
     );
   }

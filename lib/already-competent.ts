@@ -61,4 +61,4 @@ export async function alreadyCompetent(
 }
 
 export const ALREADY_COMPETENT_MESSAGE =
-  "You have already been found competent on this assessment, so there is nothing to sit again.";
+  "You have been found competent on this assessment. You do not need to sit it again.";

@@ -458,7 +458,7 @@ describe("moderation, which happens before anybody sits it", () => {
 
     expect(verdict.allowed).toBe(false);
     if (!verdict.allowed) {
-      expect(verdict.why).toContain("not been signed off");
+      expect(verdict.why).toContain("not yet signed off");
     }
   });
 

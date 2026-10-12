@@ -177,7 +177,7 @@ export async function addSectionItem(
 
     if (selected && (!input.options || input.options.length < 2)) {
       throw new PaperError(
-        "A question a learner picks an answer to needs at least two options.",
+        "A multiple-choice question needs at least two options.",
         "invalid",
       );
     }
@@ -200,7 +200,7 @@ export async function addSectionItem(
 
     if (selected && correct.length === 0) {
       throw new PaperError(
-        "A question a learner picks an answer to needs a correct answer recorded, or nothing can mark it.",
+        "Record a correct answer for each multiple-choice question.",
         "invalid",
       );
     }
@@ -426,7 +426,7 @@ export async function startAttempt(
       if (!assessment) throw new PaperError("No such assessment.", "not_found");
       if (assessment.status !== "published") {
         throw new PaperError(
-          "That assessment is still a draft, so it cannot be sat.",
+          "That assessment is a draft and cannot be sat.",
           "closed",
         );
       }
@@ -508,7 +508,7 @@ export async function startAttempt(
           failures >= ATTEMPTS_BEFORE_REVIEW
         ) {
           throw new PaperError(
-            "This assessment is held while your progress is reviewed. Your facilitator will arrange a discussion with your employer, and any further attempt is arranged from there rather than started here.",
+            "This assessment is held while your progress is reviewed. Your facilitator arranges a discussion with your employer and any further attempt.",
             "no_attempts_left",
           );
         }
@@ -519,7 +519,7 @@ export async function startAttempt(
         attempts.length >= assessment.maxAttempts
       ) {
         throw new PaperError(
-          `You have used all ${assessment.maxAttempts} attempts at this assessment. Speak to your facilitator.`,
+          `You have used all ${assessment.maxAttempts} attempts at this assessment. Contact your facilitator.`,
           "no_attempts_left",
         );
       }
@@ -771,7 +771,7 @@ export async function saveAnswer(
         submission.startedAt.getTime() + assessment.timeLimitMinutes * 60_000
     ) {
       throw new PaperError(
-        "Time is up for this assessment, so nothing further can be saved.",
+        "Time is up for this assessment. Nothing more can be saved.",
         "closed",
       );
     }
@@ -852,7 +852,7 @@ export async function submitAttempt(
       return {
         ok: false,
         reasons: [
-          "Confirm the declaration before handing in. It is what makes this your work on the record.",
+          "Confirm the declaration to hand in.",
         ],
         unanswered: 0,
       };

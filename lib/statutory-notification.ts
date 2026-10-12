@@ -686,7 +686,7 @@ async function leisaRows(
         LearnerTitle: profile?.title ?? "",
         LearnerBirthDate: person.dateOfBirth
           ? person.dateOfBirth.toISOString().slice(0, 10)
-          : need(null, "Date of birth", "Required, and it is inside the identity number."),
+          : need(null, "Date of birth", "Required. It is contained in the identity number."),
         LearnerHomeAddress1: need(profile?.homeAddress1, "Home address", "From the learner's enrolment form."),
         LearnerHomeAddress2: profile?.homeAddress2 ?? "",
         LearnerHomeAddress3: profile?.homeAddress3 ?? "",

@@ -168,7 +168,7 @@ describe("a committed upload offers its paper, not a message", () => {
   });
 
   it("says what happened in the line rather than on another screen", () => {
-    expect(list).toMatch(/An upload is committed once/);
+    expect(list).toMatch(/Upload the document again to make another paper/);
   });
 
   it("keeps the review route for what is still outstanding", () => {

@@ -60,7 +60,7 @@ export async function recordQualificationAward(
       .limit(1);
     if (!enrolled) {
       throw new AwardError(
-        "This learner is not enrolled on that qualification here, so its certificate cannot be recorded against them.",
+        "This learner is not enrolled on that qualification.",
         "not_enrolled",
       );
     }
@@ -120,7 +120,7 @@ export async function removeQualificationAward(
   reason: string,
 ) {
   assertSessionCan(session, "enrolment:manage");
-  const why = z.string().trim().min(3, "Say why it is being removed.").max(1000).parse(reason);
+  const why = z.string().trim().min(3, "Give the reason for removing it.").max(1000).parse(reason);
 
   return withTenant(session.organisationId, async (tx) => {
     const [removed] = await tx

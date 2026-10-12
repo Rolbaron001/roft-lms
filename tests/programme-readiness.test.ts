@@ -156,7 +156,7 @@ describe("before any material may be built", () => {
     expect(what).toContain("Qualification Document");
     expect(what).toContain("Curriculum Document");
     expect(what).toContain("Assessment Specification");
-    expect(what).toContain("not been read into the App");
+    expect(what).toContain("has not been imported");
 
     // Every gap says what to do about it, not merely that it exists.
     expect(readiness.gaps.every((gap) => gap.action.length > 20)).toBe(true);
@@ -185,7 +185,7 @@ describe("before any material may be built", () => {
     });
     expect(readiness.ready).toBe(false);
     expect(readiness.gaps).toHaveLength(1);
-    expect(readiness.gaps[0].what).toContain("not been read into the App");
+    expect(readiness.gaps[0].what).toContain("has not been imported");
   });
 
   it("refuses a curriculum with modules but no criteria", async () => {

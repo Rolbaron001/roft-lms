@@ -712,7 +712,7 @@ describe("a paper that does not add up", () => {
         options: ["A", "B"],
         points: 1,
       }),
-    ).rejects.toThrow(/correct answer recorded/);
+    ).rejects.toThrow(/Record a correct answer/);
   });
 });
 

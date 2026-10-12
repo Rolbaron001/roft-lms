@@ -312,7 +312,7 @@ describe("what it says when Google says no", () => {
 
     await expect(
       googleDriveProvider.list({ accessToken: TOKEN, folderId: "missing" }),
-    ).rejects.toThrow(/shared with you has to be opened/i);
+    ).rejects.toThrow(/Open a shared folder in Drive/i);
   });
 });
 

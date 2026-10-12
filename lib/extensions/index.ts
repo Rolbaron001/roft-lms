@@ -181,7 +181,7 @@ export async function modelsAvailableTo(
       models: [],
       error: `Save ${
         provider.credentialFormat.word === "token" ? "a" : "an"
-      } ${provider.credentialFormat.word} first: the list comes from the provider, and it needs one to answer.`,
+      } ${provider.credentialFormat.word} first.`,
     };
   }
 
@@ -190,7 +190,7 @@ export async function modelsAvailableTo(
     return {
       models: [],
       error:
-        "Your stored credential could not be read, so the provider could not be asked.",
+        "Your stored credential could not be read.",
     };
   }
 
@@ -308,7 +308,7 @@ export async function setMyExtension(
    */
   if (token && input.provider === "claude_code" && /^sk-ant-api/.test(token)) {
     throw new ExtensionSetupError(
-      "That is an Anthropic API key, not a Claude Code token. They are different products and this one needs the token: run `claude setup-token` on your own computer and paste what it prints. If an API key is what you have, choose a provider that takes one.",
+      "That is an Anthropic API key, not a Claude Code token. Run `claude setup-token` on your computer and paste the token it prints, or choose a provider that takes an API key.",
     );
   }
 
@@ -335,7 +335,7 @@ export async function setMyExtension(
 
   if (token && !sealingAvailable()) {
     throw new ExtensionSetupError(
-      "This deployment has no encryption key set, so a token cannot be stored safely. Nothing was saved. Tell whoever runs the server.",
+      "This deployment has no encryption key set, so the token was not saved. Contact whoever runs the server.",
     );
   }
 
@@ -438,7 +438,7 @@ export async function runExtension(
     return {
       ok: false,
       error:
-        "You have not set up an AI extension. It is on your account page under Settings, it is yours rather than the tenant's, and it uses a token you generate on your own computer.",
+        "You have not set up an AI extension. Set it up in Settings, under Your AI extension.",
     };
   }
 
@@ -446,7 +446,7 @@ export async function runExtension(
     return {
       ok: false,
       error:
-        "Your AI extension is disabled on your account page. Nothing was discarded: switch it back on there when you want it.",
+        "Your AI extension is disabled on your account page. Enable it there to use it.",
     };
   }
 
@@ -454,7 +454,7 @@ export async function runExtension(
     return {
       ok: false,
       error:
-        "Your AI extension is not switched on for this sitting. Switch it on where you want to use it; it starts off every time you sign in, and switches off again when you sign out.",
+        "Your AI extension is off for this session. Switch it on at the top of the page.",
     };
   }
 
@@ -463,7 +463,7 @@ export async function runExtension(
     return {
       ok: false,
       error:
-        "Your stored token could not be read. This usually means the server's secret has changed since you saved it. Paste a fresh one on your account page.",
+        "Your stored token could not be read. Paste a new one on your account page.",
     };
   }
 

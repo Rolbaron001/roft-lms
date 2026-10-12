@@ -35,7 +35,7 @@ function fail(
   if (error instanceof PermissionDeniedError) {
     return {
       error:
-        "Your role does not include this. Recognition is held by the provider's own staff, and a judgement is moderated by someone other than the person who made it.",
+        "Your role does not allow this.",
       values,
       attempt: (previous.attempt ?? 0) + 1,
     };
@@ -69,7 +69,7 @@ export async function openApplicationAction(
   }
 
   revalidatePath("/recognition");
-  return said({ notice: "Application opened. Advisory comes next." });
+  return said({ notice: "Application opened. Record the advisory session next." });
 }
 
 export async function recordAdvisoryAction(
@@ -117,7 +117,7 @@ export async function recordJudgementAction(
 
   revalidatePath("/recognition");
   return said({
-    notice: "Judgement recorded. It grants nothing until it is moderated.",
+    notice: "Judgement recorded. It counts once moderated.",
   });
 }
 

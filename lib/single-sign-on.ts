@@ -124,7 +124,7 @@ export async function saveSsoProvider(session: AuthenticatedSession, input: z.in
   assertSessionCan(session, "tenant:manage_settings");
   const parsed = providerInput.parse(input);
   if (parsed.clientSecret && !sealingAvailable()) {
-    throw new SsoError("This platform has no key to seal secrets with, so it cannot keep the client secret.");
+    throw new SsoError("This platform has no sealing key, so the client secret cannot be kept.");
   }
 
   return withTenant(session.organisationId, async (tx) => {

@@ -33,7 +33,7 @@ export async function selectModulesAction(
     return said({
       notice:
         selected === 0
-          ? "Cleared. This takes none of the parent's modules."
+          ? "Cleared. No modules are selected from the parent."
           : `Saved. This is assessed against ${selected} ${
               selected === 1 ? "module" : "modules"
             }.`,
@@ -46,6 +46,6 @@ export async function selectModulesAction(
       return said({ error: error.message });
     }
     console.error(error);
-    return said({ error: "That could not be saved. Please try again." });
+    return said({ error: "That could not be saved. Try again." });
   }
 }

@@ -54,7 +54,7 @@ export function sittingDatesNotice(asAt: string): SittingNotice {
     return {
       year: 0,
       expected: false,
-      text: "No sittings are recorded. They come from the assessment quality partner's letter, which is published once a year.",
+      text: "No sittings are recorded. Enter the dates from the assessment quality partner's annual letter.",
     };
   }
 
@@ -67,14 +67,14 @@ export function sittingDatesNotice(asAt: string): SittingNotice {
     return {
       year: subject,
       expected: true,
-      text: `No sittings are recorded for ${subject}. The assessment quality partner publishes the dates in December; please add them, and the countdown will start.`,
+      text: `No sittings are recorded for ${subject}. The assessment quality partner publishes the dates in December. Add them to start the countdown.`,
     };
   }
 
   return {
     year: subject,
     expected: true,
-    text: `No sittings are recorded for ${subject}. The dates come from the assessment quality partner's letter and change every year. Until they are entered, nothing here can warn you that a registration deadline is coming.`,
+    text: `No sittings are recorded for ${subject}. Enter the dates from the assessment quality partner's letter to see registration deadlines.`,
   };
 }
 

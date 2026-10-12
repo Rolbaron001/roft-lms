@@ -418,7 +418,7 @@ describe("taking a quiz", () => {
 
     await expect(
       submitQuiz(learner, { declarationAccepted: true, assessmentId, responses }),
-    ).rejects.toThrow(/already been found competent/);
+    ).rejects.toThrow(/been found competent on this assessment/);
     expect((await getAssessmentForLearner(learner, assessmentId)).competent).toBe(true);
   });
 

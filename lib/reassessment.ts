@@ -204,7 +204,7 @@ export async function authoriseReassessment(
 
   if (parsed.employerConsulted && !parsed.employerRepresentative) {
     throw new ReassessmentError(
-      "Name the person at the employer who was consulted. Without a name, there is no evidence that the consultation took place.",
+      "Name the person at the employer who was consulted.",
       "invalid",
     );
   }
@@ -300,7 +300,7 @@ export async function startOralAttempt(
 
     if (authorisation.submissionId) {
       throw new ReassessmentError(
-        "That authorisation has already been used, and only one third attempt may be granted.",
+        "That authorisation has already been used. Only one third attempt may be granted.",
         "already_used",
       );
     }
@@ -509,7 +509,7 @@ export async function assertOralRecorded(
 
     if (!record) {
       throw new ReassessmentError(
-        "Write down what was asked and answered before recording the outcome. An oral pass with no record of the exchange is not evidence.",
+        "Record what was asked and answered before you record the outcome.",
         "invalid",
       );
     }

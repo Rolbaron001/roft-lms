@@ -183,7 +183,7 @@ describe("what it refuses", () => {
         artefactCodes: { "WB 1": "workbook" },
         memorandumMarker: "AG",
       }),
-    ).rejects.toThrow(/letters and digits only/);
+    ).rejects.toThrow(/up to ten letters and digits/);
   });
 
   /**
@@ -198,7 +198,7 @@ describe("what it refuses", () => {
         artefactCodes: { AG: "workbook" },
         memorandumMarker: "AG",
       }),
-    ).rejects.toThrow(/cannot mean both/);
+    ).rejects.toThrow(/Use it for one only/);
   });
 
   it("refuses somebody without the permission", async () => {

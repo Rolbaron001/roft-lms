@@ -83,7 +83,7 @@ const lodgeInput = z.object({
   statement: z
     .string()
     .trim()
-    .min(20, "Please describe what the appeal is about in more detail."),
+    .min(20, "Describe the appeal in more detail."),
   lateAcceptanceReason: z.string().trim().max(2000).optional(),
 });
 
@@ -110,7 +110,7 @@ export async function lodgeAppeal(
 
   if (parsed.ground === "result" && !parsed.assessmentId) {
     throw new AppealError(
-      "Say which assessment the result belongs to. A result appeal that does not name one cannot be sent to a moderator.",
+      "Choose the assessment the result belongs to.",
       "invalid",
     );
   }
@@ -128,7 +128,7 @@ export async function lodgeAppeal(
 
   if (!timing.inTime && !parsed.lateAcceptanceReason) {
     throw new AppealError(
-      `This is ${timing.lateByWorkingDays} working ${timing.lateByWorkingDays === 1 ? "day" : "days"} past the deadline of ${timing.deadline}. It can still be lodged, but say why it is being accepted out of time: that reason is part of the record.`,
+      `This is ${timing.lateByWorkingDays} working ${timing.lateByWorkingDays === 1 ? "day" : "days"} past the deadline of ${timing.deadline}. You can still lodge it: give the reason for accepting it late.`,
       "out_of_time",
     );
   }
@@ -204,8 +204,8 @@ export async function lodgeAppeal(
           ? "An appeal has been lodged"
           : "An appeal has been lodged, out of time",
         body: timing.inTime
-          ? `Grounds: ${created.ground}. It has to be acknowledged, and the clock runs from today.`
-          : `Grounds: ${created.ground}. It was lodged after the deadline of ${timing.deadline} and accepted with a reason, which is part of the record.`,
+          ? `Grounds: ${created.ground}. Acknowledge it; the deadline runs from today.`
+          : `Grounds: ${created.ground}. Lodged after the deadline of ${timing.deadline} and accepted with a reason.`,
         linkPath: `/appeals/${created.id}`,
         entityType: "appeal",
         entityId: created.id,
@@ -271,7 +271,7 @@ export async function acknowledgeAppeal(
     if (!before) throw new AppealError("Appeal not found.", "not_found");
     if (before.acknowledgedAt) {
       throw new AppealError(
-        "This was already acknowledged. The first acknowledgement is the one the record keeps.",
+        "This was already acknowledged. The first acknowledgement is recorded.",
         "already_acknowledged",
       );
     }
@@ -379,7 +379,7 @@ const resolveInput = z.object({
   outcomeReason: z
     .string()
     .trim()
-    .min(20, "Please give the reasons. An outcome without reasons is not a resolution, and the learner is entitled to them."),
+    .min(20, "Give the reasons for the outcome. The learner sees them."),
 });
 
 /**
@@ -417,7 +417,7 @@ export async function resolveAppeal(
 
     if (before.ground === "result" && !before.moderatorId) {
       throw new AppealError(
-        "A result appeal goes to the internal moderator before it is resolved. Record who was consulted first.",
+        "Consult the internal moderator before you resolve an appeal against a result. Record who you consulted first.",
         "needs_moderator",
       );
     }
@@ -499,7 +499,7 @@ const withdrawInput = z.object({
   reason: z
     .string()
     .trim()
-    .min(5, "Please give the reason for the withdrawal. Without one, it could appear that the learner was put under pressure to withdraw."),
+    .min(5, "Give the reason for the withdrawal."),
 });
 
 export async function withdrawAppeal(
@@ -518,7 +518,7 @@ export async function withdrawAppeal(
     if (!before) throw new AppealError("Appeal not found.", "not_found");
     if (before.status === "resolved") {
       throw new AppealError(
-        "This appeal is already resolved. It cannot be withdrawn afterwards.",
+        "This appeal is resolved and cannot be withdrawn.",
         "already_resolved",
       );
     }
@@ -556,7 +556,7 @@ export async function addAppealNote(
 
   const note = input.note.trim();
   if (note.length < 3) {
-    throw new AppealError("Please write the note before saving it.", "invalid");
+    throw new AppealError("Write the note before you save it.", "invalid");
   }
 
   return withTenant(session.organisationId, async (tx) => {

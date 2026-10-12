@@ -107,7 +107,7 @@ describe("the key", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/Settings/);
     // The misconception this whole provider has to keep correcting.
-    expect(result.error).toMatch(/not the same as a ChatGPT subscription/i);
+    expect(result.error).toMatch(/ChatGPT subscription is not an API key/i);
   });
 });
 
@@ -184,7 +184,7 @@ describe("what it says when Google says no", () => {
 
     answering(429, { error: { message: "Rate limit reached for requests" } });
     const busy = await openAiProvider.run({ prompt: "p", token: KEY });
-    expect(busy.error).toMatch(/wait a little/i);
+    expect(busy.error).toMatch(/Wait and try again/i);
   });
 
   it("explains a refused key without blaming the platform", async () => {
@@ -193,7 +193,7 @@ describe("what it says when Google says no", () => {
     const result = await openAiProvider.run({ prompt: "p", token: KEY });
 
     expect(result.error).toMatch(/revoked|never have been valid/i);
-    expect(result.error).toMatch(/nothing is wrong with the platform/i);
+    expect(result.error).toMatch(/Nothing was lost/i);
     // And corrects the assumption that sends people here in the first place.
     expect(result.error).toMatch(/ChatGPT Plus/);
   });
@@ -203,7 +203,7 @@ describe("what it says when Google says no", () => {
 
     const result = await openAiProvider.run({ prompt: "p", token: KEY });
 
-    expect(result.error).toMatch(/their side/i);
+    expect(result.error).toMatch(/reported a problem/i);
   });
 });
 

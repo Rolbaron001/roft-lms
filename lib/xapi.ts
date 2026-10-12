@@ -493,7 +493,7 @@ export function readStatements(text: string): { statements: Incoming[]; rejected
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new XapiError("That file is not JSON. xAPI statements are exchanged as JSON: a list of statements, or an object with a \"statements\" list.");
+    throw new XapiError("That file is not JSON. Upload a JSON list of statements, or an object with a \"statements\" list.");
   }
 
   const list = Array.isArray(parsed)

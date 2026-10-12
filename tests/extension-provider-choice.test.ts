@@ -77,7 +77,7 @@ describe("choosing an AI provider", () => {
   });
 
   it("says what to do instead rather than only what is wrong", () => {
-    expect(form).toMatch(/Choose one of the API-key providers instead/);
+    expect(form).toMatch(/Choose an API-key provider instead/);
   });
 
   it("asks each provider rather than assuming", () => {

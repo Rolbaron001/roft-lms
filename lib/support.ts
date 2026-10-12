@@ -77,7 +77,7 @@ const needInput = z.object({
     .trim()
     .min(
       5,
-      "Say what will actually be done. A need with no accommodation against it changes nothing for the learner.",
+      "State what will be done.",
     )
     .max(4000),
   learnerConsented: z.boolean(),
@@ -112,7 +112,7 @@ export async function recordSupportNeed(
 
   if (!parsed.learnerConsented) {
     throw new SupportError(
-      "The learner has to agree to this being recorded before it can be. Health, disability and financial circumstances are special personal information, and agreeing to enrol was not agreeing to this.",
+      "The learner must agree to this being recorded.",
       "no_consent",
     );
   }
@@ -162,7 +162,7 @@ const reviewInput = z.object({
   note: z
     .string()
     .trim()
-    .min(5, "Please say what you found. A review must record a finding."),
+    .min(5, "Record what you found."),
   adjustment: z.string().trim().max(2000).optional(),
   nextReviewDue: z
     .string()
@@ -187,7 +187,7 @@ export async function recordSupportReview(
 
   if (!parsed.working && !parsed.adjustment) {
     throw new SupportError(
-      "If the accommodation is not working, say what is changing. A review that records a failure but changes nothing does not help the learner.",
+      "If the accommodation is not working, state what is changing.",
       "invalid",
     );
   }
@@ -237,7 +237,7 @@ export async function closeSupportNeed(
   const reason = input.reason.trim();
   if (reason.length < 5) {
     throw new SupportError(
-      "Please say why the support is ending. Without a reason, the learner has no basis on which to ask for it to be restored.",
+      "Give the reason the support is ending.",
       "invalid",
     );
   }
@@ -455,7 +455,7 @@ export async function recordMissedAssessment(
 
     if (existing) {
       throw new SupportError(
-        `An additional date was already set for this assessment: ${existing.additionalDate ? writtenDay(existing.additionalDate) : "none recorded"}, after a miss on ${writtenDay(existing.missedOn)}. The procedure allows one. If that date was also missed, record what happened to it rather than setting another.`,
+        `An additional date is already set for this assessment: ${existing.additionalDate ? writtenDay(existing.additionalDate) : "none recorded"}, after a miss on ${writtenDay(existing.missedOn)}. Only one is allowed. If that date was also missed, record what happened.`,
         "already_granted",
       );
     }
@@ -516,14 +516,14 @@ export async function recordAdditionalDateOutcome(
 
   if (parsed.outcome === "oral_authorised" && !parsed.medical) {
     throw new SupportError(
-      "An oral assessment follows a second miss only on medical grounds. Without one the outcome is a forfeit, which the learner can still appeal.",
+      "An oral assessment follows a second miss only on medical grounds. Otherwise the outcome is a forfeit, which the learner can appeal.",
       "not_eligible",
     );
   }
 
   if (parsed.outcome === "oral_authorised" && !parsed.note) {
     throw new SupportError(
-      "Please say what the medical ground was. An external verifier will ask about an oral assessment authorised for an unrecorded reason.",
+      "Record the medical ground.",
       "invalid",
     );
   }

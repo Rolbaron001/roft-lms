@@ -55,12 +55,12 @@ describe("committing a folder read as a new qualification", () => {
   it("refuses where the curriculum code is already held", () => {
     // Two qualifications on one code is an ambiguity nothing downstream can
     // resolve - the same rule the documents route enforces.
-    expect(commit).toMatch(/already carries the curriculum code/);
-    expect(commit).toMatch(/Choose it above to add this folder to it instead/);
+    expect(commit).toMatch(/already has the curriculum code/);
+    expect(commit).toMatch(/Choose it above to add this folder to it/);
   });
 
   it("refuses rather than creating something untitled", () => {
-    expect(commit).toMatch(/no title was found in it/);
+    expect(commit).toMatch(/No qualification title was found/);
   });
 
   it("says a qualification was created, not just what was counted", () => {

@@ -46,7 +46,7 @@ function looksLegacy(bytes: Uint8Array): boolean {
 function open(bytes: Uint8Array): Record<string, Uint8Array> {
   if (looksLegacy(bytes)) {
     throw new OfficeReadError(
-      "That is an older Word or Excel file: the format used before 2007, which is a different thing inside despite the similar name. Nothing is wrong with it. Open it and use Save As to make a .docx or .xlsx, and that will read.",
+      "That is an older Word or Excel file (before 2007). Open it and use Save As to make a .docx or .xlsx file, then upload that.",
     );
   }
 
@@ -56,7 +56,7 @@ function open(bytes: Uint8Array): Record<string, Uint8Array> {
     });
   } catch {
     throw new OfficeReadError(
-      "This file could not be opened. Word and Excel files are archives inside, and this one is damaged or is not really the type it claims to be.",
+      "This file could not be opened. It may be damaged, or not the file type its name suggests.",
     );
   }
 }
@@ -323,9 +323,7 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
     pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   } catch (error) {
     throw new OfficeReadError(
-      "The PDF reader could not be loaded, so no PDF can be read on this server. " +
-        "This is a fault in the installation, not in the document: " +
-        (error instanceof Error ? error.message : String(error)),
+      `The PDF reader could not be loaded on this server. The fault is in the installation, not the document: ${(error instanceof Error ? error.message : String(error))}`,
       { cause: error },
     );
   }
@@ -365,7 +363,7 @@ export async function readPdfText(bytes: Uint8Array): Promise<PdfText> {
   const pages = document.numPages;
   if (pages > MAX_PDF_PAGES) {
     throw new OfficeReadError(
-      `This PDF has ${pages} pages, which is beyond what the platform reads.`,
+      `This PDF has ${pages} pages, which is more than can be read.`,
     );
   }
 

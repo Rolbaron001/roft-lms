@@ -34,7 +34,7 @@ function describe(error: unknown): string {
       .join(" ");
   }
   console.error(error);
-  return "That could not be saved. Please try again.";
+  return "That could not be saved. Try again.";
 }
 
 export async function createQualificationAction(
@@ -150,7 +150,7 @@ async function sourcesFrom(
 
   const curriculum = await take("curriculum");
   if (!curriculum) {
-    return { error: "Choose the Curriculum Document: it is the one that states the modules." };
+    return { error: "Choose the Curriculum Document." };
   }
 
   return {
