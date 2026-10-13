@@ -40,6 +40,19 @@ export type Classified = {
 };
 
 /**
+ * A filename without its extension, however many it has. Saving a Word file
+ * under a name that already ends ".docx" gives "SU2 WB1.docx.docx"; read with
+ * only the last ending removed, "WB1.docx" is not recognised as workbook 1,
+ * the paper and its answer guide do not pair, and the paper is read without
+ * its answers (121151 SU2 WB1, Roland, 13 October 2026).
+ */
+export function bareFilename(filename: string): string {
+  const known = filename.replace(/(\.(docx?|dotx?|xlsx?|xlsm|pptx?|pdf|odt|ods|odp|rtf|txt|csv))+$/i, "");
+  // Any other single ending, as before, where none of those was found.
+  return known !== filename ? known : filename.replace(/\.[a-z0-9]+$/i, "");
+}
+
+/**
  * Reads a filename under a tenant's own convention.
  *
  * Nothing here refuses. A tenant that files inconsistently gets a blank form
@@ -51,8 +64,7 @@ export function classifyFilename(
   filename: string,
   convention: NamingConvention = DEFAULT_CONVENTION,
 ): Classified {
-  const stem = filename
-    .replace(/\.[a-z0-9]+$/i, "")
+  const stem = bareFilename(filename)
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();

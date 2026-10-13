@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import {
   assessmentCriteria,
@@ -32,6 +32,7 @@ import { NOT_A_LEARNER_STEP, readProgrammeDocumentForAuthoring, type DocumentKin
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { addPrerequisite, addStep } from "./spine";
 import { getObject } from "./storage";
+import { bareFilename } from "./naming-convention";
 
 /**
  * Building a qualification from what the platform already holds, and making it
@@ -153,7 +154,8 @@ async function assessmentFor(
   title: string,
   kind: string,
 ): Promise<string> {
-  const base = title.replace(/\s*\b(?:V|Version\s*)\d+\b/gi, "").replace(/\s{2,}/g, " ").trim() || title;
+  // A title taken from "SU2 WB1.docx.docx" keeps one ".docx"; the assessment is "SU2 WB1".
+  const base = bareFilename(title).replace(/\s*\b(?:V|Version\s*)\d+\b/gi, "").replace(/\s{2,}/g, " ").trim() || title;
   const [existing] = await withTenant(session.organisationId, (tx) =>
     tx
       .select({ id: assessments.id })
@@ -664,8 +666,8 @@ export async function verificationOf(
               .leftJoin(assessmentItemCriteria, eq(assessmentItemCriteria.itemId, assessmentItems.id))
               .where(and(inArray(assessmentSections.paperId, paperIds), isNull(assessmentItemCriteria.id)))
           : [];
-        const waitingJobs = await tx
-          .select({ id: captureJobs.id, filename: captureJobs.paperFilename })
+        const uncommitted = await tx
+          .select({ id: captureJobs.id, filename: captureJobs.paperFilename, sha256: captureJobs.paperSha256, uploadedAt: captureJobs.uploadedAt })
           .from(captureJobs)
           .innerJoin(programmeDocuments, eq(programmeDocuments.sha256, captureJobs.paperSha256))
           .where(
@@ -673,8 +675,15 @@ export async function verificationOf(
               eq(captureJobs.qualificationId, qualificationId),
               isNull(captureJobs.committedAt),
               eq(programmeDocuments.studyUnitId, unit.id),
+              // Not a paper already committed by a later capture: an abandoned
+              // reading is not work waiting for anybody.
+              sql`not exists (select 1 from capture_jobs done where done.qualification_id = ${qualificationId} and done.paper_sha256 = ${captureJobs.paperSha256} and done.committed_at is not null)`,
             ),
-          );
+          )
+          .orderBy(desc(captureJobs.uploadedAt));
+        // One line per paper: its latest reading.
+        const seenPapers = new Set<string | null>();
+        const waitingJobs = uncommitted.filter((job) => (seenPapers.has(job.sha256) ? false : (seenPapers.add(job.sha256), true)));
         const assessable = await tx
           .select({ id: curriculumModules.id })
           .from(studyUnitModules)

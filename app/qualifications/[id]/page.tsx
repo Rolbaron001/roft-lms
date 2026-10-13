@@ -443,6 +443,14 @@ export default async function QualificationPage({
       {canManage ? <ProgressMap steps={steps} /> : null}
 
       {/*
+        Who delivers, assesses and moderates it (job sheet D27). Above the
+        tabs, so it is seen first (Roland, 13 October 2026).
+      */}
+      <div className="mb-8">
+        <StaffCard session={session} scope={{ qualificationId: id }} path={`/qualifications/${id}`} t={t} intro={t("staff.introQualification")} />
+      </div>
+
+      {/*
         Two jobs, told apart. See components/view-tabs.tsx for why this is a
         query parameter rather than client state.
       */}
@@ -842,11 +850,6 @@ export default async function QualificationPage({
               </div>
             </section>
           ) : null}
-
-          {/* Who delivers, assesses and moderates it (job sheet D27). */}
-          <div className="mb-8">
-            <StaffCard session={session} scope={{ qualificationId: id }} path={`/qualifications/${id}`} t={t} intro={t("staff.introQualification")} />
-          </div>
 
           <section id="documents" data-page-section={t("qualPage.nav.documents")} className="mb-8 scroll-mt-24">
             <h2 className="mb-2 font-semibold">{t("qualPage.documents")}</h2>

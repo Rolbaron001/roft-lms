@@ -136,6 +136,19 @@ export default async function CoursePage({
 
       {qualificationId ? <QualificationNav qualificationId={qualificationId} current={id} /> : null}
 
+      {/* Who delivers, assesses and moderates it (job sheet D27): a study
+          unit's people where this course is one, else the course's own. At
+          the top, so it is seen first (Roland, 13 October 2026). */}
+      <div className="mb-6">
+        <StaffCard
+          session={session}
+          scope={detail.course.studyUnitId ? { studyUnitId: detail.course.studyUnitId } : { courseId: id }}
+          path={`/courses/${id}`}
+          t={t}
+          intro={detail.course.studyUnitId ? t("staff.introUnit") : t("staff.introCourse")}
+        />
+      </div>
+
       {qualificationId && unit && !unit.live ? (
         <div className="mb-6">
           <Card>
@@ -211,18 +224,6 @@ export default async function CoursePage({
           </Card>
         </div>
       ) : null}
-
-      {/* Who delivers, assesses and moderates it (job sheet D27): a study
-          unit's people where this course is one, else the course's own. */}
-      <div className="mb-6">
-        <StaffCard
-          session={session}
-          scope={detail.course.studyUnitId ? { studyUnitId: detail.course.studyUnitId } : { courseId: id }}
-          path={`/courses/${id}`}
-          t={t}
-          intro={detail.course.studyUnitId ? t("staff.introUnit") : t("staff.introCourse")}
-        />
-      </div>
 
       {detail.course.status === "published" ? (
         <Card>

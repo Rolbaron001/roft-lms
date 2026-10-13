@@ -325,11 +325,13 @@ describe("reading a restricted paper in order to author from it", () => {
 
     expect(jobId).toMatch(/^[0-9a-f-]{36}$/);
 
-    // And it is not offered a second time, because the digest matches.
+    // Read but not committed, so it still counts as not captured: a reading
+    // somebody abandons must not make the build skip the paper for ever
+    // (121151 SU2 WB1, 13 October 2026).
     const after = await capturableDocuments(admin, qualificationId);
     expect(
       after.find((one) => one.documentId === summative.documentId)?.captured,
-    ).toBe(true);
+    ).toBe(false);
   }, 120_000);
 });
 

@@ -81,6 +81,10 @@ happens without it**. Where a provider can change a rule, it says where.
   with which paper.
 - **Without it:** documents can still be filed by hand, but a paper is not
   paired with its guide and is not captured automatically.
+- **Doubled endings:** a file saved as `CA 121151 SU2 WB1.docx.docx` is read
+  as `CA 121151 SU2 WB1`. Renaming it is not needed.
+- **A capture counts once committed:** a paper captured but not committed is
+  still offered for capture, and Build again reads it with its guide.
 
 ### 2.2 Versions
 

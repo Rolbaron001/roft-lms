@@ -11,7 +11,7 @@ import { createCourse } from "./authoring";
 import { ensureStudyUnitCompetency } from "./unit-competency";
 import { createAssessment } from "./assessment";
 import { namingConventionFor, proposeCapture } from "./capture";
-import { classifyFilename } from "./naming-convention";
+import { bareFilename, classifyFilename } from "./naming-convention";
 import { readProgrammeDocumentForAuthoring } from "./programme-documents";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
@@ -90,8 +90,7 @@ function artefactKey(
   }
 
   const marker = convention?.memorandumMarker ?? "AG";
-  return filename
-    .replace(/\.[a-z0-9]+$/i, "")
+  return bareFilename(filename)
     .replace(new RegExp(`\\b${marker}\\b`, "gi"), "")
     .replace(/[^a-z0-9]+/gi, "")
     .toUpperCase();
@@ -102,7 +101,7 @@ function artefactKey(
  * "Version 2". Null where it carries none.
  */
 export function versionOf(filename: string): string | null {
-  const match = /(?:^|[\s_-])(?:V|Version\s*)(\d+)(?=$|[\s_.-])/i.exec(filename.replace(/\.[a-z0-9]+$/i, ""));
+  const match = /(?:^|[\s_-])(?:V|Version\s*)(\d+)(?=$|[\s_.-])/i.exec(bareFilename(filename));
   return match ? match[1] : null;
 }
 
@@ -161,6 +160,10 @@ export async function capturableDocuments(
     // Everything already captured, by digest. One query rather than one per
     // paper: a folder import files eighty documents and this screen is opened
     // every time somebody looks at the qualification.
+    //
+    // Captured means committed. A capture started and never committed left
+    // its paper counted as done, so every later build skipped it and no
+    // assessment was ever made for it (121151 SU2 WB1, 13 October 2026).
     const done = await tx
       .select({ sha256: captureJobs.paperSha256 })
       .from(captureJobs)
@@ -168,6 +171,7 @@ export async function capturableDocuments(
         and(
           eq(captureJobs.qualificationId, qualificationId),
           isNotNull(captureJobs.paperSha256),
+          isNotNull(captureJobs.committedAt),
         ),
       );
     const captured = new Set(done.map((row) => row.sha256));
