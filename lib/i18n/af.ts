@@ -44,6 +44,7 @@ export const af: Catalogue = {
   "nav./reassessments": "Teruggehou vir hersiening",
   "nav./appeals": "Appèlle",
   "nav./my-appeals": "Appèlle en klagtes",
+  "nav./discussions": "Besprekings",
   "nav./recognition": "Vorige leer",
   "nav./fisa": "FISA",
   "nav./eisa": "EISA-inskrywing",

@@ -185,8 +185,11 @@ export default async function PaperPage({
                     </li>
                   ))}
                 </ul>
-                <a href={`/learn/${id}#material`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-xs text-[var(--brand-accent)] underline underline-offset-2">
+                <a href={`/learn/${id}#material`} target="_blank" rel="noopener noreferrer" className="mt-3 block text-xs text-[var(--brand-accent)] underline underline-offset-2">
                   {t("paper.materialUnit")}
+                </a>
+                <a href={`/discussions/${delivery.course.id}`} target="_blank" rel="noopener noreferrer" className="mt-1 block text-xs text-[var(--brand-accent)] underline underline-offset-2">
+                  {t("discuss.link")}
                 </a>
               </div>
             </aside>

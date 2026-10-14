@@ -545,6 +545,27 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6r. Discussion boards (14 October 2026)
+
+- **Where:** **Learning → Discussions** lists every board a person may use. A
+  board is also linked from each course and study unit page (learner and
+  staff) and from beside a workbook.
+- **One board per course**, and so one per study unit. The learners enrolled
+  on it read and post, with the facilitators, assessors and moderators named
+  on its programme (6m). Administrators see every board.
+- **Posting:** anyone on the board can start a discussion or reply. Posts by
+  staff are marked "staff". Everyone who has posted in a discussion is
+  notified of a reply. Every learner on the course is notified of a
+  discussion a member of staff starts, which is how a facilitator puts a
+  reflection question to the class.
+- **Moderating:** staff can pin a discussion to the top, close it to replies
+  and remove any post; a learner can remove their own. A removed post stays
+  on the record: staff still see its words, learners see that it was
+  removed. Removing the first post removes the discussion. Each of these is
+  written to the audit log.
+- **What it depends on:** learners being enrolled on the course, and staff
+  being named on the programme.
+
 ## 6q. Workbooks online: answering, marking and returning (14 October 2026)
 
 - **The learner:** opens a workbook from the study unit. Answers save as they

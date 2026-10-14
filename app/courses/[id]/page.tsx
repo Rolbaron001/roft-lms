@@ -111,6 +111,12 @@ export default async function CoursePage({
                 {t("courseEdit.assessments")}
               </Link>
             ) : null}
+            <Link
+              href={`/discussions/${id}`}
+              className="text-sm font-medium text-[var(--brand-accent)] hover:underline"
+            >
+              {t("discuss.link")}
+            </Link>
             {session.permissions.includes("enrolment:read_all") ? (
               <Link
                 href={`/courses/${id}/enrolments`}

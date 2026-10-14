@@ -60,6 +60,11 @@ export default async function LearnPage({
         {!delivery.isOwn ? (
           <p className="mb-4 rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-3 py-2 text-sm">{t("learn.notYours")}</p>
         ) : null}
+        <p className="mb-2 text-right text-sm">
+          <Link href={`/discussions/${delivery.course.id}`} className="font-medium text-[var(--brand-accent)] underline-offset-2 hover:underline">
+            {t("discuss.link")} →
+          </Link>
+        </p>
         <StudyUnitView
           session={session}
           enrolmentId={id}
@@ -84,7 +89,12 @@ export default async function LearnPage({
         <Link href="/" className="text-sm text-[var(--muted)] hover:underline">
           {t("learn.back")}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">{delivery.course.title}</h1>
+        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-xl font-semibold">{delivery.course.title}</h1>
+          <Link href={`/discussions/${delivery.course.id}`} className="text-sm font-medium text-[var(--brand-accent)] underline-offset-2 hover:underline">
+            {t("discuss.link")} →
+          </Link>
+        </div>
         {delivery.course.description ? (
           <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
             {delivery.course.description}

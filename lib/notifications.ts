@@ -47,6 +47,9 @@ export type NotificationKind =
   | "assessment.decided"
   /** To the learner: their workbook is marked and back with them (14 October 2026). */
   | "assessment.feedback_returned"
+  /** A facilitator's new discussion, and a reply in one you have posted in (14 October 2026). */
+  | "discussion.started"
+  | "discussion.reply"
   | "certificate.issued"
   | "programme.step_unlocked"
   | "course.new_version"

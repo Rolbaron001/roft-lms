@@ -8,3 +8,4 @@ export * from "./support";
 export * from "./library";
 export * from "./cohort-file";
 export * from "./programme-staff";
+export * from "./discussion";

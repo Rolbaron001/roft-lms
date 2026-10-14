@@ -102,6 +102,8 @@ export const NAV: NavSection[] = [
       // unit (Roland, 5 October 2026). Staff only: learners meet it on their
       // study unit's page.
       { href: "/material", label: "Learning material", permission: "course:author" },
+      // A board for each course, for its learners and staff (job sheet D30).
+      { href: "/discussions", label: "Discussions", permission: "course:read" },
       // A reference, not a record. Every signed-in person can read it,
       // learners included - it exists so that everybody uses the same words.
       {
