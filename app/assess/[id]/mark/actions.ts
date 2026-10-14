@@ -9,8 +9,9 @@ import {
   returnFeedback,
 } from "@/lib/marking";
 import { PermissionDeniedError } from "@/lib/rbac";
+import { removeFeedbackFile, uploadFeedbackFile, UploadError } from "@/lib/uploads";
 
-export type MarkState = { error?: string; marked?: string };
+export type MarkState = { error?: string; marked?: string; returned?: boolean };
 
 export type SectionState = { error?: string; saved?: string };
 
@@ -72,6 +73,7 @@ export async function markItemAction(
       marks: rawMarks === "" ? undefined : Number(rawMarks),
       rubricLevels: Object.keys(levels).length > 0 ? levels : undefined,
       comment: String(formData.get("comment") ?? ""),
+      overrideReason: String(formData.get("overrideReason") ?? ""),
     });
   } catch (error) {
     if (error instanceof MarkingError || error instanceof PermissionDeniedError) {
@@ -109,5 +111,42 @@ export async function returnFeedbackAction(
 
   revalidatePath(`/assess/${submissionId}/mark`);
   revalidatePath("/assess");
-  return said({});
+  revalidatePath("/");
+  return said({ returned: true });
+}
+
+export type FileState = { error?: string; added?: number };
+
+/** Attaches a voice note, video or document to the feedback. */
+export async function addFeedbackFileAction(
+  _previous: FileState,
+  formData: FormData,
+): Promise<FileState> {
+  const session = await requirePermission("assessment:assess");
+  const submissionId = String(formData.get("submissionId") ?? "");
+  const files = formData.getAll("file").filter((one): one is File => one instanceof File && one.size > 0);
+  if (files.length === 0) return said({ error: "Choose a file." });
+
+  try {
+    for (const file of files) {
+      await uploadFeedbackFile(session, submissionId, {
+        filename: file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+      });
+    }
+  } catch (error) {
+    if (error instanceof UploadError || error instanceof PermissionDeniedError) {
+      return said({ error: error.message });
+    }
+    throw error;
+  }
+
+  revalidatePath(`/assess/${submissionId}/mark`);
+  return said({ added: files.length });
+}
+
+export async function removeFeedbackFileAction(formData: FormData) {
+  const session = await requirePermission("assessment:assess");
+  const submissionId = await removeFeedbackFile(session, String(formData.get("attachmentId") ?? ""));
+  revalidatePath(`/assess/${submissionId}/mark`);
 }

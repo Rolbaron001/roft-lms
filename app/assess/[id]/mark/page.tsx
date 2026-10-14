@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { withTenant } from "@/db/client";
-import { assessmentCriteria } from "@/db/schema";
+import { assessmentCriteria, users } from "@/db/schema";
+import { listAssessorQueue } from "@/lib/assessment";
+import { mailboxAddressOf } from "@/lib/mailbox";
 import {
   getMarkedPaper,
   MarkingError,
@@ -63,6 +65,33 @@ export default async function MarkPaperPage({
             .where(inArray(assessmentCriteria.id, criterionIds)),
         );
 
+  // Writing to the learner about this piece of work, and the next one waiting
+  // (Curiosa's evaluation checklist, 14 October 2026).
+  const [learner] = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ mailboxAddress: users.mailboxAddress, email: users.email })
+      .from(users)
+      .where(eq(users.id, paper.learnerId)),
+  );
+  // Through the platform's mail where the marker has a mailbox; otherwise an
+  // email from their own mail program, since most staff have no mailbox yet.
+  const address = learner?.mailboxAddress ?? learner?.email ?? null;
+  const message = !address
+    ? null
+    : (await mailboxAddressOf(session))
+      ? `/mail?${new URLSearchParams({ to: address, subject: paper.assessmentTitle }).toString()}`
+      : learner?.email
+        ? `mailto:${learner.email}?subject=${encodeURIComponent(paper.assessmentTitle)}`
+        : null;
+  const waiting = (await listAssessorQueue(session)).find(
+    (row) => row.submissionId !== id && row.learnerId !== session.userId,
+  );
+  const next = waiting
+    ? waiting.purpose === "summative"
+      ? `/assess/${waiting.submissionId}`
+      : `/assess/${waiting.submissionId}/mark`
+    : null;
+
   // For a summative, show what the marks imply once everything is marked.
   let proposals: Awaited<ReturnType<typeof proposeCriterionOutcomes>> = [];
   if (paper.purpose === "summative" && paper.fullyMarked) {
@@ -78,7 +107,7 @@ export default async function MarkPaperPage({
         <h1 className="mt-2 text-xl font-semibold">{t("marking.title")}</h1>
       </div>
 
-      <MarkForm paper={paper} rubrics={rubrics} criteria={criteria} />
+      <MarkForm paper={paper} rubrics={rubrics} criteria={criteria} links={{ message, next }} />
 
       {paper.purpose === "summative" ? (
         <div className="mt-6">

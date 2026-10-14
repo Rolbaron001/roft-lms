@@ -25,6 +25,7 @@ import { listInstruments } from "./fisa";
 import { learnerQualifications } from "./learner-qualification";
 import { listTenants, platformHealth } from "./provisioning";
 import { listHeldAndAuthorised } from "./reassessment";
+import { unreadMailCount } from "./mailbox";
 import { capabilityCoverage, headlineNumbers, overdueTraining, teamStatus } from "./reporting";
 import { cohortCourseIds } from "./schedule";
 import { cohortAttendance } from "./scheduling";
@@ -65,6 +66,23 @@ function waited(t: Translate, since: Date | null, now: Date): { text: string; to
     text: days === 0 ? t("rd.today") : days === 1 ? t("rd.oneDay") : t("rd.days", { days }),
     tone: days >= 5 ? "danger" : days >= 2 ? "warning" : "plain",
   };
+}
+
+/**
+ * Unread mail among the things needing attention, for someone with a platform
+ * mailbox (Curiosa's evaluation checklist, 14 October 2026). Nothing is shown
+ * to someone without one.
+ */
+async function mailTile(session: AuthenticatedSession, tiles: DashTile[], t: Translate) {
+  const unread = await unreadMailCount(session).catch(() => 0);
+  if (unread > 0) tiles.push(tile("mail", unread, [t("rd.mailOne"), t("rd.mailMany")], t("rd.mailNote"), [t("rd.openMail"), t("rd.openMail")], "/mail", "plain"));
+}
+
+/** How long the oldest item has waited, said as a sentence: "The oldest has waited Today" did not read. */
+function oldest(t: Translate, since: Date | null, now: Date): string {
+  if (!since) return "";
+  const days = Math.max(0, Math.floor((now.getTime() - since.getTime()) / DAY));
+  return days === 0 ? t("rd.oldestToday") : t("rd.oldestWaited", { time: waited(t, since, now).text });
 }
 
 function tile(key: string, count: number, label: [string, string], detail: string, open: [string, string], href: string, tone: DashTone): DashTile {
@@ -229,8 +247,9 @@ export async function facilitatorDashboard(session: AuthenticatedSession, { t, d
   if (data.unmarked.length) tiles.push(tile("registers", data.unmarked.length, [t("dash.urgent.registers.one"), t("dash.urgent.registers.many")], t("dash.urgent.registers.on", { date: day(data.unmarked[0].date) }), [t("rd.openOne"), t("dash.openMany.registers")], sessionHref(data.unmarked[0]), "danger"));
   // Someone who also assesses has the workbooks on their assessor's list.
   const marksToo = can(session, "assessment:assess");
-  if (data.waiting.length && !marksToo) tiles.push(tile("workbooks", data.waiting.length, [t("rd.f.workbook"), t("rd.f.workbooks")], waited(t, data.waiting[0].submittedAt, now).text ? t("rd.oldestWaited", { time: waited(t, data.waiting[0].submittedAt, now).text }) : "", [t("rd.openOne"), t("rd.f.openWorkbooks")], data.waiting.length === 1 ? markHref(data.waiting[0].id, data.waiting[0].userId) : "#workbooks", "warning"));
+  if (data.waiting.length && !marksToo) tiles.push(tile("workbooks", data.waiting.length, [t("rd.f.workbook"), t("rd.f.workbooks")], oldest(t, data.waiting[0].submittedAt, now), [t("rd.openOne"), t("rd.f.openWorkbooks")], data.waiting.length === 1 ? markHref(data.waiting[0].id, data.waiting[0].userId) : "#workbooks", "warning"));
   if (risk.length) tiles.push(tile("risk", risk.length, [t("rd.f.followUpOne"), t("rd.f.followUp")], t("rd.f.followUpNote"), [t("rd.openOne"), t("rd.f.openLearners")], risk.length === 1 ? `/people/${risk[0].userId}` : "#follow-up", "warning"));
+  await mailTile(session, tiles, t);
 
   return {
     role: "instructor",
@@ -356,9 +375,10 @@ export async function assessorDashboard(session: AuthenticatedSession, { t, day,
   };
 
   const tiles: DashTile[] = [];
-  if (summatives.length) tiles.push(tile("summatives", summatives.length, [t("rd.a.summative"), t("rd.a.summatives")], t("rd.oldestWaited", { time: waited(t, summatives[0].submittedAt, now).text || t("rd.today") }), [t("rd.openOne"), t("rd.a.openQueue")], summatives.length === 1 ? queueRow(summatives[0]).href : "#to-assess", "warning"));
-  if (workbooks.length) tiles.push(tile("workbooksToMark", workbooks.length, [t("rd.f.workbook"), t("rd.f.workbooks")], t("rd.oldestWaited", { time: waited(t, workbooks[0].submittedAt, now).text || t("rd.today") }), [t("rd.openOne"), t("rd.f.openWorkbooks")], workbooks.length === 1 ? queueRow(workbooks[0]).href : "#workbooks-to-mark", "plain"));
+  if (summatives.length) tiles.push(tile("summatives", summatives.length, [t("rd.a.summative"), t("rd.a.summatives")], oldest(t, summatives[0].submittedAt, now), [t("rd.openOne"), t("rd.a.openQueue")], summatives.length === 1 ? queueRow(summatives[0]).href : "#to-assess", "warning"));
+  if (workbooks.length) tiles.push(tile("workbooksToMark", workbooks.length, [t("rd.f.workbook"), t("rd.f.workbooks")], oldest(t, workbooks[0].submittedAt, now), [t("rd.openOne"), t("rd.f.openWorkbooks")], workbooks.length === 1 ? queueRow(workbooks[0]).href : "#workbooks-to-mark", "plain"));
   if (data.referred.length) tiles.push(tile("referred", data.referred.length, [t("rd.a.referredOne"), t("rd.a.referred")], t("rd.a.referredNote"), [t("rd.openOne"), t("rd.a.openReferred")], data.referred.length === 1 ? `/assess/${data.referred[0].submissionId}` : "#referred", "danger"));
+  await mailTile(session, tiles, t);
   if (authorised.length) tiles.push(tile("orals", authorised.length, [t("rd.a.oralOne"), t("rd.a.orals")], t("rd.a.oralNote"), [t("rd.openOne"), t("rd.a.openOrals")], "/reassessments", "plain"));
 
   return {
@@ -437,7 +457,7 @@ export async function moderatorDashboard(session: AuthenticatedSession, { t, day
   const inModeration = papers.filter((row) => row.status === "in_moderation");
 
   const tiles: DashTile[] = [];
-  if (queue.length) tiles.push(tile("sampled", queue.length, [t("rd.m.sampledOne"), t("rd.m.sampled")], t("rd.oldestWaited", { time: waited(t, queue[0].queuedAt, now).text || t("rd.today") }), [t("rd.openOne"), t("rd.m.openSample")], queue.length === 1 ? `/moderate#decision-${queue[0].decisionId}` : "/moderate", "warning"));
+  if (queue.length) tiles.push(tile("sampled", queue.length, [t("rd.m.sampledOne"), t("rd.m.sampled")], oldest(t, queue[0].queuedAt, now), [t("rd.openOne"), t("rd.m.openSample")], queue.length === 1 ? `/moderate#decision-${queue[0].decisionId}` : "/moderate", "warning"));
   if (inModeration.length) tiles.push(tile("papers", inModeration.length, [t("rd.m.paperOne"), t("rd.m.papers")], t("rd.m.papersNote"), [t("rd.openOne"), t("rd.m.openPapers")], inModeration.length === 1 ? `/fisa/${inModeration[0].id}` : "#fisa", "warning"));
   if (appeals.length) tiles.push(tile("appealsResult", appeals.length, [t("rd.m.appealOne"), t("rd.m.appeals")], t("rd.m.appealsNote"), [t("rd.openOne"), t("rd.m.openAppeals")], appeals.length === 1 ? `/appeals/${appeals[0].id}` : "#appeals", "danger"));
 

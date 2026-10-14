@@ -261,7 +261,8 @@ async function buildSummative() {
 
 /** Sits one attempt and has it judged not yet competent. */
 async function failOnce(assessmentId: string) {
-  const sitting = await startAttempt(learner, assessmentId);
+  // Asked for: opening a paper otherwise shows the attempt already handed in.
+  const sitting = await startAttempt(learner, assessmentId, { fresh: true });
   for (const section of sitting.sections) {
     for (const item of section.items) {
       await saveAnswer(learner, {
@@ -312,10 +313,10 @@ describe("held, not failed", () => {
   it("tells the learner it is held for review, not that they have failed", async () => {
     const assessmentId = await heldLearner();
 
-    await expect(startAttempt(learner, assessmentId)).rejects.toThrow(
+    await expect(startAttempt(learner, assessmentId, { fresh: true })).rejects.toThrow(
       /held while your progress is reviewed/,
     );
-    await expect(startAttempt(learner, assessmentId)).rejects.toThrow(
+    await expect(startAttempt(learner, assessmentId, { fresh: true })).rejects.toThrow(
       PaperError,
     );
   });

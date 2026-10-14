@@ -545,6 +545,50 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6q. Workbooks online: answering, marking and returning (14 October 2026)
+
+- **The learner:** opens a workbook from the study unit. Answers save as they
+  are typed. A bar at the top counts the questions answered; written answers
+  show a word count; a question asking for a file takes images, video, audio,
+  PDF and Office documents (limits: image 10 MB, document 50 MB, audio
+  100 MB, video 500 MB). The assessment's instructions, the step's guidance
+  and its due date (from the cohort's timetable) sit above the questions, and
+  the study unit's theory guide and material are listed beside them, each
+  opening in a new tab.
+- **Handing in:** the declaration is ticked and the workbook handed in. The
+  page says how many questions are still unanswered first. Once handed in it
+  cannot be changed, and opening it again shows it as handed in.
+- **What the platform marks:** multiple choice, true or false, multiple
+  response and matching questions, against the correct answers recorded for
+  them, as the workbook is handed in. An answer counts only when it matches
+  exactly. Written answers, files and true or false with a justification go
+  to a person.
+- **The facilitator or assessor:** finds it under **Workbooks to mark** on
+  their home page. The marking screen shows the platform's marks (the
+  learner's choice beside the correct answer, and any feedback written for a
+  right or wrong answer), the learner's written answers with the marking
+  guidance and any marking matrix, and the files handed in. Marks and
+  comments save themselves a moment after they are typed. Changing a
+  platform mark keeps both figures; a reason can be given, and the change is
+  written to the audit log. The totals at the top separate the platform's
+  marks from a person's.
+- **Returning it:** once every question has a mark, the overall comment is
+  written (kept in the browser until it is sent), any voice note, video or
+  marked-up document attached, and the workbook returned. The learner is
+  notified, and from then sees the marks and comment under each answer, the
+  section comments, the overall comment and the files. A workbook still
+  being marked shows the learner nothing of its marks.
+- **Another attempt:** offered to the learner once the last attempt is
+  returned, within the assessment's attempt limit.
+- **Messaging the learner:** **Message the learner** on the marking screen
+  opens a message in the platform's mail, addressed and titled, for staff
+  with a platform mailbox; for staff without one it opens an email in their
+  own mail program.
+- **What it depends on:** the correct answers being recorded for every
+  chosen-answer question (captured from the answer guide, or entered by
+  hand); the facilitator or assessor being named on the programme (6m); a
+  platform mailbox for messaging inside the platform.
+
 ## 6p. A learner's appeals and concerns (12 October 2026)
 
 - **Where:** **Assessment → Appeals and concerns**, the link under Results and

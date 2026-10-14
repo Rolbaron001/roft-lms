@@ -27,11 +27,14 @@ export function Compose({
   replySubject,
   inReplyToMessageId,
   canSend,
+  subject,
 }: {
   replyTo?: string;
   replySubject?: string;
   inReplyToMessageId?: string;
   canSend: boolean;
+  /** A new message's subject, as given by the screen that opened it. */
+  subject?: string;
 }) {
   const t = useT();
   const [state, formAction] = useActionState<MailState, FormData>(
@@ -113,7 +116,7 @@ export function Compose({
               ? replySubject.toLowerCase().startsWith("re:")
                 ? replySubject
                 : `Re: ${replySubject}`
-              : ""
+              : (subject ?? "")
           }
           className={FIELD}
         />

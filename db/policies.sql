@@ -279,12 +279,15 @@ alter table step_overrides add constraint step_overrides_reason_check
 -- A response holds one kind of answer, matching the item it answers.
 --
 -- Not enforceable against the item's type from here without a lookup, so what
--- is checked is the weaker but still useful shape: a response that carries a
--- selection and free text and a number at once is a row nothing can mark.
+-- is checked is the weaker but still useful shape: a number stands alone. A
+-- selection and free text together is the one pairing allowed, because true or
+-- false with a justification is answered with both. Until 14 October 2026 this
+-- refused that pairing, so a justification could never be saved.
 alter table item_responses drop constraint if exists item_responses_one_answer_check;
 alter table item_responses add constraint item_responses_one_answer_check
   check (
-    num_nonnulls(selected_option_ids, answer_text, answer_number) <= 1
+    answer_number is null
+    or (selected_option_ids is null and answer_text is null)
   );
 
 -- A section states what it is worth. Zero or a negative total is a mistake in

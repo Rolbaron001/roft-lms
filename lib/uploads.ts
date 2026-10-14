@@ -1,10 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
+import { reachWithin, submissionInReach } from "./staff-scope";
 import {
+  assessmentItems,
+  assessmentSections,
   assessmentSubmissions,
   courseSections,
   courses,
   evidenceArtifacts,
+  feedbackAttachments,
   workplaceLogbookEntries,
   workplaceLogbooks,
   lessons,
@@ -247,7 +251,11 @@ export async function uploadEvidence(
   session: AuthenticatedSession,
   submissionId: string,
   files: { filename: string; bytes: Uint8Array }[],
-  context: { ipAddress?: string | null } = {},
+  context: {
+    ipAddress?: string | null;
+    /** The question this file answers, on a paper that asks for a file. */
+    itemId?: string | null;
+  } = {},
 ) {
   assertSessionCan(session, "evidence:submit");
 
@@ -281,6 +289,28 @@ export async function uploadEvidence(
     );
   }
 
+  // A file answering a question is part of the paper, so it closes with the
+  // paper, and it must answer a question on that paper.
+  if (context.itemId) {
+    if (submission.status !== "draft") {
+      throw new UploadError("This has been handed in, so it cannot be changed.", "not_permitted");
+    }
+    const onPaper = await withTenant(session.organisationId, async (tx) => {
+      const [row] = await tx
+        .select({ id: assessmentItems.id })
+        .from(assessmentItems)
+        .innerJoin(assessmentSections, eq(assessmentSections.id, assessmentItems.sectionId))
+        .where(
+          and(
+            eq(assessmentItems.id, context.itemId!),
+            eq(assessmentSections.paperId, submission.paperId ?? "00000000-0000-0000-0000-000000000000"),
+          ),
+        );
+      return Boolean(row);
+    });
+    if (!onPaper) throw new UploadError("That question is not on this paper.", "not_found");
+  }
+
   const stored: StoredMedia[] = [];
   for (const file of files) {
     stored.push(
@@ -304,6 +334,7 @@ export async function uploadEvidence(
         sha256: item.sha256,
         uploadedById: session.userId,
         uploadedIp: context.ipAddress ?? null,
+        itemId: context.itemId ?? null,
       })),
     );
 
@@ -314,6 +345,7 @@ export async function uploadEvidence(
       entityType: "assessment_submission",
       entityId: submissionId,
       after: {
+        itemId: context.itemId ?? null,
         files: stored.map((item) => ({
           filename: item.filename,
           mimeType: item.mimeType,
@@ -324,6 +356,177 @@ export async function uploadEvidence(
   });
 
   return stored;
+}
+
+/**
+ * Removes a file a learner attached to a question, while the paper is still
+ * theirs to change. Once handed in, a file is evidence and stays.
+ */
+export async function removeAnswerFile(session: AuthenticatedSession, artifactId: string) {
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: evidenceArtifacts.id,
+        itemId: evidenceArtifacts.itemId,
+        filename: evidenceArtifacts.filename,
+        submissionId: evidenceArtifacts.submissionId,
+        userId: assessmentSubmissions.userId,
+        status: assessmentSubmissions.status,
+      })
+      .from(evidenceArtifacts)
+      .innerJoin(assessmentSubmissions, eq(assessmentSubmissions.id, evidenceArtifacts.submissionId))
+      .where(eq(evidenceArtifacts.id, artifactId));
+
+    if (!row || !row.itemId) throw new UploadError("No file here.", "not_found");
+    if (row.userId !== session.userId) {
+      throw new UploadError("That file belongs to someone else.", "not_permitted");
+    }
+    if (row.status !== "draft") {
+      throw new UploadError("This has been handed in, so it cannot be changed.", "not_permitted");
+    }
+
+    await tx.delete(evidenceArtifacts).where(eq(evidenceArtifacts.id, artifactId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "evidence.removed",
+      entityType: "assessment_submission",
+      entityId: row.submissionId!,
+      before: { itemId: row.itemId, filename: row.filename },
+    });
+  });
+}
+
+/**
+ * Attaches a file to the feedback on a submission: a voice note, a short video
+ * or a marked-up document. Only somebody who may mark it, and not on their own
+ * work. The learner receives it when the work is returned.
+ */
+export async function uploadFeedbackFile(
+  session: AuthenticatedSession,
+  submissionId: string,
+  file: { filename: string; bytes: Uint8Array },
+) {
+  assertSessionCan(session, "assessment:assess");
+
+  const submission = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({ id: assessmentSubmissions.id, userId: assessmentSubmissions.userId })
+      .from(assessmentSubmissions)
+      .where(eq(assessmentSubmissions.id, submissionId));
+    if (!row) return null;
+    // Only on a programme this person assesses (lib/staff-scope.ts).
+    const inReach = await submissionInReach(tx, await reachWithin(tx, session, "assessor"), submissionId);
+    return { ...row, inReach };
+  });
+
+  if (!submission) throw new UploadError("Submission not found.", "not_found");
+  if (submission.userId === session.userId) {
+    throw new UploadError("You cannot mark your own work.", "not_permitted");
+  }
+  if (!submission.inReach) {
+    throw new UploadError("This is not one of the programmes you assess.", "not_permitted");
+  }
+
+  const stored = await acceptFile(session.organisationId, `feedback/${submissionId}`, file);
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .insert(feedbackAttachments)
+      .values({
+        organisationId: session.organisationId,
+        submissionId,
+        filename: stored.filename,
+        storageKey: stored.storageKey,
+        mimeType: stored.mimeType,
+        sizeBytes: stored.sizeBytes,
+        sha256: stored.sha256,
+        uploadedById: session.userId,
+      })
+      .returning();
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "assessment.feedback_file_added",
+      entityType: "assessment_submission",
+      entityId: submissionId,
+      after: { filename: stored.filename, sha256: stored.sha256 },
+    });
+
+    return row;
+  });
+}
+
+/** Removes a feedback file, by the person who may mark the work. */
+export async function removeFeedbackFile(session: AuthenticatedSession, attachmentId: string) {
+  assertSessionCan(session, "assessment:assess");
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(feedbackAttachments)
+      .where(eq(feedbackAttachments.id, attachmentId));
+    if (!row) throw new UploadError("No file here.", "not_found");
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "assessor"), row.submissionId))) {
+      throw new UploadError("This is not one of the programmes you assess.", "not_permitted");
+    }
+
+    await tx.delete(feedbackAttachments).where(eq(feedbackAttachments.id, attachmentId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "assessment.feedback_file_removed",
+      entityType: "assessment_submission",
+      entityId: row.submissionId,
+      before: { filename: row.filename },
+    });
+    return row.submissionId;
+  });
+}
+
+/**
+ * Serves a feedback file: to staff who may mark the work, or to the learner
+ * once the work has been returned to them, and not before.
+ */
+export async function readFeedbackFile(
+  session: AuthenticatedSession,
+  attachmentId: string,
+): Promise<ServableFile> {
+  const row = await withTenant(session.organisationId, async (tx) => {
+    const [found] = await tx
+      .select({
+        storageKey: feedbackAttachments.storageKey,
+        filename: feedbackAttachments.filename,
+        submissionId: feedbackAttachments.submissionId,
+        learnerId: assessmentSubmissions.userId,
+        status: assessmentSubmissions.status,
+      })
+      .from(feedbackAttachments)
+      .innerJoin(assessmentSubmissions, eq(assessmentSubmissions.id, feedbackAttachments.submissionId))
+      .where(eq(feedbackAttachments.id, attachmentId));
+    if (!found) return null;
+
+    const isLearner = found.learnerId === session.userId;
+    const returned = found.status === "finalised" || found.status === "moderated";
+    const staff =
+      !isLearner &&
+      can(session, "assessment:assess") &&
+      (await submissionInReach(tx, await reachWithin(tx, session, "assessor"), found.submissionId));
+    return { ...found, allowed: (isLearner && returned) || staff };
+  });
+
+  if (!row) throw new UploadError("No file here.", "not_found");
+  if (!row.allowed) throw new UploadError("That file is not available to you.", "not_permitted");
+
+  const bytes = await getObject(row.storageKey);
+  const detected = detectMedia(bytes, row.filename);
+  return {
+    bytes,
+    mimeType: detected.ok ? detected.mimeType : "application/octet-stream",
+    filename: row.filename,
+    safeToEmbed: detected.ok ? detected.safeToEmbed : false,
+  };
 }
 
 /**

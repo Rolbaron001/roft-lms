@@ -397,6 +397,13 @@ export const evidenceArtifacts = pgTable(
     criterionId: uuid("criterion_id").references(() => assessmentCriteria.id, {
       onDelete: "set null",
     }),
+    /**
+     * The question this file answers, where a paper asks for a file. Null for
+     * evidence handed in against the whole assessment.
+     */
+    itemId: uuid("item_id").references(() => assessmentItems.id, {
+      onDelete: "set null",
+    }),
 
     filename: text("filename").notNull(),
     storageKey: text("storage_key").notNull(),
@@ -433,6 +440,43 @@ export const evidenceArtifacts = pgTable(
     index("evidence_artifacts_logbook_entry_idx").on(t.logbookEntryId),
     index("evidence_artifacts_org_idx").on(t.organisationId),
     index("evidence_artifacts_sha256_idx").on(t.sha256),
+  ],
+);
+
+/**
+ * A file the assessor attaches to their feedback: a voice note, a short video
+ * or a marked-up document (Curiosa's evaluation checklist, 14 October 2026).
+ *
+ * Kept apart from evidence_artifacts, which is the learner's Portfolio of
+ * Evidence: an assessor's file is not evidence of the learner's competence and
+ * must not reach a moderation pack as if it were. The learner sees it once the
+ * work is returned to them.
+ */
+export const feedbackAttachments = pgTable(
+  "feedback_attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assessmentSubmissions.id, { onDelete: "cascade" }),
+    filename: text("filename").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    sha256: text("sha256").notNull(),
+    uploadedById: uuid("uploaded_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("feedback_attachments_submission_idx").on(t.submissionId),
+    index("feedback_attachments_org_idx").on(t.organisationId),
   ],
 );
 
@@ -1140,6 +1184,11 @@ export const itemResponses = pgTable(
     rubricLevels: jsonb("rubric_levels").$type<Record<string, string>>(),
     /** What the learner is told about this answer. */
     assessorComment: text("assessor_comment"),
+    /**
+     * Why the assessor changed the platform's mark, where they did. Optional,
+     * and kept beside both figures so a moderator reads the reason with them.
+     */
+    overrideReason: text("override_reason"),
     markedById: uuid("marked_by_id").references(() => users.id, {
       onDelete: "set null",
     }),

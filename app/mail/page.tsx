@@ -32,7 +32,14 @@ function when(value: Date, dates: string, day: DateWriter["day"]): string {
  * the address a recipient sees — n.mahlangu@acme.lms.roftbusiness.org, signed
  * with the domain's own DKIM key — not the address of the screen it is read on.
  */
-export default async function MailPage() {
+export default async function MailPage({
+  searchParams,
+}: {
+  // Opened from another screen with the message started, such as "Message
+  // the learner" on the marking screen.
+  searchParams: Promise<{ to?: string; subject?: string }>;
+}) {
+  const { to, subject } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
   const { t, dates, day } = await pageLocale();
@@ -67,7 +74,7 @@ export default async function MailPage() {
             {mailbox.unread > 0 ? ` · ${t("mailbox.unread", { count: mailbox.unread })}` : ""}
           </p>
         </div>
-        <Compose canSend={canSend} />
+        <Compose canSend={canSend} replyTo={to} subject={subject} />
       </div>
 
       {mailbox.messages.length === 0 ? (

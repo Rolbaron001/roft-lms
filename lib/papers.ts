@@ -12,8 +12,14 @@ import {
   assessments,
   captureJobs,
   courseSteps,
+  evidenceArtifacts,
+  feedbackAttachments,
+  formativeFeedback,
   itemResponses,
+  moderationRecords,
+  sectionFeedback,
 } from "@/db/schema";
+import { autoMark, platformMarks } from "./auto-mark";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { assertStepOpen, SpineError } from "./spine";
@@ -352,11 +358,33 @@ export type LearnerItem = {
   /** Options without any hint of which is correct. */
   options: { id: string; text: string }[] | null;
   points: number;
+  /** The left column of a matching item; the answers are `options`. */
+  matchPrompts: { id: string; text: string }[] | null;
   answer: {
     selectedOptionIds: string[] | null;
     answerText: string | null;
     answerNumber: string | null;
+    matchedPairs: Record<string, string> | null;
   };
+  /** Files the learner attached to this question. */
+  files: { id: string; filename: string; sizeBytes: number }[];
+  /**
+   * The mark and comment, once the work has been returned to the learner.
+   * Null until then, so nothing half-marked reaches them.
+   */
+  result: { awarded: number | null; comment: string | null; byPlatform: boolean } | null;
+};
+
+/** What comes back with the work once it is returned (job sheet D29). */
+export type ReturnedWork = {
+  comments: string | null;
+  marksAwarded: number;
+  marksAvailable: number;
+  returnedAt: Date | null;
+  sections: { title: string; comments: string }[];
+  attachments: { id: string; filename: string; mimeType: string }[];
+  /** For a summative, the assessor's decision. */
+  outcome: string | null;
 };
 
 export type LearnerSection = {
@@ -381,6 +409,10 @@ export type Sitting = {
   declarationText: string | null;
   sections: LearnerSection[];
   totalMarks: number;
+  /** The assessment's own instructions, shown before the first question. */
+  instructions: string | null;
+  /** Null until the work is returned. */
+  returned: ReturnedWork | null;
 };
 
 
@@ -405,16 +437,23 @@ function paperForAttempt<T>(papers: T[], attemptNumber: number, policy: string):
  *
  * Deliberately idempotent: a learner refreshing the page, or coming back the
  * next morning, resumes rather than starting again and losing what they had.
+ *
+ * Once an attempt is handed in, opening the paper shows that attempt, with its
+ * marks and feedback when they are returned. A new attempt starts only when
+ * the learner asks for one (`fresh`). Until 14 October 2026 opening a handed-in
+ * workbook started a blank attempt, so the learner never saw their answers or
+ * the facilitator's feedback again.
  */
 export async function startAttempt(
   session: AuthenticatedSession,
   assessmentId: string,
-  options: { enrolmentId?: string | null; invigilatorId?: string | null } = {},
-): Promise<Sitting> {
+  options: { enrolmentId?: string | null; invigilatorId?: string | null; fresh?: boolean } = {},
+): Promise<Sitting & { canStartAgain: boolean }> {
   // A gated assessment is refused here, not merely hidden on the page that
   // would have linked to it.
   await assertAssessmentStepOpen(session, assessmentId);
 
+  let canStartAgain = false;
   const submissionId = await withTenant(
     session.organisationId,
     async (tx) => {
@@ -464,65 +503,19 @@ export async function startAttempt(
       const inProgress = attempts.find((a) => a.status === "draft");
       if (inProgress) return inProgress.id;
 
-      if (await alreadyCompetent(tx, assessmentId, session.userId)) {
-        throw new PaperError(ALREADY_COMPETENT_MESSAGE, "closed");
+      // A handed-in attempt is shown rather than replaced, unless the learner
+      // asked to start again. Whether they may is worked out here, by the same
+      // rules that refuse a fresh attempt below.
+      if (!options.fresh && attempts.length > 0) {
+        const latest = attempts[0];
+        const settled = latest.status === "finalised" || latest.status === "moderated";
+        canStartAgain =
+          settled && (await refusalOfNewAttempt(tx, assessment, attempts, session.userId)) === null;
+        return latest.id;
       }
 
-      // Held, not failed.
-      //
-      // After two not-yet-competent results on a summative the learner does not
-      // simply run out of attempts. A programme review is convened with their
-      // employer, and only that review can open a third attempt — which is
-      // conducted orally, by an assessor, not sat here.
-      //
-      // The distinction matters at the point it is read: "you have used all
-      // your attempts" tells somebody their programme is over, and it is not.
-      if (assessment.purpose === "summative" && attempts.length > 0) {
-        const decisions = await tx
-          .select({
-            submissionId: assessmentDecisions.submissionId,
-            outcome: assessmentDecisions.outcome,
-          })
-          .from(assessmentDecisions)
-          .where(
-            inArray(
-              assessmentDecisions.submissionId,
-              attempts.map((attempt) => attempt.id),
-            ),
-          );
-
-        // The latest decision on each attempt: a referral back can produce a
-        // second decision on one attempt, and only the surviving one counts.
-        const latest = new Map<string, string>();
-        for (const decision of decisions) {
-          latest.set(decision.submissionId, decision.outcome);
-        }
-
-        const outcomes = [...latest.values()];
-        const failures = outcomes.filter(
-          (outcome) => outcome === "not_yet_competent",
-        ).length;
-
-        if (
-          !outcomes.includes("competent") &&
-          failures >= ATTEMPTS_BEFORE_REVIEW
-        ) {
-          throw new PaperError(
-            "This assessment is held while your progress is reviewed. Your facilitator arranges a discussion with your employer and any further attempt.",
-            "no_attempts_left",
-          );
-        }
-      }
-
-      if (
-        assessment.maxAttempts !== null &&
-        attempts.length >= assessment.maxAttempts
-      ) {
-        throw new PaperError(
-          `You have used all ${assessment.maxAttempts} attempts at this assessment. Contact your facilitator.`,
-          "no_attempts_left",
-        );
-      }
+      const refusal = await refusalOfNewAttempt(tx, assessment, attempts, session.userId);
+      if (refusal) throw refusal;
 
       const attemptNumber = attempts.length + 1;
       const paper = paperForAttempt(
@@ -562,7 +555,87 @@ export async function startAttempt(
     },
   );
 
-  return getSitting(session, submissionId);
+  return { ...(await getSitting(session, submissionId)), canStartAgain };
+}
+
+/**
+ * Why a new attempt may not start, or null when it may.
+ *
+ * One definition, used both to refuse a new attempt and to decide whether the
+ * page offers one.
+ */
+async function refusalOfNewAttempt(
+  tx: TenantDatabase,
+  assessment: { id: string; purpose: "formative" | "summative"; maxAttempts: number | null },
+  attempts: { id: string; status: string }[],
+  userId: string,
+): Promise<PaperError | null> {
+  if (await alreadyCompetent(tx, assessment.id, userId)) {
+    return new PaperError(ALREADY_COMPETENT_MESSAGE, "closed");
+  }
+
+  // The last one is still with the facilitator or assessor, undecided.
+  if (attempts.some((attempt) => attempt.status === "submitted")) {
+    return new PaperError("Your last attempt is still being marked.", "closed");
+  }
+
+  // Held, not failed.
+  //
+  // After two not-yet-competent results on a summative the learner does not
+  // simply run out of attempts. A programme review is convened with their
+  // employer, and only that review can open a third attempt — which is
+  // conducted orally, by an assessor, not sat here.
+  //
+  // The distinction matters at the point it is read: "you have used all
+  // your attempts" tells somebody their programme is over, and it is not.
+  if (assessment.purpose === "summative" && attempts.length > 0) {
+    const decisions = await tx
+      .select({
+        submissionId: assessmentDecisions.submissionId,
+        outcome: assessmentDecisions.outcome,
+      })
+      .from(assessmentDecisions)
+      .where(
+        inArray(
+          assessmentDecisions.submissionId,
+          attempts.map((attempt) => attempt.id),
+        ),
+      );
+
+    // The latest decision on each attempt: a referral back can produce a
+    // second decision on one attempt, and only the surviving one counts.
+    const latest = new Map<string, string>();
+    for (const decision of decisions) {
+      latest.set(decision.submissionId, decision.outcome);
+    }
+
+    const outcomes = [...latest.values()];
+    const failures = outcomes.filter(
+      (outcome) => outcome === "not_yet_competent",
+    ).length;
+
+    if (
+      !outcomes.includes("competent") &&
+      failures >= ATTEMPTS_BEFORE_REVIEW
+    ) {
+      return new PaperError(
+        "This assessment is held while your progress is reviewed. Your facilitator arranges a discussion with your employer and any further attempt.",
+        "no_attempts_left",
+      );
+    }
+  }
+
+  if (
+    assessment.maxAttempts !== null &&
+    attempts.length >= assessment.maxAttempts
+  ) {
+    return new PaperError(
+      `You have used all ${assessment.maxAttempts} attempts at this assessment. Contact your facilitator.`,
+      "no_attempts_left",
+    );
+  }
+
+  return null;
 }
 
 /** The paper as presented, so an edit next month cannot change what was sat. */
@@ -599,6 +672,7 @@ async function freezePaper(tx: TenantDatabase, paperId: string) {
           type: item.type,
           stem: item.stem,
           options: item.options,
+          matchPrompts: item.matchPrompts,
           points: item.points,
         })),
     })),
@@ -657,6 +731,7 @@ export async function getSitting(
               type: assessmentItems.type,
               stem: assessmentItems.stem,
               options: assessmentItems.options,
+              matchPrompts: assessmentItems.matchPrompts,
               points: assessmentItems.points,
               sortOrder: assessmentItems.sortOrder,
             })
@@ -675,6 +750,19 @@ export async function getSitting(
       .where(eq(itemResponses.submissionId, submissionId));
 
     const answerByItem = new Map(answers.map((row) => [row.itemId, row]));
+
+    const files = await tx
+      .select({
+        id: evidenceArtifacts.id,
+        itemId: evidenceArtifacts.itemId,
+        filename: evidenceArtifacts.filename,
+        sizeBytes: evidenceArtifacts.sizeBytes,
+      })
+      .from(evidenceArtifacts)
+      .where(eq(evidenceArtifacts.submissionId, submissionId))
+      .orderBy(asc(evidenceArtifacts.uploadedAt));
+
+    const returned = await returnedWork(tx, submission, assessment.purpose);
 
     const closesAt =
       submission.startedAt && assessment.timeLimitMinutes
@@ -713,17 +801,113 @@ export async function getSitting(
               type: item.type,
               stem: item.stem,
               options: item.options,
+              matchPrompts: item.matchPrompts ?? null,
               points: item.points,
               answer: {
                 selectedOptionIds: answer?.selectedOptionIds ?? null,
                 answerText: answer?.answerText ?? null,
                 answerNumber: answer?.answerNumber ?? null,
+                matchedPairs: answer?.matchedPairs ?? null,
               },
+              files: files
+                .filter((file) => file.itemId === item.id)
+                .map(({ id, filename, sizeBytes }) => ({ id, filename, sizeBytes })),
+              result: returned
+                ? {
+                    awarded:
+                      answer?.awardedMarks !== null && answer?.awardedMarks !== undefined
+                        ? Number(answer.awardedMarks)
+                        : null,
+                    comment: answer?.assessorComment ?? null,
+                    byPlatform: answer?.autoMarks != null && answer?.markedById == null,
+                  }
+                : null,
             };
           }),
       })),
+      instructions: assessment.instructions ?? null,
+      returned,
     };
   });
+}
+
+/**
+ * The feedback that comes back with the work, or null while it is still with
+ * the facilitator or assessor.
+ *
+ * A workbook is returned when the facilitator returns it. A summative is
+ * returned when the decision is settled: finalised, or confirmed by a
+ * moderator. Nothing half-marked reaches the learner.
+ */
+async function returnedWork(
+  tx: TenantDatabase,
+  submission: { id: string; status: string },
+  purpose: "formative" | "summative",
+): Promise<ReturnedWork | null> {
+  if (submission.status !== "finalised" && submission.status !== "moderated") return null;
+
+  const [feedback] = await tx
+    .select()
+    .from(formativeFeedback)
+    .where(eq(formativeFeedback.submissionId, submission.id));
+
+  let outcome: string | null = null;
+  if (purpose === "summative") {
+    const decisions = await tx
+      .select({
+        outcome: assessmentDecisions.outcome,
+        comments: assessmentDecisions.comments,
+        moderationOutcome: moderationRecords.outcome,
+        revisedOutcome: moderationRecords.revisedOutcome,
+      })
+      .from(assessmentDecisions)
+      .leftJoin(moderationRecords, eq(moderationRecords.decisionId, assessmentDecisions.id))
+      .where(eq(assessmentDecisions.submissionId, submission.id))
+      .orderBy(desc(assessmentDecisions.signedAt))
+      .limit(1);
+    const latest = decisions[0];
+    if (!latest) return null;
+    outcome =
+      latest.moderationOutcome === "overridden" && latest.revisedOutcome
+        ? latest.revisedOutcome
+        : latest.outcome;
+  } else if (!feedback) {
+    return null;
+  }
+
+  const sections = await tx
+    .select({ title: assessmentSections.title, comments: sectionFeedback.comments })
+    .from(sectionFeedback)
+    .innerJoin(assessmentSections, eq(assessmentSections.id, sectionFeedback.sectionId))
+    .where(eq(sectionFeedback.submissionId, submission.id))
+    .orderBy(asc(assessmentSections.sortOrder));
+
+  const attachments = await tx
+    .select({
+      id: feedbackAttachments.id,
+      filename: feedbackAttachments.filename,
+      mimeType: feedbackAttachments.mimeType,
+    })
+    .from(feedbackAttachments)
+    .where(eq(feedbackAttachments.submissionId, submission.id))
+    .orderBy(asc(feedbackAttachments.uploadedAt));
+
+  const marks = await tx
+    .select({ awarded: itemResponses.awardedMarks })
+    .from(itemResponses)
+    .where(eq(itemResponses.submissionId, submission.id));
+
+  return {
+    comments: feedback?.comments ?? null,
+    marksAwarded: feedback
+      ? Number(feedback.marksAwarded ?? 0)
+      : marks.reduce((sum, row) => sum + Number(row.awarded ?? 0), 0),
+    marksAvailable: Number(feedback?.marksAvailable ?? 0),
+    returnedAt: feedback?.returnedAt ?? null,
+    sections,
+    attachments,
+    outcome,
+  };
 }
 
 /**
@@ -740,6 +924,7 @@ export async function saveAnswer(
     selectedOptionIds?: string[];
     answerText?: string;
     answerNumber?: number;
+    matchedPairs?: Record<string, string>;
   },
 ): Promise<{ savedAt: Date }> {
   return withTenant(session.organisationId, async (tx) => {
@@ -777,8 +962,14 @@ export async function saveAnswer(
     }
 
     // An item may hold one kind of answer. Clearing the others means switching
-    // from a typed answer to a chosen one does not leave both behind.
+    // from a typed answer to a chosen one does not leave both behind. True or
+    // false with a justification is the exception: it holds a choice and the
+    // reason for it, so the form sends both together.
+    const pairs = Object.fromEntries(
+      Object.entries(input.matchedPairs ?? {}).filter(([, option]) => option !== ""),
+    );
     const values = {
+      matchedPairs: Object.keys(pairs).length > 0 ? pairs : null,
       selectedOptionIds: input.selectedOptionIds ?? null,
       answerText:
         input.answerText !== undefined && input.answerText.trim() !== ""
@@ -861,39 +1052,16 @@ export async function submitAttempt(
     const declaration =
       assessment.declarationText?.trim() || DEFAULT_DECLARATION;
 
-    const items = await tx
-      .select({ id: assessmentItems.id })
-      .from(assessmentItems)
-      .where(
-        submission.paperId
-          ? inArray(
-              assessmentItems.sectionId,
-              (
-                await tx
-                  .select({ id: assessmentSections.id })
-                  .from(assessmentSections)
-                  .where(eq(assessmentSections.paperId, submission.paperId))
-              ).map((section) => section.id),
-            )
-          : eq(assessmentItems.assessmentId, submission.assessmentId),
-      );
+    const { unanswered } = await markOnHandIn(tx, session.organisationId, submission);
 
-    const answers = await tx
-      .select({ itemId: itemResponses.itemId })
-      .from(itemResponses)
-      .where(eq(itemResponses.submissionId, input.submissionId));
-
-    const answered = new Set(answers.map((row) => row.itemId));
-    const unanswered = items.filter((item) => !answered.has(item.id)).length;
-
-    // A summative decision is a person's judgement. A formative paper has no
-    // decision to wait for, so handing it in finishes it.
-    const awaitingAssessor = assessment.purpose === "summative";
-
+    // A summative waits for an assessor's decision, and a workbook for the
+    // facilitator to check the platform's marks, mark the rest and return it.
+    // Until 14 October 2026 a workbook was finished the moment it was handed
+    // in, so it reached nobody's list and the learner never had it back.
     await tx
       .update(assessmentSubmissions)
       .set({
-        status: awaitingAssessor ? "submitted" : "finalised",
+        status: "submitted",
         submittedAt: new Date(),
         submittedIp: input.ipAddress ?? null,
         submittedUserAgent: input.userAgent ?? null,
@@ -952,10 +1120,13 @@ export async function closeExpiredAttempt(
       submission.startedAt.getTime() + assessment.timeLimitMinutes * 60_000;
     if (Date.now() <= closesAt) return false;
 
+    await markOnHandIn(tx, session.organisationId, submission);
+
     await tx
       .update(assessmentSubmissions)
       .set({
-        status: assessment.purpose === "summative" ? "submitted" : "finalised",
+        // To a person, as a paper handed in on time is: see submitAttempt.
+        status: "submitted",
         submittedAt: new Date(closesAt),
         declarationText:
           assessment.declarationText?.trim() || DEFAULT_DECLARATION,
@@ -978,6 +1149,84 @@ export async function closeExpiredAttempt(
 
     return true;
   });
+}
+
+/**
+ * Marks what the platform can mark, as a paper is handed in.
+ *
+ * Each selected-response and matching question gets the platform's mark in
+ * `auto_marks` and, as the starting figure, in `awarded_marks` with no marker,
+ * which is how the marking screen tells the platform's mark from a person's.
+ * An assessor who changes it is recorded as having done so, with the platform's
+ * figure kept beside theirs. Written answers, files and true or false with a
+ * justification are left for a person.
+ */
+async function markOnHandIn(
+  tx: TenantDatabase,
+  organisationId: string,
+  submission: { id: string; paperId: string | null; assessmentId: string },
+): Promise<{ unanswered: number }> {
+  const sectionIds = submission.paperId
+    ? (
+        await tx
+          .select({ id: assessmentSections.id })
+          .from(assessmentSections)
+          .where(eq(assessmentSections.paperId, submission.paperId))
+      ).map((section) => section.id)
+    : [];
+
+  const items = await tx
+    .select({
+      id: assessmentItems.id,
+      type: assessmentItems.type,
+      points: assessmentItems.points,
+      correctOptionIds: assessmentItems.correctOptionIds,
+      correctMatches: assessmentItems.correctMatches,
+    })
+    .from(assessmentItems)
+    .where(
+      sectionIds.length > 0
+        ? inArray(assessmentItems.sectionId, sectionIds)
+        : eq(assessmentItems.assessmentId, submission.assessmentId),
+    );
+
+  const answers = await tx
+    .select()
+    .from(itemResponses)
+    .where(eq(itemResponses.submissionId, submission.id));
+  const answerByItem = new Map(answers.map((row) => [row.itemId, row]));
+
+  const files = await tx
+    .select({ itemId: evidenceArtifacts.itemId })
+    .from(evidenceArtifacts)
+    .where(eq(evidenceArtifacts.submissionId, submission.id));
+  const withFiles = new Set(files.map((file) => file.itemId));
+
+  let unanswered = 0;
+  for (const item of items) {
+    const answer = answerByItem.get(item.id);
+    if (!answer && !withFiles.has(item.id)) unanswered += 1;
+
+    const marks = autoMark(item, answer ?? undefined);
+    if (marks === null) continue;
+
+    const values = {
+      autoMarks: marks.toFixed(2),
+      awardedMarks: marks.toFixed(2),
+      markedById: null,
+      markedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await tx
+      .insert(itemResponses)
+      .values({ organisationId, submissionId: submission.id, itemId: item.id, ...values })
+      .onConflictDoUpdate({
+        target: [itemResponses.submissionId, itemResponses.itemId],
+        set: values,
+      });
+  }
+
+  return { unanswered };
 }
 
 /** Refuses when the assessment sits on a spine and its step is not open. */
@@ -1120,16 +1369,14 @@ export async function previewPaper(
            * checkable and the reasoning is not, and the marks are for the
            * reasoning.
            */
-          const markedBy =
-            item.correctOptionIds && item.correctOptionIds.length > 0
-              ? ("app" as const)
-              : ("assessor" as const);
+          const markedBy = platformMarks(item) ? ("app" as const) : ("assessor" as const);
 
           return {
             id: item.id,
             type: item.type,
             stem: item.stem,
             options: item.options ?? null,
+            matchPrompts: item.matchPrompts ?? null,
             points: item.points,
             // Empty, always. A preview has nothing to resume and nothing to
             // save; the form it feeds is disabled throughout.
@@ -1137,7 +1384,10 @@ export async function previewPaper(
               selectedOptionIds: null,
               answerText: null,
               answerNumber: null,
+              matchedPairs: null,
             },
+            files: [],
+            result: null,
             correctOptionIds: item.correctOptionIds ?? null,
             markingGuide: item.markingGuide,
             markedBy,

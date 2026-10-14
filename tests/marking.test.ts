@@ -14,8 +14,12 @@ import { withPlatformScope, withTenant } from "@/db/client";
 import {
   assessmentCriteria,
   assessmentDecisions,
+  assessmentSubmissions,
+  auditLog,
   curriculumModules,
   formativeFeedback,
+  itemResponses,
+  notifications,
   organisations,
   qualifications,
   rubricDescriptors,
@@ -31,6 +35,7 @@ import { assignStaffEverywhere, withStaffAssigned } from "./helpers/assign-staff
 const createCourse = withStaffAssigned(createCourseUnassigned);
 import {
   createAssessment,
+  listAssessorQueue,
   publishAssessment,
   recordAssessorDecision,
   AssessmentError,
@@ -707,10 +712,83 @@ describe("returning a workbook", () => {
     ).rejects.toThrow(/Write feedback for the learner/);
   });
 
+  /** A learner receives a whole result, never a half-marked one. */
+  it("refuses to return a workbook with questions unmarked", async () => {
+    const { assessmentId, itemIds } = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(assessmentId);
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 6 });
+
+    await expect(
+      returnFeedback(assessor, { submissionId, comments: "Good work on the first question." }),
+    ).rejects.toThrow(/Mark every question/);
+  });
+
+  /**
+   * Returning takes it off the list and tells the learner. Until 14 October
+   * 2026 a returned workbook stayed on the facilitator's list for good.
+   */
+  it("takes it off the list and tells the learner", async () => {
+    const { assessmentId, itemIds } = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(assessmentId);
+    await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 6 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 7 });
+
+    await returnFeedback(assessor, { submissionId, comments: "Sound throughout. Revise the second part." });
+
+    const [row] = await withTenant(organisationId, (tx) =>
+      tx.select().from(assessmentSubmissions).where(eq(assessmentSubmissions.id, submissionId)),
+    );
+    expect(row.status).toBe("finalised");
+    expect((await listAssessorQueue(assessor)).some((one) => one.submissionId === submissionId)).toBe(false);
+
+    const told = await withTenant(organisationId, (tx) =>
+      tx.select().from(notifications).where(eq(notifications.entityId, submissionId)),
+    );
+    expect(told.some((one) => one.kind === "assessment.feedback_returned" && one.userId === learner.userId)).toBe(true);
+  });
+
+  /**
+   * A change to the platform's mark keeps both figures and the reason, and is
+   * written to the audit log for a moderator.
+   */
+  it("keeps the platform's mark and the reason when a person changes it", async () => {
+    const { assessmentId, itemIds } = await buildPaper("formative");
+    const submissionId = await sitAndSubmit(assessmentId);
+    await withTenant(organisationId, (tx) =>
+      tx
+        .insert(itemResponses)
+        .values({ organisationId, submissionId, itemId: itemIds[0], autoMarks: "0.00", awardedMarks: "0.00" })
+        .onConflictDoUpdate({
+          target: [itemResponses.submissionId, itemResponses.itemId],
+          set: { autoMarks: "0.00", awardedMarks: "0.00", markedById: null },
+        }),
+    );
+
+    await markItem(assessor, {
+      submissionId,
+      itemId: itemIds[0],
+      marks: 10,
+      overrideReason: "A valid alternative answer.",
+    });
+
+    const paper = await getMarkedPaper(assessor, submissionId);
+    const item = paper.items.find((one) => one.itemId === itemIds[0])!;
+    expect(item.autoMarks).toBe(0);
+    expect(item.awarded).toBe(10);
+    expect(item.byPlatform).toBe(false);
+    expect(item.overrideReason).toBe("A valid alternative answer.");
+
+    const logged = await withTenant(organisationId, (tx) =>
+      tx.select().from(auditLog).where(eq(auditLog.entityId, submissionId)),
+    );
+    expect(logged.some((one) => one.action === "assessment.mark_overridden")).toBe(true);
+  });
+
   it("writes nothing a decision could be mistaken for", async () => {
     const { assessmentId, itemIds } = await buildPaper("formative");
     const submissionId = await sitAndSubmit(assessmentId);
     await markItem(assessor, { submissionId, itemId: itemIds[0], marks: 10 });
+    await markItem(assessor, { submissionId, itemId: itemIds[1], marks: 10 });
 
     await returnFeedback(assessor, {
       submissionId,

@@ -8,14 +8,18 @@ import {
   assessmentSections,
   assessmentSubmissions,
   assessments,
+  evidenceArtifacts,
+  feedbackAttachments,
   formativeFeedback,
   sectionFeedback,
   itemResponses,
   rubricDescriptors,
   rubricDimensions,
   rubricLevels,
+  users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { coursesWithin, reachWithin, submissionCourse, submissionInReach } from "./staff-scope";
 
@@ -61,6 +65,8 @@ export type MarkItemInput = {
   /** An explicit mark, which overrides whatever the rubric suggests. */
   marks?: number;
   comment?: string;
+  /** Why the platform's mark was changed, where it was. Optional. */
+  overrideReason?: string;
 };
 
 /**
@@ -136,10 +142,24 @@ export async function markItem(
       );
     }
 
+    const [existing] = await tx
+      .select({ autoMarks: itemResponses.autoMarks, awardedMarks: itemResponses.awardedMarks })
+      .from(itemResponses)
+      .where(
+        and(eq(itemResponses.submissionId, input.submissionId), eq(itemResponses.itemId, input.itemId)),
+      );
+
+    // A departure from the platform's mark is recorded with the reason, so a
+    // moderator reads both figures and why they differ.
+    const platform = existing?.autoMarks != null ? Number(existing.autoMarks) : null;
+    const departs = platform !== null && platform !== marks;
+    const reason = input.overrideReason?.trim() || null;
+
     const values = {
       awardedMarks: marks.toFixed(2),
       rubricLevels: input.rubricLevels ?? null,
       assessorComment: input.comment?.trim() || null,
+      overrideReason: departs ? reason : null,
       markedById: session.userId,
       markedAt: new Date(),
       updatedAt: new Date(),
@@ -157,6 +177,19 @@ export async function markItem(
         target: [itemResponses.submissionId, itemResponses.itemId],
         set: values,
       });
+
+    const before = existing?.awardedMarks != null ? Number(existing.awardedMarks) : null;
+    if (departs && before !== marks) {
+      await recordAudit(tx, {
+        organisationId: session.organisationId,
+        actorId: session.userId,
+        action: "assessment.mark_overridden",
+        entityType: "assessment_submission",
+        entityId: input.submissionId,
+        before: { itemId: input.itemId, platform, marks: before },
+        after: { itemId: input.itemId, marks, reason },
+      });
+    }
 
     return { marks };
   });
@@ -243,6 +276,22 @@ export type MarkedItem = {
   correctOptionIds: string[] | null;
   rubricId: string | null;
   chosenLevels: Record<string, string> | null;
+
+  type: string;
+  /** What the platform awarded at hand-in, where it marks this question. */
+  autoMarks: number | null;
+  /** The mark standing is the platform's, untouched by a person. */
+  byPlatform: boolean;
+  overrideReason: string | null;
+  /** The feedback written for a right and a wrong answer, where there is any. */
+  feedbackCorrect: string | null;
+  feedbackIncorrect: string | null;
+  matchPrompts: { id: string; text: string }[] | null;
+  correctMatches: Record<string, string> | null;
+  matchedPairs: Record<string, string> | null;
+  answerNumber: string | null;
+  /** Files the learner attached to this question. */
+  files: { id: string; filename: string; mimeType: string; sizeBytes: number }[];
 };
 
 export type MarkedPaper = {
@@ -270,6 +319,17 @@ export type MarkedPaper = {
   passMark: number;
   /** Every question has a mark. Until then nothing may be decided. */
   fullyMarked: boolean;
+
+  status: string;
+  learnerName: string;
+  /** Returned to the learner already (a workbook) or decided (a summative). */
+  returned: boolean;
+  /** The overall feedback as last saved, to edit before it goes back. */
+  feedbackComments: string | null;
+  /** Files the assessor has attached to the feedback. */
+  attachments: { id: string; filename: string; mimeType: string; sizeBytes: number }[];
+  /** Files the learner handed in against the whole assessment. */
+  evidence: { id: string; filename: string; mimeType: string; sizeBytes: number }[];
 };
 
 export async function getMarkedPaper(
@@ -358,6 +418,18 @@ async function readMarkedPaper(
             ),
           );
 
+  const files = await tx
+    .select({
+      id: evidenceArtifacts.id,
+      itemId: evidenceArtifacts.itemId,
+      filename: evidenceArtifacts.filename,
+      mimeType: evidenceArtifacts.mimeType,
+      sizeBytes: evidenceArtifacts.sizeBytes,
+    })
+    .from(evidenceArtifacts)
+    .where(eq(evidenceArtifacts.submissionId, submissionId))
+    .orderBy(asc(evidenceArtifacts.uploadedAt));
+
   const marked: MarkedItem[] = items.map((item) => {
     const response = byItem.get(item.id);
     const linked = links
@@ -365,6 +437,19 @@ async function readMarkedPaper(
       .map((link) => link.criterionId);
 
     return {
+      type: item.type,
+      autoMarks: response?.autoMarks != null ? Number(response.autoMarks) : null,
+      byPlatform: response?.autoMarks != null && response.markedById == null,
+      overrideReason: response?.overrideReason ?? null,
+      feedbackCorrect: item.feedbackCorrect,
+      feedbackIncorrect: item.feedbackIncorrect,
+      matchPrompts: item.matchPrompts ?? null,
+      correctMatches: item.correctMatches ?? null,
+      matchedPairs: response?.matchedPairs ?? null,
+      answerNumber: response?.answerNumber ?? null,
+      files: files
+        .filter((file) => file.itemId === item.id)
+        .map(({ id, filename, mimeType, sizeBytes }) => ({ id, filename, mimeType, sizeBytes })),
       itemId: item.id,
       sectionId: item.sectionId ?? null,
       stem: item.stem,
@@ -391,7 +476,36 @@ async function readMarkedPaper(
   const marksAvailable = marked.reduce((sum, item) => sum + item.points, 0);
   const marksAwarded = marked.reduce((sum, item) => sum + (item.awarded ?? 0), 0);
 
+  const [learner] = await tx
+    .select({ firstName: users.firstName, lastName: users.lastName })
+    .from(users)
+    .where(eq(users.id, submission.userId));
+
+  const [feedback] = await tx
+    .select({ comments: formativeFeedback.comments })
+    .from(formativeFeedback)
+    .where(eq(formativeFeedback.submissionId, submissionId));
+
+  const attachments = await tx
+    .select({
+      id: feedbackAttachments.id,
+      filename: feedbackAttachments.filename,
+      mimeType: feedbackAttachments.mimeType,
+      sizeBytes: feedbackAttachments.sizeBytes,
+    })
+    .from(feedbackAttachments)
+    .where(eq(feedbackAttachments.submissionId, submissionId))
+    .orderBy(asc(feedbackAttachments.uploadedAt));
+
   return {
+    status: submission.status,
+    learnerName: learner ? `${learner.firstName} ${learner.lastName}` : "",
+    returned: submission.status === "finalised" || submission.status === "moderated",
+    feedbackComments: feedback?.comments ?? null,
+    attachments,
+    evidence: files
+      .filter((file) => file.itemId === null)
+      .map(({ id, filename, mimeType, sizeBytes }) => ({ id, filename, mimeType, sizeBytes })),
     submissionId,
     purpose: assessment.purpose,
     assessmentTitle: assessment.title,
@@ -545,6 +659,14 @@ export async function returnFeedback(
     if (paper.learnerId === session.userId) {
       throw new MarkingError("You cannot mark your own work.", "not_permitted");
     }
+    // Only on a programme this person assesses (lib/staff-scope.ts).
+    if (!(await submissionInReach(tx, await reachWithin(tx, session, "assessor"), input.submissionId))) {
+      throw new MarkingError("This is not one of the programmes you assess.", "not_permitted");
+    }
+    // The learner receives a whole result, never a half-marked one.
+    if (!paper.fullyMarked) {
+      throw new MarkingError("Mark every question before returning it.", "invalid");
+    }
 
     const [returned] = await tx
       .insert(formativeFeedback)
@@ -580,6 +702,32 @@ export async function returnFeedback(
         marks: `${paper.marksAwarded} of ${paper.marksAvailable}`,
         criteriaOfConcern: input.criteriaOfConcern ?? [],
       },
+    });
+
+    // Returned: off the facilitator's list, and the learner sees the marks,
+    // comments and files from now on (job sheet D29).
+    const [submission] = await tx
+      .update(assessmentSubmissions)
+      .set({ status: "finalised" })
+      .where(eq(assessmentSubmissions.id, input.submissionId))
+      .returning({
+        assessmentId: assessmentSubmissions.assessmentId,
+        enrolmentId: assessmentSubmissions.enrolmentId,
+      });
+
+    await raise(tx, {
+      organisationId: session.organisationId,
+      userId: paper.learnerId,
+      kind: "assessment.feedback_returned",
+      subject: `Your workbook "${paper.assessmentTitle}" has been returned`,
+      body: `${paper.marksAwarded} of ${paper.marksAvailable} marks. Open it to read the feedback on each question.`,
+      linkPath: submission.enrolmentId
+        ? `/learn/${submission.enrolmentId}/paper/${submission.assessmentId}`
+        : undefined,
+      entityType: "assessment_submission",
+      entityId: input.submissionId,
+      dedupeKey: `feedback:${returned.id}:${returned.returnedAt.getTime()}`,
+      channels: ["in_app", "email"],
     });
 
     return returned;
@@ -855,7 +1003,7 @@ export async function markingQueue(session: AuthenticatedSession) {
 export type RubricView = {
   id: string;
   title: string;
-  dimensions: { id: string; title: string }[];
+  dimensions: { id: string; title: string; weight: number }[];
   levels: { id: string; label: string; minPercent: number; maxPercent: number }[];
   /** Cell text, keyed "dimensionId:levelId". */
   descriptors: Record<string, string>;
@@ -899,7 +1047,7 @@ export async function rubricsForPaper(
       out[id] = {
         id,
         title: "Marking matrix",
-        dimensions: ownDimensions.map((d) => ({ id: d.id, title: d.title })),
+        dimensions: ownDimensions.map((d) => ({ id: d.id, title: d.title, weight: d.weight })),
         levels: ownLevels.map((l) => ({
           id: l.id,
           label: l.label,

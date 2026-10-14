@@ -45,6 +45,8 @@ export type NotificationKind =
   | "moderation.waiting"
   | "assessment.referred_back"
   | "assessment.decided"
+  /** To the learner: their workbook is marked and back with them (14 October 2026). */
+  | "assessment.feedback_returned"
   | "certificate.issued"
   | "programme.step_unlocked"
   | "course.new_version"

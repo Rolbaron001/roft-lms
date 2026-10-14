@@ -20,6 +20,15 @@ export async function POST(request: Request) {
         typeof body.answerNumber === "number" && Number.isFinite(body.answerNumber)
           ? body.answerNumber
           : undefined,
+      matchedPairs:
+        body.matchedPairs && typeof body.matchedPairs === "object" && !Array.isArray(body.matchedPairs)
+          ? Object.fromEntries(
+              Object.entries(body.matchedPairs as Record<string, unknown>).map(([prompt, option]) => [
+                prompt,
+                String(option ?? ""),
+              ]),
+            )
+          : undefined,
     });
 
     return Response.json({ ok: true, savedAt: saved.savedAt });

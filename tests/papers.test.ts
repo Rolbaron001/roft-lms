@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { withPlatformScope, withTenant } from "@/db/client";
 import {
   assessmentSubmissions,
+  itemResponses,
   competencies,
   competencyFrameworks,
   organisations,
@@ -80,6 +81,16 @@ async function createPerson(email: string, roles: Role[]) {
 
 function suffix() {
   return Math.random().toString(36).slice(2, 8);
+}
+
+/** As if the facilitator had marked the attempt and returned it. */
+async function returned(submissionId: string) {
+  await withTenant(organisationId, (tx) =>
+    tx
+      .update(assessmentSubmissions)
+      .set({ status: "finalised" })
+      .where(eq(assessmentSubmissions.id, submissionId)),
+  );
 }
 
 /**
@@ -399,7 +410,7 @@ describe("handing in", () => {
 
     expect(row.declarationAcceptedAt).not.toBeNull();
     expect(row.declarationText).toContain("my own work");
-    expect(row.status).toBe("finalised");
+    expect(row.status).toBe("submitted");
   });
 
   it("counts what was left blank without refusing it", async () => {
@@ -422,6 +433,64 @@ describe("handing in", () => {
     expect(result.unanswered).toBe(12);
   });
 
+  /**
+   * The platform marks what it can as the paper is handed in: a chosen answer
+   * against the key, kept as the platform's mark with no marker, and leaves
+   * written answers to a person.
+   */
+  it("marks the chosen answers and leaves the written ones", async () => {
+    const { assessmentId } = await buildWorkbook();
+    const sitting = await startAttempt(learner, assessmentId);
+    const [right, wrong] = sitting.sections[0].items;
+    const written = sitting.sections[2].items[0];
+
+    await saveAnswer(learner, { submissionId: sitting.submissionId, itemId: right.id, selectedOptionIds: [right.options![1].id] });
+    await saveAnswer(learner, { submissionId: sitting.submissionId, itemId: wrong.id, selectedOptionIds: [wrong.options![0].id] });
+    await saveAnswer(learner, { submissionId: sitting.submissionId, itemId: written.id, answerText: "A considered answer." });
+    await submitAttempt(learner, { submissionId: sitting.submissionId, declarationAccepted: true });
+
+    const rows = await withTenant(organisationId, (tx) =>
+      tx.select().from(itemResponses).where(eq(itemResponses.submissionId, sitting.submissionId)),
+    );
+    const of = (itemId: string) => rows.find((row) => row.itemId === itemId);
+
+    expect(Number(of(right.id)!.autoMarks)).toBe(1);
+    expect(Number(of(right.id)!.awardedMarks)).toBe(1);
+    expect(of(right.id)!.markedById).toBeNull();
+    expect(Number(of(wrong.id)!.awardedMarks)).toBe(0);
+    expect(of(written.id)!.autoMarks).toBeNull();
+    expect(of(written.id)!.awardedMarks).toBeNull();
+    // A chosen-answer question left blank is marked nought, not left open.
+    const blank = sitting.sections[1].items[0];
+    expect(Number(of(blank.id)!.awardedMarks)).toBe(0);
+
+    // Nothing reaches the learner until the work is returned.
+    expect((await getSitting(learner, sitting.submissionId)).returned).toBeNull();
+    expect((await getSitting(learner, sitting.submissionId)).sections[0].items[0].result).toBeNull();
+  });
+
+  /**
+   * True or false with a justification holds the choice and the reason
+   * together. A database rule refused the pairing until 14 October 2026, so a
+   * justification could never be saved.
+   */
+  it("keeps a choice and its justification together", async () => {
+    const { assessmentId } = await buildWorkbook();
+    const sitting = await startAttempt(learner, assessmentId);
+    const item = sitting.sections[1].items[0];
+
+    await saveAnswer(learner, {
+      submissionId: sitting.submissionId,
+      itemId: item.id,
+      selectedOptionIds: [item.options![1].id],
+      answerText: "Because the key says so.",
+    });
+
+    const resumed = await getSitting(learner, sitting.submissionId);
+    expect(resumed.sections[1].items[0].answer.selectedOptionIds).toEqual([item.options![1].id]);
+    expect(resumed.sections[1].items[0].answer.answerText).toBe("Because the key says so.");
+  });
+
   it("refuses to change a paper already handed in", async () => {
     const { assessmentId } = await buildWorkbook();
     const sitting = await startAttempt(learner, assessmentId);
@@ -441,8 +510,12 @@ describe("handing in", () => {
     ).rejects.toThrow(/already been handed in/);
   });
 
-  /** A summative waits for a person; a workbook has nobody to wait for. */
-  it("sends a summative to an assessor and finishes a workbook", async () => {
+  /**
+   * A summative waits for an assessor, and a workbook for the facilitator to
+   * mark it and return it. Until 14 October 2026 a workbook was finished on
+   * hand-in, so it reached nobody's list.
+   */
+  it("sends a summative and a workbook to a person", async () => {
     const workbook = await buildWorkbook({ purpose: "formative" });
     const summative = await buildWorkbook({ purpose: "summative" });
 
@@ -452,7 +525,7 @@ describe("handing in", () => {
       declarationAccepted: true,
     });
     expect((await getSitting(learner, one.submissionId)).status).toBe(
-      "finalised",
+      "submitted",
     );
 
     const two = await startAttempt(learner, summative.assessmentId);
@@ -511,7 +584,7 @@ describe("the clock", () => {
     expect(await closeExpiredAttempt(learner, sitting.submissionId)).toBe(true);
 
     const after = await getSitting(learner, sitting.submissionId);
-    expect(after.status).toBe("finalised");
+    expect(after.status).toBe("submitted");
     // The answer given before the clock ran out survived.
     expect(after.sections[0].items[0].answer.selectedOptionIds).toEqual([
       item.options![1].id,
@@ -565,8 +638,9 @@ describe("attempts and papers", () => {
       submissionId: first.submissionId,
       declarationAccepted: true,
     });
+    await returned(first.submissionId);
 
-    const second = await startAttempt(learner, assessmentId);
+    const second = await startAttempt(learner, assessmentId, { fresh: true });
     expect(second.paperCode).toBe("V2");
     expect(second.attemptNumber).toBe(2);
   });
@@ -579,10 +653,32 @@ describe("attempts and papers", () => {
       submissionId: first.submissionId,
       declarationAccepted: true,
     });
+    await returned(first.submissionId);
 
-    await expect(startAttempt(learner, assessmentId)).rejects.toThrow(
+    expect((await startAttempt(learner, assessmentId)).canStartAgain).toBe(false);
+    await expect(startAttempt(learner, assessmentId, { fresh: true })).rejects.toThrow(
       /all 1 attempts/,
     );
+  });
+
+  /**
+   * Opening a handed-in paper shows it. Until 14 October 2026 it started a
+   * blank attempt, so the learner never saw their answers or feedback again.
+   */
+  it("shows the attempt handed in rather than starting another", async () => {
+    const { assessmentId } = await buildWorkbook();
+    const first = await startAttempt(learner, assessmentId);
+    await submitAttempt(learner, { submissionId: first.submissionId, declarationAccepted: true });
+
+    const again = await startAttempt(learner, assessmentId);
+    expect(again.submissionId).toBe(first.submissionId);
+    expect(again.status).toBe("submitted");
+    // Still with the facilitator, so no new attempt is offered or allowed.
+    expect(again.canStartAgain).toBe(false);
+    await expect(startAttempt(learner, assessmentId, { fresh: true })).rejects.toThrow(/still being marked/);
+
+    await returned(first.submissionId);
+    expect((await startAttempt(learner, assessmentId)).canStartAgain).toBe(true);
   });
 
   /**
