@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { localeFor, requireSession, requireTenant } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { learnerQualifications, type LearnerUnit } from "@/lib/learner-qualification";
+import { qualificationResources } from "@/lib/learner-unit";
 import { AppShell } from "@/components/app-shell";
 
 /**
@@ -18,6 +19,7 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
   const t = translator(localeFor(tenant, session));
   const qualification = (await learnerQualifications(session)).find((one) => one.id === id);
   if (!qualification) notFound();
+  const resources = await qualificationResources(session, id);
 
   const completed = qualification.units.filter((unit) => unit.state === "completed").length;
   const facts = [
@@ -56,6 +58,26 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
           </li>
         ))}
       </ol>
+
+      {/* The SAQA and QCTO documents, as reference (19 October 2026). */}
+      {resources.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t("learnQual.resources")}</h2>
+          <p className="text-sm text-[var(--muted)]">{t("learnQual.resourcesHint")}</p>
+          <ul className="mt-3 divide-y divide-[var(--border)] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            {resources.map((resource) => (
+              <li key={resource.id} className="flex flex-wrap items-baseline justify-between gap-3 px-4 py-3 text-sm">
+                <a href={`/api/learn/resources/${resource.id}`} target="_blank" rel="noopener noreferrer" className="font-medium underline-offset-2 hover:underline">
+                  {resource.title}
+                </a>
+                <a href={`/api/learn/resources/${resource.id}?download`} className="text-xs text-[var(--muted)] underline underline-offset-2">
+                  {t("learnUnit.download")}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </AppShell>
   );
 }

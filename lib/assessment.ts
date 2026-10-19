@@ -24,6 +24,7 @@ import {
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { STEP_ORDER } from "./assessment-order";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { buildStorageKey, putObject } from "./storage";
@@ -564,7 +565,7 @@ export async function listCourseAssessments(
       })
       .from(assessments)
       .where(eq(assessments.courseId, courseId))
-      .orderBy(asc(assessments.title)),
+      .orderBy(asc(STEP_ORDER), asc(assessments.title)),
   );
 }
 

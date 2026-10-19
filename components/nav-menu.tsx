@@ -29,7 +29,7 @@ export type NavGroup = {
  * that is rich for an administrator can come down to a single entry for an
  * assessor, and a dropdown containing one thing is worse than no dropdown.
  */
-export function NavMenu({ groups }: { groups: NavGroup[] }) {
+export function NavMenu({ groups, className = "flex" }: { groups: NavGroup[]; className?: string }) {
   const pathname = usePathname();
   const nav = useRef<HTMLElement>(null);
 
@@ -78,7 +78,8 @@ export function NavMenu({ groups }: { groups: NavGroup[] }) {
   return (
     <nav
       ref={nav}
-      className="mx-auto flex max-w-5xl flex-wrap items-center gap-1 px-6 pb-1"
+      // On the header's one row, beside the provider's name (19 October 2026).
+      className={`${className} items-center gap-0.5`}
     >
       {groups.map((group) => {
         if (group.items.length === 0) return null;
@@ -137,7 +138,7 @@ export function NavMenu({ groups }: { groups: NavGroup[] }) {
               <div
                 // Rendered in the header's dark band, so the panel carries its
                 // own light surface rather than inheriting one.
-                className="absolute left-0 z-50 mt-1 min-w-[13rem] overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg"
+                className="absolute left-0 z-50 mt-1 max-h-[75vh] min-w-[13rem] overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg"
               >
                 {group.items.map((item) => {
                   const current = isCurrent(item.href, pathname);
@@ -165,7 +166,7 @@ export function NavMenu({ groups }: { groups: NavGroup[] }) {
 
 function itemClass(active: boolean): string {
   return [
-    "rounded-t-md px-4 py-2 text-sm transition hover:bg-white/10",
+    "whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition hover:bg-white/10",
     active ? "bg-white/15 font-medium" : "",
   ].join(" ");
 }

@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { createAssessment, publishAssessment } from "./assessment";
+import { STEP_ORDER } from "./assessment-order";
 import { coursePublishChecks, publishCourse } from "./authoring";
 import { commitCapture, proposeCapture } from "./capture";
 import type { ParsedPaper } from "./capture-parse";
@@ -656,6 +657,9 @@ export async function verificationOf(
               .from(assessments)
               .leftJoin(assessmentPapers, eq(assessmentPapers.assessmentId, assessments.id))
               .where(eq(assessments.courseId, course.id))
+              // In the order a learner walks them, then by name. Unordered,
+              // they came out as the database chose (Cecelia, 19 October 2026).
+              .orderBy(asc(STEP_ORDER), asc(assessments.title), asc(assessmentPapers.sortOrder))
           : [];
         const paperIds = papers.map((p) => p.paperId).filter(Boolean) as string[];
         const unlinked = paperIds.length

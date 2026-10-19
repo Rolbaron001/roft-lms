@@ -32,10 +32,15 @@ export default async function PaperPreviewPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; answers?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, answers } = await searchParams;
+  // Opened from "See it as a learner", the paper is shown as the learner sees
+  // it: no correct answers, no marking guidance. Heidi and Cecilia took the
+  // answers shown here for answers shown to learners (19 October 2026).
+  const asLearner = answers === "hide";
+  const toggle = new URLSearchParams({ ...(from ? { from } : {}), ...(asLearner ? {} : { answers: "hide" }) }).toString();
   const tenant = await requireTenant();
   const session = await requirePermission("assessment:author");
   const t = await pageT();
@@ -97,7 +102,12 @@ export default async function PaperPreviewPage({
         <p className="text-sm font-medium" style={{ color: "var(--brand-accent)" }}>
           {t("preview.isPreview")}
         </p>
-        <p className="mt-1 text-sm text-[var(--muted)]">{t("preview.isPreviewIntro")}</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {asLearner ? t("preview.asLearner") : t("preview.isPreviewIntro")}
+        </p>
+        <Link href={`/papers/${id}/preview${toggle ? `?${toggle}` : ""}`} className="mt-2 inline-block text-sm font-medium underline underline-offset-2">
+          {asLearner ? t("preview.showAnswers") : t("preview.hideAnswers")}
+        </Link>
       </div>
 
       {items.length === 0 ? (
@@ -152,20 +162,39 @@ export default async function PaperPreviewPage({
                     list of question text cannot answer it.
                   */}
                   <div className="mt-2 pl-6">
-                    {item.options ? (
+                    {item.type === "matching" && item.matchPrompts && item.options ? (
+                      <div className="space-y-2">
+                        {item.matchPrompts.map((prompt) => (
+                          <label key={prompt.id} className="grid gap-1 text-sm sm:grid-cols-[1fr_16rem] sm:items-center sm:gap-3">
+                            <span>{prompt.text}</span>
+                            <select disabled className="w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
+                              <option>{t("paper.matchChoose")}</option>
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    ) : item.type === "file_upload" ? (
+                      <input type="file" disabled className="text-sm" />
+                    ) : item.options ? (
                       <fieldset className="space-y-1.5" disabled>
                         <legend className="sr-only">{item.stem}</legend>
+                        {item.type === "multiple_response" ? (
+                          <p className="text-xs text-[var(--muted)]">{t("paper.chooseAll")}</p>
+                        ) : null}
                         {item.options.map((option) => (
                           <label key={option.id} className="flex items-start gap-2 text-sm">
-                            <input type="radio" name={item.id} className="mt-1" disabled />
+                            <input type={item.type === "multiple_response" ? "checkbox" : "radio"} name={item.id} className="mt-1" disabled />
                             <span>{option.text}</span>
-                            {item.correctOptionIds?.includes(option.id) ? (
+                            {!asLearner && item.correctOptionIds?.includes(option.id) ? (
                               <span className="text-xs font-medium" style={{ color: "var(--success)" }}>
                                 {t("preview.correct")}
                               </span>
                             ) : null}
                           </label>
                         ))}
+                        {item.type === "true_false_justified" ? (
+                          <textarea disabled rows={3} placeholder={t("paper.justifyHint")} className="mt-2 w-full rounded-md border border-[var(--border)] px-3 py-2 text-sm" />
+                        ) : null}
                       </fieldset>
                     ) : item.type === "numeric" ? (
                       <input
@@ -192,6 +221,7 @@ export default async function PaperPreviewPage({
                     answer sits beside the question rather than in the document
                     it was read from.
                   */}
+                  {asLearner ? null : (
                   <div className="mt-3 ml-6 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                       {item.markedBy === "app" ? t("preview.byApp") : t("preview.byAssessor")}
@@ -206,6 +236,7 @@ export default async function PaperPreviewPage({
                       </p>
                     )}
                   </div>
+                  )}
                 </li>
               ))}
             </ol>

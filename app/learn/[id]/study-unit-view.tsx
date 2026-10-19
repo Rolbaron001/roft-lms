@@ -270,7 +270,7 @@ function PreviewWork({ steps, papers, t }: { steps: StepView[]; papers: Map<stri
                 {step.guidance ? <p className="mt-1 text-xs text-[var(--muted)]">{step.guidance}</p> : null}
               </div>
               {paperId ? (
-                <Link href={`/papers/${paperId}/preview`} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand-primary)" }}>
+                <Link href={`/papers/${paperId}/preview?answers=hide`} className="rounded-md px-3 py-1.5 text-sm font-semibold text-white" style={{ background: "var(--brand-primary)" }}>
                   {t("learnPreview.openPaper")}
                 </Link>
               ) : step.kind === "assessment" ? (

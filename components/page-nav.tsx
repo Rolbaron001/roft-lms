@@ -128,7 +128,22 @@ export function PageNav({
         <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
           {label ?? t("pageNav.label")}
         </span>
-        <ul className="flex flex-wrap gap-x-1 gap-y-1.5 text-sm">
+        {/* One line on a phone: the list as a drop-down (19 October 2026). */}
+        <select
+          aria-label={ariaLabel ?? t("pageNav.label")}
+          value={here ?? ""}
+          onChange={(event) => {
+            window.location.hash = event.target.value;
+          }}
+          className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm md:hidden"
+        >
+          {sections.map((section) => (
+            <option key={section.id} value={section.id}>
+              {section.label}
+            </option>
+          ))}
+        </select>
+        <ul className="hidden flex-wrap gap-x-1 gap-y-1.5 text-sm md:flex">
           {sections.map((section) => (
             <li key={section.id}>
               <a

@@ -346,7 +346,7 @@ async function stepsOf(
           ...base,
           ready: false,
           note: "is still a draft, so a learner is not offered it.",
-          href: paperId ? `/papers/${paperId}/preview` : null,
+          href: paperId ? `/papers/${paperId}/preview?answers=hide` : null,
         };
       }
 
@@ -356,7 +356,7 @@ async function stepsOf(
         note: null,
         // A published assessment with no paper is a flat quiz, which has no
         // paper screen to show. It is still ready.
-        href: paperId ? `/papers/${paperId}/preview` : null,
+        href: paperId ? `/papers/${paperId}/preview?answers=hide` : null,
       };
     }
 

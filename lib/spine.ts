@@ -29,6 +29,7 @@ import {
 import { can } from "./rbac";
 import { courseUsesCohorts, scheduleForLearner } from "./schedule";
 import { writtenDay } from "./date-format";
+import { checklistOwed } from "./pre-assessment";
 
 /**
  * The spine, and the gates on it.
@@ -490,11 +491,14 @@ async function computeSteps(
   );
   const stepById = new Map(steps.map((step) => [step.id, step]));
   const now = new Date();
+  // The pre-assessment checklist, where the provider has it on: nothing in a
+  // study unit opens until the learner has confirmed it (job sheet D32).
+  const checklistFirst = await checklistOwed(tx, courseId, userId);
 
   return steps.map((step, index) => {
     const own = progress.get(step.id)!;
     const override = overrideByStep.get(step.id) ?? null;
-    const blockedBy: string[] = [];
+    const blockedBy: string[] = checklistFirst ? ["Opens once you have completed the pre-assessment checklist above."] : [];
 
     // `sequential` is written out as the prerequisite it stands for, so both
     // release modes go through one evaluation rather than two.

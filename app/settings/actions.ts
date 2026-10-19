@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
 import { updateOwnBranding, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
 import { FeedbackError, saveQuestionnaire } from "@/lib/feedback";
+import { PreAssessmentError, saveChecklist } from "@/lib/pre-assessment";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -176,6 +177,31 @@ export async function saveQuestionnaireAction(_previous: ClockState, formData: F
   }
   revalidatePath("/settings");
   return said({ notice: "Saved. The next feedback form sent uses these questions." });
+}
+
+/** Saves the provider's pre-assessment checklist (D32). */
+export async function savePreAssessmentAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  let items: { title: string; detail: string }[] = [];
+  try {
+    items = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return said({ error: "The statements could not be read. Try again." });
+  }
+  try {
+    await saveChecklist(session, {
+      enabled: formData.get("enabled") === "on",
+      introduction: String(formData.get("introduction") ?? ""),
+      items: items.map((item) => ({ title: String(item.title ?? ""), detail: String(item.detail ?? "") })),
+      declaration: String(formData.get("declaration") ?? ""),
+    });
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    if (error instanceof PreAssessmentError) return said({ error: error.message });
+    throw error;
+  }
+  revalidatePath("/settings");
+  return said({ notice: "Saved." });
 }
 
 /** Saves the provider's own LEISA target (D19). */

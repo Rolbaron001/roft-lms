@@ -207,3 +207,74 @@ export async function readLearnerLibraryItem(
   if (!openWith(steps, link.releaseWithStepId).open) throw new LearnerUnitError("That is not open yet.", "not_permitted");
   return servable(link);
 }
+
+/**
+ * The documents SAQA and the QCTO publish for a qualification, offered to its
+ * learners as reference (Cecelia and Heidi, 19 October 2026: the SAQA
+ * document "should be included as a resource"). Public documents, so nothing
+ * is withheld that a learner could not find on SAQA's own site; the provider's
+ * workbooks, guides and memoranda are not among them.
+ */
+const PUBLISHED_KINDS = ["qualification_document", "curriculum_document", "assessment_specification"] as const;
+
+/** Whether this person is on one of the qualification's study units, or is staff who may read it. */
+async function onQualification(session: AuthenticatedSession, qualificationId: string): Promise<boolean> {
+  if (can(session, "course:author") || can(session, "enrolment:read_all")) return true;
+  return withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({ id: enrolments.id })
+      .from(enrolments)
+      .innerJoin(courses, eq(courses.id, enrolments.courseId))
+      .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+      .where(and(eq(enrolments.userId, session.userId), eq(studyUnits.qualificationId, qualificationId)))
+      .limit(1);
+    return Boolean(row);
+  });
+}
+
+export type QualificationResource = { id: string; kind: string; title: string; mimeType: string; sizeBytes: number };
+
+export async function qualificationResources(session: AuthenticatedSession, qualificationId: string): Promise<QualificationResource[]> {
+  if (!(await onQualification(session, qualificationId))) return [];
+  return withTenant(session.organisationId, async (tx) => {
+    const rows = await tx
+      .select({
+        id: programmeDocuments.id,
+        kind: programmeDocuments.kind,
+        title: programmeDocuments.title,
+        mimeType: programmeDocuments.mimeType,
+        sizeBytes: programmeDocuments.sizeBytes,
+        supersedesId: programmeDocuments.supersedesId,
+      })
+      .from(programmeDocuments)
+      .where(and(eq(programmeDocuments.qualificationId, qualificationId), inArray(programmeDocuments.kind, [...PUBLISHED_KINDS])))
+      .orderBy(asc(programmeDocuments.kind), asc(programmeDocuments.title));
+    // The current version of each: one another document replaces is left out.
+    const replaced = new Set(rows.map((row) => row.supersedesId).filter(Boolean));
+    return rows
+      .filter((row) => !replaced.has(row.id))
+      .map(({ id, kind, title, mimeType, sizeBytes }) => ({ id, kind, title, mimeType, sizeBytes: Number(sizeBytes) }));
+  });
+}
+
+export async function readQualificationResource(session: AuthenticatedSession, documentId: string): Promise<ServableFile> {
+  const document = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({ qualificationId: programmeDocuments.qualificationId, kind: programmeDocuments.kind, storageKey: programmeDocuments.storageKey, filename: programmeDocuments.filename })
+      .from(programmeDocuments)
+      .where(eq(programmeDocuments.id, documentId));
+    return row;
+  });
+  if (!document?.qualificationId || !(PUBLISHED_KINDS as readonly string[]).includes(document.kind)) {
+    throw new LearnerUnitError("Not found.", "not_found");
+  }
+  if (!(await onQualification(session, document.qualificationId))) throw new LearnerUnitError("Not found.", "not_found");
+  const bytes = await getObject(document.storageKey);
+  const detected = detectMedia(bytes, document.filename);
+  return {
+    bytes,
+    mimeType: detected.ok ? detected.mimeType : "application/octet-stream",
+    filename: document.filename,
+    safeToEmbed: detected.ok ? detected.safeToEmbed : false,
+  };
+}

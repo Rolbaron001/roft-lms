@@ -490,7 +490,7 @@ export const staff = {
   // EISA: the external assessment calendar and registration
   "eisa.title": "External assessment",
   "eisa.intro":
-    "Sittings, their registration closing dates, and the cohorts still to be entered. Registration usually closes about three months before the sitting.",
+    "Sittings, their registration closing dates, and the cohorts still to be entered. Registration closes three months before the date given in the QCTO's EISA plan.",
   "eisa.registerNow": "{count} to register now",
   "eisa.registerNowIntro":
     "Registration closes within ten working days and these cohorts have no registration date recorded.",
@@ -531,7 +531,7 @@ export const staff = {
   // EISA readiness
   "ready.title": "EISA readiness",
   "ready.intro":
-    "A learner may sit the External Integrated Summative Assessment once every internal assessment criterion in every module is achieved. The percentage shows progress; only Eligible permits entry.",
+    "A learner may sit the External Integrated Summative Assessment once every internal assessment criterion in every module is achieved. The percentage shows progress; only a learner shown as eligible may be entered.",
   "ready.nobody":
     "No learner is enrolled against a qualification yet. Enrol a learner on a course and choose the qualification it counts towards.",
   "ready.readyCount": "Ready for the EISA",
@@ -545,7 +545,7 @@ export const staff = {
   "ready.criteria": "Criteria",
   "ready.progress": "Progress",
   "ready.eisa": "EISA",
-  "ready.eligible": "Eligible",
+  "ready.eligible": "eligible",
   "ready.outstanding": "{count} outstanding",
   "ready.all": "← All learners",
   "ready.yours": "Your progress towards the EISA",
@@ -626,6 +626,10 @@ export const staff = {
   "preview.isPreview": "This is a preview.",
   "preview.isPreviewIntro":
     "You see what a learner sees. Nothing is saved, no attempt is started and the controls are switched off. The panel under each question is visible to you only.",
+  "preview.asLearner":
+    "Exactly what a learner sees: no correct answers and no marking guidance. Nothing is saved, no attempt is started and the controls are switched off.",
+  "preview.showAnswers": "Show the answers and marking guidance (visible to you only)",
+  "preview.hideAnswers": "Hide the answers: see it exactly as a learner does",
   "preview.empty": "There are no questions in this paper yet.",
   "preview.oneMark": "1 mark",
   "preview.correct": "✓ correct",
@@ -3812,6 +3816,15 @@ export const staff = {
   "feedbackReport.answers": "{count} answers",
   "feedbackReport.outOf": "{mean} of {points}",
   "settings.section.feedback": "Programme feedback",
+  "settings.section.preAssessment": "Pre-assessment checklist",
+  "pre.settingsTitle": "Pre-assessment checklist",
+  "pre.settingsNote": "Once switched on, a learner ticks every statement and agrees to the declaration before each study unit opens. What they confirmed is kept with the date.",
+  "pre.enabled": "Ask learners to complete it before each study unit",
+  "pre.introduction": "Introduction",
+  "pre.statement": "Statement {number}",
+  "pre.explanation": "Explanation",
+  "pre.remove": "Remove",
+  "pre.add": "Add a statement",
   "fbq.title": "Programme feedback questions",
   "fbq.note": "What learners are asked after a summative, and the rating scale. Saving creates a new version; forms already sent keep their questions.",
   "fbq.question": "Question",

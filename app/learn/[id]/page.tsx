@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { localeFor, requireSession, requireTenant, said } from "@/lib/request";
+import { localeFor, pageDates, requireSession, requireTenant, said } from "@/lib/request";
+import { unitChecklist } from "@/lib/pre-assessment";
+import { PreAssessmentForm } from "./pre-assessment-form";
 import { translator } from "@/lib/i18n";
 import { EnrolmentError, getEnrolmentForDelivery } from "@/lib/enrolment";
 import { listCourseAssessments } from "@/lib/assessment";
@@ -55,6 +57,8 @@ export default async function LearnPage({
 
   // A study unit opens as its own page (Roland's design, 5 October 2026).
   if (delivery.course.studyUnitId) {
+    // The pre-assessment checklist, where the provider has it on (D32).
+    const checklist = await unitChecklist(session, delivery.course.id, delivery.enrolment.userId);
     return (
       <AppShell tenant={tenant} session={session}>
         {!delivery.isOwn ? (
@@ -65,6 +69,13 @@ export default async function LearnPage({
             {t("discuss.link")} →
           </Link>
         </p>
+        {checklist?.owed && delivery.isOwn ? (
+          <PreAssessmentForm checklist={checklist.checklist} courseId={delivery.course.id} enrolmentId={id} unitTitle={delivery.course.title} />
+        ) : checklist?.owed ? (
+          <p className="mb-4 rounded-md border border-[var(--border)] px-3 py-2 text-sm">{t("pre.notYet")}</p>
+        ) : checklist?.confirmedAt ? (
+          <p className="mb-4 text-sm text-[var(--muted)]">{t("pre.done", { date: (await pageDates()).day(checklist.confirmedAt) })}</p>
+        ) : null}
         <StudyUnitView
           session={session}
           enrolmentId={id}

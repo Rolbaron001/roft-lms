@@ -545,6 +545,35 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6t. Finding your way: the menu, Find a page and recent pages (19 October 2026)
+
+- **On a laptop:** one row across the top: the provider's name (links to
+  Home), the menu headings, then Find a page, notifications, the AI switch
+  where set up, and the person's initials (their account and Sign out).
+- **Find a page:** press Ctrl+K or "/" (or select the magnifier) and type a
+  few letters of the page; the letters need only appear in order, so "eisr"
+  finds EISA readiness. Arrow keys choose; Enter opens.
+- **Recently opened:** the last five pages a person used, first in Find a
+  page and in the phone menu. Kept in that browser only.
+- **On a phone or tablet:** the **Menu** button opens the whole menu, each
+  heading folded until opened, the account at the foot.
+
+## 6s. The pre-assessment checklist (19 October 2026)
+
+- **Where it is set:** Settings → Pre-assessment checklist. The provider's
+  introduction, statements (each with a short explanation) and declaration.
+  It starts with ten statements drawn from the SETA and QCTO assessment
+  guidelines, and is off until switched on.
+- **What a learner sees:** at the top of each study unit, until completed.
+  Every statement must be ticked before the declaration can be agreed to.
+  Until then every step of the unit says it opens once the checklist is
+  completed.
+- **The record:** the statements and declaration as the learner confirmed
+  them, with the date and the address they confirmed from. Staff viewing the
+  learner's unit see whether it is done.
+- **What it depends on:** the qualification being built as study units; a
+  course that is not a study unit does not ask for it.
+
 ## 6r. Discussion boards (14 October 2026)
 
 - **Where:** **Learning → Discussions** lists every board a person may use. A

@@ -3,6 +3,7 @@ import { logoutAction } from "@/app/login/actions";
 import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
+import { AccountMenu, FindPage, MobileMenu } from "./shell-nav";
 import { arrangeNavigation } from "@/lib/navigation";
 import { can } from "@/lib/features";
 import { isViewOnly } from "@/lib/rbac";
@@ -87,6 +88,31 @@ export async function AppShell({
     }))
     .filter((section) => section.items.length > 0);
 
+  // The person's name, their account and signing out: under the initials on a
+  // laptop, at the foot of the Menu panel on a phone.
+  const account = (
+    <div className="space-y-2">
+      <p className="font-medium">
+        {session.firstName} {session.lastName}
+      </p>
+      <Link href="/account/password" className="block underline-offset-2 hover:underline">
+        {t("shell.account")}
+      </Link>
+      {extension.available ? (
+        <div className="sm:hidden">
+          <AiSwitch on={extension.on} />
+        </div>
+      ) : null}
+      {session.viewAs ? null : (
+        <form action={logoutAction}>
+          <button type="submit" className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm">
+            {t("shell.signOut")}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+
   return (
     <div
       className="min-h-screen"
@@ -113,33 +139,60 @@ export async function AppShell({
           borderColor: "var(--brand-accent)",
         }}
       >
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-          <div className="flex items-center gap-3">
+        {/*
+          One row on a laptop: the provider, the menu, then compact controls.
+          It was two rows, provider above menu, which with a page's own
+          navigation left a 13-inch screen little room for the page (Cecelia
+          and Heidi, 19 October 2026). Below 1024 pixels the menu folds into
+          one Menu button (components/shell-nav.tsx). Wider than the page
+          column, so the row fits at 1280 pixels.
+        */}
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 sm:px-6">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-3">
             {tenant.logoUrl ? (
               // Sits on the tenant's own header colour, so a logo with a
               // transparent background reads correctly.
               <TenantLogo
                 logoUrl={tenant.logoUrl}
                 displayName={tenant.displayName}
-                height={36}
+                height={32}
               />
             ) : null}
-            <div>
-              <p className="text-base font-semibold">{tenant.displayName}</p>
-              <p className="text-xs opacity-75">{t("shell.subtitle")}</p>
+            <div className="min-w-0">
+              <p className="max-w-[14rem] truncate text-sm font-semibold sm:text-base">{tenant.displayName}</p>
+              <p className="hidden text-xs opacity-75 2xl:block">{t("shell.subtitle")}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
+          </Link>
+
+          <NavMenu groups={sections} className="hidden min-w-0 flex-1 lg:flex" />
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {session.viewAs ? (
+              // Signing out is a change, refused while viewing: Stop first.
+              <form action="/api/view-as/stop" method="post">
+                <button type="submit" className="rounded-md bg-white px-3 py-1.5 text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
+                  {t("viewAs.stop")}
+                </button>
+              </form>
+            ) : null}
+
+            <FindPage groups={sections} />
+
             <Link
               href="/notifications"
-              className="relative rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
+              className="relative inline-flex items-center rounded-md border border-white/30 px-2.5 py-1.5 text-sm transition hover:bg-white/10"
+              title={t("shell.notifications")}
               aria-label={
                 unread > 0
                   ? t("shell.notificationsUnread", { count: unread })
                   : t("shell.notifications")
               }
             >
-              {t("shell.notifications")}
+              <svg aria-hidden viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+                <path d="M10 3a4.5 4.5 0 0 0-4.5 4.5c0 4-1.5 5.5-1.5 5.5h12s-1.5-1.5-1.5-5.5A4.5 4.5 0 0 0 10 3Z" />
+                <path d="M8.5 15.5a1.6 1.6 0 0 0 3 0" strokeLinecap="round" />
+              </svg>
+              <span className="ml-2 hidden xl:inline">{t("shell.notifications")}</span>
               {unread > 0 ? (
                 <span
                   className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold"
@@ -154,33 +207,17 @@ export async function AppShell({
             </Link>
 
             {extension.available ? (
-              <AiSwitch on={extension.on} variant="header" />
+              <div className="hidden sm:block">
+                <AiSwitch on={extension.on} variant="header" />
+              </div>
             ) : null}
 
-            <Link
-              href="/account/password"
-              className="text-xs opacity-75 underline-offset-2 transition hover:underline hover:opacity-100"
-              title={t("shell.account")}
-            >
-              {session.firstName} {session.lastName}
-            </Link>
-            {session.viewAs ? (
-              // Signing out is a change, refused while viewing: Stop first.
-              <form action="/api/view-as/stop" method="post">
-                <button type="submit" className="rounded-md bg-white px-3 py-1.5 text-sm font-medium" style={{ color: "var(--brand-primary)" }}>
-                  {t("viewAs.stop")}
-                </button>
-              </form>
-            ) : (
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className="rounded-md border border-white/30 px-3 py-1.5 text-sm transition hover:bg-white/10"
-                >
-                  {t("shell.signOut")}
-                </button>
-              </form>
-            )}
+            <div className="hidden lg:block">
+              <AccountMenu name={`${session.firstName} ${session.lastName}`}>{account}</AccountMenu>
+            </div>
+            <div className="lg:hidden">
+              <MobileMenu groups={sections} account={account} />
+            </div>
           </div>
         </div>
 
@@ -202,13 +239,6 @@ export async function AppShell({
             {t("viewOnly.banner")}
           </div>
         ) : null}
-
-        {/*
-          Grouped rather than listed. px-6 matches the header above and the
-          main column below, so the first item lines up with the logo and the
-          page content rather than sitting 8px to their left.
-        */}
-        <NavMenu groups={sections} />
 
       </header>
 

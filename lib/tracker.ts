@@ -20,6 +20,7 @@ import {
   users,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { STEP_ORDER, UNIT_ORDER } from "./assessment-order";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { cohortCourseIds } from "./schedule";
 import { cohortsWithin, reachWithin } from "./staff-scope";
@@ -318,7 +319,8 @@ export async function cohortGrid(
       // Every course the cohort walks: one, or each study unit of its
       // qualification (5 October 2026).
       .where(inArray(assessments.courseId, (await cohortCourseIds(tx, cohort)).concat("00000000-0000-0000-0000-000000000000")))
-      .orderBy(asc(assessments.title));
+      // Study unit by study unit, each in the order its learners walk it.
+      .orderBy(asc(UNIT_ORDER), asc(STEP_ORDER), asc(assessments.title));
 
     if (columns.length === 0 || learners.length === 0) {
       return {
