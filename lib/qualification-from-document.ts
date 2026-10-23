@@ -11,7 +11,13 @@ import {
   moduleKey,
   parseQualificationDocument,
   type ParsedExitLevelOutcome,
+  type ParsedQualificationDocument,
 } from "./qualification-document-parse";
+import {
+  isSkillsProgrammeDocument,
+  parseSkillsProgrammeDocument,
+  type ParsedSkillsProgramme,
+} from "./skills-programme-parse";
 import { createQualification, listCurriculumModules } from "./authoring";
 import { selectModules } from "./part-qualifications";
 import {
@@ -64,7 +70,28 @@ export type SourceDocuments = {
   curriculum: SourceFile;
   qualification?: SourceFile | null;
   assessmentSpecification?: SourceFile | null;
+  /**
+   * An occupational skills programme's registration document, in place of the
+   * SAQA document and assessment specification (job sheet D39).
+   */
+  skillsProgramme?: SourceFile | null;
 };
+
+/** What a Skills Programme Document adds beyond a qualification's header. */
+export type SkillsProgrammeDetails = Pick<
+  ParsedSkillsProgramme,
+  | "durationDays"
+  | "ofoCode"
+  | "qualityPartner"
+  | "relatedQualification"
+  | "purpose"
+  | "entryRequirements"
+  | "startDate"
+  | "endDate"
+  | "lastEnrolmentDate"
+  | "lastAchievementDate"
+  | "moduleCodes"
+>;
 
 export type ModuleSummary = {
   code: string;
@@ -111,12 +138,15 @@ export type DocumentReading = {
     exitLevelOutcomes: number;
     associatedCriteria: number;
   };
-  /** Which of the three were supplied, for the confirmation screen to show. */
+  /** Which were supplied, for the confirmation screen to show. */
   supplied: {
     curriculum: boolean;
     qualification: boolean;
     assessmentSpecification: boolean;
+    skillsProgramme: boolean;
   };
+  /** Read from a Skills Programme Document, where one was supplied. */
+  skillsProgramme: SkillsProgrammeDetails | null;
   existing: { id: string; title: string } | null;
 };
 
@@ -184,9 +214,41 @@ export async function readQualificationSources(
     );
   }
 
-  const registration = documents.qualification
-    ? parseQualificationDocument(await readOrExplain(documents.qualification))
-    : null;
+  // A Skills Programme Document, given in its own place or in the
+  // qualification document's: recognised by what it says, not where it came in.
+  const registrationText = documents.qualification ? await readOrExplain(documents.qualification) : null;
+  const programmeText = documents.skillsProgramme
+    ? await readOrExplain(documents.skillsProgramme)
+    : registrationText && isSkillsProgrammeDocument(registrationText)
+      ? registrationText
+      : null;
+  if (documents.skillsProgramme && programmeText && !isSkillsProgrammeDocument(programmeText)) {
+    throw new QualificationImportError(
+      `"${documents.skillsProgramme.filename}" does not read as a Skills Programme Document. It should carry a Skills Programme ID such as SP-220320.`,
+      "not_a_curriculum",
+    );
+  }
+  const programme = programmeText ? parseSkillsProgrammeDocument(programmeText) : null;
+  const registration: ParsedQualificationDocument | null = programme
+    ? {
+        saqaId: programme.spId,
+        title: programme.title,
+        nqfLevel: programme.nqfLevel,
+        totalCredits: programme.totalCredits,
+        kind: "skills_programme",
+        moduleCodes: programme.moduleCodes,
+        curriculumCode: null,
+        parentCurriculumCode: null,
+        exitLevelOutcomes: programme.exitLevelOutcomes.map((outcome) => ({
+          number: String(outcome.number),
+          description: outcome.description,
+          criteria: outcome.criteria,
+        })),
+        notes: programme.notes,
+      }
+    : registrationText
+      ? parseQualificationDocument(registrationText)
+      : null;
 
   // The specification is read so that it is indexed and searchable, and so a
   // scan is caught here rather than after the qualification exists.
@@ -219,15 +281,27 @@ export async function readQualificationSources(
 
   const notes = [...curriculum.notes, ...(registration?.notes ?? [])];
 
-  if (!documents.qualification) {
-    notes.push(
-      "No Qualification Document was supplied, so there is no SAQA ID and no Exit Level Outcomes. You can add both later.",
-    );
-  }
-  if (!documents.assessmentSpecification) {
-    notes.push(
-      "No Assessment Specification was supplied. It is required before material is authored against this qualification.",
-    );
+  if (programme) {
+    // Two documents found a skills programme; there is no assessment
+    // specification to ask for, and its credits are checked against its modules.
+    const moduleCredits = curriculum.modules.reduce((sum, entry) => sum + (entry.credits ?? 0), 0);
+    if (programme.totalCredits && moduleCredits && moduleCredits !== programme.totalCredits) {
+      notes.push(
+        `The Skills Programme Document states ${programme.totalCredits} credits; the curriculum's modules add up to ${moduleCredits}.`,
+      );
+    }
+    notes.push("A skills programme ends in a FISA set and moderated by the provider, so no Assessment Specification is needed.");
+  } else {
+    if (!documents.qualification) {
+      notes.push(
+        "No Qualification Document was supplied, so there is no SAQA ID and no Exit Level Outcomes. You can add both later.",
+      );
+    }
+    if (!documents.assessmentSpecification) {
+      notes.push(
+        "No Assessment Specification was supplied. It is required before material is authored against this qualification.",
+      );
+    }
   }
 
   const existing = details.curriculumCode
@@ -258,7 +332,26 @@ export async function readQualificationSources(
    */
   let part: DocumentReading["part"] = null;
 
-  if (details.kind !== "full") {
+  /*
+   * A skills programme stands on its own when its curriculum is its own, as
+   * SP220320's is (900096-000-00-00, with every module specified). It is only
+   * attached to a full qualification, as a part is, when its curriculum is
+   * that qualification's. Until 23 October 2026 every skills programme was
+   * sent down the part route and refused without a parent.
+   */
+  const standaloneProgramme = details.kind === "skills_programme" && !existing;
+  const programmeAlready =
+    standaloneProgramme && details.curriculumCode
+      ? await withTenant(session.organisationId, async (tx) => {
+          const [row] = await tx
+            .select({ id: qualifications.id, title: qualifications.title })
+            .from(qualifications)
+            .where(and(eq(qualifications.curriculumCode, details.curriculumCode!), eq(qualifications.kind, "skills_programme")));
+          return row ?? null;
+        })
+      : null;
+
+  if (details.kind !== "full" && !standaloneProgramme) {
     /**
      * A part is attached by its module codes, not by its own curriculum code.
      *
@@ -348,8 +441,24 @@ export async function readQualificationSources(
       curriculum: true,
       qualification: Boolean(documents.qualification),
       assessmentSpecification: Boolean(documents.assessmentSpecification),
+      skillsProgramme: Boolean(programme),
     },
-    existing,
+    skillsProgramme: programme
+      ? {
+          durationDays: programme.durationDays,
+          ofoCode: programme.ofoCode,
+          qualityPartner: programme.qualityPartner,
+          relatedQualification: programme.relatedQualification,
+          purpose: programme.purpose,
+          entryRequirements: programme.entryRequirements,
+          startDate: programme.startDate,
+          endDate: programme.endDate,
+          lastEnrolmentDate: programme.lastEnrolmentDate,
+          lastAchievementDate: programme.lastAchievementDate,
+          moduleCodes: programme.moduleCodes,
+        }
+      : null,
+    existing: standaloneProgramme ? programmeAlready : existing,
   };
 }
 
@@ -512,16 +621,18 @@ export async function createQualificationFromDocuments(
     return createPartFromDocuments(session, documents, confirmed, reading);
   }
 
-  if (reading.details.kind !== "full") {
+  // A skills programme with a curriculum of its own is imported as a full
+  // qualification is, then marked as what it is (job sheet D39).
+  if (reading.details.kind === "part") {
     throw new QualificationImportError(
-      `Its document says this is a ${reading.details.kind === "part" ? "part qualification" : "skills programme"}, and its full qualification is not on the platform. Import the full qualification first.`,
+      "Its document says this is a part qualification, and its full qualification is not on the platform. Import the full qualification first.",
       "not_a_curriculum",
     );
   }
 
   if (reading.existing) {
     throw new QualificationImportError(
-      `"${reading.existing.title}" already has the code ${reading.details.curriculumCode}. Open that qualification instead.`,
+      `"${reading.existing.title}" already has the code ${reading.details.curriculumCode}. Open that ${reading.details.kind === "skills_programme" ? "skills programme" : "qualification"} instead.`,
       "already_exists",
     );
   }
@@ -613,12 +724,41 @@ export async function createQualificationFromDocuments(
 
   const imported = await importCurriculum(session, curriculumFile);
 
+  if (reading.details.kind === "skills_programme") {
+    const programme = reading.skillsProgramme;
+    await withTenant(session.organisationId, (tx) =>
+      tx
+        .update(qualifications)
+        .set({
+          kind: "skills_programme",
+          ...(programme
+            ? {
+                description: programme.purpose,
+                ofoCode: programme.ofoCode,
+                assessmentQualityPartner: programme.qualityPartner,
+                registrationStartDate: programme.startDate,
+                registrationEndDate: programme.endDate,
+                lastEnrolmentDate: programme.lastEnrolmentDate,
+                lastAchievementDate: programme.lastAchievementDate,
+                durationDays: programme.durationDays,
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(qualifications.id, imported.qualificationId)),
+    );
+  }
+
   // Filed after the import rather than before, because a document attached to
   // a qualification that then failed to import would be a record of something
   // that does not exist.
+  const programmeFile =
+    documents.skillsProgramme ?? (reading.supplied.skillsProgramme ? documents.qualification : null);
   const filings: [SourceFile | null | undefined, string, string][] = [
     [documents.curriculum, "curriculum_document", "Curriculum Document"],
-    [documents.qualification, "qualification_document", "Qualification Document"],
+    programmeFile
+      ? [programmeFile, "qualification_document", "Skills Programme Document"]
+      : [documents.qualification, "qualification_document", "Qualification Document"],
     [
       documents.assessmentSpecification,
       "assessment_specification",

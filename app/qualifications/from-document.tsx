@@ -24,6 +24,16 @@ const SOURCES = [
 ] as const;
 
 /**
+ * The two an occupational skills programme is founded on (job sheet D39): its
+ * Skills Programme Document first, because it says what the programme is,
+ * then its curriculum. No assessment specification: it ends in a FISA.
+ */
+const PROGRAMME_SOURCES = [
+  { name: "skillsProgramme", required: false },
+  { name: "curriculum", required: true },
+] as const;
+
+/**
  * Building a qualification out of the three documents that define it.
  *
  * Two steps, and the split is the point. The first reads the files and shows
@@ -38,13 +48,17 @@ const SOURCES = [
 export function FromDocument({
   startOpen = false,
   closeHref,
+  programme = false,
 }: {
   /** Already chosen on the screen before this, so there is nothing to open. */
   startOpen?: boolean;
   /** Where "Close" goes when the choice was made by a link rather than here. */
   closeHref?: string;
+  /** Adding an occupational skills programme from its two documents. */
+  programme?: boolean;
 } = {}) {
   const t = useT();
+  const sources = programme ? PROGRAMME_SOURCES : SOURCES;
   const [reading, read, readPending] = useActionState<ReadingState, FormData>(readCurriculumAction, {});
   const [created, create, createPending] = useActionState<CreateFromDocumentState, FormData>(
     createFromDocumentAction,
@@ -144,8 +158,10 @@ export function FromDocument({
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{t("fromDoc.title")}</h2>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("fromDoc.intro")}</p>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
+            {programme ? t("fromDoc.titleProgramme") : t("fromDoc.title")}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{programme ? t("fromDoc.introProgramme") : t("fromDoc.intro")}</p>
         </div>
         {/*
           A link where the choice was made on the screen before this one, so
@@ -169,8 +185,8 @@ export function FromDocument({
 
       {/* One form, two submit buttons: read, then create. */}
       <form ref={formRef} className="mt-5">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {SOURCES.map((source) => (
+        <div className={`grid gap-4 ${programme ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+          {sources.map((source) => (
             <label key={source.name} className="block space-y-1.5">
               <span className="block text-sm font-medium">
                 {t(`fromDoc.source.${source.name}`)}
@@ -333,7 +349,7 @@ export function FromDocument({
 
               <label className="block space-y-1.5">
                 <span className="block text-sm font-medium">
-                  {t("fromDoc.saqaId")}
+                  {found.details.kind === "skills_programme" ? t("fromDoc.spId") : t("fromDoc.saqaId")}
                   {found.details.saqaId ? null : (
                     <span className="font-normal text-[var(--muted)]">{t("fromDoc.noQualDoc")}</span>
                   )}
@@ -373,6 +389,35 @@ export function FromDocument({
                 />
               </label>
             </div>
+
+            {/* What the Skills Programme Document adds: its length, dates and purpose. */}
+            {found.skillsProgramme ? (
+              <dl className="mt-4 grid gap-x-6 gap-y-2 rounded-md border border-[var(--border)] bg-[var(--background)] p-3 text-sm sm:grid-cols-2">
+                {[
+                  [t("fromDoc.sp.duration"), found.skillsProgramme.durationDays ? t("fromDoc.sp.days", { days: found.skillsProgramme.durationDays }) : null],
+                  [t("fromDoc.sp.ofo"), found.skillsProgramme.ofoCode],
+                  [t("fromDoc.sp.partner"), found.skillsProgramme.qualityPartner],
+                  [t("fromDoc.sp.entry"), found.skillsProgramme.entryRequirements],
+                  [t("fromDoc.sp.registered"), found.skillsProgramme.startDate && found.skillsProgramme.endDate ? `${shortDate(found.skillsProgramme.startDate)} – ${shortDate(found.skillsProgramme.endDate)}` : null],
+                  [t("fromDoc.sp.lastEnrolment"), found.skillsProgramme.lastEnrolmentDate ? shortDate(found.skillsProgramme.lastEnrolmentDate) : null],
+                  [t("fromDoc.sp.lastAchievement"), found.skillsProgramme.lastAchievementDate ? shortDate(found.skillsProgramme.lastAchievementDate) : null],
+                  [t("fromDoc.sp.related"), found.skillsProgramme.relatedQualification],
+                ]
+                  .filter(([, value]) => value)
+                  .map(([label, value]) => (
+                    <div key={label as string}>
+                      <dt className="text-xs text-[var(--muted)]">{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                {found.skillsProgramme.purpose ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-[var(--muted)]">{t("fromDoc.sp.purpose")}</dt>
+                    <dd>{found.skillsProgramme.purpose}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
 
             <details className="mt-4">
               <summary className="cursor-pointer text-sm font-medium">
@@ -467,7 +512,9 @@ export function FromDocument({
                     ? t("fromDoc.creating")
                     : found.part
                       ? t("fromDoc.createPart")
-                      : t("fromDoc.create")}
+                      : found.details.kind === "skills_programme"
+                        ? t("fromDoc.createProgramme")
+                        : t("fromDoc.create")}
                 </button>
                 <p className="mt-2 text-xs text-[var(--muted)]">
                   {found.part ? t("fromDoc.filedPart") : t("fromDoc.filed")}
@@ -479,6 +526,12 @@ export function FromDocument({
       </form>
     </section>
   );
+}
+
+/** A date read from a document, as the day it names. Dates cross the server boundary as strings. */
+function shortDate(value: Date | string): string {
+  const date = new Date(value);
+  return `${String(date.getUTCDate()).padStart(2, "0")}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${date.getUTCFullYear()}`;
 }
 
 /**

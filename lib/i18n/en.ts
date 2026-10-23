@@ -82,13 +82,14 @@ export const en = {
 
   // Menu headings
   "nav.heading.Learning": "Learning",
-  "nav.heading.People": "People",
+  "nav.heading.Learners & cohorts": "Learners & cohorts",
   "nav.heading.Assessment": "Assessment",
   "nav.heading.Reports": "Reports",
   "nav.heading.Management": "Management",
   // Menu items, by address
   "nav./": "Home",
   "nav./qualifications": "Qualifications",
+  "nav./skills-programmes": "Skills programmes",
   "nav./capture": "Capture",
   "nav./records": "Policies & documents",
   "nav./material": "Learning material",

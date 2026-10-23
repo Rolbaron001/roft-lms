@@ -545,6 +545,32 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6u. Occupational skills programmes (23 October 2026)
+
+- **Where:** **Learning → Skills programmes**, a list of its own beside
+  Qualifications. Each list says how many of the other kind there are.
+- **What a provider needs:** the two QCTO documents a skills programme is
+  founded on: the **Skills Programme Document** (with its SP number, such as
+  SP-220320) and its **Curriculum Document**, as PDF or Word. No assessment
+  specification: a skills programme ends in a FISA that the provider sets,
+  conducts and moderates.
+- **Adding one:** Skills programmes → Add a skills programme → From its
+  documents. Choose both files and read them. The platform shows the title,
+  SP number, curriculum code, level, credits, duration, OFO code, quality
+  assuring body, entry requirements, registration dates, last date for
+  enrolment and achievement, related qualification, purpose, modules and exit
+  level outcomes, for checking. Nothing is written until the skills programme
+  is created. A skills programme can also be added by hand.
+- **After that:** it is built and delivered as a qualification is: study
+  units, workbooks and assessments, cohorts, marking. Its page shows its
+  duration and last dates; its readiness does not ask for an assessment
+  specification.
+- **A skills programme whose curriculum belongs to a full qualification
+  already on the platform** is attached to that qualification, as a part
+  qualification is, and takes its modules from it.
+- **Not yet:** reading a skills programme from a folder; add it from its two
+  documents instead.
+
 ## 6t. Finding your way: the menu, Find a page and recent pages (19 October 2026)
 
 - **On a laptop:** one row across the top: the provider's name (links to

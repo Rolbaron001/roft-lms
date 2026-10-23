@@ -148,6 +148,7 @@ describe("reading the documents", () => {
       curriculum: true,
       qualification: true,
       assessmentSpecification: false,
+      skillsProgramme: false,
     });
   });
 

@@ -151,12 +151,18 @@ export async function programmeReadiness(
 
     const gaps: ReadinessGap[] = [];
 
+    // A skills programme is founded on two documents: its Skills Programme
+    // Document and its curriculum. It ends in a FISA the provider sets, so it
+    // has no assessment specification to ask for (job sheet D39).
+    const programme = qualification.kind === "skills_programme";
     for (const document of REQUIRED_DOCUMENTS) {
+      if (programme && document.kind === "assessment_specification") continue;
+      const label = programme && document.kind === "qualification_document" ? "Skills Programme Document" : document.label;
       if (!have.has(document.kind)) {
         gaps.push({
-          what: `The ${document.label} has not been uploaded.`,
-          why: document.why,
-          action: `Upload the ${document.label} against this qualification first.`,
+          what: `The ${label} has not been uploaded.`,
+          why: programme && document.kind === "qualification_document" ? "It has the exit level outcomes, the modules and how the FISA is run." : document.why,
+          action: `Upload the ${label} against this ${programme ? "skills programme" : "qualification"} first.`,
         });
       }
     }

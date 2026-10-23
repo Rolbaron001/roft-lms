@@ -442,6 +442,9 @@ export function parseQualificationDetails(lines: string[]): ParsedQualification 
           result.nqfLevel = Number(level[1]);
           break;
         }
+        // A skills programme's cover has no level line: the title would run
+        // into the page footer and the table of contents (SP220320).
+        if (/Page \d+ of \d+|^Table of contents?$|^SECTION \d/i.test(lines[next])) break;
         parts.push(lines[next]);
       }
 

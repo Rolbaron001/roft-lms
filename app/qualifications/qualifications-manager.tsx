@@ -78,6 +78,7 @@ export function QualificationsManager({
   qualifications,
   canManage,
   show = "both",
+  defaultKind = "full",
 }: {
   qualifications: Qualification[];
   /**
@@ -100,6 +101,8 @@ export function QualificationsManager({
    * it, with the folder and document uploads above the lot.
    */
   show?: "both" | "list" | "create";
+  /** What the create form starts as: a skills programme from its own screen (D39). */
+  defaultKind?: Qualification["kind"];
 }) {
   const t = useT();
   const [createState, createAction, createPending] = useActionState<
@@ -126,7 +129,7 @@ export function QualificationsManager({
   // Held in state because the rest of the form reads it: the parent picker is
   // meaningless for a full qualification and required for a part, and the
   // curriculum-code hint says opposite things in the two cases.
-  const [newKind, setNewKind] = useState<Qualification["kind"]>("full");
+  const [newKind, setNewKind] = useState<Qualification["kind"]>(defaultKind);
 
   /**
    * A part shows what it came out of, and a full qualification shows what came
@@ -214,7 +217,12 @@ export function QualificationsManager({
                         ? // What the curriculum document itself calls it.
                           t("qual.curriculum", { code: qualification.curriculumCode })
                         : null,
-                      qualification.saqaId ? t("qual.saqa", { id: qualification.saqaId }) : null,
+                      // An SP number is the QCTO's, not a SAQA ID (D39).
+                      qualification.saqaId
+                        ? qualification.kind === "skills_programme"
+                          ? qualification.saqaId
+                          : t("qual.saqa", { id: qualification.saqaId })
+                        : null,
                       qualification.nqfLevel ? t("qual.nqf", { level: qualification.nqfLevel }) : null,
                       qualification.totalCredits ? t("qual.credits", { credits: qualification.totalCredits }) : null,
                     ]

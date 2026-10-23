@@ -24,7 +24,7 @@ import { withPhrases } from "./helpers/phrases";
 
 // With each catalogue phrase back in English (job sheet D9, stage 4).
 const page = withPhrases(
-  readFileSync(join(process.cwd(), "app/qualifications/page.tsx"), "utf8"),
+  readFileSync(join(process.cwd(), "app/qualifications/screen.tsx"), "utf8"),
 );
 
 describe("an empty qualifications screen", () => {

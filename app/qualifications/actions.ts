@@ -157,6 +157,7 @@ async function sourcesFrom(
     curriculum,
     qualification: await take("qualification"),
     assessmentSpecification: await take("assessmentSpecification"),
+    skillsProgramme: await take("skillsProgramme"),
   };
 }
 

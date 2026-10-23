@@ -28,7 +28,7 @@ const picker = withPhrases(
 
 /** Every screen that hands this component an extension has to pass all of it. */
 const CALLERS = [
-  "app/qualifications/page.tsx",
+  "app/qualifications/screen.tsx",
   "app/qualifications/[id]/page.tsx",
   "app/courses/[id]/page.tsx",
   "app/paths/[id]/page.tsx",

@@ -97,6 +97,19 @@ export const NAV: NavSection[] = [
           "assessment:moderate",
         ],
       },
+      // Occupational skills programmes: founded on two documents rather than a
+      // qualification's three, so listed and added on their own (job sheet D39).
+      {
+        href: "/skills-programmes",
+        label: "Skills programmes",
+        feature: "qualifications",
+        anyPermission: [
+          "qualification:manage",
+          "course:author",
+          "assessment:assess",
+          "assessment:moderate",
+        ],
+      },
       { href: "/capture", label: "Capture", permission: "assessment:author" },
       // Videos, diagrams and other material, kept once and used by any study
       // unit (Roland, 5 October 2026). Staff only: learners meet it on their
@@ -119,7 +132,8 @@ export const NAV: NavSection[] = [
   },
 
   {
-    label: "People",
+    // Was "People", which put People under People (Roland, 23 October 2026).
+    label: "Learners & cohorts",
     items: [
       { href: "/people", label: "People", permission: "user:invite" },
       { href: "/cohorts", label: "Cohorts", term: "cohort", permission: "enrolment:read_all" },
@@ -371,7 +385,7 @@ export const NAV: NavSection[] = [
  * every provider who used the shipped default with a menu quietly split in
  * two.
  */
-const RENAMED_HEADINGS: Record<string, string> = { Admin: "Management" };
+const RENAMED_HEADINGS: Record<string, string> = { Admin: "Management", People: "Learners & cohorts" };
 
 
 /**

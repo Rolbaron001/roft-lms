@@ -265,7 +265,8 @@ describe("the pages behind a choice refuse to load without it", () => {
    * sent before somebody changed the shape.
    */
   it.each([
-    ["app/qualifications/page.tsx", "qualifications"],
+    // The list is drawn by the screen it shares with /skills-programmes (D39).
+    ["app/qualifications/screen.tsx", "qualifications"],
     ["app/qualifications/[id]/page.tsx", "qualifications"],
     ["app/paths/page.tsx", "programmes"],
     ["app/statutory/page.tsx", "statutory_reporting"],

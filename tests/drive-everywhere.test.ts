@@ -37,7 +37,8 @@ function pages(dir: string): string[] {
     const full = `${dir}/${entry}`;
     if (statSync(full).isDirectory()) {
       found.push(...pages(full));
-    } else if (entry === "page.tsx") {
+    } else if (entry === "page.tsx" || entry === "screen.tsx") {
+      // A screen shared by two pages (qualifications and skills programmes, D39).
       found.push(full);
     }
   }
@@ -71,7 +72,7 @@ describe("every screen that takes a folder", () => {
   it("covers qualifications, courses and programmes", () => {
     const screens = screensOfferingAFolder().join(" ");
 
-    expect(screens).toContain("app/qualifications/page.tsx");
+    expect(screens).toContain("app/qualifications/screen.tsx");
     expect(screens).toContain("app/qualifications/[id]/page.tsx");
     expect(screens).toContain("app/courses/[id]/page.tsx");
     expect(screens).toContain("app/paths/[id]/page.tsx");

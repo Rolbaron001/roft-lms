@@ -50,15 +50,26 @@ export const HOW_OPTIONS: HowOption[] = (["documents", "folder", "blank"] as con
  * actually choosing between. "From its documents" and "From a folder" are not
  * distinguishable by name alone.
  */
-export async function HowChooser({ basePath }: { basePath: string }) {
+export async function HowChooser({
+  basePath,
+  only,
+  programme = false,
+}: {
+  basePath: string;
+  /** The ways in offered here; all three unless narrowed. */
+  only?: HowOption["id"][];
+  /** On the skills programmes screen, which speaks of its two documents (D39). */
+  programme?: boolean;
+}) {
   const t = await pageT();
+  const options = HOW_OPTIONS.filter((option) => !only || only.includes(option.id));
   return (
     <div>
-      <h2 className="text-sm font-semibold">{t("how.title")}</h2>
-      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("how.intro")}</p>
+      <h2 className="text-sm font-semibold">{programme ? t("how.titleProgramme") : t("how.title")}</h2>
+      <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{programme ? t("how.introProgramme") : t("how.intro")}</p>
 
       <ol className="mt-4 space-y-3">
-        {HOW_OPTIONS.map((option, index) => (
+        {options.map((option, index) => (
           <li key={option.id}>
             {index > 0 ? (
               <p className="mb-3 text-sm font-medium text-[var(--muted)]">{t("how.or")}</p>
@@ -69,10 +80,12 @@ export async function HowChooser({ basePath }: { basePath: string }) {
               className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--brand-accent)]"
             >
               <p className="font-medium">{t(option.title)}</p>
-              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t(option.summary)}</p>
+              <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+                {programme && option.id === "documents" ? t("how.documents.summaryProgramme") : t(option.summary)}
+              </p>
               <p className="mt-2 text-xs text-[var(--muted)]">
                 <span className="font-medium text-[var(--foreground)]">{t("how.needs")}</span>{" "}
-                {t(option.needs)}{" "}
+                {programme && option.id === "documents" ? t("how.documents.needsProgramme") : t(option.needs)}{" "}
                 <span className="font-medium text-[var(--foreground)]">{t("how.takes")}</span>{" "}
                 {t(option.speed)}
               </p>
@@ -85,7 +98,7 @@ export async function HowChooser({ basePath }: { basePath: string }) {
 }
 
 /** The way back, shown above whichever one was chosen. */
-export async function ChooseDifferently({ basePath }: { basePath: string }) {
+export async function ChooseDifferently({ basePath }: { basePath: string; programme?: boolean }) {
   const t = await pageT();
   return (
     <p className="mb-4">

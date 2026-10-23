@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pageT, requireAnyPermission, requireCapability, said } from "@/lib/request";
+import { pageDates, pageT, requireAnyPermission, requireCapability, said } from "@/lib/request";
 import { curriculumOutline } from "@/lib/authoring";
 import { StaffCard } from "@/components/staff-card";
 import {
@@ -91,6 +91,7 @@ export default async function QualificationPage({
     "assessment:moderate",
   ]);
   const t = await pageT();
+  const { day } = await pageDates();
   const componentLabel = (component: string) => maybe(t, `qualPage.componentModule.${component}`) ?? component;
   const kindLabel = (kind: string) =>
     maybe(t, `docKind.${kind}`) ?? DOCUMENT_KIND_LABELS[kind as DocumentKind] ?? kind;
@@ -365,13 +366,33 @@ export default async function QualificationPage({
   return (
     <AppShell tenant={tenant} session={session}>
       <div className="mb-6">
-        <Link href="/qualifications" className="text-sm text-[var(--muted)] underline-offset-2 hover:underline">
-          {t("qualPage.all")}
+        <Link
+          href={qualification.kind === "skills_programme" ? "/skills-programmes" : "/qualifications"}
+          className="text-sm text-[var(--muted)] underline-offset-2 hover:underline"
+        >
+          {qualification.kind === "skills_programme" ? t("sp.allProgrammes") : t("qualPage.all")}
         </Link>
         <h1 className="mt-2 text-xl font-semibold">{qualification.title}</h1>
+        {/* A skills programme's own facts, from its Skills Programme Document (D39). */}
+        {qualification.kind === "skills_programme" ? (
+          <p className="mt-1 text-sm">
+            {[
+              t("qualPage.spKind"),
+              qualification.durationDays ? t("qualPage.spDays", { days: qualification.durationDays }) : null,
+              qualification.lastEnrolmentDate ? t("qualPage.spLastEnrolment", { date: day(qualification.lastEnrolmentDate) }) : null,
+              qualification.lastAchievementDate ? t("qualPage.spLastAchievement", { date: day(qualification.lastAchievementDate) }) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-[var(--muted)]">
           {[
-            qualification.saqaId ? t("qualPage.saqa", { id: qualification.saqaId }) : null,
+            qualification.saqaId
+              ? qualification.kind === "skills_programme"
+                ? qualification.saqaId
+                : t("qualPage.saqa", { id: qualification.saqaId })
+              : null,
             qualification.curriculumCode,
             qualification.nqfLevel ? t("qualPage.nqf", { level: qualification.nqfLevel }) : null,
             qualification.totalCredits ? t("qualPage.credits", { credits: qualification.totalCredits }) : null,
@@ -757,7 +778,7 @@ export default async function QualificationPage({
                         {unit.outcome.criteria.length > 0 ? (
                           <>
                             <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
-                              {t("qualPage.eisaTests")}
+                              {qualification.kind === "skills_programme" ? t("qualPage.fisaTests") : t("qualPage.eisaTests")}
                             </p>
                             <ul className="mt-1.5 space-y-1">
                               {unit.outcome.criteria.map((criterion) => (

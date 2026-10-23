@@ -169,6 +169,14 @@ export const qualifications = pgTable(
     registrationEndDate: timestamp("registration_end_date", {
       withTimezone: false,
     }),
+    /**
+     * A skills programme's own dates and length, from its Skills Programme
+     * Document (job sheet D39). Nobody may be enrolled after the first, and
+     * nobody may achieve it after the second.
+     */
+    lastEnrolmentDate: timestamp("last_enrolment_date", { withTimezone: false }),
+    lastAchievementDate: timestamp("last_achievement_date", { withTimezone: false }),
+    durationDays: integer("duration_days"),
 
     /**
      * Component weightings for the EISA readiness index, copied from the

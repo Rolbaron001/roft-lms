@@ -43,7 +43,7 @@ describe("a screen doing two jobs separates them", () => {
    * for making another underneath it. Neither job had a screen of its own.
    */
   it.each([
-    ["app/qualifications/page.tsx", "Qualifications"],
+    ["app/qualifications/screen.tsx", "Qualifications"],
     ["app/paths/page.tsx", "Programmes"],
   ])("%s (%s) uses tabs rather than stacking them", (path) => {
     const page = code(path);
@@ -60,7 +60,7 @@ describe("an empty screen says what to do, with something to press", () => {
    * the reader may do - which is why EmptyState rather than a bare card.
    */
   it.each([
-    "app/qualifications/page.tsx",
+    "app/qualifications/screen.tsx",
     "app/paths/page.tsx",
     "app/courses/page.tsx",
   ])("%s uses EmptyState", (path) => {

@@ -32,7 +32,7 @@ function source(path: string): string {
 }
 
 const detail = source("app/qualifications/[id]/page.tsx");
-const index = source("app/qualifications/page.tsx");
+const index = source("app/qualifications/screen.tsx");
 const tabs = source("components/view-tabs.tsx");
 
 describe("the tab strip", () => {
@@ -85,8 +85,9 @@ describe("the module chips in a study unit", () => {
 describe("the qualifications index", () => {
   it("separates the list from the making of a new one", () => {
     expect(index).toMatch(/view === "add" \? \(/);
-    expect(index).toMatch(/label: "Qualifications"/);
-    expect(index).toMatch(/label: "Add a qualification"/);
+    // One screen for qualifications and skills programmes (D39): each its own tabs.
+    expect(index).toMatch(/label: programme \? "Skills programmes" : "Qualifications"/);
+    expect(index).toMatch(/label: programme \? "Add a skills programme" : "Add a qualification"/);
   });
 
   it("shows the list one side and the create form the other", () => {
@@ -162,7 +163,7 @@ describe("a study unit's material", () => {
  */
 describe("choosing how to add a qualification", () => {
   const chooser = source("app/qualifications/how-chooser.tsx");
-  const page = source("app/qualifications/page.tsx");
+  const page = source("app/qualifications/screen.tsx");
 
   // The wording is in the language catalogue since job sheet D9, stage 4.
   it("offers exactly the three ways Roland named", () => {
@@ -199,14 +200,15 @@ describe("choosing how to add a qualification", () => {
   });
 
   it("can be closed again to choose differently", () => {
-    expect(page).toMatch(/<ChooseDifferently basePath="\/qualifications" \/>/);
+    expect(page).toMatch(/const basePath = programme \? "\/skills-programmes" : "\/qualifications"/);
+    expect(page).toMatch(/<ChooseDifferently basePath=\{basePath\} \/>/);
     // The documents panel has its own Close, which must go back to the
     // chooser rather than collapsing to a button on an empty page.
-    expect(page).toMatch(/closeHref="\/qualifications\?view=add"/);
+    expect(page).toMatch(/closeHref=\{`\$\{basePath\}\?view=add`\}/);
   });
 
   it("ignores a way that does not exist rather than showing nothing", () => {
     // ?how=nonsense falls back to the chooser.
-    expect(page).toMatch(/HOW_OPTIONS\.some\(\(option\) => option\.id === params\.how\)/);
+    expect(page).toMatch(/offered\.some\(\(id\) => id === params\.how\)/);
   });
 });
