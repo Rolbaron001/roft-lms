@@ -22,10 +22,24 @@ import {
 import { classLength, markFor, minutesIn } from "@/lib/classroom-attendance";
 import { classInvitation } from "@/lib/classroom-calendar";
 import { heldInClassroom, joinHref } from "@/lib/classroom-rules";
-import { classPass, classroomState, endClass, getClassroom, postClassChat, recordPresence, saveClassNotes } from "@/lib/classroom";
+import {
+  answerPoll,
+  classPass,
+  classPolls,
+  classroomState,
+  closePoll,
+  endBreakouts,
+  endClass,
+  getClassroom,
+  postClassChat,
+  recordPresence,
+  saveClassNotes,
+  startBreakouts,
+  startPoll,
+} from "@/lib/classroom";
 import { classReminders, calendarFor } from "@/lib/classroom-reminders";
 import { sweepTenant } from "@/lib/notifications";
-import { takeRegister, sessionRegister } from "@/lib/scheduling";
+import { cohortAttendance, takeRegister, sessionRegister } from "@/lib/scheduling";
 import { roomName } from "@/lib/classroom-media";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -261,6 +275,72 @@ describe("who may come in", () => {
   });
 });
 
+describe("polls", () => {
+  it("asks the class, takes one answer each, and shows the results once closed", async () => {
+    const poll = await startPoll(facilitator, sessionId, "Which comes first?", ["Job profile", "Grading", ""]);
+    expect(poll.options).toEqual(["Job profile", "Grading"]);
+    await expect(startPoll(facilitator, sessionId, "One answer only", ["Yes"])).rejects.toThrow(/two to six/);
+    await expect(startPoll(learner, sessionId, "Mine", ["a", "b"])).rejects.toThrow(/facilitator/);
+
+    await answerPoll(learner, sessionId, poll.id, 0);
+    await expect(answerPoll(learner, sessionId, poll.id, 1)).rejects.toThrow(/already answered/);
+    await answerPoll(absentLearner, sessionId, poll.id, 1);
+
+    // The learner sees their own answer but not the count until it closes; the facilitator sees it throughout.
+    const seen = (await getClassroom(learner, sessionId)).polls.find((one) => one.id === poll.id)!;
+    expect(seen).toMatchObject({ mine: 0, counts: null, closed: false });
+    expect((await classPolls(facilitator, sessionId)).find((one) => one.id === poll.id)!.counts).toEqual([1, 1]);
+
+    await closePoll(facilitator, sessionId, poll.id);
+    await expect(answerPoll(excusedLearner, sessionId, poll.id, 0)).rejects.toThrow(/closed/);
+    expect((await getClassroom(learner, sessionId)).polls.find((one) => one.id === poll.id)!.counts).toEqual([1, 1]);
+  });
+});
+
+describe("breakout groups", () => {
+  it("places only learners in the class, sends each to their own group's room, and brings them back", async () => {
+    const room = roomName(organisationId, sessionId);
+    // Two learners in the class; the third is not, and is not placed.
+    await recordPresence({ event: "joined", room, identity: learner.userId, connectionId: "BG_1", at: new Date() });
+    await recordPresence({ event: "joined", room, identity: excusedLearner.userId, connectionId: "BG_2", at: new Date() });
+
+    await expect(startBreakouts(learner, sessionId, 2)).rejects.toThrow(/facilitator/);
+    const groups = await startBreakouts(facilitator, sessionId, 2);
+    expect(groups.flat().sort()).toEqual([learner.userId, excusedLearner.userId].sort());
+    expect(groups).toHaveLength(2);
+    await expect(startBreakouts(facilitator, sessionId, 2)).rejects.toThrow(/already running/);
+
+    const mine = groups.findIndex((group) => group.includes(learner.userId)) + 1;
+    const pass = await classPass(learner, sessionId);
+    expect("token" in pass && pass.group).toBe(mine);
+    if ("token" in pass) {
+      const claims = JSON.parse(Buffer.from(pass.token.split(".")[1], "base64url").toString());
+      expect(claims.video.room).toBe(roomName(organisationId, sessionId, mine));
+    }
+    // The facilitator stays in the whole class unless they visit a group.
+    const stays = await classPass(facilitator, sessionId);
+    expect("token" in stays && stays.group).toBeNull();
+    const visits = await classPass(facilitator, sessionId, new Date(), 2);
+    expect("token" in visits && visits.group).toBe(2);
+
+    // What is said in one group stays in it.
+    await postClassChat(learner, sessionId, "Our group's answer");
+    const other = await getClassroom(excusedLearner, sessionId);
+    expect(other.chat.map((line) => line.body)).not.toContain("Our group's answer");
+    expect((await getClassroom(facilitator, sessionId)).breakout?.flat().map((one) => one.userId).sort()).toEqual(groups.flat().sort());
+
+    // Time in a group's room is time in the class.
+    expect(await recordPresence({ event: "joined", room: roomName(organisationId, sessionId, mine), identity: learner.userId, connectionId: "BG_3", at: new Date() })).toBe(true);
+
+    await endBreakouts(facilitator, sessionId);
+    const back = await classPass(learner, sessionId);
+    expect("token" in back && back.group).toBeNull();
+    for (const connectionId of ["BG_1", "BG_2", "BG_3"]) {
+      await recordPresence({ event: "left", room, identity: learner.userId, connectionId, at: new Date() });
+    }
+  });
+});
+
 describe("the register, from who was there", () => {
   it("marks present at the share or more, leaves a person's own marks alone, and asks the facilitator to check", async () => {
     const room = roomName(organisationId, sessionId);
@@ -297,6 +377,17 @@ describe("the register, from who was there", () => {
     await takeRegister(facilitator, sessionId, register.lines.map((one) => ({ userId: one.userId, status: one.status!, note: one.note ?? undefined })));
     expect((await sessionRegister(facilitator, sessionId)).lines.some((one) => one.fromClassroom)).toBe(false);
     expect(await classroomState(learner, sessionId)).toBe("ended");
+  });
+
+  it("flags learners below the provider's programme target on what has been held", async () => {
+    await withPlatformScope("classroom test target", (tx) =>
+      tx.update(organisations).set({ attendanceTargetPercent: 90 }).where(eq(organisations.id, organisationId)),
+    );
+    const attendance = await cohortAttendance(facilitator, cohortId);
+    expect(attendance.targetPercent).toBe(90);
+    const flagged = (who: AuthenticatedSession) => attendance.learners.find((one) => one.userId === who.userId)!.belowTarget;
+    expect(flagged(learner)).toBe(false);
+    expect(flagged(absentLearner)).toBe(true);
   });
 });
 

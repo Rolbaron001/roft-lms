@@ -729,6 +729,12 @@ export const cohortSessions = pgTable(
      */
     classStartedAt: timestamp("class_started_at", { withTimezone: true }),
     classEndedAt: timestamp("class_ended_at", { withTimezone: true }),
+    /**
+     * Breakout groups while they run: each group's learners, by user id.
+     * Null in the whole class. Kept here so a learner reconnecting goes back
+     * to their own group, and nobody can choose another.
+     */
+    classBreakout: jsonb("class_breakout").$type<{ startedAt: string; groups: string[][] }>(),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

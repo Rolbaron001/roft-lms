@@ -60,8 +60,10 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
         opensAtClock={clockInZone(view.opensAt, tenant.timezone)}
         cameras={view.cameras}
         configured={view.configured}
-        chat={view.chat.map((line) => ({ id: line.id, name: line.name, body: line.body, sentAt: line.sentAt.toISOString(), mine: line.mine }))}
+        chat={view.chat.map((line) => ({ id: line.id, name: line.name, body: line.body, sentAt: line.sentAt.toISOString(), mine: line.mine, group: line.group }))}
         notes={view.notes}
+        polls={view.polls}
+        breakout={view.breakout}
       />
     </AppShell>
   );

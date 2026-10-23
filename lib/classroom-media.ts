@@ -41,15 +41,16 @@ function prefix(): string {
  * and live apart when they share one media server, since a copy of live's
  * database carries live's identifiers.
  */
-export function roomName(organisationId: string, sessionId: string): string {
-  return `${prefix()}-${organisationId}-${sessionId}`;
+export function roomName(organisationId: string, sessionId: string, group?: number | null): string {
+  return `${prefix()}-${organisationId}-${sessionId}${group ? `-g${group}` : ""}`;
 }
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
-export function parseRoomName(room: string): { organisationId: string; sessionId: string } | null {
-  const match = new RegExp(`^${prefix()}-(${UUID})-(${UUID})$`, "i").exec(room);
-  return match ? { organisationId: match[1], sessionId: match[2] } : null;
+/** A breakout group's room names its class, so time in a group counts as time in the class. */
+export function parseRoomName(room: string): { organisationId: string; sessionId: string; group: number | null } | null {
+  const match = new RegExp(`^${prefix()}-(${UUID})-(${UUID})(?:-g(\\d+))?$`, "i").exec(room);
+  return match ? { organisationId: match[1], sessionId: match[2], group: match[3] ? Number(match[3]) : null } : null;
 }
 
 /**
@@ -81,7 +82,10 @@ export async function issuePass(input: {
     canPublish: true,
     canPublishSources: sources,
     canSubscribe: true,
-    canPublishData: false,
+    // The whiteboard's strokes go from browser to browser. Chat, polls and
+    // breakouts come only from this server, and the page ignores those
+    // topics from anybody else.
+    canPublishData: true,
     // A raised hand is the person's own attribute.
     canUpdateOwnMetadata: true,
   });

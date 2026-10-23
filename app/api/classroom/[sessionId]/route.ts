@@ -1,6 +1,27 @@
 import { currentSession, said } from "@/lib/request";
-import { ClassroomError, classPass, endClass, hostControl, postClassChat, saveClassNotes, type HostAction } from "@/lib/classroom";
+import {
+  ClassroomError,
+  answerPoll,
+  classPass,
+  classPolls,
+  closePoll,
+  endBreakouts,
+  endClass,
+  getClassroom,
+  hostControl,
+  postClassChat,
+  saveClassNotes,
+  startBreakouts,
+  startPoll,
+  type HostAction,
+} from "@/lib/classroom";
 import { PermissionDeniedError } from "@/lib/rbac";
+
+/** The breakout group a host says they are in, or null for the whole class. */
+function visiting(value: unknown): number | null {
+  const group = Number(value);
+  return Number.isInteger(group) && group > 0 ? group : null;
+}
 
 /**
  * Everything the classroom page asks of the server while a class runs (job
@@ -18,9 +39,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ ses
     const body = (await request.json()) as Record<string, unknown>;
     switch (body.do) {
       case "pass":
-        return Response.json(await classPass(session, sessionId));
+        return Response.json(await classPass(session, sessionId, new Date(), visiting(body.group)));
       case "chat":
-        return Response.json({ ok: true, line: await postClassChat(session, sessionId, String(body.body ?? "")) });
+        return Response.json({ ok: true, line: await postClassChat(session, sessionId, String(body.body ?? ""), visiting(body.group)) });
+      case "breakout_start":
+        return Response.json({ ok: true, groups: await startBreakouts(session, sessionId, Number(body.count)) });
+      case "breakout_end":
+        await endBreakouts(session, sessionId);
+        return Response.json({ ok: true });
+      case "poll_start":
+        return Response.json({
+          ok: true,
+          poll: await startPoll(session, sessionId, String(body.question ?? ""), Array.isArray(body.options) ? body.options.map(String) : []),
+        });
+      case "poll_answer":
+        await answerPoll(session, sessionId, String(body.pollId ?? ""), Number(body.choice));
+        return Response.json({ ok: true });
+      case "poll_close":
+        return Response.json({ ok: true, poll: await closePoll(session, sessionId, String(body.pollId ?? "")) });
+      case "polls":
+        return Response.json({ ok: true, polls: await classPolls(session, sessionId) });
+      case "groups":
+        return Response.json({ ok: true, breakout: (await getClassroom(session, sessionId)).breakout });
       case "notes":
         return Response.json({ ok: true, savedAt: await saveClassNotes(session, sessionId, String(body.body ?? "")) });
       case "control":

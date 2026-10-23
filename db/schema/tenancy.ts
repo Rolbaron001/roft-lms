@@ -276,6 +276,12 @@ export const organisations = pgTable(
     classroomCameras: boolean("classroom_cameras").notNull().default(true),
     /** The share of the class a learner must attend to be counted present. */
     classroomPresentPercent: integer("classroom_present_percent").notNull().default(75),
+    /**
+     * The attendance a learner must reach over the whole programme, as a
+     * percentage (Heidi, 23 October 2026: 90% at Curiosa), or none. Learners
+     * below it are flagged on the cohort's attendance.
+     */
+    attendanceTargetPercent: integer("attendance_target_percent"),
 
     /**
      * The language this provider's people read the platform in unless they

@@ -484,6 +484,7 @@ export default async function CohortPage({
             >
               <p className="mb-3 text-sm text-[var(--muted)]">
                 {t("cohort.held", { held: attendance.held, countable: attendance.countable })}
+                {attendance.targetPercent !== null ? ` ${t("cohort.target", { percent: attendance.targetPercent })}` : ""}
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -504,7 +505,10 @@ export default async function CohortPage({
                         <td className="py-2 pr-3 tabular-nums">{line.present}</td>
                         <td className="py-2 pr-3 tabular-nums">{line.absent}</td>
                         <td className="py-2 pr-3 tabular-nums">{line.excused}</td>
-                        <td className="py-2 pr-3 tabular-nums">{line.toDatePercent}%</td>
+                        <td className={`py-2 pr-3 tabular-nums ${line.belowTarget ? "font-semibold text-[var(--danger)]" : ""}`}>
+                          {line.toDatePercent}%
+                          {line.belowTarget ? <span className="ml-1 text-xs font-normal">{t("cohort.belowTarget")}</span> : null}
+                        </td>
                         <td className="py-2 tabular-nums">{line.overallPercent}%</td>
                       </tr>
                     ))}

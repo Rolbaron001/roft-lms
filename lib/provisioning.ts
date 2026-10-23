@@ -700,16 +700,25 @@ export async function setTenantLeisaTarget(session: AuthenticatedSession, hours:
  */
 export async function setTenantClassroom(
   session: AuthenticatedSession,
-  settings: { enabled: boolean; cameras: boolean; presentPercent: number },
+  settings: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null },
 ) {
   assertSessionCan(session, "tenant:manage_settings");
   if (!Number.isInteger(settings.presentPercent) || settings.presentPercent < 1 || settings.presentPercent > 100) {
     throw new z.ZodError([{ code: "custom", path: ["presentPercent"], message: "Give a whole percentage from 1 to 100." }]);
   }
+  const target = settings.attendanceTarget;
+  if (target !== null && (!Number.isInteger(target) || target < 1 || target > 100)) {
+    throw new z.ZodError([{ code: "custom", path: ["attendanceTarget"], message: "Give the attendance target as a whole percentage from 1 to 100, or leave it empty." }]);
+  }
 
   await withTenant(session.organisationId, async (tx) => {
     const [before] = await tx
-      .select({ enabled: organisations.classroomEnabled, cameras: organisations.classroomCameras, presentPercent: organisations.classroomPresentPercent })
+      .select({
+        enabled: organisations.classroomEnabled,
+        cameras: organisations.classroomCameras,
+        presentPercent: organisations.classroomPresentPercent,
+        attendanceTarget: organisations.attendanceTargetPercent,
+      })
       .from(organisations)
       .where(eq(organisations.id, session.organisationId));
     await tx
@@ -718,6 +727,7 @@ export async function setTenantClassroom(
         classroomEnabled: settings.enabled,
         classroomCameras: settings.cameras,
         classroomPresentPercent: settings.presentPercent,
+        attendanceTargetPercent: target,
         updatedAt: new Date(),
       })
       .where(eq(organisations.id, session.organisationId));

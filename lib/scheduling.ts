@@ -11,6 +11,7 @@ import {
   courses,
   curriculumModules,
   notifications,
+  organisations,
   sessionWorkbooks,
   stepReleases,
   studyUnits,
@@ -702,6 +703,8 @@ export type LearnerAttendance = {
   overallPercent: number;
   /** Of the sessions held so far. */
   toDatePercent: number;
+  /** Below the provider's programme target on the sessions held so far. */
+  belowTarget: boolean;
 };
 
 export type CohortAttendance = {
@@ -709,6 +712,8 @@ export type CohortAttendance = {
   countable: number;
   /** Of those, the ones that have happened. */
   held: number;
+  /** The attendance a learner must reach over the programme (Heidi: 90%), or none. */
+  targetPercent: number | null;
   learners: LearnerAttendance[];
 };
 
@@ -786,9 +791,18 @@ export async function cohortAttendance(
     const pct = (part: number, whole: number) =>
       whole === 0 ? 0 : Math.round((part / whole) * 1000) / 10;
 
+    // Measured on what has been held: early in a programme the overall figure
+    // is low for everybody, and flagging the whole cohort would flag nobody.
+    const [provider] = await tx
+      .select({ target: organisations.attendanceTargetPercent })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+    const targetPercent = provider?.target ?? null;
+
     return {
       countable: countable.length,
       held: held.length,
+      targetPercent,
       learners: members.map((member) => {
         const mine = marks.filter((m) => m.userId === member.userId);
         const present = mine.filter((m) => m.status === "present");
@@ -802,6 +816,7 @@ export async function cohortAttendance(
           excused: mine.filter((m) => m.status === "excused").length,
           overallPercent: pct(present.length, countable.length),
           toDatePercent: pct(presentHeld.length, held.length),
+          belowTarget: targetPercent !== null && held.length > 0 && pct(presentHeld.length, held.length) < targetPercent,
         };
       }),
     };

@@ -14,7 +14,7 @@ export function ClassroomForm({
   current,
   configured,
 }: {
-  current: { enabled: boolean; cameras: boolean; presentPercent: number };
+  current: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null };
   /** Whether this server has a media server to hold classes on. */
   configured: boolean;
 }) {
@@ -52,6 +52,19 @@ export function ClassroomForm({
             className="w-20 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 tabular-nums"
           />
           <span>{t("classroomSettings.presentAfter")}</span>
+        </label>
+        <label className="flex flex-wrap items-center gap-2">
+          <span>{t("classroomSettings.target")}</span>
+          <input
+            name="attendanceTarget"
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            defaultValue={current.attendanceTarget ?? ""}
+            className="w-20 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 tabular-nums"
+          />
+          <span>{t("classroomSettings.targetAfter")}</span>
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button

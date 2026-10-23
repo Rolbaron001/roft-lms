@@ -577,8 +577,24 @@ person going through it question by question.
   already marked by a person (excused, say) is left as marked. The facilitator
   is asked to check the register and save it; until then it says it was filled
   in from the classroom.
-- **What is kept:** the chat, the facilitator's notes and the register. No
-  sound or picture of the class is stored.
+- **Polls:** the facilitator asks a question with two to six answers. Each
+  learner answers once; the facilitator sees the answers come in, and the
+  class sees the results when the poll is closed. Kept with the class.
+- **The whiteboard:** the facilitator shows a shared board on the stage and may
+  let learners draw on it. It is not kept once the class ends.
+- **Breakout groups:** the facilitator splits the learners in the class (at
+  least two) into groups, each in a room of its own, and can visit any group.
+  A learner who drops out goes back to the same group. Chat in a group stays in
+  that group. Time in a group counts as time in the class. **Bring everyone
+  back** returns them all.
+- **Ended by mistake:** the facilitator can open the class again from the same
+  page; the register is filled in again when it next ends.
+- **Programme attendance target:** Settings → Live classes. The share of
+  sessions a learner must attend over the whole programme (Curiosa: 90%).
+  Learners below it on the sessions held so far are marked on the cohort's
+  attendance. Leave it empty for none.
+- **What is kept:** the chat, the polls, the facilitator's notes and the
+  register. No sound or picture of the class is stored.
 - **Learners need:** a laptop, phone or tablet with a current browser, and
   earphones with a microphone.
 

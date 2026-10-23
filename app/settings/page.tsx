@@ -239,7 +239,7 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <ClassroomForm
-            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent }}
+            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent, attendanceTarget: tenant.attendanceTargetPercent }}
             configured={mediaConfigured()}
           />
         </div>
