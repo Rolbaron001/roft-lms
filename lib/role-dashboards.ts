@@ -34,6 +34,7 @@ import { blockedLearners, stepsForLearner } from "./spine";
 import { cohortLeisa, notificationDue } from "./statutory-notification";
 import { myLogbooks } from "./workplace";
 import { coursesOf } from "./programme-staff";
+import { classroomSettingsWithin, joinHref } from "./classroom";
 
 /**
  * Every role's dashboard but the administrator's (job sheet D25), as designed
@@ -186,11 +187,14 @@ export async function facilitatorDashboard(session: AuthenticatedSession, { t, d
 
   const data = await withTenant(session.organisationId, async (tx) => {
     if (ids.length === 0) return { upcoming: [], unmarked: [], waiting: [], members: [] };
-    const upcoming = await tx
-      .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl })
-      .from(cohortSessions)
-      .where(and(inArray(cohortSessions.cohortId, ids), gte(cohortSessions.scheduledDate, today), lte(cohortSessions.scheduledDate, fortnight), notInArray(cohortSessions.status, ["cancelled", "postponed"])))
-      .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime));
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    const upcoming = (
+      await tx
+        .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, deliveryMode: cohortSessions.deliveryMode })
+        .from(cohortSessions)
+        .where(and(inArray(cohortSessions.cohortId, ids), gte(cohortSessions.scheduledDate, today), lte(cohortSessions.scheduledDate, fortnight), notInArray(cohortSessions.status, ["cancelled", "postponed"])))
+        .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime))
+    ).map((row) => ({ ...row, join: joinHref(classroom, row) }));
     const past = await tx
       .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, date: cohortSessions.scheduledDate, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence })
       .from(cohortSessions)
@@ -286,8 +290,8 @@ export async function facilitatorDashboard(session: AuthenticatedSession, { t, d
         title: t("dash.timetable"),
         empty: t("dash.timetableNone"),
         rows: todays.map((row) =>
-          row.meetingUrl
-            ? { primary: t("dash.join"), secondary: `${sessionName(t, row)} · ${nameOf(row.cohortId)}`, right: row.startTime ?? "", href: row.meetingUrl, external: true }
+          row.join
+            ? { primary: t("dash.join"), secondary: `${sessionName(t, row)} · ${nameOf(row.cohortId)}`, right: row.startTime ?? "", href: row.join.href, external: row.join.external }
             : { primary: t("dash.register"), secondary: `${sessionName(t, row)} · ${nameOf(row.cohortId)}`, right: row.startTime ?? "", href: sessionHref(row) },
         ),
       },
@@ -520,14 +524,17 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
   const home = qualificationsHeld[0] ? `/learn/qualification/${qualificationsHeld[0].id}` : "/";
 
   const data = await withTenant(session.organisationId, async (tx) => {
-    const classes = await tx
-      .select({ id: cohortSessions.id, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, venue: cohortSessions.venue, cohortName: cohorts.name })
-      .from(cohortSessions)
-      .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
-      .innerJoin(cohortMembers, and(eq(cohortMembers.cohortId, cohortSessions.cohortId), eq(cohortMembers.userId, session.userId), isNull(cohortMembers.leftAt)))
-      .where(and(gte(cohortSessions.scheduledDate, today), lte(cohortSessions.scheduledDate, addDays(today, 14)), notInArray(cohortSessions.status, ["cancelled", "postponed"])))
-      .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime))
-      .limit(5);
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    const classes = (
+      await tx
+        .select({ id: cohortSessions.id, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, deliveryMode: cohortSessions.deliveryMode, venue: cohortSessions.venue, cohortName: cohorts.name })
+        .from(cohortSessions)
+        .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
+        .innerJoin(cohortMembers, and(eq(cohortMembers.cohortId, cohortSessions.cohortId), eq(cohortMembers.userId, session.userId), isNull(cohortMembers.leftAt)))
+        .where(and(gte(cohortSessions.scheduledDate, today), lte(cohortSessions.scheduledDate, addDays(today, 14)), notInArray(cohortSessions.status, ["cancelled", "postponed"])))
+        .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime))
+        .limit(5)
+    ).map((row) => ({ ...row, join: joinHref(classroom, row) }));
     const returned = await tx
       .select({ enrolmentId: assessmentSubmissions.enrolmentId, assessmentId: assessmentSubmissions.assessmentId, title: assessments.title, at: formativeFeedback.returnedAt })
       .from(formativeFeedback)
@@ -586,11 +593,11 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
   const documents = onQualification ? await enrolmentReadiness(session, session.userId, "standard_qualification", now).catch(() => null) : null;
   const missing = documents ? documents.documents.filter((row) => !row.satisfied) : [];
   const todays = data.classes.filter((row) => row.date === today);
-  const classHref = (row: (typeof data.classes)[number]) => row.meetingUrl ?? home;
+  const classHref = (row: (typeof data.classes)[number]) => row.join?.href ?? home;
   const resultHref = (row: { enrolmentId: string | null; assessmentId: string }) => (row.enrolmentId ? `/learn/${row.enrolmentId}/assessment/${row.assessmentId}` : home);
 
   const tiles: DashTile[] = [];
-  if (todays.length) tiles.push({ ...tile("classToday", todays.length, [t("rd.l.classToday"), t("rd.l.classesToday")], `${todays[0].startTime ?? ""} ${sessionName(t, todays[0])}`.trim(), [todays[0].meetingUrl ? t("dash.join") : t("rd.openOne"), t("rd.l.openClasses")], classHref(todays[0]), "warning") });
+  if (todays.length) tiles.push({ ...tile("classToday", todays.length, [t("rd.l.classToday"), t("rd.l.classesToday")], `${todays[0].startTime ?? ""} ${sessionName(t, todays[0])}`.trim(), [todays[0].join ? t("dash.join") : t("rd.openOne"), t("rd.l.openClasses")], classHref(todays[0]), "warning") });
   if (dueSoon.length) tiles.push(tile("dueSoon", dueSoon.length, [t("rd.l.dueOne"), t("rd.l.due")], dueSoon[0].right ?? "", [t("rd.openOne"), t("rd.l.openDue")], dueSoon.length === 1 ? dueSoon[0].href : "#due-next", dueSoon.some((row) => row.tone === "danger") ? "danger" : "warning"));
   if (data.returned.length) tiles.push(tile("feedbackBack", data.returned.length, [t("rd.l.feedbackOne"), t("rd.l.feedback")], data.returned[0].title, [t("rd.l.read"), t("rd.l.openFeedback")], data.returned.length === 1 ? resultHref(data.returned[0]) : "#results", "plain"));
   if (owed.length) tiles.push(tile("forms", owed.length, [t("rd.l.formOne"), t("rd.l.forms")], owed[0].assessmentTitle ?? owed[0].cohortName, [t("rd.l.fillIn"), t("rd.l.openForms")], `/feedback/${owed[0].id}`, "warning"));
@@ -611,11 +618,11 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
         empty: t("rd.l.classesNone"),
         rows: data.classes.map((row) => ({
           primary: sessionName(t, row),
-          secondary: row.meetingUrl ? t("rd.l.join") : row.venue ?? row.cohortName,
+          secondary: row.join ? t("rd.l.join") : row.venue ?? row.cohortName,
           right: row.date === today ? `${t("rd.today")} ${row.startTime ?? ""}`.trim() : day(row.date, { short: true }),
           tone: row.date === today ? "warning" : "plain",
           href: classHref(row),
-          external: Boolean(row.meetingUrl),
+          external: Boolean(row.join?.external),
         })),
       },
       {

@@ -10,3 +10,4 @@ export * from "./cohort-file";
 export * from "./programme-staff";
 export * from "./discussion";
 export * from "./pre-assessment";
+export * from "./classroom";

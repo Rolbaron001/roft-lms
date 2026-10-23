@@ -92,6 +92,11 @@ export function Rollout({
                     </td>
                     <td className="py-2 pr-3">
                       {entry.title ?? maybe(t, `session.kind.${entry.kind}`) ?? entry.kind}
+                      {entry.classroom && entry.status !== "cancelled" && entry.status !== "postponed" ? (
+                        <Link href={`/classroom/${entry.id}`} className="ml-2 text-xs font-medium text-[var(--brand-accent)] hover:underline">
+                          {t("rollout.classroom")}
+                        </Link>
+                      ) : null}
                       {entry.status !== "scheduled" ? (
                         <span className="ml-2 text-xs text-[var(--muted)]">
                           {maybe(t, `session.status.${entry.status}`) ?? entry.status}

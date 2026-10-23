@@ -18,6 +18,8 @@ import { CapabilitiesForm } from "./capabilities-form";
 import { ClockForm } from "./clock-form";
 import { DateForm } from "./date-form";
 import { LeisaTargetForm } from "./leisa-target-form";
+import { ClassroomForm } from "./classroom-form";
+import { mediaConfigured } from "@/lib/classroom-media";
 import { FeedbackQuestionsForm } from "./feedback-questions-form";
 import { activeQuestionnaire } from "@/lib/feedback";
 import { providerChecklist } from "@/lib/pre-assessment";
@@ -227,6 +229,19 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <LeisaTargetForm current={tenant.leisaTargetHours} />
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="classroom"
+          data-settings-section={t("settings.section.classroom")}
+          className="mt-6 scroll-mt-24"
+        >
+          <ClassroomForm
+            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent }}
+            configured={mediaConfigured()}
+          />
         </div>
       ) : null}
 

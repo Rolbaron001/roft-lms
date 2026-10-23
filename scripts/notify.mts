@@ -18,15 +18,10 @@ import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
-const {
-  markEmailFailed,
-  markEmailSent,
-  pendingEmails,
-  sweepAllTenants,
-} = await import("../lib/notifications");
-const { deliver, mailIsConfigured, verifyRelay } = await import("../lib/mail");
-const { sayer } = await import("../lib/i18n/said");
-const { localeFor } = await import("../lib/i18n/locales");
+const { pendingEmails, sweepAllTenants } = await import("../lib/notifications");
+const { mailIsConfigured, verifyRelay } = await import("../lib/mail");
+const { deliverQueued } = await import("../lib/outbox");
+const { classRemindersAllTenants } = await import("../lib/classroom-reminders");
 const { sendToAllRecordStores } = await import("../lib/record-store");
 
 const mode = process.argv[2] ?? "both";
@@ -59,6 +54,12 @@ async function sweep() {
         `${result.sessionsAnnounced} session announcements considered.`,
     );
   }
+
+  // Classes in the LMS classroom (D41). Also run every five minutes through
+  // POST /api/classroom/tick, for the reminder fifteen minutes before.
+  for (const { tenant, result } of await classRemindersAllTenants()) {
+    log(`  ${tenant}: ${result.announced} class announcements, ${result.reminded} class reminders.`);
+  }
 }
 
 async function send() {
@@ -80,35 +81,7 @@ async function send() {
     return;
   }
 
-  let sent = 0;
-  let failed = 0;
-
-  for (const message of queued) {
-    const base = process.env.AUTH_URL ?? "";
-    // Raised in English; sent in the recipient's language (D9 stage 5).
-    const locale = localeFor({ defaultLocale: message.providerLocale }, { locale: message.locale });
-    const say = sayer(locale);
-
-    const result = await deliver({
-      to: message.email,
-      toName: message.firstName,
-      subject: say(message.subject),
-      body: say(message.body),
-      linkUrl: message.linkPath ? `${base}${message.linkPath}` : null,
-      locale,
-    });
-
-    if (result.ok) {
-      await markEmailSent(message.id);
-      sent += 1;
-    } else {
-      await markEmailFailed(message.id, result.error, {
-        retryable: result.retryable,
-      });
-      failed += 1;
-    }
-  }
-
+  const { sent, failed } = await deliverQueued(queued);
   log(`Sent ${sent}, failed ${failed}.`);
 }
 

@@ -722,6 +722,14 @@ export const cohortSessions = pgTable(
     resources: text("resources"),
     proceedings: text("proceedings"),
 
+    /**
+     * When the facilitator opened the LMS classroom for this session, and
+     * when they ended it (job sheet D41). Learners wait in the lobby until the
+     * first is set, and are let in no longer once the second is.
+     */
+    classStartedAt: timestamp("class_started_at", { withTimezone: true }),
+    classEndedAt: timestamp("class_ended_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

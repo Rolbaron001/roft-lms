@@ -693,6 +693,47 @@ export async function setTenantLeisaTarget(session: AuthenticatedSession, hours:
   clearTenantCache();
 }
 
+/**
+ * The LMS classroom (job sheet D41): whether online sessions are held in it,
+ * whether cameras are allowed (off is audio only), and the share of a class a
+ * learner must attend to be counted present.
+ */
+export async function setTenantClassroom(
+  session: AuthenticatedSession,
+  settings: { enabled: boolean; cameras: boolean; presentPercent: number },
+) {
+  assertSessionCan(session, "tenant:manage_settings");
+  if (!Number.isInteger(settings.presentPercent) || settings.presentPercent < 1 || settings.presentPercent > 100) {
+    throw new z.ZodError([{ code: "custom", path: ["presentPercent"], message: "Give a whole percentage from 1 to 100." }]);
+  }
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({ enabled: organisations.classroomEnabled, cameras: organisations.classroomCameras, presentPercent: organisations.classroomPresentPercent })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+    await tx
+      .update(organisations)
+      .set({
+        classroomEnabled: settings.enabled,
+        classroomCameras: settings.cameras,
+        classroomPresentPercent: settings.presentPercent,
+        updatedAt: new Date(),
+      })
+      .where(eq(organisations.id, session.organisationId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.classroom_updated",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: before ?? null,
+      after: settings,
+    });
+  });
+  clearTenantCache();
+}
+
 export { RESERVED_SLUGS };
 
 /**

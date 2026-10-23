@@ -23,6 +23,7 @@ import { matchAttendance, readAttendanceExport } from "./attendance-import";
 import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { facilitatorsForCohort } from "./programme-staff";
+import { classroomSettingsWithin, heldInClassroom } from "./classroom";
 
 /**
  * The dated occasions a cohort meets, and who was there.
@@ -360,6 +361,8 @@ export type ScheduledSession = {
   workbooks: { role: string; title: string }[];
   /** How many of the cohort have been marked, and how many were present. */
   register: { marked: number; present: number; expected: number };
+  /** Held in the LMS classroom (D41). */
+  classroom: boolean;
 };
 
 /**
@@ -433,6 +436,7 @@ export async function cohortSchedule(
       .where(
         and(eq(cohortMembers.cohortId, cohortId), isNull(cohortMembers.leftAt)),
       );
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
 
     return rows.map((row) => {
       const forSession = marks.filter((m) => m.sessionId === row.id);
@@ -463,6 +467,7 @@ export async function cohortSchedule(
             forSession.find((m) => m.status === "present")?.count ?? 0,
           expected,
         },
+        classroom: heldInClassroom(classroom, row),
       };
     });
   });
@@ -477,6 +482,8 @@ export type RegisterLine = {
   name: string;
   status: "present" | "absent" | "excused" | null;
   note: string | null;
+  /** Filled in from the LMS classroom (D41) and not yet confirmed by a person. */
+  fromClassroom: boolean;
 };
 
 /** Everyone still in the cohort, with whatever has already been marked. */
@@ -519,6 +526,7 @@ export async function sessionRegister(
         userId: attendanceRecords.userId,
         status: attendanceRecords.status,
         note: attendanceRecords.note,
+        markedById: attendanceRecords.markedById,
       })
       .from(attendanceRecords)
       .where(eq(attendanceRecords.sessionId, sessionId));
@@ -537,6 +545,7 @@ export async function sessionRegister(
           name: `${member.firstName} ${member.lastName}`,
           status: mark?.status ?? null,
           note: mark?.note ?? null,
+          fromClassroom: Boolean(mark && mark.markedById === null),
         };
       }),
     };

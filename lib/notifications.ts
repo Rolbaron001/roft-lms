@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import type { AuthenticatedSession } from "./session";
 import { writtenDay } from "./date-format";
+import { heldInClassroom } from "./classroom-rules";
 
 /**
  * Notifications.
@@ -76,7 +77,13 @@ export type NotificationKind =
   | "statutory.overdue"
   /** A scheduled session a week ahead, and one called off after being announced. */
   | "session.announced"
-  | "session.cancelled";
+  | "session.cancelled"
+  /**
+   * The LMS classroom (D41): a class the day before and fifteen minutes
+   * before, and, to its facilitator, a register filled in from the classroom.
+   */
+  | "class.reminder"
+  | "class.register_to_check";
 
 export type RaiseInput = {
   organisationId: string;
@@ -573,7 +580,15 @@ export async function sweepTenant(
         ),
       );
 
+    const [provider] = await tx
+      .select({ classroomOn: organisations.classroomEnabled })
+      .from(organisations)
+      .where(eq(organisations.id, organisationId));
+
     for (const row of upcoming) {
+      // A class in the LMS classroom is announced by the classroom's own
+      // reminders, with its calendar invitation (lib/classroom-reminders.ts).
+      if (heldInClassroom(provider?.classroomOn ?? false, row)) continue;
       const members = await tx
         .select({ userId: cohortMembers.userId })
         .from(cohortMembers)
@@ -705,10 +720,18 @@ export type PendingEmail = {
   /** The recipient's own language, and their provider's, for writing the email in (D9). */
   locale: string | null;
   providerLocale: string | null;
+  /** What it is about, so a class's message can carry its calendar invitation (D41). */
+  kind: string;
+  entityType: string | null;
+  entityId: string | null;
 };
 
-/** Email notifications waiting to go out, oldest first. */
-export async function pendingEmails(limit = 100): Promise<PendingEmail[]> {
+/**
+ * Email notifications waiting to go out, oldest first. `kinds` narrows it to
+ * some kinds of message: the classroom's run every five minutes sends its own
+ * reminders at once rather than waiting for the hourly send.
+ */
+export async function pendingEmails(limit = 100, kinds?: NotificationKind[]): Promise<PendingEmail[]> {
   return withPlatformScope(
     "draining the notification outbox for delivery",
     (tx) =>
@@ -724,6 +747,9 @@ export async function pendingEmails(limit = 100): Promise<PendingEmail[]> {
           attempts: notifications.attempts,
           locale: users.locale,
           providerLocale: organisations.defaultLocale,
+          kind: notifications.kind,
+          entityType: notifications.entityType,
+          entityId: notifications.entityId,
         })
         .from(notifications)
         .innerJoin(users, eq(users.id, notifications.userId))
@@ -732,6 +758,7 @@ export async function pendingEmails(limit = 100): Promise<PendingEmail[]> {
           and(
             eq(notifications.channel, "email"),
             eq(notifications.status, "pending"),
+            kinds ? inArray(notifications.kind, kinds) : undefined,
             // Anonymised accounts have no working address, and a suspended
             // person should not be chased.
             eq(users.status, "active"),

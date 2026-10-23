@@ -545,6 +545,43 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6v. Live classes in the LMS classroom (23 October 2026)
+
+- **Switching it on:** Settings → Live classes. Choose audio and video
+  (cameras allowed, off by default for learners) or audio only, and the share
+  of a class a learner must attend to be counted present (75% to start).
+- **Which sessions it holds:** every online session on a cohort's schedule
+  without an outside meeting link. Nothing has to be marked; an imported
+  roll-out schedule is ready as it stands. Give a session an outside link only
+  as a contingency, when the classroom cannot hold it.
+- **What the provider must have:** a media server for the platform (set up by
+  the hosting provider); start and end times on every class, since the lobby,
+  the reminders and the register are worked out from them; a facilitator named
+  on each session.
+- **Reminders:** a week ahead (with a calendar invitation in the email), the
+  day before, and fifteen minutes before. Each goes to the notifications list,
+  to the person's email, and to their LMS mailbox if they have one.
+- **Who may enter:** the cohort's current learners and its staff. The named
+  facilitator, or any staff member who manages sessions for the cohort, hosts
+  the class; a stand-in can open and run it. Nobody else, whatever link they
+  hold.
+- **The lobby:** learners can come in fifteen minutes before the start and wait
+  until the facilitator opens the class.
+- **In the class:** voice, cameras where allowed, the facilitator's shared
+  screen, chat, raised hands, and Low data (voice only) for learners on mobile
+  data. The facilitator can mute one person or everyone, lower a hand, remove
+  someone, keep notes, and end the class.
+- **The register:** filled in when the facilitator ends the class, from the
+  media server's record of who was in it and for how long: present at the
+  provider's share or more, absent below it, minutes in the note. Anybody
+  already marked by a person (excused, say) is left as marked. The facilitator
+  is asked to check the register and save it; until then it says it was filled
+  in from the classroom.
+- **What is kept:** the chat, the facilitator's notes and the register. No
+  sound or picture of the class is stored.
+- **Learners need:** a laptop, phone or tablet with a current browser, and
+  earphones with a microphone.
+
 ## 6u. Occupational skills programmes (23 October 2026)
 
 - **Where:** **Learning → Skills programmes**, a list of its own beside

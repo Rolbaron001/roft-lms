@@ -267,6 +267,17 @@ export const organisations = pgTable(
     leisaTargetHours: integer("leisa_target_hours"),
 
     /**
+     * Live classes held in the LMS's own classroom (job sheet D41). Off until
+     * the provider switches it on, and then every online session without an
+     * outside meeting link is held there.
+     */
+    classroomEnabled: boolean("classroom_enabled").notNull().default(false),
+    /** Cameras in the class (the design's Option 1); off is audio only (Option 2). */
+    classroomCameras: boolean("classroom_cameras").notNull().default(true),
+    /** The share of the class a learner must attend to be counted present. */
+    classroomPresentPercent: integer("classroom_present_percent").notNull().default(75),
+
+    /**
      * The language this provider's people read the platform in unless they
      * choose their own (job sheet D9). A code from lib/i18n/locales.ts.
      */

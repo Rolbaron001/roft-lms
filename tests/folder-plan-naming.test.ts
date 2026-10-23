@@ -84,6 +84,12 @@ describe("the rest of the folder", () => {
    * "other" left every element showing nothing covering it while the answer
    * sat in the same folder.
    */
+  /** A skills programme's two documents, as the QCTO names them (D39). */
+  it("recognises a skills programme's document and curriculum", () => {
+    expect(kindOf("SP Doc Assessment Practitioner 5 20.pdf")).toBe("qualification_document");
+    expect(kindOf("SP Cur Doc Assessment Practitioner 5 20.pdf")).toBe("curriculum_document");
+  });
+
   it("recognises an alignment matrix that does not say matrix", () => {
     expect(kindOf("CA - 121151 - KM PM ELO Alignment.docx")).toBe(
       "alignment_matrix",

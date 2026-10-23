@@ -204,8 +204,10 @@ export function AdminDashboardView({ data, t, day }: { data: AdminDashboard; t: 
                       <p className="font-medium">{sessionName(row)}</p>
                       <p className="text-xs text-[var(--muted)]">{row.cohortName}</p>
                       <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs">
-                        {row.meetingUrl ? (
-                          <a href={row.meetingUrl} target="_blank" rel="noreferrer" className={link}>{t("dash.join")}</a>
+                        {row.join?.external ? (
+                          <a href={row.join.href} target="_blank" rel="noreferrer" className={link}>{t("dash.join")}</a>
+                        ) : row.join ? (
+                          <Link href={row.join.href} className={link}>{t("dash.join")}</Link>
                         ) : null}
                         <Link href={`/cohorts/${row.cohortId}/sessions/${row.sessionId}`} className={link}>{t("dash.register")}</Link>
                       </p>

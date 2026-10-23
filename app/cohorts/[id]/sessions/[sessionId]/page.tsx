@@ -23,6 +23,7 @@ import {
 import { sittingRegister } from "@/lib/invigilation";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { cohortCourseIds } from "@/lib/schedule";
+import { heldInClassroom } from "@/lib/classroom";
 
 /**
  * One session's register.
@@ -67,7 +68,13 @@ export default async function SessionRegisterPage({
 
   const [notes] = await withTenant(session.organisationId, (tx) =>
     tx
-      .select({ agenda: cohortSessions.agenda, resources: cohortSessions.resources, proceedings: cohortSessions.proceedings })
+      .select({
+        agenda: cohortSessions.agenda,
+        resources: cohortSessions.resources,
+        proceedings: cohortSessions.proceedings,
+        deliveryMode: cohortSessions.deliveryMode,
+        meetingUrl: cohortSessions.meetingUrl,
+      })
       .from(cohortSessions)
       .where(eq(cohortSessions.id, sessionId)),
   );
@@ -165,6 +172,13 @@ export default async function SessionRegisterPage({
         {kind ?? register.session.kind} · {dates.day(register.session.date)} ·{" "}
         {t("register.marked", { marked, total: register.lines.length })}
       </p>
+      {notes && heldInClassroom(tenant.classroomEnabled, notes) ? (
+        <p className="mt-2 text-sm">
+          <Link href={`/classroom/${sessionId}`} className="font-medium text-[var(--brand-accent)] hover:underline">
+            {t("register.openClassroom")}
+          </Link>
+        </p>
+      ) : null}
 
       {supervised ? (
         <div className="mt-6">
@@ -218,6 +232,11 @@ export default async function SessionRegisterPage({
 
       <div className="mt-6">
         <Card title={t("register.title")} description={t("register.intro")}>
+          {register.lines.some((line) => line.fromClassroom) ? (
+            <p role="status" className="mb-4 rounded-md border border-[var(--warning)] bg-[var(--background)] p-3 text-sm">
+              {t("register.fromClassroom")}
+            </p>
+          ) : null}
           <RegisterForm cohortId={id} sessionId={sessionId} lines={register.lines} />
         </Card>
       </div>

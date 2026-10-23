@@ -35,6 +35,12 @@ export type OutgoingEmail = {
    * theirs and goes as they wrote it.
    */
   locale?: string | null;
+  /**
+   * A calendar invitation to go with the message (D41): a class in the LMS
+   * classroom, or its cancellation. Sent the way calendar programs recognise,
+   * so the class lands in the learner's calendar as Meet's invitations did.
+   */
+  calendar?: { method: "REQUEST" | "CANCEL"; content: string } | null;
 };
 
 export type DeliveryResult =
@@ -206,6 +212,9 @@ export async function deliver(
       replyTo: process.env.MAIL_REPLY_TO || undefined,
       inReplyTo: email.inReplyTo ?? undefined,
       references: email.references ?? undefined,
+      icalEvent: email.calendar
+        ? { method: email.calendar.method, content: email.calendar.content, filename: "class.ics" }
+        : undefined,
     });
 
     return { ok: true, messageId: sent.messageId };

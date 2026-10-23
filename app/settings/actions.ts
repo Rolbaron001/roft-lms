@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
-import { updateOwnBranding, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
+import { updateOwnBranding, setTenantClassroom, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
 import { FeedbackError, saveQuestionnaire } from "@/lib/feedback";
 import { PreAssessmentError, saveChecklist } from "@/lib/pre-assessment";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
@@ -220,6 +220,32 @@ export async function updateLeisaTargetAction(_previous: ClockState, formData: F
   }
   revalidatePath("/cohorts", "layout");
   return said({ notice: typed === "" ? "Saved. Only the regulator's limit is shown." : "Saved. Each cohort's LEISA now shows your target beside the regulator's limit." });
+}
+
+/** The LMS classroom's settings (job sheet D41). */
+export async function updateClassroomAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  const enabled = formData.get("enabled") === "on";
+  try {
+    await setTenantClassroom(session, {
+      enabled,
+      cameras: formData.get("cameras") === "video",
+      presentPercent: Number(String(formData.get("presentPercent") ?? "").trim()),
+    });
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    if (error && typeof error === "object" && "issues" in error) {
+      return said({ error: (error as { issues: { message: string }[] }).issues.map((issue) => issue.message).join(" ") });
+    }
+    console.error(error);
+    return said({ error: "That could not be saved. Try again." });
+  }
+  revalidatePath("/", "layout");
+  return said({
+    notice: enabled
+      ? "Saved. Online sessions without an outside meeting link are now held in the LMS classroom."
+      : "Saved. The classroom is off; online sessions use their meeting links.",
+  });
 }
 
 export type ExtensionState = { error?: string; notice?: string };

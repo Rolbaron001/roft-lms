@@ -100,6 +100,11 @@ export type IngestionPlan = {
  * do not recognise is filed as "other" and listed, rather than guessed at.
  */
 const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
+  // A skills programme's two founding documents, as the QCTO names them:
+  // "SP Cur Doc Assessment Practitioner 5 20.pdf" and "SP Doc ..." (D39).
+  // The curriculum first, since "SP Cur Doc" also contains "Doc".
+  { match: /\bSP Cur(riculum)? Doc\b/i, kind: "curriculum_document" },
+  { match: /\bSP Doc\b|skills program+e document/i, kind: "qualification_document" },
   { match: /qualification document/i, kind: "qualification_document" },
   { match: /curriculum document/i, kind: "curriculum_document" },
   { match: /assessment specification/i, kind: "assessment_specification" },

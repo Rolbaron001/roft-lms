@@ -19,6 +19,7 @@ import { listCohorts } from "./cohorts";
 import { verificationOf } from "./qualification-build";
 import { cohortCourseIds } from "./schedule";
 import { cohortAttendance } from "./scheduling";
+import { classroomSettingsWithin, joinHref } from "./classroom";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { blockedLearners } from "./spine";
 import { notificationDue } from "./statutory-notification";
@@ -56,7 +57,8 @@ export type AdminDashboard = {
   }[];
   setup: { id: string; name: string; startDate: string; learners: number; next: CohortStepKey; step: number }[];
   atRisk: { userId: string; name: string; cohortId: string; cohortName: string; reason: "blocked" | "absent"; detail: string }[];
-  today: { sessionId: string; cohortId: string; cohortName: string; title: string | null; kind: string; sequence: number | null; startTime: string | null; meetingUrl: string | null }[];
+  /** `join`: the outside link or the LMS classroom (D41), or null for a session in a venue. */
+  today: { sessionId: string; cohortId: string; cohortName: string; title: string | null; kind: string; sequence: number | null; startTime: string | null; join: { href: string; external: boolean } | null }[];
   due: { date: string; kind: "leisaTarget" | "leisa" | "summative"; cohortId: string; cohortName: string; count: number; overdue: boolean }[];
   qualifications: { id: string; title: string; saqaId: string | null; blocking: number; toCheck: number }[];
   waiting: { toAssess: number; toModerate: number; withCoaches: number; assessHref: string; moderateHref: string };
@@ -112,7 +114,8 @@ export async function adminDashboard(
 
   const sessionData = await withTenant(session.organisationId, async (tx) => {
     const ids = all.map((row) => row.id);
-    if (ids.length === 0) return { upcoming: [], past: [], marks: [], courses: new Map<string, string[]>() };
+    if (ids.length === 0) return { upcoming: [], past: [], marks: [], courses: new Map<string, string[]>(), classroom: false };
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
     const upcoming = await tx
       .select({
         id: cohortSessions.id,
@@ -123,6 +126,7 @@ export async function adminDashboard(
         kind: cohortSessions.kind,
         sequence: cohortSessions.sequence,
         meetingUrl: cohortSessions.meetingUrl,
+        deliveryMode: cohortSessions.deliveryMode,
         facilitatorFirst: users.firstName,
         facilitatorLast: users.lastName,
       })
@@ -144,7 +148,7 @@ export async function adminDashboard(
       : [];
     const courses = new Map<string, string[]>();
     for (const row of runningRows) courses.set(row.id, await cohortCourseIds(tx, row));
-    return { upcoming, past, marks, courses };
+    return { upcoming, past, marks, courses, classroom };
   });
 
   // ---- Learners held up: stuck at a step, or absent from the last two sessions.
@@ -216,7 +220,7 @@ export async function adminDashboard(
   const name = (cohortId: string) => all.find((row) => row.id === cohortId)?.name ?? "";
   const todays = sessionData.upcoming
     .filter((one) => one.date === today)
-    .map((one) => ({ sessionId: one.id, cohortId: one.cohortId, cohortName: name(one.cohortId), title: one.title, kind: one.kind, sequence: one.sequence, startTime: one.startTime, meetingUrl: one.meetingUrl }));
+    .map((one) => ({ sessionId: one.id, cohortId: one.cohortId, cohortName: name(one.cohortId), title: one.title, kind: one.kind, sequence: one.sequence, startTime: one.startTime, join: joinHref(sessionData.classroom, one) }));
 
   // ---- Registers not taken: a session held, on a cohort with learners, with no marks.
   const unmarked = sessionData.past.filter(

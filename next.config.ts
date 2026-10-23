@@ -52,8 +52,11 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
+            // The LMS classroom (job sheet D41) uses the camera, the
+            // microphone and screen sharing, on this site's own pages and
+            // nowhere else; the browser still asks the person first.
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(self), microphone=(self), display-capture=(self), geolocation=()",
           },
         ],
       },

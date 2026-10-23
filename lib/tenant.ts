@@ -40,6 +40,10 @@ export type TenantIdentity = {
   leisaTargetHours: number | null;
   /** The language its people read the platform in unless they choose (D9). */
   defaultLocale: string;
+  /** The LMS classroom (D41): switched on, cameras allowed, and the share counted present. */
+  classroomEnabled: boolean;
+  classroomCameras: boolean;
+  classroomPresentPercent: number;
   /** How this provider arranged their menu, or null for the built-in one. */
   navigation: { label: string | null; items: string[] }[] | null;
   /** What this provider calls things, where it differs from the default. */
@@ -204,6 +208,9 @@ export async function resolveTenant(
           dateStyle: organisations.dateStyle,
           leisaTargetHours: organisations.leisaTargetHours,
           defaultLocale: organisations.defaultLocale,
+          classroomEnabled: organisations.classroomEnabled,
+          classroomCameras: organisations.classroomCameras,
+          classroomPresentPercent: organisations.classroomPresentPercent,
           navigation: organisations.navigation,
           terminology: organisations.terminology,
           offlineEnabled: organisations.offlineEnabled,
