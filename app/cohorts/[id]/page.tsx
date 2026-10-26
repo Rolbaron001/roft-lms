@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduling";
+import { cohortClassNotes } from "@/lib/classroom-record";
 import { cohortLeisa } from "@/lib/statutory-notification";
 import { CohortLeisa } from "./leisa";
 import { CohortFacilitator } from "./cohort-facilitator";
@@ -87,6 +88,7 @@ export default async function CohortPage({
       }))
     : [];
   const attendance = await cohortAttendance(session, detail.cohort.id);
+  const classNotes = await cohortClassNotes(session, detail.cohort.id);
   const grid = await cohortGrid(session, detail.cohort.id);
   const wem = await cohortWem(session, detail.cohort.id);
 
@@ -473,6 +475,33 @@ export default async function CohortPage({
                       })}
                 </p>
               ) : null}
+            </Card>
+          ) : null}
+
+          {/* The cohort's class notes (job sheet D41, phase C). */}
+          {classNotes.length > 0 ? (
+            <Card
+              section={{ id: "class-notes", label: t("cohortNav.section.classNotes") }}
+              title={t("notes.list")}
+              description={t("notes.listIntro")}
+            >
+              <ul className="divide-y divide-[var(--border)] text-sm">
+                {classNotes.map((entry) => (
+                  <li key={entry.sessionId} className="flex flex-wrap items-baseline justify-between gap-3 py-2">
+                    <Link
+                      href={entry.publishedAt ? `/classroom/${entry.sessionId}/notes` : `/classroom/${entry.sessionId}/record`}
+                      className="font-medium hover:underline"
+                    >
+                      {entry.title ?? maybe(t, `session.kind.${entry.kind}`) ?? entry.kind}
+                      {!entry.title && entry.sequence && entry.kind === "lecture" ? ` ${entry.sequence}` : ""}
+                    </Link>
+                    <span className="text-xs text-[var(--muted)]">
+                      {day(entry.scheduledDate)}
+                      {entry.publishedAt ? "" : ` · ${t("notes.waiting")}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </Card>
           ) : null}
 

@@ -12,7 +12,20 @@ import { classroomRecordings, classroomRecords, cohortMembers, cohortSessions, c
 import { orderTranscript, transcriptText } from "@/lib/classroom-transcript";
 import { classPass, endClass } from "@/lib/classroom";
 import { acknowledgeNotice, noticeOwed } from "@/lib/classroom-notice";
-import { correctTranscript, draftSummary, getClassRecord, microphoneStarted, publishRecord, receiveTranscript, recordingEnded, saveSummary, transcribeWhenReady } from "@/lib/classroom-record";
+import {
+  classNotes,
+  cohortClassNotes,
+  correctTranscript,
+  draftSummary,
+  getClassRecord,
+  microphoneStarted,
+  myClassNotes,
+  publishRecord,
+  receiveTranscript,
+  recordingEnded,
+  saveSummary,
+  transcribeWhenReady,
+} from "@/lib/classroom-record";
 import { roomName } from "@/lib/classroom-media";
 import { permissionsFor, type Role } from "@/lib/rbac";
 import type { AuthenticatedSession } from "@/lib/session";
@@ -45,6 +58,7 @@ describe("the transcript, put together", () => {
 });
 
 let organisationId: string;
+let cohortId: string;
 let sessionId: string;
 let facilitator: AuthenticatedSession;
 let learner: AuthenticatedSession;
@@ -89,7 +103,7 @@ beforeAll(async () => {
   });
   facilitator = await person(`facilitator-${stamp}@record.test`, "instructor", "Thandi");
   learner = await person(`learner-${stamp}@record.test`, "learner", "Sam");
-  sessionId = await withPlatformScope("classroom record cohort", async (tx) => {
+  ({ cohortId, sessionId } = await withPlatformScope("classroom record cohort", async (tx) => {
     const [course] = await tx.insert(courses).values({ organisationId, title: "SU1", status: "published" }).returning({ id: courses.id });
     const [cohort] = await tx.insert(cohorts).values({ organisationId, courseId: course.id, name: "HRM 2026", startDate: "2026-10-01", status: "running" }).returning({ id: cohorts.id });
     await tx.insert(cohortMembers).values({ organisationId, cohortId: cohort.id, userId: learner.userId });
@@ -97,8 +111,8 @@ beforeAll(async () => {
       .insert(cohortSessions)
       .values({ organisationId, cohortId: cohort.id, kind: "lecture", scheduledDate: "2026-11-02", startTime: "18:30", endTime: "20:30", deliveryMode: "virtual", facilitatorId: facilitator.userId })
       .returning({ id: cohortSessions.id });
-    return session.id;
-  });
+    return { cohortId: cohort.id, sessionId: session.id };
+  }));
 });
 
 afterAll(async () => {
@@ -189,6 +203,13 @@ describe("the record of a class", () => {
     expect(record.summary).toBe("You covered job architecture.");
   });
 
+  it("shows the cohort nothing until the facilitator publishes", async () => {
+    await expect(classNotes(learner, sessionId)).rejects.toThrow(/not been published/);
+    expect(await myClassNotes(learner)).toEqual([]);
+    // Staff see it waiting for the check.
+    expect((await cohortClassNotes(facilitator, cohortId)).map((one) => one.publishedAt)).toEqual([null]);
+  });
+
   it("publishes, and deletes the voices from the media server", async () => {
     await expect(publishRecord(learner, sessionId)).rejects.toThrow(/facilitator/);
     expect(await publishRecord(facilitator, sessionId)).toEqual({ voicesDeleted: true });
@@ -202,5 +223,30 @@ describe("the record of a class", () => {
     expect(record.voiceDeletedAt).not.toBeNull();
     const left = await withTenant(organisationId, (tx) => tx.select({ status: classroomRecordings.status }).from(classroomRecordings).where(eq(classroomRecordings.sessionId, sessionId)));
     expect(left.every((one) => one.status === "deleted")).toBe(true);
+  });
+});
+
+describe("the published notes (phase C)", () => {
+  it("tells the cohort's learners, and lets them read the notes with their own attendance", async () => {
+    const told = await withTenant(organisationId, (tx) =>
+      tx.select({ userId: notifications.userId, linkPath: notifications.linkPath }).from(notifications).where(and(eq(notifications.entityId, sessionId), eq(notifications.kind, "class.notes_published"))),
+    );
+    expect(told).toEqual([{ userId: learner.userId, linkPath: `/classroom/${sessionId}/notes` }]);
+
+    const notes = await classNotes(learner, sessionId);
+    expect(notes.summary).toBe("You covered job architecture.");
+    expect(notes.transcript.map((line) => line.text)).toEqual(["Good evening, everyone.", "Is the job profile where it starts?"]);
+    expect(notes.facilitatorName).toBe("Thandi Tester");
+    expect(notes.myAttendance?.status).toBeDefined();
+    // Staff read it too, without an attendance line of their own.
+    expect((await classNotes(facilitator, sessionId)).myAttendance).toBeNull();
+  });
+
+  it("lists it under the cohort and on the learner's own list, and keeps everybody else out", async () => {
+    expect((await myClassNotes(learner)).map((one) => one.sessionId)).toEqual([sessionId]);
+    expect((await cohortClassNotes(learner, cohortId)).map((one) => one.sessionId)).toEqual([sessionId]);
+    const stranger = await person(`stranger-${Date.now()}@record.test`, "learner", "Lerato");
+    await expect(classNotes(stranger, sessionId)).rejects.toThrow(/cohort's learners and its staff/);
+    expect(await cohortClassNotes(stranger, cohortId)).toEqual([]);
   });
 });

@@ -1673,6 +1673,7 @@ export const staff = {
   "cohortNav.section.waiting": "Held up",
   "cohortNav.section.progress": "Progress",
   "cohortNav.section.attendance": "Attendance",
+  "cohortNav.section.classNotes": "Class notes",
   "cohortNav.section.results": "Results",
   "cohortNav.section.wem": "Work experience",
   "wem.title": "Work experience",

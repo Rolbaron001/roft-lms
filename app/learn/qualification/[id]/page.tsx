@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { localeFor, pageDates, requireSession, requireTenant } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { learnerQualifications, type LearnerUnit } from "@/lib/learner-qualification";
 import { qualificationResources } from "@/lib/learner-unit";
+import { myClassNotes } from "@/lib/classroom-record";
+import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
 
 /**
@@ -20,6 +22,8 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
   const qualification = (await learnerQualifications(session)).find((one) => one.id === id);
   if (!qualification) notFound();
   const resources = await qualificationResources(session, id);
+  const classNotes = await myClassNotes(session, id);
+  const { day } = await pageDates();
 
   const completed = qualification.units.filter((unit) => unit.state === "completed").length;
   const facts = [
@@ -58,6 +62,25 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
           </li>
         ))}
       </ol>
+
+      {/* The notes of the cohort's classes, once published (job sheet D41, phase C). */}
+      {classNotes.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t("notes.list")}</h2>
+          <p className="text-sm text-[var(--muted)]">{t("notes.listIntro")}</p>
+          <ul className="mt-3 divide-y divide-[var(--border)] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            {classNotes.map((entry) => (
+              <li key={entry.sessionId} className="flex flex-wrap items-baseline justify-between gap-3 px-4 py-3 text-sm">
+                <Link href={`/classroom/${entry.sessionId}/notes`} className="font-medium underline-offset-2 hover:underline">
+                  {entry.title ?? maybe(t, `session.kind.${entry.kind}`) ?? entry.kind}
+                  {!entry.title && entry.sequence && entry.kind === "lecture" ? ` ${entry.sequence}` : ""}
+                </Link>
+                <span className="text-xs text-[var(--muted)]">{day(entry.scheduledDate)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* The SAQA and QCTO documents, as reference (19 October 2026). */}
       {resources.length > 0 ? (

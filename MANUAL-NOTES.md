@@ -609,6 +609,14 @@ person going through it question by question.
   has their AI extension draft it, and selects **Publish the notes**. Publishing
   deletes the voices; only the text is kept. A facilitator without an AI
   extension writes the summary themselves.
+- **Class notes for the cohort (26 October 2026):** once published, a class's
+  notes (summary, the facilitator's notes, the full transcript, polls and chat)
+  are listed under **Class notes**: on the cohort page for staff, and on the
+  learner's dashboard and qualification page. The cohort's learners are told
+  when notes are published. Each learner sees their own attendance on the
+  notes; chat said in a breakout group is shown only to that group. The page
+  prints or saves as a PDF. Nobody but the cohort's learners and staff can open
+  it, and learners see nothing before the facilitator publishes.
 - **Learners need:** a laptop, phone or tablet with a current browser, and
   earphones with a microphone.
 

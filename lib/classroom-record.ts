@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
 import {
   attendanceRecords,
@@ -8,14 +8,17 @@ import {
   classroomPolls,
   classroomRecordings,
   classroomRecords,
+  cohortMembers,
   cohortSessions,
+  cohorts,
   users,
   type TranscriptSegment,
 } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { raise } from "./notifications";
 import type { AuthenticatedSession } from "./session";
-import { ClassroomError, asHost } from "./classroom";
+import { ClassroomError, asHost, roleIn, sessionRow } from "./classroom";
+import { inReach, reachWithin } from "./staff-scope";
 import * as media from "./classroom-media";
 import { deleteVoices, requestTranscription } from "./classroom-transcriber";
 import { transcribingWithin } from "./classroom-notice";
@@ -385,6 +388,24 @@ export async function publishRecord(session: AuthenticatedSession, sessionId: st
         entityType: "cohort_session",
         entityId: sessionId,
       });
+      // The cohort's learners are told the notes are there to read (phase C).
+      const members = await tx
+        .select({ userId: cohortMembers.userId })
+        .from(cohortMembers)
+        .where(and(eq(cohortMembers.cohortId, view.cohortId), isNull(cohortMembers.leftAt)));
+      for (const { userId } of members) {
+        await raise(tx, {
+          organisationId: session.organisationId,
+          userId,
+          kind: "class.notes_published",
+          subject: `Class notes: ${view.title ?? view.kind}, ${view.scheduledDate}`,
+          body: "The notes of your class are ready to read: the summary, the transcript and the facilitator's notes.",
+          linkPath: `/classroom/${sessionId}/notes`,
+          entityType: "cohort_session",
+          entityId: sessionId,
+          dedupeKey: `class_notes:${sessionId}:${userId}`,
+        });
+      }
     }
     return tx
       .select({ filePath: classroomRecordings.filePath })
@@ -421,6 +442,154 @@ async function markVoicesDeleted(session: AuthenticatedSession, sessionId: strin
       entityType: "cohort_session",
       entityId: sessionId,
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase C: the published notes, for the cohort to read
+// ---------------------------------------------------------------------------
+
+export type ClassNotes = {
+  sessionId: string;
+  cohortId: string;
+  cohortName: string;
+  title: string | null;
+  kind: string;
+  sequence: number | null;
+  scheduledDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  facilitatorName: string | null;
+  publishedAt: Date;
+  summary: string;
+  notes: string;
+  transcript: { name: string; startedAt: string; text: string }[];
+  polls: { question: string; options: string[]; counts: number[] }[];
+  chat: { name: string; body: string; sentAt: Date }[];
+  /** A learner's own mark in the register, or null for staff. */
+  myAttendance: { status: string; note: string | null } | null;
+};
+
+/**
+ * A class's published notes, for anybody in the class: its learners and its
+ * staff. Nothing is shown before the facilitator publishes, so a learner never
+ * reads a transcript nobody has checked.
+ */
+export async function classNotes(session: AuthenticatedSession, sessionId: string): Promise<ClassNotes> {
+  return withTenant(session.organisationId, async (tx) => {
+    const row = await sessionRow(tx, sessionId);
+    const role = await roleIn(tx, session, row);
+    const [record] = await tx.select().from(classroomRecords).where(eq(classroomRecords.sessionId, sessionId));
+    if (!record?.publishedAt) throw new ClassroomError("The notes of this class have not been published yet.", "not_found");
+
+    const segments = record.transcript ?? [];
+    const names = await namesOf(tx, [...new Set([...segments.map((one) => one.userId), ...(row.facilitatorId ? [row.facilitatorId] : [])])]);
+    const [notes] = await tx.select({ body: classroomNotes.body }).from(classroomNotes).where(eq(classroomNotes.sessionId, sessionId));
+    const myGroups = (row.classBreakout?.groups ?? []).map((group, index) => (group.includes(session.userId) ? index + 1 : null)).filter((one): one is number => one !== null);
+    const chat = await tx
+      .select({ body: classroomChat.body, sentAt: classroomChat.sentAt, group: classroomChat.groupNumber, firstName: users.firstName, lastName: users.lastName })
+      .from(classroomChat)
+      .innerJoin(users, eq(users.id, classroomChat.userId))
+      .where(eq(classroomChat.sessionId, sessionId))
+      .orderBy(asc(classroomChat.sentAt));
+    const polls = await tx.select({ id: classroomPolls.id, question: classroomPolls.question, options: classroomPolls.options }).from(classroomPolls).where(eq(classroomPolls.sessionId, sessionId)).orderBy(asc(classroomPolls.createdAt));
+    const answers = polls.length
+      ? await tx.select({ pollId: classroomPollAnswers.pollId, choice: classroomPollAnswers.choice }).from(classroomPollAnswers).where(inArray(classroomPollAnswers.pollId, polls.map((one) => one.id)))
+      : [];
+    const [mark] =
+      role === "learner"
+        ? await tx.select({ status: attendanceRecords.status, note: attendanceRecords.note }).from(attendanceRecords).where(and(eq(attendanceRecords.sessionId, sessionId), eq(attendanceRecords.userId, session.userId)))
+        : [];
+
+    return {
+      sessionId,
+      cohortId: row.cohortId,
+      cohortName: row.cohortName,
+      title: row.title,
+      kind: row.kind,
+      sequence: row.sequence,
+      scheduledDate: row.scheduledDate,
+      startTime: row.startTime,
+      endTime: row.endTime,
+      facilitatorName: row.facilitatorId ? (names.get(row.facilitatorId) ?? null) : null,
+      publishedAt: record.publishedAt,
+      summary: record.summary ?? "",
+      notes: notes?.body ?? "",
+      transcript: segments.map((one) => ({ name: names.get(one.userId) ?? "", startedAt: one.startedAt, text: one.text })),
+      polls: polls.map((poll) => ({
+        question: poll.question,
+        options: poll.options,
+        counts: poll.options.map((_, index) => answers.filter((answer) => answer.pollId === poll.id && answer.choice === index).length),
+      })),
+      // What was said in a breakout group stays with that group, as it did in the class.
+      chat: chat
+        .filter((line) => role !== "learner" || line.group === null || myGroups.includes(line.group))
+        .map((line) => ({ name: `${line.firstName} ${line.lastName}`, body: line.body, sentAt: line.sentAt })),
+      myAttendance: mark ? { status: mark.status, note: mark.note } : null,
+    };
+  });
+}
+
+export type ClassNotesEntry = {
+  sessionId: string;
+  cohortId: string;
+  cohortName: string;
+  title: string | null;
+  kind: string;
+  sequence: number | null;
+  scheduledDate: string;
+  /** Null while the facilitator has still to check and publish them. */
+  publishedAt: Date | null;
+};
+
+async function entriesFor(tx: TenantDatabase, cohortIds: string[], publishedOnly: boolean): Promise<ClassNotesEntry[]> {
+  if (cohortIds.length === 0) return [];
+  const rows = await tx
+    .select({
+      sessionId: cohortSessions.id,
+      cohortId: cohortSessions.cohortId,
+      cohortName: cohorts.name,
+      title: cohortSessions.title,
+      kind: cohortSessions.kind,
+      sequence: cohortSessions.sequence,
+      scheduledDate: cohortSessions.scheduledDate,
+      publishedAt: classroomRecords.publishedAt,
+    })
+    .from(classroomRecords)
+    .innerJoin(cohortSessions, eq(cohortSessions.id, classroomRecords.sessionId))
+    .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
+    .where(and(inArray(cohortSessions.cohortId, cohortIds), publishedOnly ? isNotNull(classroomRecords.publishedAt) : undefined))
+    .orderBy(desc(cohortSessions.scheduledDate), desc(cohortSessions.startTime));
+  return rows;
+}
+
+/**
+ * A cohort's class notes, newest first: the cohort's Library of its classes.
+ * Its learners see what is published; its staff also see what is waiting for
+ * the facilitator's check.
+ */
+export async function cohortClassNotes(session: AuthenticatedSession, cohortId: string): Promise<ClassNotesEntry[]> {
+  return withTenant(session.organisationId, async (tx) => {
+    const [member] = await tx
+      .select({ userId: cohortMembers.userId })
+      .from(cohortMembers)
+      .where(and(eq(cohortMembers.cohortId, cohortId), eq(cohortMembers.userId, session.userId), isNull(cohortMembers.leftAt)));
+    if (member) return entriesFor(tx, [cohortId], true);
+    const staff = session.roles.some((role) => role !== "learner");
+    if (staff && inReach(await reachWithin(tx, session), { cohortId })) return entriesFor(tx, [cohortId], false);
+    return [];
+  });
+}
+
+/** A learner's class notes across their cohorts, or one qualification's cohorts. */
+export async function myClassNotes(session: AuthenticatedSession, qualificationId?: string): Promise<ClassNotesEntry[]> {
+  return withTenant(session.organisationId, async (tx) => {
+    const mine = await tx
+      .select({ cohortId: cohortMembers.cohortId })
+      .from(cohortMembers)
+      .innerJoin(cohorts, eq(cohorts.id, cohortMembers.cohortId))
+      .where(and(eq(cohortMembers.userId, session.userId), isNull(cohortMembers.leftAt), qualificationId ? eq(cohorts.qualificationId, qualificationId) : undefined));
+    return entriesFor(tx, mine.map((one) => one.cohortId), true);
   });
 }
 

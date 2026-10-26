@@ -35,6 +35,7 @@ import { cohortLeisa, notificationDue } from "./statutory-notification";
 import { myLogbooks } from "./workplace";
 import { coursesOf } from "./programme-staff";
 import { classroomSettingsWithin, joinHref } from "./classroom";
+import { myClassNotes } from "./classroom-record";
 
 /**
  * Every role's dashboard but the administrator's (job sheet D25), as designed
@@ -520,7 +521,7 @@ export async function moderatorDashboard(session: AuthenticatedSession, { t, day
 
 export async function learnerDashboard(session: AuthenticatedSession, { t, day, now }: Kit): Promise<RoleDashboard> {
   const today = iso(now);
-  const [enrolled, owed, qualificationsHeld] = await Promise.all([myEnrolments(session), feedbackOwedBy(session, session.userId), learnerQualifications(session)]);
+  const [enrolled, owed, qualificationsHeld, classNotes] = await Promise.all([myEnrolments(session), feedbackOwedBy(session, session.userId), learnerQualifications(session), myClassNotes(session)]);
   const home = qualificationsHeld[0] ? `/learn/qualification/${qualificationsHeld[0].id}` : "/";
 
   const data = await withTenant(session.organisationId, async (tx) => {
@@ -625,6 +626,22 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
           external: Boolean(row.join?.external),
         })),
       },
+      // The notes of classes already held, once the facilitator publishes them (D41 phase C).
+      ...(classNotes.length
+        ? [
+            {
+              id: "class-notes",
+              title: t("notes.list"),
+              empty: t("notes.none"),
+              rows: classNotes.slice(0, 5).map((entry) => ({
+                primary: sessionName(t, entry),
+                secondary: entry.cohortName,
+                right: day(entry.scheduledDate, { short: true }),
+                href: `/classroom/${entry.sessionId}/notes`,
+              })),
+            },
+          ]
+        : []),
       {
         id: "results",
         title: t("rd.l.results"),
