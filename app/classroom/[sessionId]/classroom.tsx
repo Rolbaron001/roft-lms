@@ -111,6 +111,7 @@ export function Classroom(props: Props) {
   const moving = useRef(false);
   const rejoin = useRef<(visit: number | null) => Promise<void>>(async () => {});
   const host = props.role === "host";
+  const transcribed = props.transcribed;
 
   // The lobby asks every ten seconds whether the facilitator has opened the class.
   useEffect(() => {
@@ -205,6 +206,16 @@ export function Classroom(props: Props) {
         await next.startAudio();
         // The facilitator is heard from the start; a learner unmutes to speak.
         if (host) await next.localParticipant.setMicrophoneEnabled(true).catch(() => setError(t("class.noMicrophone")));
+        // In a transcribed class a learner's microphone is set up at once and
+        // muted, so the media server is already recording it when they first
+        // speak; starting a recording takes a second, which would otherwise
+        // lose their first words (found in the trial, 26 October 2026).
+        else if (transcribed) {
+          await next.localParticipant
+            .setMicrophoneEnabled(true)
+            .then(() => next.localParticipant.setMicrophoneEnabled(false))
+            .catch(() => undefined);
+        }
         setGroup(answer.group ?? null);
         setRoom(next);
         setPhase({ kind: "in" });
@@ -214,7 +225,7 @@ export function Classroom(props: Props) {
         setPhase({ kind: "ready" });
       }
     },
-    [props.sessionId, host, t],
+    [props.sessionId, host, transcribed, t],
   );
 
   // A room's own events re-join through this, since a function cannot name itself while it is being made.

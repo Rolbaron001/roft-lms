@@ -65,3 +65,9 @@ Then, in each provider's Settings → Live classes: switch the classroom on, and
 - The transcriber holds PyAV at 18.1.0: version 19 broke faster-whisper 1.2.1
   (found on 26 October 2026).
 - Whisper's model is downloaded on the first class, into the `models` volume.
+- The whole chain was tried on 26 October 2026 with Docker on a laptop: two
+  voices played into a class with LiveKit's command-line tool (`lk room join
+  --publish voice.ogg`) were recorded, transcribed with the right speakers,
+  published and deleted. Not yet proved: what the recorder does with time
+  while somebody is muted. Try it with two real people before relying on the
+  order of lines across speakers.

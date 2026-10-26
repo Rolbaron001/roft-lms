@@ -157,7 +157,9 @@ export function recordingsDir(): string {
 export async function startVoiceRecording(room: string, trackId: string, identity: string): Promise<{ egressId: string; filePath: string }> {
   const filePath = `${recordingsDir()}/${room}/${identity}-${trackId}.ogg`;
   const egress = new EgressClient(apiUrl(), process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
-  const info = await egress.startTrackEgress(room, new DirectFileOutput({ filepath: filePath }), trackId);
+  // No manifest: the recorder would otherwise leave a small file beside each
+  // voice that outlives the voice's deletion (found in the trial, 26 October).
+  const info = await egress.startTrackEgress(room, new DirectFileOutput({ filepath: filePath, disableManifest: true }), trackId);
   return { egressId: info.egressId, filePath };
 }
 
