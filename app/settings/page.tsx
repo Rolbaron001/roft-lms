@@ -20,6 +20,7 @@ import { DateForm } from "./date-form";
 import { LeisaTargetForm } from "./leisa-target-form";
 import { ClassroomForm } from "./classroom-form";
 import { mediaConfigured } from "@/lib/classroom-media";
+import { transcriptionAvailable } from "@/lib/classroom-notice";
 import { FeedbackQuestionsForm } from "./feedback-questions-form";
 import { activeQuestionnaire } from "@/lib/feedback";
 import { providerChecklist } from "@/lib/pre-assessment";
@@ -239,8 +240,9 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <ClassroomForm
-            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent, attendanceTarget: tenant.attendanceTargetPercent }}
+            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent, attendanceTarget: tenant.attendanceTargetPercent, transcribe: tenant.classroomTranscribe }}
             configured={mediaConfigured()}
+            transcription={transcriptionAvailable()}
           />
         </div>
       ) : null}

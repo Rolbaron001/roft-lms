@@ -277,6 +277,13 @@ export const organisations = pgTable(
     /** The share of the class a learner must attend to be counted present. */
     classroomPresentPercent: integer("classroom_present_percent").notNull().default(75),
     /**
+     * Classes transcribed for their notes (phase B). Off until the provider
+     * switches it on, because it needs a notice in their learner agreement
+     * first: voices are captured, transcribed on the media server, and
+     * deleted once the notes are published.
+     */
+    classroomTranscribe: boolean("classroom_transcribe").notNull().default(false),
+    /**
      * The attendance a learner must reach over the whole programme, as a
      * percentage (Heidi, 23 October 2026: 90% at Curiosa), or none. Learners
      * below it are flagged on the cohort's attendance.

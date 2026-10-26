@@ -42,6 +42,106 @@ export const classroomPresence = pgTable(
   ],
 );
 
+/**
+ * One person's voice in a class, captured on the media server so the class
+ * can be transcribed (job sheet D41, phase B). Each microphone is its own
+ * file, which is how the transcript knows who spoke. The file never leaves
+ * the media server and is deleted once the facilitator publishes the notes.
+ */
+export const classroomRecordings = pgTable(
+  "classroom_recordings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cohortSessions.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The media server's names for the recording and the microphone it records. */
+    egressId: text("egress_id").notNull(),
+    trackId: text("track_id").notNull(),
+    /** Where the file is on the media server. */
+    filePath: text("file_path").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    /** Recording, ended, failed, or deleted. */
+    status: text("status").notNull().default("recording"),
+  },
+  (t) => [
+    uniqueIndex("classroom_recordings_egress_idx").on(t.egressId),
+    index("classroom_recordings_session_idx").on(t.sessionId),
+    index("classroom_recordings_org_idx").on(t.organisationId),
+  ],
+);
+
+export type TranscriptSegment = {
+  /** Who spoke: a person at the provider. */
+  userId: string;
+  /** When the words began and ended, as instants. */
+  startedAt: string;
+  endedAt: string;
+  text: string;
+};
+
+/**
+ * What the LMS keeps of a class once it ends (job sheet D41): the transcript,
+ * the summary, and whether the facilitator has checked and published it.
+ */
+export const classroomRecords = pgTable(
+  "classroom_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => cohortSessions.id, { onDelete: "cascade" }),
+    /** none (nothing captured), waiting, working, done, failed. */
+    transcriptStatus: text("transcript_status").notNull().default("none"),
+    transcript: jsonb("transcript").$type<TranscriptSegment[]>(),
+    transcriptError: text("transcript_error"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }),
+    transcribedAt: timestamp("transcribed_at", { withTimezone: true }),
+    summary: text("summary"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    publishedById: uuid("published_by_id").references(() => users.id, { onDelete: "set null" }),
+    /** When the voice files were deleted from the media server. */
+    voiceDeletedAt: timestamp("voice_deleted_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("classroom_records_session_idx").on(t.sessionId),
+    index("classroom_records_org_idx").on(t.organisationId),
+  ],
+);
+
+/**
+ * A person having been told, once, that classes are transcribed, and having
+ * acknowledged it before joining their first. Kept as the provider's evidence
+ * that the notice was given.
+ */
+export const classroomAcknowledgements = pgTable(
+  "classroom_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("classroom_acknowledgements_user_idx").on(t.organisationId, t.userId),
+  ],
+);
+
 /** The facilitator's notes, typed during the class and saved as they go. */
 export const classroomNotes = pgTable(
   "classroom_notes",

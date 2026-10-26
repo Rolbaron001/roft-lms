@@ -21,6 +21,7 @@ import { reachWithin, inReach } from "./staff-scope";
 import { zonedTimeToUtc } from "./timezone";
 import { classLength, markFor, minutesIn } from "./classroom-attendance";
 import { heldInClassroom, joinHref } from "./classroom-rules";
+import { noticeOwed } from "./classroom-notice";
 import * as media from "./classroom-media";
 
 /**
@@ -104,7 +105,7 @@ function groupOf(row: Pick<SessionRow, "classBreakout">, userId: string): number
   return index >= 0 ? index + 1 : null;
 }
 
-async function sessionRow(tx: TenantDatabase, sessionId: string): Promise<SessionRow> {
+export async function sessionRow(tx: TenantDatabase, sessionId: string): Promise<SessionRow> {
   const [row] = await tx
     .select({
       id: cohortSessions.id,
@@ -137,7 +138,7 @@ async function sessionRow(tx: TenantDatabase, sessionId: string): Promise<Sessio
  * look in; its current learners attend. Nobody else enters, whatever link they
  * hold.
  */
-async function roleIn(tx: TenantDatabase, session: AuthenticatedSession, row: SessionRow): Promise<ClassroomRole> {
+export async function roleIn(tx: TenantDatabase, session: AuthenticatedSession, row: SessionRow): Promise<ClassroomRole> {
   if (row.facilitatorId === session.userId) return "host";
 
   const [member] = await tx
@@ -354,8 +355,10 @@ export async function classPass(
   now: Date = new Date(),
   /** A host visiting a breakout group; anybody else goes to their own group, or the whole class. */
   visit: number | null = null,
-): Promise<{ url: string; token: string; role: ClassroomRole; group: number | null } | { waiting: ClassroomState }> {
+): Promise<{ url: string; token: string; role: ClassroomRole; group: number | null } | { waiting: ClassroomState } | { notice: true }> {
   requireMedia();
+  // Nobody joins a transcribed class without having been told it is transcribed.
+  if (await noticeOwed(session)) return { notice: true };
   const { row, role, settings, name } = await withTenant(session.organisationId, async (tx) => {
     const row = await sessionRow(tx, sessionId);
     const role = await roleIn(tx, session, row);
@@ -531,7 +534,7 @@ export async function classPolls(session: AuthenticatedSession, sessionId: strin
   return withTenant(session.organisationId, (tx) => pollsWithin(tx, sessionId, session.userId, true));
 }
 
-async function asHost(session: AuthenticatedSession, sessionId: string) {
+export async function asHost(session: AuthenticatedSession, sessionId: string) {
   return withTenant(session.organisationId, async (tx) => {
     const row = await sessionRow(tx, sessionId);
     if ((await roleIn(tx, session, row)) !== "host") {

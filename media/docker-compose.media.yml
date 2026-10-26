@@ -1,0 +1,61 @@
+# The media server for the LMS classroom (job sheet D41). A second server,
+# beside the one the LMS runs on: it carries the classes' voice and video,
+# records each voice for the transcript, and transcribes it. See README.md.
+#
+#   docker compose -f docker-compose.media.yml --env-file .env up -d
+#
+# Images are pulled, never built here: the transcriber is built by GitHub
+# Actions like the LMS itself.
+
+services:
+  # Holds the media server's state and hands recordings to the recorder.
+  redis:
+    image: redis:7.4.10-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    network_mode: host
+
+  # Carries the classes. On the host's network, because it uses a range of
+  # UDP ports for media and Docker's port mapping copes badly with ranges.
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    restart: unless-stopped
+    network_mode: host
+    command: ["--config", "/etc/livekit.yaml"]
+    environment:
+      # "key: secret", the same pair the LMS sites are given.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    depends_on: [redis]
+
+  # Records each microphone to its own file, without re-encoding it.
+  egress:
+    image: livekit/egress:v1.15.0
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+      - recordings:/recordings
+    depends_on: [livekit]
+
+  # Turns the voices into text, on this server's processors.
+  transcriber:
+    image: ghcr.io/rolbaron001/roft-lms-transcriber:${TRANSCRIBER_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      TRANSCRIBER_SECRET: ${TRANSCRIBER_SECRET}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-}
+      RECORDINGS_DIR: /recordings
+    ports:
+      - "8790:8790"
+    volumes:
+      - recordings:/recordings
+      - models:/models
+
+volumes:
+  recordings:
+  models:

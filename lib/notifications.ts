@@ -83,7 +83,9 @@ export type NotificationKind =
    * before, and, to its facilitator, a register filled in from the classroom.
    */
   | "class.reminder"
-  | "class.register_to_check";
+  | "class.register_to_check"
+  /** To the facilitator: the class's transcript is ready to check and publish (D41 phase B). */
+  | "class.record_ready";
 
 export type RaiseInput = {
   organisationId: string;

@@ -1,5 +1,7 @@
+import { EgressStatus, TrackSource } from "livekit-server-sdk";
 import { recordPresence } from "@/lib/classroom";
 import { mediaConfigured, receiveReport } from "@/lib/classroom-media";
+import { microphoneStarted, recordingEnded } from "@/lib/classroom-record";
 
 /**
  * The media server's reports of who joined a class and who left (job sheet
@@ -34,6 +36,25 @@ export async function POST(request: Request) {
       break;
     case "room_finished":
       await recordPresence({ event: "room_finished", room, at });
+      break;
+    // Phase B: each microphone recorded for the transcript, and the class
+    // sent to be transcribed once every recording has closed.
+    case "track_published":
+      if (person && event.track?.source === TrackSource.MICROPHONE) {
+        await microphoneStarted({ room, identity: person.identity, trackId: event.track.sid, at }).catch((error: unknown) => {
+          console.error("A class voice could not be recorded:", error);
+        });
+      }
+      break;
+    case "egress_ended":
+      if (event.egressInfo) {
+        await recordingEnded({
+          egressId: event.egressInfo.egressId,
+          // Nanoseconds since 1970, as the recorder counts them.
+          at: event.egressInfo.endedAt ? new Date(Number(event.egressInfo.endedAt / BigInt(1_000_000))) : at,
+          failed: event.egressInfo.status !== EgressStatus.EGRESS_COMPLETE,
+        });
+      }
       break;
   }
   return new Response("Received.");

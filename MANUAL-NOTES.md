@@ -595,6 +595,20 @@ person going through it question by question.
   attendance. Leave it empty for none.
 - **What is kept:** the chat, the polls, the facilitator's notes and the
   register. No sound or picture of the class is stored.
+- **Transcribing classes (26 October 2026):** Settings → Live classes →
+  "Transcribe classes". Needs the transcriber on the media server. Before
+  switching it on, the provider's learner agreement must say that what is said
+  in classes is transcribed for the notes and the voice deleted once the notes
+  are published, and the Information Officer should approve that notice.
+- **The notice:** every participant sees it once, before their first class, and
+  acknowledges it; the acknowledgement is kept as evidence. A line saying the
+  class is transcribed stays visible during every class.
+- **After the class:** each person's voice is transcribed on the media server,
+  usually within the hour. The facilitator is told when it is ready, opens
+  **Check the class notes**, corrects any misheard line, writes the summary or
+  has their AI extension draft it, and selects **Publish the notes**. Publishing
+  deletes the voices; only the text is kept. A facilitator without an AI
+  extension writes the summary themselves.
 - **Learners need:** a laptop, phone or tablet with a current browser, and
   earphones with a microphone.
 

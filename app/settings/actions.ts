@@ -232,6 +232,7 @@ export async function updateClassroomAction(_previous: ClockState, formData: For
       cameras: formData.get("cameras") === "video",
       presentPercent: Number(String(formData.get("presentPercent") ?? "").trim()),
       attendanceTarget: String(formData.get("attendanceTarget") ?? "").trim() === "" ? null : Number(String(formData.get("attendanceTarget")).trim()),
+      transcribe: formData.get("transcribe") === "on",
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });

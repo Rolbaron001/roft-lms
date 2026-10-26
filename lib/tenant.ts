@@ -46,6 +46,8 @@ export type TenantIdentity = {
   classroomPresentPercent: number;
   /** The attendance a learner must reach over the whole programme, or none. */
   attendanceTargetPercent: number | null;
+  /** Classes transcribed for their notes (D41 phase B). */
+  classroomTranscribe: boolean;
   /** How this provider arranged their menu, or null for the built-in one. */
   navigation: { label: string | null; items: string[] }[] | null;
   /** What this provider calls things, where it differs from the default. */
@@ -214,6 +216,7 @@ export async function resolveTenant(
           classroomCameras: organisations.classroomCameras,
           classroomPresentPercent: organisations.classroomPresentPercent,
           attendanceTargetPercent: organisations.attendanceTargetPercent,
+          classroomTranscribe: organisations.classroomTranscribe,
           navigation: organisations.navigation,
           terminology: organisations.terminology,
           offlineEnabled: organisations.offlineEnabled,

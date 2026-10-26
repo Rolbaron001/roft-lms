@@ -700,7 +700,7 @@ export async function setTenantLeisaTarget(session: AuthenticatedSession, hours:
  */
 export async function setTenantClassroom(
   session: AuthenticatedSession,
-  settings: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null },
+  settings: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null; transcribe: boolean },
 ) {
   assertSessionCan(session, "tenant:manage_settings");
   if (!Number.isInteger(settings.presentPercent) || settings.presentPercent < 1 || settings.presentPercent > 100) {
@@ -718,6 +718,7 @@ export async function setTenantClassroom(
         cameras: organisations.classroomCameras,
         presentPercent: organisations.classroomPresentPercent,
         attendanceTarget: organisations.attendanceTargetPercent,
+        transcribe: organisations.classroomTranscribe,
       })
       .from(organisations)
       .where(eq(organisations.id, session.organisationId));
@@ -728,6 +729,7 @@ export async function setTenantClassroom(
         classroomCameras: settings.cameras,
         classroomPresentPercent: settings.presentPercent,
         attendanceTargetPercent: target,
+        classroomTranscribe: settings.transcribe,
         updatedAt: new Date(),
       })
       .where(eq(organisations.id, session.organisationId));

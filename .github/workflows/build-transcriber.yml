@@ -1,0 +1,37 @@
+# Builds the LMS classroom's transcriber (job sheet D41, phase B) and
+# publishes it, so the media server only ever pulls it, as the LMS server
+# does its own images. Runs only when the transcriber changes.
+
+name: Build and publish the transcriber
+
+on:
+  push:
+    branches: [main]
+    paths: ["media/transcriber/**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Sign in to the registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the transcriber
+        uses: docker/build-push-action@v6
+        with:
+          context: media/transcriber
+          push: true
+          tags: |
+            ghcr.io/rolbaron001/roft-lms-transcriber:${{ github.sha }}
+            ghcr.io/rolbaron001/roft-lms-transcriber:latest
+          cache-from: type=gha,scope=transcriber
+          cache-to: type=gha,scope=transcriber,mode=max

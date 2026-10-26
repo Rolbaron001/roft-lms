@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pageLocale, requireSession, requireTenant } from "@/lib/request";
 import { ClassroomError, getClassroom } from "@/lib/classroom";
+import { classesTranscribed } from "@/lib/classroom-notice";
 import { clockInZone } from "@/lib/timezone";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
@@ -64,6 +65,7 @@ export default async function ClassroomPage({ params }: { params: Promise<{ sess
         notes={view.notes}
         polls={view.polls}
         breakout={view.breakout}
+        transcribed={await classesTranscribed(session)}
       />
     </AppShell>
   );

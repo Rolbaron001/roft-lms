@@ -13,10 +13,13 @@ import { updateClassroomAction, type ClockState } from "./actions";
 export function ClassroomForm({
   current,
   configured,
+  transcription,
 }: {
-  current: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null };
+  current: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null; transcribe: boolean };
   /** Whether this server has a media server to hold classes on. */
   configured: boolean;
+  /** Whether it also has the transcriber (phase B). */
+  transcription: boolean;
 }) {
   const t = useT();
   const [state, action, saving] = useActionState<ClockState, FormData>(updateClassroomAction, {});
@@ -40,6 +43,13 @@ export function ClassroomForm({
             <span>{t("classroomSettings.audio")}</span>
           </label>
         </fieldset>
+        <div className="space-y-1">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="transcribe" defaultChecked={current.transcribe} disabled={!transcription} />
+            <span>{t("classroomSettings.transcribe")}</span>
+          </label>
+          <p className="text-xs text-[var(--muted)]">{transcription ? t("classroomSettings.transcribeNote") : t("classroomSettings.transcribeUnavailable")}</p>
+        </div>
         <label className="flex flex-wrap items-center gap-2">
           <span>{t("classroomSettings.present")}</span>
           <input

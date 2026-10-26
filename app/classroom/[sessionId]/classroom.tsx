@@ -47,10 +47,13 @@ type Props = {
   notes: string | null;
   polls: PollView[];
   breakout: GroupMember[][] | null;
+  /** Whether what is said is transcribed for the class's notes (phase B). */
+  transcribed: boolean;
 };
 
 type Phase =
   | { kind: "waiting"; state: "early" | "lobby" }
+  | { kind: "notice" }
   | { kind: "ready" }
   | { kind: "connecting" }
   | { kind: "in" }
@@ -139,6 +142,10 @@ export function Classroom(props: Props) {
       setPhase({ kind: "connecting" });
       try {
         const answer = await ask(props.sessionId, { do: "pass", group: visit });
+        if (answer.notice) {
+          setPhase({ kind: "notice" });
+          return;
+        }
         if (!answer.token) {
           setPhase(answer.waiting === "ended" ? { kind: "ended" } : { kind: "waiting", state: answer.waiting === "early" ? "early" : "lobby" });
           return;
@@ -239,6 +246,28 @@ export function Classroom(props: Props) {
   if (!props.configured) {
     return <Notice title={t("class.notSetUp")} body={t("class.notSetUpNote")} />;
   }
+  if (phase.kind === "notice") {
+    return (
+      <Notice title={t("class.noticeTitle")} body={t("class.noticeBody")}>
+        {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
+        <button
+          type="button"
+          className={PRIMARY}
+          style={{ background: "var(--brand-primary)" }}
+          onClick={async () => {
+            try {
+              await ask(props.sessionId, { do: "acknowledge" });
+              await join(null);
+            } catch (caught) {
+              setError(caught instanceof Error ? caught.message : String(caught));
+            }
+          }}
+        >
+          {t("class.noticeAgree")}
+        </button>
+      </Notice>
+    );
+  }
   if (phase.kind === "cancelled") return <Notice title={t("class.cancelled")} />;
   if (phase.kind === "removed") return <Notice title={t("class.removed")} />;
   if (phase.kind === "ended") {
@@ -248,6 +277,9 @@ export function Classroom(props: Props) {
           <>
             <Link href={`/cohorts/${props.cohortId}/sessions/${props.sessionId}`} className={PRIMARY} style={{ background: "var(--brand-primary)" }}>
               {t("class.checkRegister")}
+            </Link>
+            <Link href={`/classroom/${props.sessionId}/record`} className={BUTTON}>
+              {t("class.checkRecord")}
             </Link>
             {/* Ended by mistake: the register is filled in again when it next ends. */}
             <button type="button" className={BUTTON} onClick={() => join(null)}>
@@ -444,6 +476,8 @@ function InClass({
           {error}
         </p>
       ) : null}
+
+      {props.transcribed ? <p className="text-xs text-[var(--muted)]">{t("class.noticeShort")}</p> : null}
 
       <div className="grid gap-3 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-3">

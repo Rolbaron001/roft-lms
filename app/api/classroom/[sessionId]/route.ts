@@ -15,6 +15,8 @@ import {
   startPoll,
   type HostAction,
 } from "@/lib/classroom";
+import { correctTranscript, draftSummary, publishRecord, saveSummary, transcribeWhenReady } from "@/lib/classroom-record";
+import { acknowledgeNotice } from "@/lib/classroom-notice";
 import { PermissionDeniedError } from "@/lib/rbac";
 
 /** The breakout group a host says they are in, or null for the whole class. */
@@ -66,8 +68,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ ses
       case "control":
         await hostControl(session, sessionId, body.control as HostAction);
         return Response.json({ ok: true });
-      case "end":
-        return Response.json({ ok: true, ...(await endClass(session, sessionId)) });
+      case "end": {
+        const tally = await endClass(session, sessionId);
+        // Sent now if no recording is still closing; otherwise when the last one closes.
+        await transcribeWhenReady(session.organisationId, sessionId).catch((error: unknown) => console.error("Class could not be sent to be transcribed:", error));
+        return Response.json({ ok: true, ...tally });
+      }
+      case "acknowledge":
+        await acknowledgeNotice(session);
+        return Response.json({ ok: true });
+      case "summary_save":
+        await saveSummary(session, sessionId, String(body.summary ?? ""));
+        return Response.json({ ok: true });
+      case "summary_draft":
+        return Response.json({ ok: true, summary: await draftSummary(session, sessionId) });
+      case "transcript_correct":
+        await correctTranscript(session, sessionId, Number(body.index), String(body.text ?? ""));
+        return Response.json({ ok: true });
+      case "publish":
+        return Response.json({ ok: true, ...(await publishRecord(session, sessionId)) });
       default:
         return Response.json(await said({ error: "That is not something the classroom does." }), { status: 400 });
     }

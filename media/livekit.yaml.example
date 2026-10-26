@@ -1,0 +1,25 @@
+# LiveKit for the LMS classroom. Copy to livekit.yaml on the media server and
+# replace the three names in capitals. The key and secret come from the
+# environment (LIVEKIT_KEYS in docker-compose.media.yml), never this file.
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+redis:
+  address: 127.0.0.1:6379
+# Reaches learners behind company firewalls and mobile networks, over 443.
+turn:
+  enabled: true
+  domain: MEDIA_DOMAIN
+  tls_port: 5349
+  udp_port: 443
+  external_tls: true
+# Who joined and left, and when recordings finish: sent to every LMS site that
+# uses this media server. Each site keeps only its own rooms.
+webhook:
+  api_key: LIVEKIT_API_KEY
+  urls:
+    - https://LIVE_SITE/api/classroom/webhook
+    - https://DEVELOPMENT_SITE/api/classroom/webhook

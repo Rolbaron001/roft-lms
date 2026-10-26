@@ -1,4 +1,13 @@
-import { AccessToken, DataPacket_Kind, RoomServiceClient, TrackSource, WebhookReceiver, type WebhookEvent } from "livekit-server-sdk";
+import {
+  AccessToken,
+  DataPacket_Kind,
+  DirectFileOutput,
+  EgressClient,
+  RoomServiceClient,
+  TrackSource,
+  WebhookReceiver,
+  type WebhookEvent,
+} from "livekit-server-sdk";
 
 /**
  * The media server that carries a class's voice, cameras and shared screens
@@ -129,6 +138,27 @@ export async function sendToRoom(room: string, topic: string, payload: unknown):
 /** Ends the room, letting everybody out. */
 export async function closeRoom(room: string): Promise<void> {
   await rooms().deleteRoom(room);
+}
+
+/**
+ * Where the media server's recorder keeps voice files, as the recorder and the
+ * transcriber both see it. A shared folder on the media server.
+ */
+export function recordingsDir(): string {
+  return (process.env.LIVEKIT_RECORDINGS_DIR || "/recordings").replace(/\/+$/, "");
+}
+
+/**
+ * Starts recording one microphone to its own file (phase B). The recorder
+ * copies the voice as it arrives, without re-encoding it and without running
+ * a browser, so it costs the media server little. Returns the recording's
+ * name and the file it writes.
+ */
+export async function startVoiceRecording(room: string, trackId: string, identity: string): Promise<{ egressId: string; filePath: string }> {
+  const filePath = `${recordingsDir()}/${room}/${identity}-${trackId}.ogg`;
+  const egress = new EgressClient(apiUrl(), process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
+  const info = await egress.startTrackEgress(room, new DirectFileOutput({ filepath: filePath }), trackId);
+  return { egressId: info.egressId, filePath };
 }
 
 /** A report from the media server, checked against the secret it was signed with. */
