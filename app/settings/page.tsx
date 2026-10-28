@@ -177,6 +177,7 @@ export default async function SettingsPage({
           displayName: tenant.displayName,
           primaryColour: tenant.primaryColour,
           accentColour: tenant.accentColour,
+          backgroundColour: tenant.backgroundColour,
           logoUrl: tenant.logoUrl,
           signInGraphicUrl: tenant.signInGraphicUrl,
           illustrationUrl: tenant.illustrationUrl,

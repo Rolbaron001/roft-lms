@@ -28,6 +28,7 @@ export async function updateBrandingAction(
       illustrationUrl:
         String(formData.get("illustrationUrl") ?? "") || undefined,
       strapline: String(formData.get("strapline") ?? "") || undefined,
+      backgroundColour: String(formData.get("backgroundColour") ?? "").trim() || undefined,
     });
   } catch (error) {
     if (error instanceof PermissionDeniedError) {

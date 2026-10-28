@@ -38,6 +38,11 @@ export async function generateMetadata(): Promise<Metadata> {
      * ranger programme's learners were meant to take it into the field.
      */
     ...(tenant?.offlineEnabled ? { manifest: "/manifest.webmanifest" } : {}),
+    /*
+     * The provider's own logo in the browser tab, where one is set (28 October
+     * 2026, for the Curiosa Foundation book icon); otherwise the platform's.
+     */
+    ...(tenant?.logoUrl ? { icons: { icon: tenant.logoUrl, apple: tenant.logoUrl } } : {}),
   };
 }
 

@@ -545,6 +545,22 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6w. A provider's look: name, colours, logo and pictures (28 October 2026)
+
+- **Where it is set:** Settings → Branding, by the provider's administrator.
+- **What can be set:** the name shown everywhere; the main colour (header bar,
+  main buttons); the accent colour (highlights, progress bars); the page
+  background (the tint behind the white panels, or empty for the platform's
+  light grey); the logo (also the browser-tab icon); a picture and a line for
+  the sign-in page; a character for empty screens and the next button.
+- **What the provider must have:** its colours as six-character codes (for
+  example #0A2B65) and its logo as a PNG or SVG with a transparent background.
+  A square logo or icon works best in the header and the browser tab; the full
+  emblem suits the sign-in page.
+- **Curiosa Foundation:** main colour Navy #0A2B65, accent Copper #CB876E,
+  page background Blush #FBF3F2, the book icon as the logo, the full seal on
+  the sign-in page, as set out in its Logo Guide and Branding Guidelines.
+
 ## 6v. Live classes in the LMS classroom (23 October 2026)
 
 - **Switching it on:** Settings → Live classes. Choose audio and video

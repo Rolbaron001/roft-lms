@@ -885,6 +885,7 @@ export const server = {
   "said.provisioning.a553924d": "The address \"{slug}\" is already in use.",
   "said.provisioning.e945930d": "Use a colour like #0D1E32.",
   "said.provisioning.e9588a79": "Give a whole percentage from 1 to 100.",
+  "said.provisioning.f18ef78f": "Use a colour like #FBF3F2, or leave it empty.",
   "said.qualification-awards.0fb9c15e": "The date on the certificate is needed.",
   "said.qualification-awards.3b9fcfcb": "Certificate {number} is already recorded for this qualification. Remove it first if it was entered wrongly.",
   "said.qualification-awards.4191d4b6": "No such certificate is recorded.",

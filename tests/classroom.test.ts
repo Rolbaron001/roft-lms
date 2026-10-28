@@ -86,7 +86,7 @@ describe("the calendar invitation", () => {
     summary: "Lecture 3, HRM Officer 2026, Monday, 2 November 2026",
     description: "Lecture 3 for HRM Officer 2026; bring your workbook.",
     url: "https://lms.example.test/classroom/11111111-2222-3333-4444-555555555555",
-    organiser: { name: "Curiosa Academy", email: "lms@example.test" },
+    organiser: { name: "Curiosa Foundation", email: "lms@example.test" },
     attendee: { name: "Thandi", email: "thandi@example.test" },
   };
 

@@ -2981,6 +2981,8 @@ export const staff = {
   "brand.mainNote": "Headers, buttons and certificates.",
   "brand.accent": "Accent colour",
   "brand.accentNote": "Highlights, progress bars and certificate borders.",
+  "brand.background": "Page background",
+  "brand.backgroundNote": "The tint behind the white panels, such as your brand's lightest colour. Leave it empty for the platform's light grey.",
   "brand.logo": "Logo",
   "brand.logoNote":
     "Shown in the header, on the sign-in page and on every certificate. Use a PNG with a transparent background, under 2 MB.",

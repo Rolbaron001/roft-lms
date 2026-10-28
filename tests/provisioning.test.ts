@@ -414,4 +414,19 @@ describe("branding", () => {
       }),
     ).rejects.toThrow();
   });
+
+  /** Job sheet D42: a provider's own page tint, such as the Curiosa Foundation's Blush. */
+  it("keeps a page background colour, and clears it when left empty", async () => {
+    await updateOwnBranding(tenantAdmin, { displayName: "Tinted", primaryColour: "#0A2B65", accentColour: "#CB876E", backgroundColour: "#FBF3F2" });
+    const tinted = await withTenant(platformOrgId, (tx) => tx.select().from(organisations).where(eq(organisations.id, platformOrgId)));
+    expect(tinted[0].backgroundColour).toBe("#FBF3F2");
+
+    await updateOwnBranding(tenantAdmin, { displayName: "Tinted", primaryColour: "#0A2B65", accentColour: "#CB876E", backgroundColour: "" });
+    const plain = await withTenant(platformOrgId, (tx) => tx.select().from(organisations).where(eq(organisations.id, platformOrgId)));
+    expect(plain[0].backgroundColour).toBeNull();
+
+    await expect(
+      updateOwnBranding(tenantAdmin, { displayName: "Tinted", primaryColour: "#0A2B65", accentColour: "#CB876E", backgroundColour: "blush" }),
+    ).rejects.toThrow();
+  });
 });

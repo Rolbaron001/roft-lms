@@ -1,13 +1,13 @@
 /**
  * Sets the organisation that operates this deployment.
  *
- *   npx tsx scripts/set-operator.mts --slug curiosa --name "Curiosa Academy" \
+ *   npx tsx scripts/set-operator.mts --slug curiosa --name "Curiosa Foundation" \
  *     --primary "#42244E" --accent "#AE608A" \
  *     --logo /curiosa-mark.png --graphic /curiosa-tree.png \
  *     --strapline "Lifelong curiosity"
  *
  * The platform is deployed more than once — ROFT runs an instance for its own
- * clients, Curiosa Academy runs another for theirs — from one codebase. What
+ * clients, Curiosa Foundation runs another for theirs — from one codebase. What
  * differs between them is the organisation sitting at the top, and this is how
  * that organisation is named.
  *
@@ -53,7 +53,7 @@ const currentSlug = process.env.PLATFORM_ORG_SLUG?.trim() || "roft";
 if (!slug || !name) {
   console.error(
     'Give at least a slug and a name:\n' +
-      '  npx tsx scripts/set-operator.mts --slug curiosa --name "Curiosa Academy"\n',
+      '  npx tsx scripts/set-operator.mts --slug curiosa --name "Curiosa Foundation"\n',
   );
   process.exit(1);
 }

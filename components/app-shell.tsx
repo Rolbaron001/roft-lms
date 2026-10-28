@@ -120,6 +120,8 @@ export async function AppShell({
         {
           "--brand-primary": tenant.primaryColour,
           "--brand-accent": tenant.accentColour,
+          // A provider's own page tint (D42), behind the white cards.
+          ...(tenant.backgroundColour ? { "--background": tenant.backgroundColour, background: tenant.backgroundColour } : {}),
         } as React.CSSProperties
       }
     >

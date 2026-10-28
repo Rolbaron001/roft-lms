@@ -15,6 +15,7 @@ export function BrandingForm({
     displayName: string;
     primaryColour: string;
     accentColour: string;
+    backgroundColour: string | null;
     logoUrl: string | null;
     signInGraphicUrl: string | null;
     illustrationUrl: string | null;
@@ -30,6 +31,7 @@ export function BrandingForm({
   const [name, setName] = useState(defaults.displayName);
   const [primary, setPrimary] = useState(defaults.primaryColour);
   const [accent, setAccent] = useState(defaults.accentColour);
+  const [background, setBackground] = useState(defaults.backgroundColour ?? "");
   const [logo, setLogo] = useState(defaults.logoUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -143,6 +145,30 @@ export function BrandingForm({
             <span className="block text-xs text-[var(--muted)]">{t("brand.accentNote")}</span>
           </label>
         </div>
+
+        {/* The page behind the cards (job sheet D42); empty keeps the platform's own. */}
+        <label className="block space-y-1.5">
+          <span className="block text-sm font-medium">
+            {t("brand.background")} <span className="font-normal text-[var(--muted)]">{t("common.optional")}</span>
+          </span>
+          <div className="flex gap-2">
+            <input
+              type="color"
+              value={background || "#f6f7f9"}
+              onChange={(event) => setBackground(event.target.value)}
+              className="h-9 w-12 rounded border border-[var(--border)]"
+              aria-label={t("brand.background")}
+            />
+            <input
+              name="backgroundColour"
+              value={background}
+              placeholder="#FBF3F2"
+              onChange={(event) => setBackground(event.target.value)}
+              className={`${inputClass} font-mono sm:max-w-xs`}
+            />
+          </div>
+          <span className="block text-xs text-[var(--muted)]">{t("brand.backgroundNote")}</span>
+        </label>
 
         <div className="space-y-2 rounded-md border border-[var(--border)] p-4">
           <span className="block text-sm font-medium">{t("brand.logo")}</span>

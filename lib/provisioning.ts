@@ -542,6 +542,16 @@ export const brandingInput = z.object({
    */
   illustrationUrl: logoAddress,
   strapline: z.string().trim().max(120).optional().or(z.literal("")),
+  /**
+   * The page behind the cards (job sheet D42): a provider's own tint, such as
+   * the Curiosa Foundation's Blush, or empty for the platform's light grey.
+   */
+  backgroundColour: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Use a colour like #FBF3F2, or leave it empty.")
+    .optional()
+    .or(z.literal("")),
 });
 
 export async function updateOwnBranding(
@@ -567,6 +577,7 @@ export async function updateOwnBranding(
         signInGraphicUrl: parsed.signInGraphicUrl || null,
         illustrationUrl: parsed.illustrationUrl || null,
         strapline: parsed.strapline || null,
+        backgroundColour: parsed.backgroundColour || null,
         updatedAt: new Date(),
       })
       .where(eq(organisations.id, session.organisationId))

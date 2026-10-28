@@ -1,6 +1,6 @@
 # Three things to check in the Study Unit 5 assessment material
 
-**For:** Heidi Edwards, Curiosa Academy  
+**For:** Heidi Edwards, Curiosa Foundation  
 **From:** Roland Jones, ROFT Strategic Workforce Advisory  
 **Date:** 27 September 2026
 

@@ -120,7 +120,7 @@ describe("the pages in the archive", () => {
   const manifest: ArchiveManifest = {
     formatVersion: 1,
     archiveId: "arch-1",
-    provider: "Curiosa Academy",
+    provider: "Curiosa Foundation",
     cohort: { id: "c1", name: "HRM Officer 2026 A", code: "HRM-26A" },
     qualification: "Advanced Occupational Certificate: Human Resource Management Officer",
     builtAt: "2026-09-25T10:00:00.000Z",

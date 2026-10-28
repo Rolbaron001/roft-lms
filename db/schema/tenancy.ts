@@ -126,6 +126,8 @@ export const organisations = pgTable(
 
     primaryColour: text("primary_colour").notNull().default("#0D1E32"),
     accentColour: text("accent_colour").notNull().default("#B9975B"),
+    /** The page behind the cards, or null for the platform's light grey (D42). */
+    backgroundColour: text("background_colour"),
     customDomain: text("custom_domain"),
 
     /**

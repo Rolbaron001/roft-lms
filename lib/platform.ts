@@ -2,7 +2,7 @@
  * Who operates this deployment.
  *
  * The platform is sold twice: ROFT runs one instance for its own clients, and
- * Curiosa Academy runs another for theirs. They are the same application from
+ * Curiosa Foundation runs another for theirs. They are the same application from
  * the same repository — what differs is the organisation sitting at the top of
  * it, and that is configuration rather than code.
  *

@@ -60,6 +60,7 @@ export default async function LoginPage({
           ? ({
               "--brand-primary": tenant.primaryColour,
               "--brand-accent": tenant.accentColour,
+              ...(tenant.backgroundColour ? { "--background": tenant.backgroundColour, background: tenant.backgroundColour } : {}),
             } as React.CSSProperties)
           : undefined
       }

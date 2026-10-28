@@ -32,6 +32,8 @@ export type TenantIdentity = {
   strapline: string | null;
   primaryColour: string;
   accentColour: string;
+  /** The page behind the cards, or null for the platform's own (D42). */
+  backgroundColour: string | null;
   /** The provider's own clock, as an IANA zone name. */
   timezone: string;
   /** How dates are written (lib/date-format.ts). */
@@ -208,6 +210,7 @@ export async function resolveTenant(
           strapline: organisations.strapline,
           primaryColour: organisations.primaryColour,
           accentColour: organisations.accentColour,
+          backgroundColour: organisations.backgroundColour,
           timezone: organisations.timezone,
           dateStyle: organisations.dateStyle,
           leisaTargetHours: organisations.leisaTargetHours,

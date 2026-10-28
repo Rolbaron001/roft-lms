@@ -22,7 +22,7 @@ about whether it is finished. Ticked as it lands, with the commit.
 
 ## 1. The Curiosa conversion — visible identity
 
-**Done when:** `lms.roftbusiness.org/login` shows the Curiosa Academy logo and
+**Done when:** `lms.roftbusiness.org/login` shows the Curiosa Foundation logo and
 name, the palette is Curiosa's throughout, and the graphics from
 `Branding/Curiosa Branding/Graphics/` set a consistent tone across sign-in,
 the learner's home and the empty states.

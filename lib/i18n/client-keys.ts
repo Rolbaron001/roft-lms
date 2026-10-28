@@ -158,6 +158,8 @@ export const CLIENT_KEYS: readonly string[] = [
   "badges.symbol",
   "brand.accent",
   "brand.accentNote",
+  "brand.background",
+  "brand.backgroundNote",
   "brand.character",
   "brand.characterHint",
   "brand.characterNote",
