@@ -70,6 +70,16 @@ Google Meet, Calendar and Gemini today is replaced by the LMS; it is not run
 beside it. The outside meeting link is kept only as a contingency for a class
 whose media server has failed.
 
+**Superseded on 29 October 2026 (Roland):** outside meetings become a full way
+of working beside the LMS classroom. Each provider chooses in Settings: the LMS
+classroom, Google Meet, Microsoft Teams or another meeting link, and a single
+session can be switched. Everything around the class (schedule, reminders,
+register, class record, summary) stays in the LMS either way. The LMS
+classroom's capacity is shared across providers, so it is managed: a platform
+limit, an allowance per provider, and a check when a session is scheduled. The
+paper for Heidi and Linda is `Design/Live Classes - Server Assessment and Two
+Options - Oct2026.docx`, which also sizes the classroom on the existing server.
+
 **Two options put to Heidi.** The full design went to Heidi (and to Linda for
 a quote) as `Design/Live Online Classes - Design for Consideration -
 Oct2026.docx`, in ROFT Neutral branding. Revised the same day: no recording
