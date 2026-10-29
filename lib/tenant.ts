@@ -3,6 +3,7 @@ import { withPlatformScope } from "@/db/client";
 import { organisations } from "@/db/schema";
 import type { CapabilityFlags } from "./features";
 import type { TermOverrides } from "./terms";
+import type { LiveClassMethod } from "./classroom-rules";
 
 /**
  * Working out which client a request belongs to.
@@ -42,8 +43,10 @@ export type TenantIdentity = {
   leisaTargetHours: number | null;
   /** The language its people read the platform in unless they choose (D9). */
   defaultLocale: string;
-  /** The LMS classroom (D41): switched on, cameras allowed, and the share counted present. */
-  classroomEnabled: boolean;
+  /** How live classes are usually held (D41), whether cameras are allowed, and the share counted present. */
+  liveClassMethod: LiveClassMethod;
+  /** Classes at once in the LMS classroom, set by the operator; null for the deployment's limit only. */
+  classroomAllowance: number | null;
   classroomCameras: boolean;
   classroomPresentPercent: number;
   /** The attendance a learner must reach over the whole programme, or none. */
@@ -215,7 +218,8 @@ export async function resolveTenant(
           dateStyle: organisations.dateStyle,
           leisaTargetHours: organisations.leisaTargetHours,
           defaultLocale: organisations.defaultLocale,
-          classroomEnabled: organisations.classroomEnabled,
+          liveClassMethod: organisations.liveClassMethod,
+          classroomAllowance: organisations.classroomAllowance,
           classroomCameras: organisations.classroomCameras,
           classroomPresentPercent: organisations.classroomPresentPercent,
           attendanceTargetPercent: organisations.attendanceTargetPercent,

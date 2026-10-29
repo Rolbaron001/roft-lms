@@ -146,11 +146,67 @@ const ENUM_VALUES: { type: string; value: string; why: string }[] = [
   },
 ];
 
+/**
+ * Columns added before the push, because the same push drops another column
+ * from that table.
+ *
+ * Faced with one column gone and another new, `drizzle-kit push` stops to ask
+ * whether it is a rename, and `--force` does not answer that question: on a
+ * deploy, with nobody at the keyboard, the push fails. Found locally on 29
+ * October 2026, when `organisations.classroom_enabled` gave way to
+ * `live_class_method` and `classroom_allowance`. Adding the new columns here
+ * leaves the push only the drop, which `--force` approves.
+ *
+ * `copy` carries the old column's meaning across, run once when the column is
+ * added, and only while the old column is still there.
+ */
+const ADDITIONS: {
+  table: string;
+  column: string;
+  /** Run before the column is added: a type it needs. Must be idempotent. */
+  prepare?: string;
+  definition: string;
+  copy?: { from: string; sql: string };
+  why: string;
+}[] = [
+  {
+    table: "organisations",
+    column: "live_class_method",
+    prepare:
+      "do $$ begin create type live_class_method as enum ('lms_classroom', 'google_meet', 'microsoft_teams', 'meeting_link'); exception when duplicate_object then null; end $$",
+    definition: "live_class_method live_class_method not null default 'meeting_link'",
+    copy: { from: "classroom_enabled", sql: "update organisations set live_class_method = 'lms_classroom' where classroom_enabled" },
+    why: "How a provider holds live classes replaces the classroom's on/off switch (Roland, 29 October 2026).",
+  },
+  {
+    table: "organisations",
+    column: "classroom_allowance",
+    definition: "classroom_allowance integer",
+    why: "Each provider's allowance in the shared LMS classroom, added with live_class_method.",
+  },
+];
+
 async function main() {
   const sql = postgres(adminUrl!, { max: 1, onnotice: () => {} });
   let applied = 0;
 
   try {
+    for (const addition of phase === "reshapes" ? [] : ADDITIONS) {
+      const present = await sql<{ column_name: string }[]>`
+        select column_name from information_schema.columns
+        where table_schema = 'public' and table_name = ${addition.table}
+      `;
+      // No table: a fresh database, which the push builds complete.
+      if (present.length === 0) continue;
+      const have = new Set(present.map((row) => row.column_name));
+      if (have.has(addition.column)) continue;
+
+      console.log(`Adding ${addition.table}.${addition.column}\n  ${addition.why}`);
+      if (addition.prepare) await sql.unsafe(addition.prepare);
+      await sql.unsafe(`alter table "${addition.table}" add column if not exists ${addition.definition}`);
+      if (addition.copy && have.has(addition.copy.from)) await sql.unsafe(addition.copy.sql);
+    }
+
     for (const entry of phase === "reshapes" ? [] : ENUM_VALUES) {
       const [type] = await sql<{ exists: boolean }[]>`
         select exists (

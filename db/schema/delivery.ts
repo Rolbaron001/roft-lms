@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { organisations, users } from "./tenancy";
+import { liveClassMethod, organisations, users } from "./tenancy";
 import {
   courses,
   curriculumModules,
@@ -691,6 +691,12 @@ export const cohortSessions = pgTable(
     endTime: text("end_time"),
 
     deliveryMode: deliveryMode("delivery_mode").notNull().default("virtual"),
+    /**
+     * How this session is held, when not the provider's usual way: a class
+     * moved out of a full classroom, or out of one that failed on the night.
+     * Null follows the provider (lib/classroom-rules.ts).
+     */
+    liveClassMethod: liveClassMethod("live_class_method"),
     /** Where a virtual session is held. Sent with the notice announcing it. */
     meetingUrl: text("meeting_url"),
     venue: text("venue"),

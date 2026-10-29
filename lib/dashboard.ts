@@ -114,8 +114,8 @@ export async function adminDashboard(
 
   const sessionData = await withTenant(session.organisationId, async (tx) => {
     const ids = all.map((row) => row.id);
-    if (ids.length === 0) return { upcoming: [], past: [], marks: [], courses: new Map<string, string[]>(), classroom: false };
-    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    if (ids.length === 0) return { upcoming: [], past: [], marks: [], courses: new Map<string, string[]>(), classroom: "meeting_link" as const };
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).method;
     const upcoming = await tx
       .select({
         id: cohortSessions.id,
@@ -126,6 +126,7 @@ export async function adminDashboard(
         kind: cohortSessions.kind,
         sequence: cohortSessions.sequence,
         meetingUrl: cohortSessions.meetingUrl,
+        liveClassMethod: cohortSessions.liveClassMethod,
         deliveryMode: cohortSessions.deliveryMode,
         facilitatorFirst: users.firstName,
         facilitatorLast: users.lastName,

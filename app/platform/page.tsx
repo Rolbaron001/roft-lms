@@ -3,6 +3,8 @@ import { listTenants, platformHealth } from "@/lib/provisioning";
 import { maybe } from "@/lib/i18n";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { NewTenantForm } from "./new-tenant-form";
+import { AllowanceForm } from "./allowance-form";
+import { deploymentClassroomLimit } from "@/lib/classroom-capacity";
 
 export default async function PlatformPage() {
   const tenant = await requireTenant();
@@ -13,6 +15,7 @@ export default async function PlatformPage() {
     listTenants(session),
     platformHealth(session),
   ]);
+  const limit = deploymentClassroomLimit();
 
   return (
     <AppShell tenant={tenant} session={session}>
@@ -56,6 +59,7 @@ export default async function PlatformPage() {
                   <th className="pb-2 pr-4 font-medium">{t("platformPage.address")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("platformPage.mode")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("platformPage.usage")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("platformPage.allowance")}</th>
                   <th className="pb-2 font-medium">{t("platformPage.status")}</th>
                 </tr>
               </thead>
@@ -86,6 +90,12 @@ export default async function PlatformPage() {
                         </span>
                       ) : null}
                     </td>
+                    <td className="py-2.5 pr-4">
+                      <AllowanceForm tenantId={row.id} allowance={row.classroomAllowance} />
+                      <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                        {t(`classroomSettings.method.${row.liveClassMethod}`)}
+                      </span>
+                    </td>
                     <td className="py-2.5">
                       <StatusBadge status={row.status} />
                     </td>
@@ -94,6 +104,9 @@ export default async function PlatformPage() {
               </tbody>
             </table>
           </div>
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            {limit === null ? t("platformPage.capacityUnset") : t("platformPage.capacity", { count: limit })}
+          </p>
         </Card>
       </div>
 

@@ -6,6 +6,7 @@ import { structureFrom } from "@/lib/features";
 import {
   createTenant,
   ProvisioningError,
+  setClassroomAllowance,
   setTenantStatus,
   updateTenant,
   type TenantInput,
@@ -111,6 +112,25 @@ export async function updateTenantAction(
 
   revalidatePath("/platform");
   revalidatePath(`/platform/${tenantId}`);
+  return said({ notice: "Saved." });
+}
+
+/** A provider's allowance in the shared LMS classroom (Roland, 29 October 2026). */
+export async function setClassroomAllowanceAction(
+  _previous: PlatformState,
+  formData: FormData,
+): Promise<PlatformState> {
+  const session = await requireSession();
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const typed = String(formData.get("allowance") ?? "").trim();
+
+  try {
+    await setClassroomAllowance(session, tenantId, typed === "" ? null : Number(typed));
+  } catch (error) {
+    return said({ error: describe(error) });
+  }
+
+  revalidatePath("/platform");
   return said({ notice: "Saved." });
 }
 

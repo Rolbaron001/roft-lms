@@ -188,10 +188,10 @@ export async function facilitatorDashboard(session: AuthenticatedSession, { t, d
 
   const data = await withTenant(session.organisationId, async (tx) => {
     if (ids.length === 0) return { upcoming: [], unmarked: [], waiting: [], members: [] };
-    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).method;
     const upcoming = (
       await tx
-        .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, deliveryMode: cohortSessions.deliveryMode })
+        .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, liveClassMethod: cohortSessions.liveClassMethod, deliveryMode: cohortSessions.deliveryMode })
         .from(cohortSessions)
         .where(and(inArray(cohortSessions.cohortId, ids), gte(cohortSessions.scheduledDate, today), lte(cohortSessions.scheduledDate, fortnight), notInArray(cohortSessions.status, ["cancelled", "postponed"])))
         .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime))
@@ -525,10 +525,10 @@ export async function learnerDashboard(session: AuthenticatedSession, { t, day, 
   const home = qualificationsHeld[0] ? `/learn/qualification/${qualificationsHeld[0].id}` : "/";
 
   const data = await withTenant(session.organisationId, async (tx) => {
-    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).method;
     const classes = (
       await tx
-        .select({ id: cohortSessions.id, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, deliveryMode: cohortSessions.deliveryMode, venue: cohortSessions.venue, cohortName: cohorts.name })
+        .select({ id: cohortSessions.id, date: cohortSessions.scheduledDate, startTime: cohortSessions.startTime, title: cohortSessions.title, kind: cohortSessions.kind, sequence: cohortSessions.sequence, meetingUrl: cohortSessions.meetingUrl, liveClassMethod: cohortSessions.liveClassMethod, deliveryMode: cohortSessions.deliveryMode, venue: cohortSessions.venue, cohortName: cohorts.name })
         .from(cohortSessions)
         .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
         .innerJoin(cohortMembers, and(eq(cohortMembers.cohortId, cohortSessions.cohortId), eq(cohortMembers.userId, session.userId), isNull(cohortMembers.leftAt)))

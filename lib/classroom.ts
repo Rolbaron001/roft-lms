@@ -20,7 +20,7 @@ import type { AuthenticatedSession } from "./session";
 import { reachWithin, inReach } from "./staff-scope";
 import { zonedTimeToUtc } from "./timezone";
 import { classLength, markFor, minutesIn } from "./classroom-attendance";
-import { heldInClassroom, joinHref } from "./classroom-rules";
+import { heldInClassroom, joinHref, type LiveClassMethod } from "./classroom-rules";
 import { noticeOwed } from "./classroom-notice";
 import * as media from "./classroom-media";
 
@@ -59,7 +59,8 @@ export { heldInClassroom, joinHref };
 
 /** The provider's classroom settings. */
 export type ClassroomSettings = {
-  enabled: boolean;
+  /** How the provider usually holds a class; a session may have its own way. */
+  method: LiveClassMethod;
   cameras: boolean;
   presentPercent: number;
   timezone: string;
@@ -68,14 +69,14 @@ export type ClassroomSettings = {
 export async function classroomSettingsWithin(tx: TenantDatabase, organisationId: string): Promise<ClassroomSettings> {
   const [row] = await tx
     .select({
-      enabled: organisations.classroomEnabled,
+      method: organisations.liveClassMethod,
       cameras: organisations.classroomCameras,
       presentPercent: organisations.classroomPresentPercent,
       timezone: organisations.timezone,
     })
     .from(organisations)
     .where(eq(organisations.id, organisationId));
-  return row ?? { enabled: false, cameras: true, presentPercent: 75, timezone: "Africa/Johannesburg" };
+  return row ?? { method: "meeting_link", cameras: true, presentPercent: 75, timezone: "Africa/Johannesburg" };
 }
 
 export type ClassroomRole = "host" | "staff" | "learner";
@@ -92,6 +93,7 @@ type SessionRow = {
   endTime: string | null;
   deliveryMode: string;
   meetingUrl: string | null;
+  liveClassMethod: LiveClassMethod | null;
   status: string;
   facilitatorId: string | null;
   classStartedAt: Date | null;
@@ -119,6 +121,7 @@ export async function sessionRow(tx: TenantDatabase, sessionId: string): Promise
       endTime: cohortSessions.endTime,
       deliveryMode: cohortSessions.deliveryMode,
       meetingUrl: cohortSessions.meetingUrl,
+      liveClassMethod: cohortSessions.liveClassMethod,
       status: cohortSessions.status,
       facilitatorId: cohortSessions.facilitatorId,
       classStartedAt: cohortSessions.classStartedAt,
@@ -211,7 +214,7 @@ export type PollView = {
 
 async function heldHere(tx: TenantDatabase, organisationId: string, row: SessionRow): Promise<ClassroomSettings> {
   const settings = await classroomSettingsWithin(tx, organisationId);
-  if (!heldInClassroom(settings.enabled, row)) {
+  if (!heldInClassroom(settings.method, row)) {
     throw new ClassroomError(
       row.meetingUrl ? "This class is held at its outside meeting link, not in the LMS classroom." : "This session is not held in the LMS classroom.",
       "invalid_state",

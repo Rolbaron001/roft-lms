@@ -8,6 +8,8 @@ import { PreAssessmentError, saveChecklist } from "@/lib/pre-assessment";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
 import { CaptureError, setNamingConvention } from "@/lib/capture";
 import { PermissionDeniedError } from "@/lib/rbac";
+import { isLiveClassMethod } from "@/lib/classroom-rules";
+import { classesWithoutRoom } from "@/lib/classroom-capacity";
 
 export type BrandingState = { error?: string; notice?: string };
 
@@ -226,15 +228,18 @@ export async function updateLeisaTargetAction(_previous: ClockState, formData: F
 /** The LMS classroom's settings (job sheet D41). */
 export async function updateClassroomAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
   const session = await requireSession();
-  const enabled = formData.get("enabled") === "on";
+  const method = String(formData.get("method") ?? "");
+  if (!isLiveClassMethod(method)) return said({ error: "Choose how your live classes are held." });
+  let withoutRoom = 0;
   try {
     await setTenantClassroom(session, {
-      enabled,
+      method,
       cameras: formData.get("cameras") === "video",
       presentPercent: Number(String(formData.get("presentPercent") ?? "").trim()),
       attendanceTarget: String(formData.get("attendanceTarget") ?? "").trim() === "" ? null : Number(String(formData.get("attendanceTarget")).trim()),
       transcribe: formData.get("transcribe") === "on",
     });
+    if (method === "lms_classroom") withoutRoom = (await classesWithoutRoom(session.organisationId)).length;
   } catch (error) {
     if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
     if (error && typeof error === "object" && "issues" in error) {
@@ -244,10 +249,11 @@ export async function updateClassroomAction(_previous: ClockState, formData: For
     return said({ error: "That could not be saved. Try again." });
   }
   revalidatePath("/", "layout");
+  if (method !== "lms_classroom") return said({ notice: "Saved. Online sessions are held at the meeting link on each session." });
   return said({
-    notice: enabled
-      ? "Saved. Online sessions without an outside meeting link are now held in the LMS classroom."
-      : "Saved. The classroom is off; online sessions use their meeting links.",
+    notice: withoutRoom
+      ? `Saved. Online sessions without an outside meeting link are now held in the LMS classroom. It has no room for ${withoutRoom} of them: they are listed above.`
+      : "Saved. Online sessions without an outside meeting link are now held in the LMS classroom.",
   });
 }
 

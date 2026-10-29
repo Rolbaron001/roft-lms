@@ -10,6 +10,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { clearTenantCache } from "./tenant";
 import { DEFAULT_TIME_ZONE, isSupportedTimeZone } from "./timezone";
 import { isDateStyle } from "./date-format";
+import { isLiveClassMethod, type LiveClassMethod } from "./classroom-rules";
 
 /**
  * Provisioning client organisations — the Platform Owner's job.
@@ -145,6 +146,9 @@ export type TenantSummary = {
   deploymentMode: string;
   customDomain: string | null;
   createdAt: Date;
+  /** How it holds live classes, and its allowance in the shared classroom. */
+  liveClassMethod: LiveClassMethod;
+  classroomAllowance: number | null;
   /** Counts only. Never the records themselves. */
   people: number;
   enrolments: number;
@@ -170,6 +174,8 @@ export async function listTenants(
           deploymentMode: organisations.deploymentMode,
           customDomain: organisations.customDomain,
           createdAt: organisations.createdAt,
+          liveClassMethod: organisations.liveClassMethod,
+          classroomAllowance: organisations.classroomAllowance,
           people: sql<number>`(
             select count(*)::int from users u
             where u.organisation_id = organisations.id and u.status = 'active'
@@ -705,15 +711,19 @@ export async function setTenantLeisaTarget(session: AuthenticatedSession, hours:
 }
 
 /**
- * The LMS classroom (job sheet D41): whether online sessions are held in it,
- * whether cameras are allowed (off is audio only), and the share of a class a
- * learner must attend to be counted present.
+ * Live classes (job sheet D41): how the provider usually holds them (Roland,
+ * 29 October 2026), whether cameras are allowed in the LMS classroom (off is
+ * audio only), and the share of a class a learner must attend to be counted
+ * present.
  */
 export async function setTenantClassroom(
   session: AuthenticatedSession,
-  settings: { enabled: boolean; cameras: boolean; presentPercent: number; attendanceTarget: number | null; transcribe: boolean },
+  settings: { method: LiveClassMethod; cameras: boolean; presentPercent: number; attendanceTarget: number | null; transcribe: boolean },
 ) {
   assertSessionCan(session, "tenant:manage_settings");
+  if (!isLiveClassMethod(settings.method)) {
+    throw new z.ZodError([{ code: "custom", path: ["method"], message: "Choose how your live classes are held." }]);
+  }
   if (!Number.isInteger(settings.presentPercent) || settings.presentPercent < 1 || settings.presentPercent > 100) {
     throw new z.ZodError([{ code: "custom", path: ["presentPercent"], message: "Give a whole percentage from 1 to 100." }]);
   }
@@ -725,7 +735,8 @@ export async function setTenantClassroom(
   await withTenant(session.organisationId, async (tx) => {
     const [before] = await tx
       .select({
-        enabled: organisations.classroomEnabled,
+        method: organisations.liveClassMethod,
+        allowance: organisations.classroomAllowance,
         cameras: organisations.classroomCameras,
         presentPercent: organisations.classroomPresentPercent,
         attendanceTarget: organisations.attendanceTargetPercent,
@@ -733,10 +744,13 @@ export async function setTenantClassroom(
       })
       .from(organisations)
       .where(eq(organisations.id, session.organisationId));
+    if (settings.method === "lms_classroom" && before?.allowance === 0) {
+      throw new z.ZodError([{ code: "custom", path: ["method"], message: "The LMS classroom is not offered to you. Choose an outside meeting." }]);
+    }
     await tx
       .update(organisations)
       .set({
-        classroomEnabled: settings.enabled,
+        liveClassMethod: settings.method,
         classroomCameras: settings.cameras,
         classroomPresentPercent: settings.presentPercent,
         attendanceTargetPercent: target,
@@ -752,6 +766,37 @@ export async function setTenantClassroom(
       entityId: session.organisationId,
       before: before ?? null,
       after: settings,
+    });
+  });
+  clearTenantCache();
+}
+
+/**
+ * How many classes a provider may hold in the LMS classroom at once (Roland,
+ * 29 October 2026). The operator's to set, because the classroom's capacity
+ * is shared by every provider on the deployment. Null: the deployment's limit
+ * only. Nought: the classroom is not offered to the provider.
+ */
+export async function setClassroomAllowance(session: AuthenticatedSession, organisationId: string, allowance: number | null) {
+  assertSessionCan(session, "platform:manage_tenants");
+  if (allowance !== null && (!Number.isInteger(allowance) || allowance < 0 || allowance > 1000)) {
+    throw new z.ZodError([{ code: "custom", path: ["allowance"], message: "Give a whole number of classes, 0 or more, or leave it empty." }]);
+  }
+  await withPlatformScope("setting a provider's allowance in the shared LMS classroom", async (tx) => {
+    const [before] = await tx
+      .select({ allowance: organisations.classroomAllowance })
+      .from(organisations)
+      .where(eq(organisations.id, organisationId));
+    if (!before) throw new z.ZodError([{ code: "custom", path: ["organisationId"], message: "That provider was not found." }]);
+    await tx.update(organisations).set({ classroomAllowance: allowance, updatedAt: new Date() }).where(eq(organisations.id, organisationId));
+    await recordAudit(tx, {
+      organisationId,
+      actorId: session.userId,
+      action: "tenant.classroom_allowance_set",
+      entityType: "organisation",
+      entityId: organisationId,
+      before,
+      after: { allowance },
     });
   });
   clearTenantCache();

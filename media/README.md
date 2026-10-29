@@ -49,7 +49,14 @@ LIVEKIT_ROOM_PREFIX=live       # "dev" on the development site
 TRANSCRIBER_URL=http://<media server>:8790
 TRANSCRIBER_SECRET=...
 CLASSROOM_TICK_SECRET=...      # for the five-minute reminders
+CLASSROOM_CAPACITY=3           # classes at once, every provider together
 ```
+
+`CLASSROOM_CAPACITY` is the most classes the media server carries at once,
+shared by every provider on the site; set it from a load test. Left out, no
+limit is applied. Each provider's own allowance is set on the Platform page.
+Two sites sharing one media server share its capacity, so give each a share
+that adds up to no more than the server holds.
 
 The reminders need a five-minute job on the LMS server:
 
@@ -57,8 +64,9 @@ The reminders need a five-minute job on the LMS server:
 */5 * * * * curl -fsS -X POST -H "Authorization: Bearer $CLASSROOM_TICK_SECRET" https://<site>/api/classroom/tick
 ```
 
-Then, in each provider's Settings → Live classes: switch the classroom on, and
-"Transcribe classes" once their learner agreement carries the notice.
+Then, in each provider's Settings → Live classes: choose "In the LMS
+classroom" as the usual way, and "Transcribe classes" once their learner
+agreement carries the notice.
 
 ## Known
 

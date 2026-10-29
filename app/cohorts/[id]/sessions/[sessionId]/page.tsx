@@ -12,6 +12,7 @@ import { Sitting } from "./sitting";
 import { SetUpSitting, SittingStatus } from "./set-up-sitting";
 import { withTenant } from "@/db/client";
 import { PlanNotes } from "./plan-notes";
+import { HeldForm } from "./held-form";
 import {
   assessments,
   cohortSessions,
@@ -74,6 +75,8 @@ export default async function SessionRegisterPage({
         proceedings: cohortSessions.proceedings,
         deliveryMode: cohortSessions.deliveryMode,
         meetingUrl: cohortSessions.meetingUrl,
+        liveClassMethod: cohortSessions.liveClassMethod,
+        status: cohortSessions.status,
       })
       .from(cohortSessions)
       .where(eq(cohortSessions.id, sessionId)),
@@ -172,12 +175,27 @@ export default async function SessionRegisterPage({
         {kind ?? register.session.kind} · {dates.day(register.session.date)} ·{" "}
         {t("register.marked", { marked, total: register.lines.length })}
       </p>
-      {notes && heldInClassroom(tenant.classroomEnabled, notes) ? (
+      {notes && heldInClassroom(tenant.liveClassMethod, notes) ? (
         <p className="mt-2 text-sm">
           <Link href={`/classroom/${sessionId}`} className="font-medium text-[var(--brand-accent)] hover:underline">
             {t("register.openClassroom")}
           </Link>
         </p>
+      ) : null}
+
+      {notes && notes.status === "scheduled" && notes.deliveryMode !== "in_person" && session.permissions.includes("session:manage") ? (
+        <div className="mt-6">
+          <Card title={t("heldBy.title")} description={t("heldBy.intro")}>
+            <HeldForm
+              cohortId={id}
+              sessionId={sessionId}
+              usual={tenant.liveClassMethod}
+              current={notes.liveClassMethod}
+              meetingUrl={notes.meetingUrl}
+              classroomOffered={tenant.classroomAllowance !== 0}
+            />
+          </Card>
+        </div>
       ) : null}
 
       {supervised ? (

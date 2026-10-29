@@ -20,9 +20,11 @@ import {
   scheduleSession,
   SchedulingError,
   proposeAttendance,
+  setSessionMethod,
   setSessionStatus,
   takeRegister,
 } from "@/lib/scheduling";
+import { isLiveClassMethod, type LiveClassMethod } from "@/lib/classroom-rules";
 import {
   addCohortTask,
   setTaskStatus,
@@ -219,7 +221,10 @@ export async function rolloutAction(_previous: RolloutState, formData: FormData)
     if (field(formData, "mode") === "apply") {
       const applied = await applyRollout(session, cohortId, plan);
       revalidatePath(`/cohorts/${cohortId}`);
-      return said({ done: `Schedule saved: ${applied.scheduled} steps dated, ${applied.sessions} class sessions added.` });
+      const moved = applied.withoutRoom
+        ? ` The LMS classroom had no room for ${applied.withoutRoom} of them, so ${applied.withoutRoom === 1 ? "it is" : "they are"} set to be held at a meeting link: add the link on each session.`
+        : "";
+      return said({ done: `Schedule saved: ${applied.scheduled} steps dated, ${applied.sessions} class sessions added.${moved}` });
     }
     return said({
       preview: {
@@ -343,6 +348,7 @@ export async function scheduleSessionAction(
         endTime: field(formData, "endTime") || undefined,
         deliveryMode: (field(formData, "deliveryMode") || "virtual") as "virtual",
         meetingUrl: field(formData, "meetingUrl") || undefined,
+        liveClassMethod: isLiveClassMethod(field(formData, "liveClassMethod")) ? (field(formData, "liveClassMethod") as LiveClassMethod) : undefined,
         venue: field(formData, "venue") || undefined,
         sequence: field(formData, "sequence")
           ? Number(field(formData, "sequence"))
@@ -354,6 +360,23 @@ export async function scheduleSessionAction(
       }),
     "Session added to the schedule.",
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
+  ));
+}
+
+/** How one session is held: the provider's usual way, or another (Roland, 29 October 2026). */
+export async function setSessionMethodAction(
+  _previous: CohortActionState,
+  formData: FormData,
+): Promise<CohortActionState> {
+  const session = await requirePermission("session:manage");
+  const cohortId = field(formData, "cohortId");
+  const sessionId = field(formData, "sessionId");
+  const chosen = field(formData, "liveClassMethod");
+
+  return said(run(
+    () => setSessionMethod(session, sessionId, { method: isLiveClassMethod(chosen) ? chosen : null, meetingUrl: field(formData, "meetingUrl") }),
+    "Saved.",
+    [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
   ));
 }
 

@@ -563,13 +563,36 @@ person going through it question by question.
 
 ## 6v. Live classes in the LMS classroom (23 October 2026)
 
-- **Switching it on:** Settings → Live classes. Choose audio and video
+- **How live classes are held (29 October 2026):** Settings → Live classes →
+  **How your live classes are held**. Choose one usual way: **In the LMS
+  classroom**, **Google Meet**, **Microsoft Teams** or **Another meeting
+  link**. The schedule, reminders, register and class record stay in the LMS
+  whichever way is chosen. Until the LMS connects to Google and Microsoft, Meet
+  and Teams work by pasting the link on each session and uploading the
+  attendance export afterwards.
+- **One session held another way:** open the session from the cohort's
+  schedule → **How this session is held**. Choose another way, or paste a
+  meeting link (a link on the session is used in place of the classroom). The
+  add-a-session form offers the same choice.
+- **Room in the classroom:** the classroom is shared by every provider on the
+  platform, so it holds only so many classes at once. The platform operator
+  sets the deployment's limit (`CLASSROOM_CAPACITY`, from a load test of the
+  media server) and may give each provider an allowance on the Platform page
+  (empty: any free place; 0: the classroom is not offered). A class is checked
+  when it is booked: if there is no room at that time, the LMS says so and the
+  class is held another way or at another time. An imported roll-out schedule
+  is saved whole; classes without room are set to a meeting link and counted
+  in the message. Settings → Live classes lists any classes from today on that
+  no longer have room (after an allowance is lowered, for example).
+- **Classes without a start time** cannot be checked for room. A class without
+  an end time is counted as two hours long.
+- **Cameras and attendance:** Settings → Live classes. Choose audio and video
   (cameras allowed, off by default for learners) or audio only, and the share
   of a class a learner must attend to be counted present (75% to start).
 - **Which sessions it holds:** every online session on a cohort's schedule
+  held the classroom way (the provider's usual way, or the session's own) and
   without an outside meeting link. Nothing has to be marked; an imported
-  roll-out schedule is ready as it stands. Give a session an outside link only
-  as a contingency, when the classroom cannot hold it.
+  roll-out schedule is ready as it stands.
 - **What the provider must have:** a media server for the platform (set up by
   the hosting provider); start and end times on every class, since the lobby,
   the reminders and the register are worked out from them; a facilitator named

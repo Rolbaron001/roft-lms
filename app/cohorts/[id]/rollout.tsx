@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { scheduleSessionAction } from "@/app/cohorts/actions";
 import type { CohortActionState } from "@/app/cohorts/actions";
 import type { ScheduledSession, SessionChoices } from "@/lib/scheduling";
+import { LIVE_CLASS_METHODS } from "@/lib/classroom-rules";
 import { ProviderClockNote } from "@/components/zoned-time";
 import { useDay, useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
@@ -237,6 +238,18 @@ export function Rollout({
               <option value="virtual">{t("rollout.virtual")}</option>
               <option value="in_person">{t("rollout.inPerson")}</option>
               <option value="blended">{t("rollout.blended")}</option>
+            </select>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="block text-sm font-medium">{t("heldBy.way")}</span>
+            <select name="liveClassMethod" defaultValue="" className={inputClass}>
+              <option value="">{t("heldBy.usual", { way: t(`classroomSettings.method.${choices.usualMethod}`) })}</option>
+              {LIVE_CLASS_METHODS.filter((method) => choices.classroomOffered || method !== "lms_classroom").map((method) => (
+                <option key={method} value={method}>
+                  {t(`classroomSettings.method.${method}`)}
+                </option>
+              ))}
             </select>
           </label>
 

@@ -69,6 +69,19 @@ services:
       # Node sizes its heap from the machine, not the container, and would
       # reach past the cap below and be killed. This keeps it inside.
       NODE_OPTIONS: --max-old-space-size=320
+      # The LMS classroom's media server, shared with live under its own
+      # room prefix ("dev"). See docker-compose.production.yml.
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      LIVEKIT_API_URL: ${LIVEKIT_API_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      LIVEKIT_ROOM_PREFIX: ${LIVEKIT_ROOM_PREFIX:-dev}
+      LIVEKIT_RECORDINGS_DIR: ${LIVEKIT_RECORDINGS_DIR:-}
+      TRANSCRIBER_URL: ${TRANSCRIBER_URL:-}
+      TRANSCRIBER_SECRET: ${TRANSCRIBER_SECRET:-}
+      TRANSCRIBER_CALLBACK_URL: ${TRANSCRIBER_CALLBACK_URL:-}
+      CLASSROOM_TICK_SECRET: ${CLASSROOM_TICK_SECRET:-}
+      CLASSROOM_CAPACITY: ${CLASSROOM_CAPACITY:-}
 
       # Deliberately absent, and each absence is a decision:
       #

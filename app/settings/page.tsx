@@ -21,6 +21,7 @@ import { LeisaTargetForm } from "./leisa-target-form";
 import { ClassroomForm } from "./classroom-form";
 import { mediaConfigured } from "@/lib/classroom-media";
 import { transcriptionAvailable } from "@/lib/classroom-notice";
+import { sessionsWithoutRoom } from "@/lib/scheduling";
 import { FeedbackQuestionsForm } from "./feedback-questions-form";
 import { activeQuestionnaire } from "@/lib/feedback";
 import { providerChecklist } from "@/lib/pre-assessment";
@@ -111,6 +112,11 @@ export default async function SettingsPage({
   const moduleCodes = canManageSettings
     ? await proposeModuleCodeTable(session)
     : null;
+  // Classes the shared LMS classroom has no room for (Roland, 29 October 2026).
+  const withoutRoom = canManageSettings && session.permissions.includes("session:manage") && tenant.classroomAllowance !== 0
+    ? await sessionsWithoutRoom(session)
+    : [];
+  const dates = await pageDates();
   /*
    * What this provider's platform is for.
    *
@@ -241,9 +247,14 @@ export default async function SettingsPage({
           className="mt-6 scroll-mt-24"
         >
           <ClassroomForm
-            current={{ enabled: tenant.classroomEnabled, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent, attendanceTarget: tenant.attendanceTargetPercent, transcribe: tenant.classroomTranscribe }}
+            current={{ method: tenant.liveClassMethod, cameras: tenant.classroomCameras, presentPercent: tenant.classroomPresentPercent, attendanceTarget: tenant.attendanceTargetPercent, transcribe: tenant.classroomTranscribe }}
             configured={mediaConfigured()}
             transcription={transcriptionAvailable()}
+            allowance={tenant.classroomAllowance}
+            withoutRoom={withoutRoom.map((one) => ({
+              href: `/cohorts/${one.cohortId}/sessions/${one.id}`,
+              label: `${one.cohortName} · ${dates.day(one.scheduledDate)}${one.startTime ? `, ${one.startTime}` : ""}`,
+            }))}
           />
         </div>
       ) : null}

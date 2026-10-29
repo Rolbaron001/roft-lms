@@ -97,7 +97,7 @@ beforeAll(async () => {
   organisationId = await withPlatformScope("classroom record setup", async (tx) => {
     const [row] = await tx
       .insert(organisations)
-      .values({ slug: `record-${stamp}`, legalName: "Record Ltd", displayName: "Record Co", status: "active", classroomEnabled: true, classroomTranscribe: true })
+      .values({ slug: `record-${stamp}`, legalName: "Record Ltd", displayName: "Record Co", status: "active", liveClassMethod: "lms_classroom", classroomTranscribe: true })
       .returning({ id: organisations.id });
     return row.id;
   });

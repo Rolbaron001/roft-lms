@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { withTenant } from "@/db/client";
+import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   assessments,
   attendanceRecords,
@@ -25,6 +25,8 @@ import { raise } from "./notifications";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { facilitatorsForCohort } from "./programme-staff";
 import { classroomSettingsWithin, heldInClassroom } from "./classroom";
+import { LIVE_CLASS_METHODS, type LiveClassMethod } from "./classroom-rules";
+import { classesWithoutRoom, roomInClassroom, type ClassTimes, type ClassroomRoom } from "./classroom-capacity";
 
 /**
  * The dated occasions a cohort meets, and who was there.
@@ -50,11 +52,27 @@ export class SchedulingError extends Error {
     public readonly code:
       | "not_found"
       | "invalid_state"
-      | "not_permitted",
+      | "not_permitted"
+      | "classroom_full",
   ) {
     super(message);
     this.name = "SchedulingError";
   }
+}
+
+/** Why a class cannot be booked in the classroom, in words for the person booking it. */
+export function classroomFullMessage(room: Exclude<ClassroomRoom, { fits: true }>): string {
+  if (room.reason === "not_offered") return "The LMS classroom is not offered to you. Hold this session another way.";
+  if (room.reason === "allowance") {
+    return `The LMS classroom is full for you at this time: your allowance is ${room.limit} ${room.limit === 1 ? "class" : "classes"} at once. Choose another time, or hold this session another way.`;
+  }
+  return "The LMS classroom is full at this time. Choose another time, or hold this session another way.";
+}
+
+/** Refuses a class the classroom has no room for. */
+async function assertRoom(organisationId: string, times: ClassTimes, excluding?: string) {
+  const room = await roomInClassroom(organisationId, times, excluding);
+  if (!room.fits) throw new SchedulingError(classroomFullMessage(room), "classroom_full");
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +109,8 @@ export const sessionInput = z.object({
     .transform((value) => (value && !/^[a-z]+:\/\//i.test(value) ? `https://${value}` : value))
     .pipe(z.string().url("That is not a meeting link. Paste it as it appears in the invitation."))
     .optional(),
+  /** How this session is held, when not the provider's usual way. */
+  liveClassMethod: z.enum(LIVE_CLASS_METHODS).optional(),
   /** The workbook handed out at this session, which then opens on its date (D17). */
   handoutAssessmentId: z.string().uuid().optional(),
   /** The workbook handed in at this session, which is then due on its date. */
@@ -157,6 +177,13 @@ export async function scheduleSession(
     }
     const studyUnitId = parsed.studyUnitId ?? steps[0]?.studyUnitId ?? null;
 
+    // A class for the LMS classroom is booked only if there is room for it.
+    const { method } = await classroomSettingsWithin(tx, session.organisationId);
+    const held = { deliveryMode: parsed.deliveryMode, meetingUrl: parsed.meetingUrl ?? null, liveClassMethod: parsed.liveClassMethod ?? null };
+    if (heldInClassroom(method, held)) {
+      await assertRoom(session.organisationId, { scheduledDate: parsed.scheduledDate, startTime: parsed.startTime ?? null, endTime: parsed.endTime ?? null });
+    }
+
     const [created] = await tx
       .insert(cohortSessions)
       .values({
@@ -169,6 +196,7 @@ export async function scheduleSession(
         endTime: parsed.endTime ?? null,
         deliveryMode: parsed.deliveryMode,
         meetingUrl: parsed.meetingUrl ?? null,
+        liveClassMethod: parsed.liveClassMethod ?? null,
         venue: parsed.venue ?? null,
         facilitatorId: parsed.facilitatorId ?? null,
         curriculumModuleId: parsed.curriculumModuleId ?? null,
@@ -305,6 +333,88 @@ export async function setSessionStatus(
   });
 }
 
+/**
+ * Changes how one session is held (Roland, 29 October 2026): moved out of a
+ * full classroom, out of one that failed on the night, or into it. `method`
+ * null returns the session to the provider's usual way. The meeting link is
+ * replaced with what is given; an empty one clears it.
+ */
+export async function setSessionMethod(
+  session: AuthenticatedSession,
+  sessionId: string,
+  change: { method: LiveClassMethod | null; meetingUrl?: string },
+) {
+  assertSessionCan(session, "session:manage");
+  let meetingUrl: string | null = null;
+  if (change.meetingUrl !== undefined && change.meetingUrl.trim() !== "") {
+    const link = sessionInput.shape.meetingUrl.safeParse(change.meetingUrl);
+    if (!link.success || !link.data) throw new SchedulingError(link.error?.issues[0]?.message ?? "That is not a meeting link.", "invalid_state");
+    meetingUrl = link.data;
+  }
+  if (change.method !== null && !LIVE_CLASS_METHODS.includes(change.method)) {
+    throw new SchedulingError("Choose how the session is held.", "invalid_state");
+  }
+
+  return withTenant(session.organisationId, async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: cohortSessions.id,
+        status: cohortSessions.status,
+        deliveryMode: cohortSessions.deliveryMode,
+        scheduledDate: cohortSessions.scheduledDate,
+        startTime: cohortSessions.startTime,
+        endTime: cohortSessions.endTime,
+        liveClassMethod: cohortSessions.liveClassMethod,
+        meetingUrl: cohortSessions.meetingUrl,
+      })
+      .from(cohortSessions)
+      .where(eq(cohortSessions.id, sessionId));
+    if (!existing) throw new SchedulingError("Session not found.", "not_found");
+    if (existing.status !== "scheduled") {
+      throw new SchedulingError("Only a session still to be held can change how it is held.", "invalid_state");
+    }
+
+    const { method } = await classroomSettingsWithin(tx, session.organisationId);
+    const after = { deliveryMode: existing.deliveryMode, liveClassMethod: change.method, meetingUrl: meetingUrl ?? null };
+    if (heldInClassroom(method, after) && !heldInClassroom(method, existing)) {
+      await assertRoom(session.organisationId, existing, existing.id);
+    }
+
+    await tx
+      .update(cohortSessions)
+      .set({ liveClassMethod: change.method, meetingUrl, updatedAt: new Date() })
+      .where(eq(cohortSessions.id, sessionId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      actorRole: session.roles[0],
+      action: "session.method_changed",
+      entityType: "cohort_session",
+      entityId: sessionId,
+      before: { liveClassMethod: existing.liveClassMethod, meetingUrl: existing.meetingUrl },
+      after: { liveClassMethod: change.method, meetingUrl },
+    });
+  });
+}
+
+/**
+ * This provider's classes from today on that the LMS classroom has no room
+ * for, with what a person needs to find them. See lib/classroom-capacity.ts.
+ */
+export async function sessionsWithoutRoom(session: AuthenticatedSession) {
+  assertSessionCan(session, "session:manage");
+  const found = await classesWithoutRoom(session.organisationId);
+  if (found.length === 0) return [];
+  return withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: cohortSessions.id, cohortId: cohortSessions.cohortId, cohortName: cohorts.name, scheduledDate: cohortSessions.scheduledDate, startTime: cohortSessions.startTime })
+      .from(cohortSessions)
+      .innerJoin(cohorts, eq(cohorts.id, cohortSessions.cohortId))
+      .where(inArray(cohortSessions.id, found.map((one) => one.sessionId)))
+      .orderBy(asc(cohortSessions.scheduledDate), asc(cohortSessions.startTime)),
+  );
+}
+
 /** Attaches a workbook to a session as handed out, submitted, or returned. */
 export async function setSessionWorkbook(
   session: AuthenticatedSession,
@@ -389,6 +499,7 @@ export async function cohortSchedule(
         endTime: cohortSessions.endTime,
         deliveryMode: cohortSessions.deliveryMode,
         meetingUrl: cohortSessions.meetingUrl,
+        liveClassMethod: cohortSessions.liveClassMethod,
         venue: cohortSessions.venue,
         status: cohortSessions.status,
         statusNote: cohortSessions.statusNote,
@@ -437,7 +548,7 @@ export async function cohortSchedule(
       .where(
         and(eq(cohortMembers.cohortId, cohortId), isNull(cohortMembers.leftAt)),
       );
-    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).enabled;
+    const classroom = (await classroomSettingsWithin(tx, session.organisationId)).method;
 
     return rows.map((row) => {
       const forSession = marks.filter((m) => m.sessionId === row.id);
@@ -869,6 +980,9 @@ export type SessionChoices = {
    */
   facilitators: { id: string; name: string; named: boolean }[];
   defaultFacilitator: string | null;
+  /** How the provider usually holds a class, and whether the LMS classroom is offered to it. */
+  usualMethod: LiveClassMethod;
+  classroomOffered: boolean;
 };
 
 /**
@@ -924,6 +1038,16 @@ export async function sessionChoices(session: AuthenticatedSession, cohortId: st
       nextLecture: (last?.top ?? 0) + 1,
       facilitators,
       defaultFacilitator: cohort.facilitatorId ?? facilitators.find((one) => one.named)?.id ?? null,
+      ...(await howHeld(tx, session.organisationId)),
     };
   });
+}
+
+/** The provider's usual way of holding a class, and whether the classroom is offered to it. */
+async function howHeld(tx: TenantDatabase, organisationId: string) {
+  const [row] = await tx
+    .select({ method: organisations.liveClassMethod, allowance: organisations.classroomAllowance })
+    .from(organisations)
+    .where(eq(organisations.id, organisationId));
+  return { usualMethod: row?.method ?? ("meeting_link" as const), classroomOffered: row?.allowance !== 0 };
 }

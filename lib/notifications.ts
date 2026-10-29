@@ -570,6 +570,7 @@ export async function sweepTenant(
         endTime: cohortSessions.endTime,
         deliveryMode: cohortSessions.deliveryMode,
         meetingUrl: cohortSessions.meetingUrl,
+        liveClassMethod: cohortSessions.liveClassMethod,
         venue: cohortSessions.venue,
         facilitatorId: cohortSessions.facilitatorId,
       })
@@ -585,14 +586,14 @@ export async function sweepTenant(
       );
 
     const [provider] = await tx
-      .select({ classroomOn: organisations.classroomEnabled })
+      .select({ method: organisations.liveClassMethod })
       .from(organisations)
       .where(eq(organisations.id, organisationId));
 
     for (const row of upcoming) {
       // A class in the LMS classroom is announced by the classroom's own
       // reminders, with its calendar invitation (lib/classroom-reminders.ts).
-      if (heldInClassroom(provider?.classroomOn ?? false, row)) continue;
+      if (heldInClassroom(provider?.method ?? "meeting_link", row)) continue;
       const members = await tx
         .select({ userId: cohortMembers.userId })
         .from(cohortMembers)

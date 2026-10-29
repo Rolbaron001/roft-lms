@@ -21,7 +21,8 @@ import {
 } from "@/db/schema";
 import { classLength, markFor, minutesIn } from "@/lib/classroom-attendance";
 import { classInvitation } from "@/lib/classroom-calendar";
-import { heldInClassroom, joinHref } from "@/lib/classroom-rules";
+import { heldInClassroom, joinHref, peakClassesAt } from "@/lib/classroom-rules";
+import { slotOf } from "@/lib/classroom-capacity";
 import {
   answerPoll,
   classPass,
@@ -113,17 +114,51 @@ describe("the calendar invitation", () => {
 });
 
 describe("which sessions the classroom holds", () => {
-  it("holds online sessions without an outside link, once switched on", () => {
-    expect(heldInClassroom(true, { deliveryMode: "virtual", meetingUrl: null })).toBe(true);
-    expect(heldInClassroom(true, { deliveryMode: "virtual", meetingUrl: "https://meet.google.com/abc" })).toBe(false);
-    expect(heldInClassroom(true, { deliveryMode: "in_person", meetingUrl: null })).toBe(false);
-    expect(heldInClassroom(false, { deliveryMode: "virtual", meetingUrl: null })).toBe(false);
+  it("holds online sessions without an outside link, where the classroom is the usual way", () => {
+    expect(heldInClassroom("lms_classroom", { deliveryMode: "virtual", meetingUrl: null })).toBe(true);
+    expect(heldInClassroom("lms_classroom", { deliveryMode: "virtual", meetingUrl: "https://meet.google.com/abc" })).toBe(false);
+    expect(heldInClassroom("lms_classroom", { deliveryMode: "in_person", meetingUrl: null })).toBe(false);
+    expect(heldInClassroom("google_meet", { deliveryMode: "virtual", meetingUrl: null })).toBe(false);
+    expect(heldInClassroom("meeting_link", { deliveryMode: "virtual", meetingUrl: null })).toBe(false);
+  });
+
+  it("lets one session be held another way than the provider's usual one", () => {
+    expect(heldInClassroom("meeting_link", { deliveryMode: "virtual", meetingUrl: null, liveClassMethod: "lms_classroom" })).toBe(true);
+    expect(heldInClassroom("lms_classroom", { deliveryMode: "virtual", meetingUrl: null, liveClassMethod: "microsoft_teams" })).toBe(false);
+    expect(heldInClassroom("lms_classroom", { deliveryMode: "virtual", meetingUrl: null, liveClassMethod: null })).toBe(true);
   });
 
   it("joins at the outside link where there is one, the classroom otherwise", () => {
-    expect(joinHref(true, { id: "s", deliveryMode: "virtual", meetingUrl: null })).toEqual({ href: "/classroom/s", external: false });
-    expect(joinHref(true, { id: "s", deliveryMode: "virtual", meetingUrl: "https://meet.example" })).toEqual({ href: "https://meet.example", external: true });
-    expect(joinHref(true, { id: "s", deliveryMode: "in_person", meetingUrl: null })).toBeNull();
+    expect(joinHref("lms_classroom", { id: "s", deliveryMode: "virtual", meetingUrl: null })).toEqual({ href: "/classroom/s", external: false });
+    expect(joinHref("lms_classroom", { id: "s", deliveryMode: "virtual", meetingUrl: "https://meet.example" })).toEqual({ href: "https://meet.example", external: true });
+    expect(joinHref("lms_classroom", { id: "s", deliveryMode: "in_person", meetingUrl: null })).toBeNull();
+    expect(joinHref("google_meet", { id: "s", deliveryMode: "virtual", meetingUrl: null })).toBeNull();
+  });
+});
+
+describe("classes at once in the classroom", () => {
+  const hour = 3_600_000;
+  const slot = (from: number, to: number) => ({ start: from * hour, end: to * hour });
+
+  it("counts the class being booked", () => {
+    expect(peakClassesAt(slot(18, 20), [])).toBe(1);
+  });
+
+  it("counts classes that run at the same time as each other, not merely within the slot", () => {
+    // 18:00 to 20:00, beside one from 17:00 to 18:30 and one from 19:30 to 21:00:
+    // each overlaps the new class, never each other.
+    expect(peakClassesAt(slot(18, 20), [slot(17, 18.5), slot(19.5, 21)])).toBe(2);
+    expect(peakClassesAt(slot(18, 20), [slot(17, 19), slot(18.5, 21)])).toBe(3);
+  });
+
+  it("does not count a class that ends as this one starts", () => {
+    expect(peakClassesAt(slot(18, 20), [slot(16, 18), slot(20, 22)])).toBe(1);
+  });
+
+  it("takes a class with no end time as two hours long", () => {
+    const at = slotOf({ scheduledDate: "2026-11-02", startTime: "18:00", endTime: null }, "Africa/Johannesburg");
+    expect(at && (at.end - at.start) / hour).toBe(2);
+    expect(slotOf({ scheduledDate: "2026-11-02", startTime: null, endTime: null }, "Africa/Johannesburg")).toBeNull();
   });
 });
 
@@ -188,8 +223,8 @@ beforeAll(async () => {
     const rows = await tx
       .insert(organisations)
       .values([
-        { slug: `classroom-${stamp}`, legalName: "Classroom Test Ltd", displayName: "Classroom Test Co", status: "active", classroomEnabled: true },
-        { slug: `classroom-other-${stamp}`, legalName: "Other Ltd", displayName: "Other Co", status: "active", classroomEnabled: true },
+        { slug: `classroom-${stamp}`, legalName: "Classroom Test Ltd", displayName: "Classroom Test Co", status: "active", liveClassMethod: "lms_classroom" as const },
+        { slug: `classroom-other-${stamp}`, legalName: "Other Ltd", displayName: "Other Co", status: "active", liveClassMethod: "lms_classroom" as const },
       ])
       .returning({ id: organisations.id });
     return rows.map((row) => row.id);

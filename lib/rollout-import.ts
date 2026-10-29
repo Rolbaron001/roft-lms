@@ -5,7 +5,7 @@ import { readXlsxSheets } from "./office";
 import { cohortCourseIds } from "./schedule";
 import { resolveTitles } from "./spine";
 import { setSchedule } from "./cohorts";
-import { scheduleSession } from "./scheduling";
+import { scheduleSession, SchedulingError } from "./scheduling";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -204,7 +204,7 @@ export async function planRollout(session: AuthenticatedSession, cohortId: strin
  * schedule replaces the cohort's old one; hand releases are kept
  * (lib/cohorts.ts).
  */
-export async function applyRollout(session: AuthenticatedSession, cohortId: string, plan: RolloutPlan): Promise<{ scheduled: number; sessions: number }> {
+export async function applyRollout(session: AuthenticatedSession, cohortId: string, plan: RolloutPlan): Promise<{ scheduled: number; sessions: number; withoutRoom: number }> {
   assertSessionCan(session, "enrolment:manage");
   const { startDate, existingDates } = await withTenant(session.organisationId, async (tx) => {
     const [cohort] = await tx.select({ startDate: cohorts.startDate }).from(cohorts).where(eq(cohorts.id, cohortId));
@@ -222,20 +222,31 @@ export async function applyRollout(session: AuthenticatedSession, cohortId: stri
     }),
   );
   let sessions = 0;
+  // Classes the LMS classroom has no room for are booked to be held at a
+  // meeting link instead and counted, so the plan is saved whole and the
+  // person importing it is told how many to arrange.
+  let withoutRoom = 0;
   if (session.permissions.includes("session:manage")) {
     for (const row of plan.sessions) {
       if (existingDates.has(row.date)) continue;
-      await scheduleSession(session, {
+      const input = {
         cohortId,
         kind: row.kind,
         title: row.title,
         scheduledDate: row.date,
         startTime: row.startTime ?? undefined,
         endTime: row.endTime ?? undefined,
-        deliveryMode: "virtual",
-      });
+        deliveryMode: "virtual" as const,
+      };
+      try {
+        await scheduleSession(session, input);
+      } catch (error) {
+        if (!(error instanceof SchedulingError) || error.code !== "classroom_full") throw error;
+        await scheduleSession(session, { ...input, liveClassMethod: "meeting_link" });
+        withoutRoom += 1;
+      }
       sessions += 1;
     }
   }
-  return { scheduled: plan.entries.length, sessions };
+  return { scheduled: plan.entries.length, sessions, withoutRoom };
 }

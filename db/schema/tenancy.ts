@@ -22,6 +22,18 @@ export const deploymentMode = pgEnum("deployment_mode", [
   "on_premise",
 ]);
 
+/**
+ * How a live class is held (Roland, 29 October 2026): in the LMS's own
+ * classroom, or at an outside meeting. The values are lib/classroom-rules.ts's
+ * LIVE_CLASS_METHODS, which screens and rules read without the database.
+ */
+export const liveClassMethod = pgEnum("live_class_method", [
+  "lms_classroom",
+  "google_meet",
+  "microsoft_teams",
+  "meeting_link",
+]);
+
 export const tenantStatus = pgEnum("tenant_status", [
   "provisioning",
   "active",
@@ -269,11 +281,25 @@ export const organisations = pgTable(
     leisaTargetHours: integer("leisa_target_hours"),
 
     /**
-     * Live classes held in the LMS's own classroom (job sheet D41). Off until
-     * the provider switches it on, and then every online session without an
-     * outside meeting link is held there.
+     * How this provider usually holds a live class (job sheet D41; Roland, 29
+     * October 2026): the LMS classroom, Google Meet, Microsoft Teams or another
+     * meeting link. Every online session is held this way unless it has a way
+     * of its own. A meeting link until the provider chooses, which is how
+     * sessions were held before the classroom existed.
+     *
+     * Replaced `classroom_enabled` on 29 October 2026. No provider on either
+     * server had switched the classroom on, so nothing was carried across.
      */
-    classroomEnabled: boolean("classroom_enabled").notNull().default(false),
+    liveClassMethod: liveClassMethod("live_class_method").notNull().default("meeting_link"),
+    /**
+     * How many classes this provider may hold in the LMS classroom at once,
+     * set by the platform operator. The classroom's capacity is shared by
+     * every provider on the deployment, so one provider's busy evening must
+     * not leave another without room. Null: no allowance of its own, only the
+     * deployment's limit (CLASSROOM_CAPACITY). Nought: the classroom is not
+     * offered to this provider.
+     */
+    classroomAllowance: integer("classroom_allowance"),
     /** Cameras in the class (the design's Option 1); off is audio only (Option 2). */
     classroomCameras: boolean("classroom_cameras").notNull().default(true),
     /** The share of the class a learner must attend to be counted present. */

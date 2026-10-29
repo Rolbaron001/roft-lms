@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, eq, exists, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { withPlatformScope, withTenant, type TenantDatabase } from "@/db/client";
 import { cohortMembers, cohortSessions, cohorts, mailMessages, notifications, organisations, users } from "@/db/schema";
 import { raise, sessionAnnouncement, type NotificationKind } from "./notifications";
@@ -45,10 +45,10 @@ export async function classReminders(organisationId: string, now: Date = new Dat
 
   await withTenant(organisationId, async (tx) => {
     const [provider] = await tx
-      .select({ enabled: organisations.classroomEnabled, timezone: organisations.timezone, slug: organisations.slug, name: organisations.displayName })
+      .select({ method: organisations.liveClassMethod, timezone: organisations.timezone, slug: organisations.slug, name: organisations.displayName })
       .from(organisations)
       .where(eq(organisations.id, organisationId));
-    if (!provider?.enabled) return;
+    if (!provider) return;
 
     const sessions = await tx
       .select({
@@ -62,6 +62,7 @@ export async function classReminders(organisationId: string, now: Date = new Dat
         endTime: cohortSessions.endTime,
         deliveryMode: cohortSessions.deliveryMode,
         meetingUrl: cohortSessions.meetingUrl,
+        liveClassMethod: cohortSessions.liveClassMethod,
         venue: cohortSessions.venue,
         facilitatorId: cohortSessions.facilitatorId,
       })
@@ -77,7 +78,7 @@ export async function classReminders(organisationId: string, now: Date = new Dat
       );
 
     for (const row of sessions) {
-      if (!heldInClassroom(true, row)) continue;
+      if (!heldInClassroom(provider.method, row)) continue;
       const startsAt = zonedTimeToUtc(row.scheduledDate, row.startTime, provider.timezone);
       const until = startsAt.getTime() - now.getTime();
       const stage = STAGES.find((one) => until <= one.from && until > one.to);
@@ -161,13 +162,29 @@ async function fileInMailbox(
   });
 }
 
-/** Every provider with the classroom switched on. For the scheduled run. */
+/**
+ * Every provider that holds classes in the classroom: as its usual way, or
+ * for a session moved into it. For the scheduled run.
+ */
 export async function classRemindersAllTenants(now: Date = new Date()) {
-  const tenants = await withPlatformScope("classroom reminders across providers with the classroom on", (tx) =>
+  const tenants = await withPlatformScope("classroom reminders across providers holding classes in the classroom", (tx) =>
     tx
       .select({ id: organisations.id, name: organisations.displayName })
       .from(organisations)
-      .where(and(eq(organisations.status, "active"), eq(organisations.classroomEnabled, true))),
+      .where(
+        and(
+          eq(organisations.status, "active"),
+          or(
+            eq(organisations.liveClassMethod, "lms_classroom"),
+            exists(
+              tx
+                .select({ id: cohortSessions.id })
+                .from(cohortSessions)
+                .where(and(eq(cohortSessions.organisationId, organisations.id), eq(cohortSessions.liveClassMethod, "lms_classroom"))),
+            ),
+          ),
+        ),
+      ),
   );
   const results: { tenant: string; result: ReminderResult }[] = [];
   for (const tenant of tenants) {
@@ -215,7 +232,8 @@ export async function calendarFor(message: {
         deliveryMode: cohortSessions.deliveryMode,
         meetingUrl: cohortSessions.meetingUrl,
         venue: cohortSessions.venue,
-        enabled: organisations.classroomEnabled,
+        liveClassMethod: cohortSessions.liveClassMethod,
+        method: organisations.liveClassMethod,
         timezone: organisations.timezone,
         providerName: organisations.displayName,
       })
@@ -225,7 +243,7 @@ export async function calendarFor(message: {
       .where(eq(cohortSessions.id, message.entityId!));
     return found ?? null;
   });
-  if (!row || !row.startTime || !heldInClassroom(row.enabled, row)) return null;
+  if (!row || !row.startTime || !heldInClassroom(row.method, row)) return null;
 
   const start = zonedTimeToUtc(row.scheduledDate, row.startTime, row.timezone);
   const end = row.endTime ? zonedTimeToUtc(row.scheduledDate, row.endTime, row.timezone) : new Date(start.getTime() + 60 * MINUTE);
