@@ -332,6 +332,7 @@ describe("setting it up", () => {
     expect(setup).toMatch(/delete from sessions/);
     expect(setup).toMatch(/update ai_user_settings set token_sealed = null/);
     expect(setup).toMatch(/delete from drive_connections/);
+    expect(setup).toMatch(/delete from meeting_connections/);
   });
 
   it("checks the copy is complete rather than assuming it", () => {

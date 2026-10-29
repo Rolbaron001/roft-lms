@@ -92,6 +92,11 @@ services:
       GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
       ONE_DRIVE_CLIENT_ID: ${ONE_DRIVE_CLIENT_ID:-}
       ONE_DRIVE_CLIENT_SECRET: ${ONE_DRIVE_CLIENT_SECRET:-}
+      # A provider's Google Meet or Teams account for its live classes (D41).
+      GOOGLE_MEET_CLIENT_ID: ${GOOGLE_MEET_CLIENT_ID:-}
+      GOOGLE_MEET_CLIENT_SECRET: ${GOOGLE_MEET_CLIENT_SECRET:-}
+      MICROSOFT_TEAMS_CLIENT_ID: ${MICROSOFT_TEAMS_CLIENT_ID:-}
+      MICROSOFT_TEAMS_CLIENT_SECRET: ${MICROSOFT_TEAMS_CLIENT_SECRET:-}
 
       # Outbound mail, and the domain the per-person mailboxes sit on.
       #

@@ -226,8 +226,11 @@ else
   # Its own statement, and only where the tables exist: a copy taken from a
   # live that predates them must not fail the clearing above.
   dev exec -T db psql -U "$DB_USER" -d "$DB_NAME" -q -c \
-    "do \$\$ begin if to_regclass('public.record_store_connections') is not null then delete from record_store_connections; delete from record_store_deliveries; end if; if to_regclass('public.sign_in_providers') is not null then delete from sign_in_providers; end if; end \$\$;"
-  log "Cleared copied sign-ins, AI tokens, drive connections and record store connections."
+    "do \$\$ begin if to_regclass('public.record_store_connections') is not null then delete from record_store_connections; delete from record_store_deliveries; end if; if to_regclass('public.sign_in_providers') is not null then delete from sign_in_providers; end if; if to_regclass('public.meeting_connections') is not null then delete from meeting_connections; end if; end \$\$;"
+  # The last of those, a provider's Google Meet or Teams account (D41), for the
+  # same reason as the record store: a test site would create meetings in the
+  # provider's real account.
+  log "Cleared copied sign-ins, AI tokens, drive connections, record store connections and meeting accounts."
 
   # Checked, not assumed: the same rows on both sides.
   for table in organisations users qualifications curriculum_modules library_documents assessments; do

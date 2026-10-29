@@ -338,6 +338,16 @@ export async function sweepTenant(
     sessionsAnnounced: 0,
   };
 
+  // Meetings in the provider's Google Meet or Teams for the coming week's
+  // classes still without one, so the announcement below carries the link
+  // (D41). A service refusing is logged there and never stops the sweep.
+  try {
+    const { ensureMeetings } = await import("./meetings");
+    await ensureMeetings(organisationId, now);
+  } catch (error) {
+    console.error("meetings not created in the sweep", { organisationId, message: error instanceof Error ? error.message : "unknown" });
+  }
+
   await withTenant(organisationId, async (tx) => {
     const week = weekBucket(now);
     const soon = new Date(now.getTime() + 7 * 86_400_000);

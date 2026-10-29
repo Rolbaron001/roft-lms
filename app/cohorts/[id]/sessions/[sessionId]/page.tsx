@@ -25,6 +25,7 @@ import { sittingRegister } from "@/lib/invigilation";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { cohortCourseIds } from "@/lib/schedule";
 import { heldInClassroom } from "@/lib/classroom";
+import { meetingCreatedIn } from "@/lib/meetings";
 
 /**
  * One session's register.
@@ -55,6 +56,8 @@ export default async function SessionRegisterPage({
   }
 
   const marked = register.lines.filter((line) => line.status !== null).length;
+  // The meeting the LMS created in Google Meet or Teams, whose attendance it can read (D41).
+  const meetingService = await meetingCreatedIn(session, sessionId);
 
   // A supervised sitting, if one has been set up at this session. Looked up by
   // the session rather than passed in, so the invigilator reaches the room
@@ -255,7 +258,7 @@ export default async function SessionRegisterPage({
               {t("register.fromClassroom")}
             </p>
           ) : null}
-          <RegisterForm cohortId={id} sessionId={sessionId} lines={register.lines} />
+          <RegisterForm cohortId={id} sessionId={sessionId} lines={register.lines} meetingService={meetingService} />
         </Card>
       </div>
 

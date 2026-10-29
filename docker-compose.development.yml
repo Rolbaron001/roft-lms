@@ -82,6 +82,14 @@ services:
       TRANSCRIBER_CALLBACK_URL: ${TRANSCRIBER_CALLBACK_URL:-}
       CLASSROOM_TICK_SECRET: ${CLASSROOM_TICK_SECRET:-}
       CLASSROOM_CAPACITY: ${CLASSROOM_CAPACITY:-}
+      # Passed so the Meet and Teams connection can be tried here with a test
+      # account. Live's connected accounts are removed when the copy is taken
+      # (scripts/setup-development.sh), so nothing here reaches a provider's
+      # real account unless somebody connects one on this site.
+      GOOGLE_MEET_CLIENT_ID: ${GOOGLE_MEET_CLIENT_ID:-}
+      GOOGLE_MEET_CLIENT_SECRET: ${GOOGLE_MEET_CLIENT_SECRET:-}
+      MICROSOFT_TEAMS_CLIENT_ID: ${MICROSOFT_TEAMS_CLIENT_ID:-}
+      MICROSOFT_TEAMS_CLIENT_SECRET: ${MICROSOFT_TEAMS_CLIENT_SECRET:-}
 
       # Deliberately absent, and each absence is a decision:
       #

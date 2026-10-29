@@ -38,7 +38,7 @@ describe("an attendance export", () => {
       ],
       learners,
     );
-    expect(present).toEqual([
+    expect(present.map(({ userId, duration }) => ({ userId, duration }))).toEqual([
       { userId: "b", duration: null },
       { userId: "a", duration: "1 hr" },
     ]);

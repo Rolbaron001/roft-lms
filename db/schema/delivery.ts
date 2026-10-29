@@ -699,6 +699,14 @@ export const cohortSessions = pgTable(
     liveClassMethod: liveClassMethod("live_class_method"),
     /** Where a virtual session is held. Sent with the notice announcing it. */
     meetingUrl: text("meeting_url"),
+    /**
+     * Set when the LMS created the meeting in the provider's connected Google
+     * Meet or Microsoft Teams account (lib/meetings): which service, and the
+     * service's own id for it, so attendance can be read back afterwards.
+     * Null for a link somebody pasted.
+     */
+    meetingService: text("meeting_service"),
+    meetingExternalId: text("meeting_external_id"),
     venue: text("venue"),
 
     facilitatorId: uuid("facilitator_id").references(() => users.id, {

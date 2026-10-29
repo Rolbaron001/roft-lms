@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { importAttendanceAction, takeRegisterAction } from "@/app/cohorts/actions";
 import type { AttendanceImportState, CohortActionState } from "@/app/cohorts/actions";
 import type { RegisterLine } from "@/lib/scheduling";
+import type { MeetingService } from "@/lib/meetings/base";
 import { useT } from "@/components/i18n";
 
 const MARKS = ["present", "absent", "excused"] as const;
@@ -21,10 +22,13 @@ export function RegisterForm({
   cohortId,
   sessionId,
   lines,
+  meetingService = null,
 }: {
   cohortId: string;
   sessionId: string;
   lines: RegisterLine[];
+  /** Set when the LMS created this session's meeting, so its attendance can be read from it (D41). */
+  meetingService?: MeetingService | null;
 }) {
   const t = useT();
   const [state, action, pending] = useActionState<CohortActionState, FormData>(
@@ -41,6 +45,17 @@ export function RegisterForm({
 
   return (
     <div className="space-y-4">
+    {meetingService ? (
+      <form action={importAct} className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] p-3 text-sm">
+        <input type="hidden" name="cohortId" value={cohortId} />
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="from" value="meeting" />
+        <span className="flex-1">{t(`register.fromMeeting.${meetingService}`)}</span>
+        <button type="submit" disabled={importing} className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-medium disabled:opacity-60">
+          {importing ? t("register.importing") : t("register.fromMeetingRead")}
+        </button>
+      </form>
+    ) : null}
     <form action={importAct} className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
       <input type="hidden" name="cohortId" value={cohortId} />
       <input type="hidden" name="sessionId" value={sessionId} />

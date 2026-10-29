@@ -380,9 +380,16 @@ export async function setSessionMethod(
       await assertRoom(session.organisationId, existing, existing.id);
     }
 
+    // A meeting the LMS created stays known to it only while its link stays.
+    const keepsMeeting = meetingUrl !== null && meetingUrl === existing.meetingUrl;
     await tx
       .update(cohortSessions)
-      .set({ liveClassMethod: change.method, meetingUrl, updatedAt: new Date() })
+      .set({
+        liveClassMethod: change.method,
+        meetingUrl,
+        ...(keepsMeeting ? {} : { meetingService: null, meetingExternalId: null }),
+        updatedAt: new Date(),
+      })
       .where(eq(cohortSessions.id, sessionId));
     await recordAudit(tx, {
       organisationId: session.organisationId,

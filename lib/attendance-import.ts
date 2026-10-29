@@ -57,11 +57,11 @@ export function readAttendanceExport(filename: string, bytes: Uint8Array): Atten
  * name appears in the participant's name, in any order and any case ("BONGI
  * MBOKANE", "Mbokane, Bongi"). A participant is matched to one learner only.
  */
-export function matchAttendance(
-  attendees: Attendee[],
+export function matchAttendance<A extends Attendee>(
+  attendees: A[],
   learners: { userId: string; firstName: string; lastName: string; email: string | null }[],
-): { present: { userId: string; duration: string | null }[]; unknown: string[] } {
-  const present: { userId: string; duration: string | null }[] = [];
+): { present: { userId: string; duration: string | null; attendee: A }[]; unknown: string[] } {
+  const present: { userId: string; duration: string | null; attendee: A }[] = [];
   const unknown: string[] = [];
   const taken = new Set<string>();
 
@@ -75,7 +75,7 @@ export function matchAttendance(
       });
     if (match && !taken.has(match.userId)) {
       taken.add(match.userId);
-      present.push({ userId: match.userId, duration: person.duration });
+      present.push({ userId: match.userId, duration: person.duration, attendee: person });
     } else if (!match) {
       unknown.push(person.name);
     }

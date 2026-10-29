@@ -1816,6 +1816,52 @@ export const driveConnections = pgTable(
   ],
 );
 
+/**
+ * A provider's Google Meet or Microsoft Teams account, connected once in
+ * Settings → Live classes (Roland, 29 October 2026), so the LMS can create
+ * each class's meeting and read its attendance afterwards.
+ *
+ * Unlike a drive connection this is the provider's, not a person's: the
+ * meetings belong to the organisation's account, and every facilitator's
+ * classes are created in it. Tokens are sealed and never displayed or logged.
+ */
+export const meetingConnections = pgTable(
+  "meeting_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+
+    /** "google_meet" or "microsoft_teams". */
+    service: text("service").notNull(),
+
+    /** The account that consented, shown in Settings. */
+    accountLabel: text("account_label"),
+
+    refreshTokenSealed: text("refresh_token_sealed").notNull(),
+    accessTokenSealed: text("access_token_sealed"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+
+    connectedById: uuid("connected_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    connectedAt: timestamp("connected_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [
+    // One account per service per provider. Connecting again replaces it.
+    uniqueIndex("meeting_connections_org_service_idx").on(
+      t.organisationId,
+      t.service,
+    ),
+  ],
+);
+
 export const aiUserSettings = pgTable(
   "ai_user_settings",
   {

@@ -25,6 +25,7 @@ import {
   takeRegister,
 } from "@/lib/scheduling";
 import { isLiveClassMethod, type LiveClassMethod } from "@/lib/classroom-rules";
+import { createMeetingFor, meetingProvider, MeetingError, proposeAttendanceFromMeeting } from "@/lib/meetings";
 import {
   addCohortTask,
   setTaskStatus,
@@ -55,7 +56,7 @@ export type CohortActionState = { error?: string; done?: string };
  */
 async function run(
   work: () => Promise<unknown>,
-  done: string,
+  done: string | (() => string),
   paths: string[],
 ): Promise<CohortActionState> {
   try {
@@ -76,7 +77,22 @@ async function run(
   }
 
   for (const path of paths) revalidatePath(path);
-  return { done };
+  return { done: typeof done === "function" ? done() : done };
+}
+
+/**
+ * What happened to a session's meeting in the provider's Google Meet or
+ * Microsoft Teams, as a sentence to add to the save message (job sheet D41).
+ */
+async function meetingNote(organisationId: string, sessionId: string): Promise<string> {
+  const outcome = await createMeetingFor(organisationId, sessionId);
+  if (outcome.kind === "not_needed") return "";
+  const label = meetingProvider(outcome.service)?.label ?? outcome.service;
+  if (outcome.kind === "created") return ` The ${label} meeting was created and its link added to the session.`;
+  if (outcome.kind === "not_connected") {
+    return ` ${label} is not connected in Settings → Live classes, so the LMS cannot create the meeting. Paste its link on the session.`;
+  }
+  return ` The ${label} meeting could not be created: ${outcome.message} It is tried again a week before the class, or paste a link on the session.`;
 }
 
 function field(formData: FormData, name: string): string {
@@ -336,10 +352,11 @@ export async function scheduleSessionAction(
 ): Promise<CohortActionState> {
   const session = await requirePermission("session:manage");
   const cohortId = field(formData, "cohortId");
+  let meeting = "";
 
   return said(run(
-    () =>
-      scheduleSession(session, {
+    async () => {
+      const created = await scheduleSession(session, {
         cohortId,
         kind: (field(formData, "kind") || "lecture") as "lecture",
         title: field(formData, "title") || undefined,
@@ -357,8 +374,10 @@ export async function scheduleSessionAction(
         handoutAssessmentId: field(formData, "handoutAssessmentId") || undefined,
         handinAssessmentId: field(formData, "handinAssessmentId") || undefined,
         facilitatorId: field(formData, "facilitatorId") || undefined,
-      }),
-    "Session added to the schedule.",
+      });
+      meeting = await meetingNote(session.organisationId, created.id);
+    },
+    () => `Session added to the schedule.${meeting}`,
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/plan`],
   ));
 }
@@ -372,10 +391,14 @@ export async function setSessionMethodAction(
   const cohortId = field(formData, "cohortId");
   const sessionId = field(formData, "sessionId");
   const chosen = field(formData, "liveClassMethod");
+  let meeting = "";
 
   return said(run(
-    () => setSessionMethod(session, sessionId, { method: isLiveClassMethod(chosen) ? chosen : null, meetingUrl: field(formData, "meetingUrl") }),
-    "Saved.",
+    async () => {
+      await setSessionMethod(session, sessionId, { method: isLiveClassMethod(chosen) ? chosen : null, meetingUrl: field(formData, "meetingUrl") });
+      meeting = await meetingNote(session.organisationId, sessionId);
+    },
+    () => `Saved.${meeting}`,
     [`/cohorts/${cohortId}`, `/cohorts/${cohortId}/sessions/${sessionId}`],
   ));
 }
@@ -424,6 +447,22 @@ export async function importAttendanceAction(_previous: AttendanceImportState, f
   const session = await requirePermission("attendance:record");
   const cohortId = field(formData, "cohortId");
   const sessionId = field(formData, "sessionId");
+
+  // Read from the meeting the LMS created in Google Meet or Teams, rather
+  // than from an uploaded export.
+  if (field(formData, "from") === "meeting") {
+    try {
+      return await proposeAttendanceFromMeeting(session, sessionId);
+    } catch (error) {
+      if (error instanceof MeetingError || error instanceof PermissionDeniedError) return said({ error: error.message });
+      if (error instanceof Error) {
+        console.error("meeting attendance not read", { sessionId, message: error.message });
+        return said({ error: error.message });
+      }
+      throw error;
+    }
+  }
+
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return said({ error: "Choose the attendance export first." });
   const bytes = new Uint8Array(await file.arrayBuffer());

@@ -19,6 +19,8 @@ import { ClockForm } from "./clock-form";
 import { DateForm } from "./date-form";
 import { LeisaTargetForm } from "./leisa-target-form";
 import { ClassroomForm } from "./classroom-form";
+import { MeetingAccounts } from "./meeting-accounts";
+import { meetingConnectionsFor } from "@/lib/meetings";
 import { mediaConfigured } from "@/lib/classroom-media";
 import { transcriptionAvailable } from "@/lib/classroom-notice";
 import { sessionsWithoutRoom } from "@/lib/scheduling";
@@ -56,10 +58,19 @@ const DRIVE_NOTICES: Record<string, MessageKey> = {
   failed: "settings.drive.failed",
 };
 
+/** What came back from connecting a Google Meet or Teams account. */
+const MEETING_NOTICES: Record<string, MessageKey> = {
+  connected: "meetingAccounts.connected",
+  cancelled: "meetingAccounts.cancelled",
+  refused: "meetingAccounts.refused",
+  state: "settings.drive.state",
+  failed: "meetingAccounts.failed",
+};
+
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ drive?: string }>;
+  searchParams: Promise<{ drive?: string; meeting?: string }>;
 }) {
   const tenant = await requireTenant();
   const session = await requireSession();
@@ -117,6 +128,10 @@ export default async function SettingsPage({
     ? await sessionsWithoutRoom(session)
     : [];
   const dates = await pageDates();
+  // The provider's Google Meet and Teams accounts (D41).
+  const meetingAccounts = canManageSettings ? await meetingConnectionsFor(session) : [];
+  const meetingKey = MEETING_NOTICES[(await searchParams).meeting ?? ""];
+  const meetingNotice = meetingKey ? { text: t(meetingKey), good: meetingKey === "meetingAccounts.connected" } : null;
   /*
    * What this provider's platform is for.
    *
@@ -256,6 +271,12 @@ export default async function SettingsPage({
               label: `${one.cohortName} · ${dates.day(one.scheduledDate)}${one.startTime ? `, ${one.startTime}` : ""}`,
             }))}
           />
+          <div className="mt-4">
+            <MeetingAccounts
+              accounts={meetingAccounts.map((account) => ({ ...account, connectedAt: account.connectedAt ? dates.day(account.connectedAt) : null }))}
+              notice={meetingNotice}
+            />
+          </div>
         </div>
       ) : null}
 

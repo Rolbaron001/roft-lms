@@ -567,9 +567,46 @@ person going through it question by question.
   **How your live classes are held**. Choose one usual way: **In the LMS
   classroom**, **Google Meet**, **Microsoft Teams** or **Another meeting
   link**. The schedule, reminders, register and class record stay in the LMS
-  whichever way is chosen. Until the LMS connects to Google and Microsoft, Meet
-  and Teams work by pasting the link on each session and uploading the
-  attendance export afterwards.
+  whichever way is chosen. Without a connected account (below), Meet and Teams
+  work by pasting the link on each session and uploading the attendance export
+  afterwards.
+- **Connecting Google Meet or Microsoft Teams (29 October 2026):** Settings →
+  Live classes → **Google Meet and Microsoft Teams** → **Connect**. Connect one
+  account per service for the whole organisation, not one per person: every
+  class's meeting is created in it, so use an account the organisation keeps
+  (for example a classes or training mailbox), not a member of staff's own.
+  - **What the provider must have:** Google Workspace for Meet, or a Microsoft
+    365 work or school account with Teams. A personal Microsoft account cannot
+    be connected: Microsoft does not give attendance reports to personal
+    accounts. A Microsoft administrator may have to approve the LMS for the
+    organisation before the connection goes through.
+  - **The meeting is created** when a session is added or moved to the Meet or
+    Teams way, if it is online and has no link. The save message says whether
+    it was created. A session added from an imported roll-out schedule, or one
+    whose meeting could not be created, gets its meeting in the daily run a
+    week before the class, before the class notice goes out. A link pasted on
+    the session is always used in its place.
+  - **Who may join without asking** is decided by the connected account's own
+    Google or Microsoft settings, not by the LMS. Check them before the first
+    class, so learners from outside the organisation are not left waiting.
+  - **Attendance:** after the class, open the session's register and select
+    **Read attendance**. Learners in the call for the provider's share of the
+    class (Settings → Live classes) are marked present, those below it absent
+    with their minutes in the note, and names that match no learner are
+    listed. Check the register and save it. Meet gives names only, so learners
+    must join under the name they are enrolled with; Teams also gives the email
+    address they signed in with. Microsoft keeps attendance for a year; read it
+    well within that.
+  - **Disconnecting** stops new meetings being created; meetings already
+    created keep their links. To withdraw the access completely, also remove
+    the LMS from the account's list of connected applications.
+  - **What the server operator must set up first:** an application registered
+    with Google and with Microsoft, and its client id and secret in the
+    server's settings (`GOOGLE_MEET_CLIENT_*`, `MICROSOFT_TEAMS_CLIENT_*`; the
+    scopes and the callback address are in `.env.example`). Without them the
+    card says the service is not set up on the server. Google must verify the
+    application before accounts outside the operator's own test users can
+    connect it.
 - **One session held another way:** open the session from the cohort's
   schedule → **How this session is held**. Choose another way, or paste a
   meeting link (a link on the session is used in place of the classroom). The
