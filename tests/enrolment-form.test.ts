@@ -544,7 +544,7 @@ describe("the printed form", () => {
           inductionOn: "2026-03-02",
         },
       }),
-      "provider.name": "Curiosa Foundation",
+      "provider.name": "Curiosa Academy",
       "provider.address": "14 Curiosity Lane",
       "provider.accreditationNumber": "QCTO/SDP/2024/0113",
       "document.issuedOn": "15 September 2026",
@@ -553,7 +553,7 @@ describe("the printed form", () => {
 
     const body = fillTemplate(STARTER_TEMPLATES.enrolment_form, values);
 
-    expect(body).toContain("Curiosa Foundation");
+    expect(body).toContain("Curiosa Academy");
     expect(body).toContain("Thandi Mokoena");
     expect(body).toContain("isiZulu");
     expect(body).toContain("Hair Cutting Attendant");

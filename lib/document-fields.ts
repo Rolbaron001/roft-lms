@@ -79,7 +79,7 @@ const PROVIDER_FIELDS: DocumentField[] = [
   {
     key: "provider.name",
     label: "Provider's name",
-    example: "Curiosa Foundation",
+    example: "Curiosa Academy",
   },
   {
     key: "provider.address",

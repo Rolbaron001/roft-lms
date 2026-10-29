@@ -22,7 +22,7 @@ that deployment.** Not one application shared across all of them.
 
 This was got wrong once, on 18 September, and the wrong turn is easy to repeat.
 The platform is deployed more than once from one codebase: ROFT runs an
-instance for its own clients, Curiosa Foundation runs another at
+instance for its own clients, Curiosa Academy runs another at
 `lms.curiosa.academy`. So "who owns the OAuth app" has an obvious-sounding
 wrong answer - ROFT built the platform, so ROFT - and a correct one: whoever
 operates the deployment the app serves.

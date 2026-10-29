@@ -1,6 +1,6 @@
 # What to correct in the 121151 documents
 
-**For:** Heidi Edwards, Curiosa Foundation  
+**For:** Heidi Edwards, Curiosa Academy  
 **From:** Roland Jones, ROFT Strategic Workforce Advisory  
 **Date:** 9 October 2026
 

@@ -259,14 +259,14 @@ describe("catching a mistake when it is made, not when it is printed", () => {
 describe("filling one in", () => {
   it("replaces the fields with the learner's own details", () => {
     const filled = fillTemplate(BODY, {
-      "provider.name": "Curiosa Foundation",
+      "provider.name": "Curiosa Academy",
       "learner.fullName": "Thandi Mokoena",
       "qualification.title": "Occupational Certificate: Commercial Cleaner",
       "document.reference": "ROFT-ABCDE-FGHJK-MNPQR-STVWX",
     });
 
     expect(filled).toContain("Thandi Mokoena");
-    expect(filled).toContain("Curiosa Foundation");
+    expect(filled).toContain("Curiosa Academy");
     expect(filled).not.toContain("{{");
   });
 
