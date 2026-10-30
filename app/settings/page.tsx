@@ -192,6 +192,9 @@ export default async function SettingsPage({
       */}
       <SettingsNav />
 
+      {/* Only for those who may change it; saving was always refused to the
+          rest, who reach this page for their AI extension. */}
+      {canBrand ? (
       <div id="branding" data-settings-section={t("settings.section.branding")} className="scroll-mt-24">
       <BrandingForm
         defaults={{
@@ -206,6 +209,7 @@ export default async function SettingsPage({
         }}
       />
       </div>
+      ) : null}
 
       {structure ? (
         <div className="mt-6">

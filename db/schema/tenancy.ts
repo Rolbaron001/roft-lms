@@ -551,6 +551,14 @@ export const sessions = pgTable(
      */
     aiOnSince: timestamp("ai_on_since", { withTimezone: true }),
 
+    /**
+     * The one role the person chose to work in, from the badges on their home
+     * page (Heidi, 30 October 2026), or null for all their roles. On the
+     * session for the same reason as the extension switch: signing in again
+     * starts with every role, whatever was chosen last time.
+     */
+    actingRole: userRole("acting_role"),
+
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     revokedReason: text("revoked_reason"),
   },

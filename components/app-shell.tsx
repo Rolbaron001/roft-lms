@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
+import { chooseRoleAction } from "@/app/role-actions";
 import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
@@ -231,6 +232,20 @@ export async function AppShell({
               roles: session.roles.map((role) => maybe(t, `role.${role}`) ?? role).join(", "),
               by: session.viewAs.byName,
             })}
+          </div>
+        ) : null}
+
+        {/* Working in one role (Heidi, 30 October 2026): said on every page,
+            with the way back to all of them. */}
+        {session.actingRole && !session.viewAs ? (
+          <div className="flex flex-wrap items-center justify-center gap-3 bg-white/95 px-6 py-2 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
+            <span>{t("acting.banner", { role: maybe(t, `role.${session.actingRole}`) ?? session.actingRole })}</span>
+            <form action={chooseRoleAction}>
+              <input type="hidden" name="role" value="" />
+              <button type="submit" className="rounded-full border px-3 py-0.5 text-xs font-medium hover:bg-[var(--background)]" style={{ borderColor: "var(--brand-primary)" }}>
+                {t("acting.all")}
+              </button>
+            </form>
           </div>
         ) : null}
 

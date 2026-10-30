@@ -545,6 +545,20 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6x. Working in one role (30 October 2026)
+
+- **Who sees it:** anyone holding more than one role. Their roles show as
+  badges under their name on **Home**.
+- **Choosing a role:** select a badge. The person then sees and does only what
+  that role allows: its dashboard, its menu and its pages. A line at the top of
+  every page says which role they are working in.
+- **Changing role:** go back to **Home** and select another badge.
+- **All assigned roles:** the button beside the badges, or in the line at the
+  top of any page, returns to every role.
+- **Signing out** ends the choice. The next sign-in starts with all roles.
+- **Read-only stays read-only:** a person with the Administrator View role
+  cannot change anything whichever role they choose.
+
 ## 6w. A provider's look: name, colours, logo and pictures (28 October 2026)
 
 - **Where it is set:** Settings → Branding, by the provider's administrator.

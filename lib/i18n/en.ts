@@ -79,6 +79,11 @@ export const en = {
   "viewOnly.refused": "You can view this but not change it.",
   "viewAs.noAttempt": "This paper does not open while you view as this learner. To see the paper, use See it as a learner on the qualification.",
   "viewAs.banner": "You are viewing the platform as {person} ({roles}). You cannot change anything. Viewed by {by}.",
+  "acting.banner": "You are working as {role}. You see and do only what this role allows.",
+  "acting.all": "All assigned roles",
+  "acting.hint": "Select a role to work in it alone. Signing out returns you to all your roles.",
+  "acting.choose": "Work as {role}",
+  "acting.current": "You are working as {role}",
 
   // Menu headings
   "nav.heading.Learning": "Learning",

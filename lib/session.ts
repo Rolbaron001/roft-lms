@@ -53,6 +53,14 @@ export type AuthenticatedSession = {
    * lib/view-as.ts): who is really looking. Everything is read-only then.
    */
   viewAs?: { byUserId: string; byName: string };
+  /**
+   * Every role the person holds, when they have chosen to work in one of
+   * them (Heidi, 30 October 2026). `roles` and `permissions` are then that
+   * one role's alone; this keeps the full set for the badges that switch
+   * between them. Absent or null while working in all of them.
+   */
+  heldRoles?: Role[];
+  actingRole?: Role | null;
 };
 
 export type RequestContext = {
@@ -265,6 +273,7 @@ export async function resolveSession(
         idleExpiresAt: sessions.idleExpiresAt,
         revokedAt: sessions.revokedAt,
         aiOnSince: sessions.aiOnSince,
+        actingRole: sessions.actingRole,
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
@@ -297,7 +306,11 @@ export async function resolveSession(
         .where(eq(sessions.id, row.sessionId));
     }
 
-    const roles = await loadRoles(tx, row.userId);
+    const held = await loadRoles(tx, row.userId);
+    // A chosen role counts only while the person still holds it, and only
+    // when there is a choice to make.
+    const acting = row.actingRole && held.length > 1 && held.includes(row.actingRole) ? row.actingRole : null;
+    const roles = acting ? [acting] : held;
 
     return {
       sessionId: row.sessionId,
@@ -311,6 +324,8 @@ export async function resolveSession(
       mustChangePassword: row.mustChangePassword,
       aiOn: row.aiOnSince !== null,
       locale: row.locale,
+      heldRoles: held,
+      actingRole: acting,
     };
     // Keeping the sitting alive is the person's own business, under
     // "Administrator View" as for anybody (db/client.ts).
@@ -348,6 +363,42 @@ export async function setSessionAi(
       entityId: row.id,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
+    });
+  }, { ownSitting: true });
+}
+
+/**
+ * Working in one of the person's roles, or in all of them with `role` null
+ * (Heidi, 30 October 2026). Only a role they hold can be chosen. Kept on the
+ * session, so it ends with the sitting.
+ *
+ * Choosing a role narrows what the person can do; it never widens it. A
+ * read-only "Administrator View" holder stays read-only whatever they choose,
+ * because the database decides that from the roles they hold (db/client.ts).
+ */
+export async function setActingRole(
+  session: AuthenticatedSession,
+  role: Role | null,
+): Promise<void> {
+  if (session.viewAs) throw new PermissionDeniedError("report:own");
+  await withTenant(session.organisationId, async (tx) => {
+    if (role !== null) {
+      const held = await loadRoles(tx, session.userId);
+      if (!held.includes(role)) throw new PermissionDeniedError("report:own");
+    }
+    const [row] = await tx
+      .update(sessions)
+      .set({ actingRole: role })
+      .where(and(eq(sessions.id, session.sessionId), isNull(sessions.revokedAt)))
+      .returning({ id: sessions.id });
+    if (!row) return;
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: role ? "session.role_chosen" : "session.all_roles",
+      entityType: "session",
+      entityId: row.id,
+      after: { role },
     });
   }, { ownSitting: true });
 }

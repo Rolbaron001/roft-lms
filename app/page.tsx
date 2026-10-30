@@ -15,6 +15,7 @@ import { adminDashboard } from "@/lib/dashboard";
 import { PageNav } from "@/components/page-nav";
 import { AdminDashboardView } from "./admin-dashboard";
 import { RoleDashboardView } from "./role-dashboard";
+import { chooseRoleAction } from "./role-actions";
 import { combineDashboards, type RoleDashboard } from "@/lib/dashboard-kit";
 import {
   assessorDashboard,
@@ -112,6 +113,8 @@ export default async function HomePage() {
   // rather than taking the home page down with it.
   const kit = { t, day, now: new Date() };
   const roles = session.roles;
+  // Every role the person holds, for the badges, even while working in one.
+  const held = session.heldRoles ?? session.roles;
   const builders: [boolean, () => Promise<RoleDashboard>][] = [
     [roles.includes("platform_owner"), () => platformDashboard(session, kit)],
     [roles.includes("instructor"), () => facilitatorDashboard(session, kit)],
@@ -152,17 +155,56 @@ export default async function HomePage() {
         <h1 className="text-xl font-semibold">
           {session.firstName} {session.lastName}
         </h1>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {session.roles.map((role) => (
-            <span
-              key={role}
-              className="rounded-full px-3 py-1 text-xs font-medium text-white"
-              style={{ background: "var(--brand-primary)" }}
-            >
-              {maybe(t, `role.${role}`) ?? role}
-            </span>
-          ))}
-        </div>
+        {/* The person's roles. With more than one, each badge chooses to work
+            in that role alone, and "All assigned roles" returns to the lot
+            (Heidi, 30 October 2026). Kept on the sitting: signing out drops it. */}
+        {held.length > 1 && !session.viewAs ? (
+          <>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {held.map((role) => {
+                const label = maybe(t, `role.${role}`) ?? role;
+                const current = session.actingRole === role;
+                const filled = current || !session.actingRole;
+                return (
+                  <form key={role} action={chooseRoleAction}>
+                    <input type="hidden" name="role" value={role} />
+                    <button
+                      type="submit"
+                      disabled={current}
+                      aria-pressed={current}
+                      aria-label={current ? t("acting.current", { role: label }) : t("acting.choose", { role: label })}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${filled ? "text-white" : "bg-[var(--surface)] text-[var(--brand-primary)] hover:bg-[var(--background)]"} ${current ? "ring-2 ring-[var(--brand-accent)] ring-offset-1" : ""}`}
+                      style={{ borderColor: "var(--brand-primary)", ...(filled ? { background: "var(--brand-primary)" } : {}) }}
+                    >
+                      {label}
+                    </button>
+                  </form>
+                );
+              })}
+              {session.actingRole ? (
+                <form action={chooseRoleAction}>
+                  <input type="hidden" name="role" value="" />
+                  <button type="submit" className="rounded-full border border-dashed px-3 py-1 text-xs font-medium text-[var(--brand-primary)] hover:bg-[var(--background)]" style={{ borderColor: "var(--brand-primary)" }}>
+                    {t("acting.all")}
+                  </button>
+                </form>
+              ) : null}
+            </div>
+            {session.actingRole ? null : <p className="mt-1.5 text-xs text-[var(--muted)]">{t("acting.hint")}</p>}
+          </>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {session.roles.map((role) => (
+              <span
+                key={role}
+                className="rounded-full px-3 py-1 text-xs font-medium text-white"
+                style={{ background: "var(--brand-primary)" }}
+              >
+                {maybe(t, `role.${role}`) ?? role}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {anyDashboard ? <PageNav /> : null}
