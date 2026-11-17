@@ -22,6 +22,8 @@ import { Appeals } from "./appeals";
 import { Support } from "./support";
 import { Missed } from "./missed";
 import { Conduct } from "./conduct";
+import { Observations } from "./observations";
+import { mayReadObservations, mayWriteObservations, observationsOf } from "@/lib/observations";
 import { HEARING_NOTICE_HOURS, learnerCases } from "@/lib/conduct";
 import { externalRecordsFor } from "@/lib/xapi";
 import { awardsFor } from "@/lib/qualification-awards";
@@ -132,6 +134,12 @@ export default async function PersonPage({
         learnerSupport(session, id),
         learnerMissedAssessments(session, id),
       ])
+    : [[], []];
+  // Observations of the learner (job sheet D52 (2)): its staff only.
+  const canReadObservations = isLearner && mayReadObservations(session);
+  const canWriteObservations = isLearner && mayWriteObservations(session);
+  const [observations, observationCohorts] = canReadObservations
+    ? await Promise.all([observationsOf(session, id), canWriteObservations ? cohortsForLearner(session, id) : []])
     : [[], []];
   const [appealCohorts, lodged] = canManageAppeals
     ? await Promise.all([
@@ -265,6 +273,14 @@ export default async function PersonPage({
         />
         </div>
       )}
+
+      {canReadObservations ? (
+        <section id="observations" data-page-section={t("observe.title")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{t("observe.title")}</h2>
+          <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("observe.intro")}</p>
+          <Observations learnerId={id} today={today} rows={observations} cohorts={observationCohorts} canWrite={canWriteObservations} />
+        </section>
+      ) : null}
 
       {canManageConduct ? (
         <section id="conduct" data-page-section={t("personPage.conduct")} className="mt-6 scroll-mt-28 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6">

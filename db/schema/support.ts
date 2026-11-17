@@ -904,6 +904,34 @@ export const disciplinaryCases = pgTable(
   ],
 );
 
+/**
+ * A facilitator's or assessor's observation of a learner (Heidi's role
+ * specifications, job sheet D52 (2), 17 November 2026: "Log observations in
+ * relation to learner behaviour and progress"). Everyday notes, kept apart
+ * from the disciplinary process above; read by the learner's staff only.
+ */
+export const observationKind = pgEnum("observation_kind", ["behaviour", "progress", "attendance", "other"]);
+
+export const learnerObservations = pgTable(
+  "learner_observations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    kind: observationKind("kind").notNull(),
+    observedOn: date("observed_on").notNull(),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("learner_observations_org_idx").on(t.organisationId), index("learner_observations_learner_idx").on(t.learnerId, t.observedOn)],
+);
+
 export const warningKind = pgEnum("warning_kind", [
   "verbal",
   "written",

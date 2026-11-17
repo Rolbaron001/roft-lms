@@ -823,6 +823,19 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6ac. Observations of a learner (17 November 2026)
+
+- **Where:** the learner's page under People, **Observations**.
+- **Who:** facilitators and assessors log them for the learners on their
+  programmes, and administrators for any; a Quality Assurer reads them.
+- **Each one:** what it is about (behaviour, progress, attendance or other),
+  the date observed, the cohort where relevant, and the note.
+- **Not shown to the learner.** They are staff notes. Under POPIA a learner
+  may ask for the personal information held about them; a provider answers
+  that request as it does for any record.
+- **Kept apart from Conduct**, which is the disciplinary process with its
+  hearings and warnings.
+
 ## 6ab. Announcements to a cohort (17 November 2026)
 
 - **Where:** the cohort's page, **Announcements**. A facilitator posts to the
