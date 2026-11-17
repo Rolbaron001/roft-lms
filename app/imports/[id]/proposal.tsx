@@ -195,7 +195,9 @@ export function Proposal({
           ? t("proposal.fromBlueprint")
           : plan.source === "documents"
             ? t("proposal.fromDocuments")
-            : t("proposal.byName")}
+            : plan.source === "readers"
+              ? t("proposal.fromReaders")
+              : t("proposal.byName")}
       </p>
 
       {/*

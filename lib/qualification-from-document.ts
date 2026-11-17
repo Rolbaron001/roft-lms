@@ -181,6 +181,23 @@ async function readOrExplain(file: SourceFile): Promise<string> {
   }
 }
 
+/**
+ * The qualification already holding this SAQA ID (or SP number), which a
+ * provider can hold only once. Checked apart from the curriculum code, which
+ * a part shares with its parent: 121151 read from its folder on 17 November
+ * 2026 reached the database with the ID already taken and failed there.
+ */
+export async function qualificationWithSaqaId(
+  session: AuthenticatedSession,
+  saqaId: string | null,
+): Promise<{ id: string; title: string } | null> {
+  if (!saqaId) return null;
+  const [row] = await withTenant(session.organisationId, (tx) =>
+    tx.select({ id: qualifications.id, title: qualifications.title }).from(qualifications).where(eq(qualifications.saqaId, saqaId)),
+  );
+  return row ?? null;
+}
+
 /** Reads whichever documents were supplied and reports what they say. Writes nothing. */
 export async function readQualificationSources(
   session: AuthenticatedSession,
@@ -633,6 +650,16 @@ export async function createQualificationFromDocuments(
   if (reading.existing) {
     throw new QualificationImportError(
       `"${reading.existing.title}" already has the code ${reading.details.curriculumCode}. Open that ${reading.details.kind === "skills_programme" ? "skills programme" : "qualification"} instead.`,
+      "already_exists",
+    );
+  }
+
+  // The ID that will be stored, which is the one confirmed; a document's own
+  // ID left unconfirmed is not written and so cannot clash.
+  const sameId = await qualificationWithSaqaId(session, confirmed.saqaId || null);
+  if (sameId) {
+    throw new QualificationImportError(
+      `"${sameId.title}" already has the ID ${confirmed.saqaId}. Open it and add the material there, or remove it first if this is to replace it.`,
       "already_exists",
     );
   }

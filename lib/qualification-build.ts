@@ -699,13 +699,35 @@ export async function verificationOf(
           .innerJoin(curriculumModules, eq(curriculumModules.id, studyUnitModules.curriculumModuleId))
           .where(and(eq(studyUnitModules.studyUnitId, unit.id), ne(curriculumModules.component, "workplace")))
           .limit(1);
-        return { unit, course, steps: steps.length, papers, unlinked, waitingJobs, assessable: assessable.length > 0 };
+        /*
+         * Where this unit's criteria are assessed by another unit's papers.
+         * SP-260508 assesses SU1 and SU2 together in a summative after SU2
+         * (17 November 2026), so SU1 has no papers of its own and is still
+         * assessed: its modules' criteria are linked from SU2's questions.
+         */
+        const [assessedIn] = await tx
+          .select({ code: studyUnits.code })
+          .from(assessmentItemCriteria)
+          .innerJoin(assessmentItems, eq(assessmentItems.id, assessmentItemCriteria.itemId))
+          .innerJoin(assessmentSections, eq(assessmentSections.id, assessmentItems.sectionId))
+          .innerJoin(assessmentPapers, eq(assessmentPapers.id, assessmentSections.paperId))
+          .innerJoin(assessments, eq(assessments.id, assessmentPapers.assessmentId))
+          .innerJoin(courses, eq(courses.id, assessments.courseId))
+          .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+          .innerJoin(assessmentCriteria, eq(assessmentCriteria.id, assessmentItemCriteria.criterionId))
+          .innerJoin(
+            studyUnitModules,
+            and(eq(studyUnitModules.curriculumModuleId, assessmentCriteria.curriculumModuleId), eq(studyUnitModules.studyUnitId, unit.id)),
+          )
+          .where(and(eq(studyUnits.qualificationId, qualificationId), ne(studyUnits.id, unit.id)))
+          .limit(1);
+        return { unit, course, steps: steps.length, papers, unlinked, waitingJobs, assessable: assessable.length > 0, assessedIn: assessedIn?.code ?? null };
       }),
     );
   });
 
   const result: UnitVerification[] = [];
-  for (const { unit, course, steps, papers, unlinked, waitingJobs, assessable } of units) {
+  for (const { unit, course, steps, papers, unlinked, waitingJobs, assessable, assessedIn } of units) {
     const blocking: Finding[] = [];
     const toCheck: Finding[] = [];
     const byAssessment = new Map<string, UnitVerification["assessments"][number]>();
@@ -729,7 +751,13 @@ export async function verificationOf(
       // word. A unit with nothing for a learner to answer could then be
       // finished without anybody being assessed. A unit of workplace modules
       // only is signed off at work, not answered on paper.
-      if (assessable && byAssessment.size === 0 && course.status !== "published") {
+      if (assessable && byAssessment.size === 0 && course.status !== "published" && assessedIn) {
+        toCheck.push({
+          studyUnit: unit.code,
+          what: `${unit.code} has no workbooks or assessments of its own. Its criteria are assessed in ${assessedIn}'s papers, so a learner is assessed on it there.`,
+          href: null,
+        });
+      } else if (assessable && byAssessment.size === 0 && course.status !== "published") {
         blocking.push({
           studyUnit: unit.code,
           what: `${unit.code} has no workbooks or assessments, so a learner could finish it without being assessed. File its papers in the qualification's documents and build again.`,

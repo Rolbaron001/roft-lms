@@ -72,7 +72,18 @@ export type IngestionPlan = {
    * that has no blueprint. Getting this wrong misstates where a provider's
    * documents went and what looked at them.
    */
-  source: "blueprint" | "documents" | "filing";
+  source: "blueprint" | "documents" | "filing" | "readers";
+  /**
+   * "readers": the folder's own base documents, read by the platform's
+   * curriculum, SAQA and Skills Programme readers rather than by a model
+   * (17 November 2026). Their paths, so the commit creates the qualification
+   * from exactly these files, as adding it from its documents does.
+   */
+  baseDocuments?: {
+    curriculum: string;
+    qualification: string | null;
+    assessmentSpecification: string | null;
+  };
   qualification: {
     title: string;
     saqaId: string | null;
@@ -107,9 +118,13 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   // "SP Curr - Recognition of Prior Learning Advisor.pdf" (SP-260508).
   { match: /\bSP Curr?(iculum)?\b(?! Doc)/i, kind: "curriculum_document" },
   { match: /\bSP Doc\b|skills program+e document/i, kind: "qualification_document" },
-  { match: /qualification document/i, kind: "qualification_document" },
-  { match: /curriculum document/i, kind: "curriculum_document" },
-  { match: /assessment specification/i, kind: "assessment_specification" },
+  { match: /qualification\s*document/i, kind: "qualification_document" },
+  // "SAQA 118709.pdf": the SAQA registration, named by its ID (17 November 2026).
+  { match: /\bSAQA\s*(?:ID\s*)?\d{5,6}\b/i, kind: "qualification_document" },
+  // Spaces optional and "Specifications" plural, as the QCTO's own files have
+  // them: "CommercialCleaner-ExternalAssessmentSpecificationsDocument.pdf".
+  { match: /assessment\s*specifications?/i, kind: "assessment_specification" },
+  { match: /curriculum\s*document/i, kind: "curriculum_document" },
   /*
    * "Alignment" alone, because that is what a provider calls it. Curiosa
    * name theirs "CA - 121151 - KM PM ELO Alignment.docx", and requiring the
@@ -171,6 +186,15 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   // Slides for a topic ("RPL KM1 KT1.pptx") are taught from, as a theory
   // guide is.
   { match: /\.pptx?$/i, kind: "theory_guide" },
+  /*
+   * A topic's tools and templates: "RPL KM1 KT1 Practical Tools, Templates &
+   * Assessment Rubrics.docx" (SP-260508, 17 November 2026). Learners work
+   * from them, so they are taught from as a theory guide is. Answer guides
+   * named "Rubric" are caught above as memoranda.
+   */
+  { match: /\b(practical tools|templates?|toolkit|tool kit)\b/i, kind: "theory_guide" },
+  // "Learning Material Matrix": which material and equipment each topic uses.
+  { match: /\b(material matrix|resource specification|learning material matrix)\b/i, kind: "learning_programme_guide" },
 ];
 
 /**

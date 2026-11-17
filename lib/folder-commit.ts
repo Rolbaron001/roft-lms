@@ -22,6 +22,8 @@ import { fileLibraryDocument, type LibraryCategory } from "./records";
 import { getIngestJob, IngestError } from "./folder-import";
 import { getObject } from "./storage";
 import type { IngestionPlan, PlannedModule } from "./folder-plan";
+import { createQualificationFromDocuments } from "./qualification-from-document";
+import type { ImportSummary } from "./curriculum-import";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 
 /**
@@ -127,6 +129,53 @@ export async function commitPlan(
    */
   let qualificationId = input.qualificationId;
   let created: string | null = null;
+  /** Set where the curriculum was written from the base documents, and so must not be written again. */
+  let curriculumWritten: ImportSummary | null = null;
+
+  /*
+   * Read from the folder's own base documents (17 November 2026): created as
+   * adding it "From its documents" creates it, from the same staged files, so
+   * a skills programme, a part qualification and a full one each take their
+   * own path there and nowhere else.
+   */
+  if (!qualificationId && job.target?.mode === "qualification" && plan.source === "readers" && plan.baseDocuments) {
+    const staged = job.stagedFiles ?? {};
+    const fileAt = async (path: string | null) => {
+      if (!path || !staged[path]) return null;
+      return { filename: path.split("/").pop() ?? path, bytes: await getObject(staged[path]) };
+    };
+    const curriculum = await fileAt(plan.baseDocuments.curriculum);
+    if (!curriculum) throw new IngestError("The curriculum document was not staged when the folder was read. Read the folder again.", "no_plan");
+    try {
+      const made = await createQualificationFromDocuments(
+        session,
+        {
+          curriculum,
+          qualification: await fileAt(plan.baseDocuments.qualification),
+          assessmentSpecification: await fileAt(plan.baseDocuments.assessmentSpecification),
+        },
+        {
+          title: plan.qualification.title.trim(),
+          curriculumCode: plan.qualification.curriculumCode ?? undefined,
+          saqaId: plan.qualification.saqaId ?? undefined,
+          nqfLevel: plan.qualification.nqfLevel ?? undefined,
+          totalCredits: plan.qualification.credits ?? undefined,
+        },
+      );
+      qualificationId = made.qualificationId;
+      created = plan.qualification.title.trim();
+      curriculumWritten = made.summary;
+    } catch (error) {
+      // A sentence, never a validator's dump (17 November 2026: a missing
+      // title came back as a JSON array).
+      const raw = error instanceof Error ? error.message.trim() : "";
+      const message =
+        raw && !raw.startsWith("[") && !/^Failed query/i.test(raw)
+          ? raw
+          : "The qualification could not be created from these documents: it may already be on the platform, or its title, code, level or credits are incomplete. Check the warnings above, or add it from its documents and correct them there.";
+      throw new IngestError(message, "no_plan");
+    }
+  }
 
   if (!qualificationId && job.target?.mode === "qualification") {
     const details = plan.qualification;
@@ -229,12 +278,28 @@ export async function commitPlan(
   }
 
   // --- the curriculum ------------------------------------------------------
-  for (const planned of intoQualification ? plan.modules : []) {
+  if (curriculumWritten) {
+    report.modules = curriculumWritten.modules;
+    report.topics = curriculumWritten.topics;
+    report.elements = curriculumWritten.elements;
+    report.criteria = curriculumWritten.criteria;
+    report.refused.push(...curriculumWritten.warnings.filter((warning) => /not (filed|stored)|dropped|could not/i.test(warning)));
+  }
+  for (const planned of intoQualification && !curriculumWritten ? plan.modules : []) {
     await commitModule(session, qualificationId!, planned, report);
   }
 
   // --- the documents -------------------------------------------------------
+  // The base documents were filed when the qualification was made from them.
+  // Filing them again would put a part's parent's curriculum under the part.
+  const baseDocumentPaths = new Set(
+    curriculumWritten && plan.baseDocuments
+      ? [plan.baseDocuments.curriculum, plan.baseDocuments.qualification, plan.baseDocuments.assessmentSpecification].filter(Boolean)
+      : [],
+  );
+
   for (const document of plan.documents) {
+    if (baseDocumentPaths.has(document.path)) continue;
     // Read back from where the upload was staged. The bytes are not on any
     // disk path the server could re-walk: they came from a browser.
     const key = (job.stagedFiles ?? {})[document.path];

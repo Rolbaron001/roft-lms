@@ -3566,6 +3566,8 @@ export const staff = {
     "Read from the folder's blueprint file. The structure below is exactly what that file says.",
   "proposal.fromDocuments":
     "Read from the documents by the AI model. Check it against the curriculum document before you commit.",
+  "proposal.fromReaders":
+    "Read from the qualification's own documents in the folder (its curriculum document, and its SAQA or Skills Programme Document and assessment specification where they are there), in the same way as adding it from its documents. No AI was used.",
   "proposal.byName":
     "Filed without a blueprint or AI model: each document goes to the study unit its file name gives, or else to the one the alignment document gives for the modules and topics it covers. The curriculum is not changed.",
   "proposal.toFile": "{count} documents",

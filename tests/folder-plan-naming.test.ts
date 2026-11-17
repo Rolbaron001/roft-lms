@@ -169,4 +169,14 @@ describe("the SP-260508 RPL Advisor folder, named with underscores (17 November 
     expect(kindOf("Master_Learner_Handbook_RPL_Advisor_NQF7.docx")).toBe("learner_handbook");
     expect(kindOf("RPL KM1 KT1.pptx")).toBe("theory_guide");
   });
+
+  it("recognises a topic's tools and the material matrix, and leaves nothing of the folder unrecognised", () => {
+    expect(kindOf("RPL KM1 KT1 Practical Tools, Templates & Assessment Rubrics.docx")).toBe("theory_guide");
+    expect(kindOf("Learning Material Matrix RPL Advisor.docx")).toBe("learning_programme_guide");
+    expect(kindOf("FISA_3_Assessor_Guide_Memo_Rubric.docx")).toBe("summative_memorandum");
+    // The base documents, however the QCTO's files are named.
+    expect(kindOf("SAQA 118709.pdf")).toBe("qualification_document");
+    expect(kindOf("CommercialCleaner-ExternalAssessmentSpecificationsDocument.pdf")).toBe("assessment_specification");
+    expect(kindOf("SP Curr - Recognition of Prior Learning Advisor.pdf")).toBe("curriculum_document");
+  });
 });

@@ -22,6 +22,8 @@ import {
 } from "./folder-upload";
 import { extensionState, readJson, runExtension } from "./extensions";
 import { readOfficeText } from "./office";
+import { parseCurriculumText } from "./curriculum-parse";
+import { qualificationWithSaqaId, readQualificationSources } from "./qualification-from-document";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { buildStorageKey, hashBytes, putObject } from "./storage";
 import { libraryFilingPreview } from "./records";
@@ -197,7 +199,7 @@ export async function ingestUpload(
       staged[file.path] = key;
     }
 
-    const plan = await buildPlan(session, shaped.files, shaped.warnings, mode);
+    const plan = await buildPlan(session, shaped.files, shaped.warnings, mode, folderName);
     await placeByContent(session, target.qualificationId ?? null, shaped.files, plan);
     return await finish(session, job.id, { status: "proposed", plan, staged });
   } catch (error) {
@@ -216,6 +218,7 @@ async function buildPlan(
   files: UploadedFile[],
   uploadWarnings: string[],
   mode: IngestMode,
+  folderName: string,
 ): Promise<IngestionPlan> {
   const warnings: string[] = [...uploadWarnings];
 
@@ -230,6 +233,11 @@ async function buildPlan(
 
   // The structured path first, always. No model, no extension, no waiting.
   let plan = readBlueprint(files);
+
+  // Then the qualification's own documents, if the folder holds them: read by
+  // the platform's readers, as adding it from its documents does. A model is
+  // only the last resort, for a folder with no curriculum document in it.
+  if (!plan) plan = await planFromBaseDocuments(session, files, folderName);
 
   if (!plan) {
     // Only here is a model needed, and only for the structure. Filing the
@@ -261,6 +269,144 @@ async function buildPlan(
       plan.studyUnits.length > 0 ? plan.studyUnits : gathered.studyUnits,
     documents: gathered.documents,
     warnings: [...plan.warnings, ...warnings],
+  };
+}
+
+/**
+ * The qualification read from the base documents in the folder, or null where
+ * the folder has no curriculum document.
+ *
+ * Roland, 17 November 2026: uploading a folder must be "a good place to
+ * start". Until then a folder without a blueprint needed an AI extension to
+ * become a qualification, although the documents in it were ones the platform
+ * reads itself on the "From its documents" screen; so a provider uploaded the
+ * base documents, then the alignment document, then the folder, as three jobs.
+ */
+async function planFromBaseDocuments(session: AuthenticatedSession, files: UploadedFile[], folderName: string): Promise<IngestionPlan | null> {
+  const seen = new Set<string>();
+  const found: Record<"curriculum_document" | "qualification_document" | "assessment_specification", UploadedFile | null> = {
+    curriculum_document: null,
+    qualification_document: null,
+    assessment_specification: null,
+  };
+  for (const file of files) {
+    if (file.kind !== "convert" || !/\.(pdf|docx)$/i.test(file.filename)) continue;
+    const kind = classifyDocument(file.path, file.filename, file.bytes.byteLength).kind as keyof typeof found | null;
+    if (!kind || !(kind in found) || found[kind]) continue;
+    const digest = hashBytes(file.bytes);
+    if (seen.has(digest)) continue;
+    seen.add(digest);
+    found[kind] = file;
+  }
+
+  /*
+   * By what they say, where the name said nothing. The QCTO's own files are
+   * named every way: "SAQA 118709.pdf", "CommercialCleaner-External
+   * AssessmentSpecificationsDocument.pdf" (17 November 2026). Only files the
+   * names left unrecognised are opened, and only while something is missing.
+   */
+  const missing = () => (Object.keys(found) as (keyof typeof found)[]).filter((kind) => !found[kind]);
+  if (missing().length > 0) {
+    for (const file of files) {
+      if (missing().length === 0) break;
+      if (file.kind !== "convert" || !/\.(pdf|docx)$/i.test(file.filename)) continue;
+      if (classifyDocument(file.path, file.filename, file.bytes.byteLength).kind !== "other") continue;
+      if (seen.has(hashBytes(file.bytes))) continue;
+      let opening = "";
+      try {
+        opening = (await readOfficeText(file.filename, file.bytes)).slice(0, 6000);
+      } catch {
+        continue;
+      }
+      const kind: keyof typeof found | null = /SAQA\s+QUAL(?:IFICATION)?\s+ID|Skills\s+Programme\s+ID|QCTO\s+OCCUPATIONAL\s+SKILLS\s+PROGRAMME\s+DOCUMENT/i.test(opening)
+        ? "qualification_document"
+        : /ASSESSMENT\s+SPECIFICATIONS?\b/i.test(opening)
+          ? "assessment_specification"
+          : /CURRICULUM\s+(?:DOCUMENT|SUMMARY)|Knowledge\s+Module\s+Specifications?/i.test(opening)
+            ? "curriculum_document"
+            : null;
+      if (!kind || found[kind]) continue;
+      seen.add(hashBytes(file.bytes));
+      found[kind] = file;
+    }
+  }
+
+  const curriculumFile = found.curriculum_document;
+  if (!curriculumFile) return null;
+
+  const source = (file: UploadedFile | null) => (file ? { filename: file.filename, bytes: file.bytes } : null);
+  let reading;
+  try {
+    reading = await readQualificationSources(session, {
+      curriculum: source(curriculumFile)!,
+      qualification: source(found.qualification_document),
+      assessmentSpecification: source(found.assessment_specification),
+    });
+  } catch (error) {
+    throw new IngestError(error instanceof Error ? error.message : "The qualification's documents could not be read.", "unreadable");
+  }
+
+  const curriculum = parseCurriculumText(await readOfficeText(curriculumFile.filename, curriculumFile.bytes));
+  const warnings = [...reading.notes];
+  // Never an empty title: the documents' own, else the folder's name, and said.
+  let title = (reading.details.title ?? curriculum.qualification.title ?? "").trim();
+  if (title.length < 3) {
+    title = folderName.trim();
+    warnings.unshift(`No title was found in the documents, so it is named "${title}" after the folder. Change it on its page.`);
+  }
+  if (reading.part) {
+    const taken = reading.part.modules.filter((entry) => entry.found).length;
+    const missingCodes = reading.part.modules.filter((entry) => !entry.found).map((entry) => entry.code);
+    warnings.unshift(
+      `A part qualification of "${reading.part.parent.title}", taking ${taken} of its modules. It uses that qualification's curriculum, so no modules are listed below.${missingCodes.length ? ` Not found in it: ${missingCodes.join(", ")}.` : ""}`,
+    );
+  }
+  const sameId = reading.part ? null : await qualificationWithSaqaId(session, reading.details.saqaId);
+  if (sameId) {
+    warnings.unshift(
+      `"${sameId.title}" is already on the platform with the ID ${reading.details.saqaId}, so committing will create nothing. To add this material to it, open it and upload the folder there; to replace it, remove it first.`,
+    );
+  } else if (reading.existing && !reading.part) {
+    warnings.unshift(
+      `"${reading.existing.title}" already has the curriculum code ${reading.details.curriculumCode}. Open it and upload this folder there to add the material to it.`,
+    );
+  }
+
+  return {
+    source: "readers",
+    baseDocuments: {
+      curriculum: curriculumFile.path,
+      qualification: found.qualification_document?.path ?? null,
+      assessmentSpecification: found.assessment_specification?.path ?? null,
+    },
+    qualification: {
+      title,
+      saqaId: reading.details.saqaId,
+      curriculumCode: reading.details.curriculumCode,
+      nqfLevel: reading.details.nqfLevel,
+      credits: reading.details.totalCredits,
+      purpose: reading.skillsProgramme?.purpose ?? null,
+    },
+    // Shown for checking; the commit writes the curriculum from the document
+    // itself, so a part qualification lists the modules it takes and none of
+    // its own.
+    modules: reading.part
+      ? []
+      : curriculum.modules.map((entry) => ({
+          component: entry.component,
+          code: entry.code,
+          title: entry.title,
+          credits: entry.credits ?? null,
+          topics: entry.topics.map((topic) => ({
+            code: topic.code,
+            title: topic.title,
+            elements: topic.elements.map((element) => element.description),
+            criteria: topic.criteria.map((criterion) => criterion.description),
+          })),
+        })),
+    studyUnits: [],
+    documents: [],
+    warnings,
   };
 }
 

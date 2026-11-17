@@ -1693,6 +1693,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "proposal.filedQualification",
   "proposal.fromBlueprint",
   "proposal.fromDocuments",
+  "proposal.fromReaders",
   "proposal.levelCredits",
   "proposal.moduleCounts",
   "proposal.notStated",
