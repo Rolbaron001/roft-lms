@@ -116,18 +116,20 @@ export const NAV: NavSection[] = [
       // study unit's page.
       { href: "/material", label: "Learning material", permission: "course:author" },
       // A board for each course, for its learners and staff (job sheet D30).
-      { href: "/discussions", label: "Discussions", permission: "course:read" },
+      // A Guest is kept from discussion boards (Heidi, D51).
+      { href: "/discussions", label: "Discussions", permission: "course:read", notWith: "guest:preview" },
       // A reference, not a record. Every signed-in person can read it,
       // learners included - it exists so that everybody uses the same words.
       {
         href: "/records",
         label: "Policies & documents",
         permission: "course:read",
+        notWith: "guest:preview",
       },
       { href: "/dictionary", label: "Dictionary", permission: "report:own" },
       // Designed alongside the courses they recognise rather than under Admin:
       // a badge is part of how an intervention is set up, not a setting.
-      { href: "/badges", label: "Badges", permission: "course:read" },
+      { href: "/badges", label: "Badges", permission: "course:read", notWith: "guest:preview" },
     ],
   },
 
@@ -156,6 +158,7 @@ export const NAV: NavSection[] = [
         href: "/enrolment-form",
         label: "Enrolment form",
         anyPermission: ["report:own", "enrolment:read_all"],
+        notWith: "guest:preview",
       },
     ],
   },
@@ -255,6 +258,10 @@ export const NAV: NavSection[] = [
         label: "Programme quality",
         anyPermission: ["report:tenant", "qualification:manage"],
       },
+      // Quality assurance (Heidi, 13 November 2026; D51).
+      { href: "/audit", label: "Audit trail", permission: "audit:read" },
+      { href: "/quality/credentials", label: "Staff credentials", permission: "audit:read" },
+      { href: "/quality/holds", label: "Compliance holds", permission: "audit:read" },
     ],
   },
 

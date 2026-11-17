@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { pageLocale, requireSession, requireTenant } from "@/lib/request";
+import { redirect } from "next/navigation";
 import { myBoards } from "@/lib/discussions";
+import { isGuest } from "@/lib/guest";
 import { AppShell, Card } from "@/components/app-shell";
 
 /**
@@ -10,6 +12,9 @@ import { AppShell, Card } from "@/components/app-shell";
 export default async function DiscussionsPage() {
   const tenant = await requireTenant();
   const session = await requireSession();
+  // A Guest is kept from discussion boards (Heidi, D51); each board refuses
+  // anyone not on its course, and this list refuses a Guest outright.
+  if (isGuest(session)) redirect("/not-permitted");
   const { t, day } = await pageLocale();
   const boards = await myBoards(session);
 

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { assessmentPapers, courses, studyUnits } from "@/db/schema";
-import { localeFor, requirePermission, requireTenant } from "@/lib/request";
+import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { guestMayOpenQualification } from "@/lib/guest";
 import { translator } from "@/lib/i18n";
 import { stepsForPreview } from "@/lib/spine";
 import { AppShell } from "@/components/app-shell";
@@ -19,7 +20,10 @@ import { StudyUnitView } from "@/app/learn/[id]/study-unit-view";
 export default async function UnitPreviewPage({ params }: { params: Promise<{ id: string; unitId: string }> }) {
   const { id, unitId } = await params;
   const tenant = await requireTenant();
-  const session = await requirePermission("course:author");
+  const session = await requireSession();
+  // Staff who build it, or a Guest where it is open to guests (D51).
+  const guest = !session.permissions.includes("course:author");
+  if (guest && !(await guestMayOpenQualification(session, id))) redirect("/not-permitted");
   const locale = localeFor(tenant, session);
   const t = translator(locale);
 
@@ -62,9 +66,9 @@ export default async function UnitPreviewPage({ params }: { params: Promise<{ id
 
   return (
     <AppShell tenant={tenant} session={session}>
-      <QualificationNav qualificationId={id} current={course?.id ?? "preview"} />
+      {guest ? null : <QualificationNav qualificationId={id} current={course?.id ?? "preview"} />}
       {view}
-      {!course ? (
+      {!course && !guest ? (
         <p className="mt-6 text-sm text-[var(--muted)]">
           {t("learnPreview.notBuilt")}{" "}
           <Link href={`/qualifications/${id}/verify`} className="underline underline-offset-2">

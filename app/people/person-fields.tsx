@@ -139,6 +139,9 @@ const ROLES = [
   "skills_development_facilitator",
   "external_verifier",
   "workplace_coach",
+  "quality_assurer",
+  "instructional_designer",
+  "guest",
 ] as const;
 
 export function RoleChecklist({

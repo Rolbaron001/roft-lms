@@ -38,6 +38,7 @@ import { raise, usersWithRole } from "./notifications";
 import { assertOralRecorded } from "./reassessment";
 import { getMarkedPaper, proposeCriterionOutcomes } from "./marking";
 import { coursesWithin, reachWithin, submissionCourse, submissionInReach } from "./staff-scope";
+import { holdBlocking, holdMessage } from "./quality";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -1640,6 +1641,10 @@ export async function recordAssessorDecision(
       .select()
       .from(assessments)
       .where(eq(assessments.id, submission.assessmentId));
+
+    // A Quality Assurer's compliance hold stops decisions (D51).
+    const hold = await holdBlocking(tx, { learnerId: submission.userId, courseId: assessment?.courseId ?? null });
+    if (hold) throw new AssessmentError(holdMessage(hold, "No assessment decision can be recorded"), "not_permitted");
 
     const [{ priorDecisions }] = await tx
       .select({ priorDecisions: count() })

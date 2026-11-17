@@ -19,6 +19,7 @@ import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { can } from "./rbac";
 import { raise } from "./notifications";
+import { holdBlocking, holdMessage } from "./quality";
 
 /**
  * Certificates.
@@ -333,6 +334,13 @@ async function issueWithin(
     if (!eligibility.eligible) {
       return { ok: false as const, reasons: eligibility.reasons };
     }
+
+    // A Quality Assurer's compliance hold stops certificates (D51).
+    const hold = await holdBlocking(tx, {
+      learnerId: eligibility.enrolment.userId,
+      courseId: eligibility.enrolment.courseId,
+    });
+    if (hold) return { ok: false as const, reasons: [holdMessage(hold, "No certificate can be issued")] };
 
     const [course] = await tx
       .select({

@@ -9,6 +9,7 @@ import {
 import { certificates, enrolments, organisations, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
 import { withCombined } from "./roles";
+import { DEFAULT_TIME_ZONE, zonedTimeToUtc } from "./timezone";
 import {
   assertPasswordAcceptable,
   hashPassword,
@@ -66,6 +67,9 @@ const ROLE_VALUES = [
   "external_verifier",
   "workplace_coach",
   "tenant_viewer",
+  "quality_assurer",
+  "instructional_designer",
+  "guest",
 ] as const;
 
 /**
@@ -299,6 +303,7 @@ export async function invitePerson(
           role,
         })),
       );
+      await endGuestAccess(tx, created.id, storedRoles);
     }
 
     await recordAudit(tx, {
@@ -413,6 +418,61 @@ async function rolesToStore(tx: TenantDatabase, organisationId: string, roles: R
   return withCombined(roles, provider?.combined ?? false);
 }
 
+/** How long a Guest's access lasts when no end date has been given (D51). */
+export const GUEST_DEFAULT_DAYS = 30;
+
+/**
+ * A Guest's access always ends (Heidi, 13 November 2026). Given the role with
+ * no end date, the person gets one GUEST_DEFAULT_DAYS from now, which the
+ * administrator can change on their page.
+ */
+async function endGuestAccess(tx: TenantDatabase, userId: string, roles: Role[]): Promise<void> {
+  if (!roles.includes("guest")) return;
+  await tx
+    .update(users)
+    .set({ accessEndsAt: new Date(Date.now() + GUEST_DEFAULT_DAYS * 86_400_000) })
+    .where(and(eq(users.id, userId), isNull(users.accessEndsAt)));
+}
+
+/**
+ * When a person's access ends: the end of the given day on the provider's
+ * clock, or no end with null (D51). From then they cannot sign in, and an
+ * open session stops working. A Guest always keeps an end date.
+ */
+export async function setAccessEnd(session: AuthenticatedSession, userId: string, endsOn: string | null) {
+  assertSessionCan(session, "user:manage_roles");
+  if (endsOn !== null && !/^\d{4}-\d{2}-\d{2}$/.test(endsOn)) {
+    throw new PeopleError("Give the date access ends, or leave it empty for no end.", "invalid_input");
+  }
+  if (userId === session.userId) {
+    throw new PeopleError("You cannot set when your own access ends. Ask another administrator.", "not_permitted");
+  }
+
+  await withTenant(session.organisationId, async (tx) => {
+    const [person] = await tx.select({ id: users.id, accessEndsAt: users.accessEndsAt }).from(users).where(eq(users.id, userId));
+    if (!person) throw new PeopleError("Person not found.", "not_found");
+    const [provider] = await tx.select({ timezone: organisations.timezone }).from(organisations).where(eq(organisations.id, session.organisationId));
+    const held = await tx
+      .select({ role: userRoles.role })
+      .from(userRoles)
+      .where(and(eq(userRoles.userId, userId), isNull(userRoles.revokedAt)));
+    if (endsOn === null && held.some((row) => row.role === "guest")) {
+      throw new PeopleError("A Guest's access must end. Give the date it ends.", "invalid_input");
+    }
+    const endsAt = endsOn === null ? null : zonedTimeToUtc(endsOn, "23:59", provider?.timezone ?? DEFAULT_TIME_ZONE);
+    await tx.update(users).set({ accessEndsAt: endsAt, updatedAt: new Date() }).where(eq(users.id, userId));
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "user.access_end_set",
+      entityType: "user",
+      entityId: userId,
+      before: { accessEndsAt: person.accessEndsAt },
+      after: { accessEndsAt: endsAt },
+    });
+  });
+}
+
 export async function setRoles(
   session: AuthenticatedSession,
   userId: string,
@@ -461,6 +521,7 @@ export async function setRoles(
           registrationNumber: registrationNumbers[role] ?? null,
         })),
       );
+      await endGuestAccess(tx, userId, storedRoles);
     }
 
     await recordAudit(tx, {

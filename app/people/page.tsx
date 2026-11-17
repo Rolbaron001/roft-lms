@@ -3,7 +3,6 @@ import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { listPeople, possibleLineManagers } from "@/lib/people";
 import { maybe } from "@/lib/i18n/maybe";
 import { displayRoles, roleLabelKey, withCombined } from "@/lib/roles";
-import type { Role } from "@/lib/rbac";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { InviteForm } from "./invite-form";
 import { RosterForm } from "./roster-form";

@@ -10,6 +10,7 @@ import {
   resetPassword,
   setMailboxAddress,
   setPersonStatus,
+  setAccessEnd,
   setRoles,
   updatePerson,
   type Role,
@@ -132,6 +133,25 @@ export async function setRolesAction(
 
   revalidatePath(`/people/${userId}`);
   return said({ notice: "Roles updated. They apply from the person's next page." });
+}
+
+/** When a person's access ends, or no end (D51). */
+export async function setAccessEndAction(
+  _previous: PeopleState,
+  formData: FormData,
+): Promise<PeopleState> {
+  const session = await requireSession();
+  const userId = String(formData.get("userId") ?? "");
+  const endsOn = String(formData.get("accessEndsOn") ?? "").trim() || null;
+
+  try {
+    await setAccessEnd(session, userId, endsOn);
+  } catch (error) {
+    return said({ error: describe(error) });
+  }
+
+  revalidatePath(`/people/${userId}`);
+  return said({ notice: endsOn ? "Saved. Their access ends at the end of that day." : "Saved. Their access has no end date." });
 }
 
 export async function setStatusAction(

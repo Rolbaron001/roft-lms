@@ -23,6 +23,7 @@ import {
 } from "./certificates";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
+import { holdBlocking, holdMessage } from "./quality";
 
 /**
  * The Statement of Results.
@@ -359,6 +360,10 @@ async function issueWith(
     if (!learner) {
       throw new StatementError("Learner not found.", "not_found");
     }
+
+    // A Quality Assurer's compliance hold stops Statements of Results (D51).
+    const hold = await holdBlocking(tx, { learnerId: userId, qualificationId });
+    if (hold) throw new StatementError(holdMessage(hold, "No Statement of Results can be issued"), "not_permitted");
 
     // Read from the qualification rather than from the readiness result: an
     // assessment centre checks the SAQA identifier, the curriculum code and the

@@ -87,6 +87,7 @@ describe("who may use an AI extension", () => {
   it("is every one of the provider's own staff roles", () => {
     expect(holders).toEqual([
       "assessor",
+      "instructional_designer",
       "instructor",
       "moderator",
       "skills_development_facilitator",

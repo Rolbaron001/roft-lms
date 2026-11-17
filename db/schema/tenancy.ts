@@ -72,6 +72,17 @@ export const userRole = pgEnum("user_role", [
    * request the person makes read-only in the database (lib/view-only.ts).
    */
   "tenant_viewer",
+  /**
+   * Heidi's role specifications, 13 November 2026 (job sheet D51). The
+   * Quality Assurer audits everything read-only and may place compliance
+   * holds; the Instructional Designer builds courses and sees no learner's
+   * personal information or grades; the Guest (a QCTO or QP verifier) previews
+   * the qualifications marked open to guests, sees no learner data, and loses
+   * access on a date the administrator sets.
+   */
+  "quality_assurer",
+  "instructional_designer",
+  "guest",
 ]);
 
 export const userStatus = pgEnum("user_status", [
@@ -400,6 +411,14 @@ export const users = pgTable(
      * window to a single use rather than for as long as the account lives.
      */
     mustChangePassword: boolean("must_change_password").notNull().default(false),
+
+    /**
+     * When this person's access ends, or null for no end (Heidi, 13 November
+     * 2026: a Guest's access "expires automatically after a set timeframe
+     * configured by the administrator"). From then they cannot sign in, and a
+     * session already open stops working. Any person may be given one.
+     */
+    accessEndsAt: timestamp("access_ends_at", { withTimezone: true }),
 
     /**
      * The address this person holds *on the platform*, distinct from `email`.

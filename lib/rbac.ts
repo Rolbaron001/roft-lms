@@ -157,6 +157,15 @@ export const PERMISSIONS = [
   "report:statutory",
   "audit:read",
   "verification:external_audit",
+
+  // Quality assurance (job sheet D51). Placing a compliance hold stops results
+  // being recorded or issued for a qualification or cohort, so it is a
+  // permission of its own rather than part of reading the audit trail.
+  "quality:hold",
+
+  // A Guest's preview of the qualifications opened to guests (D51): the
+  // learner's view, with nothing saved and no learner's data in it.
+  "guest:preview",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -349,6 +358,57 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "report:tenant",
     "verification:external_audit",
   ],
+
+  /**
+   * Heidi, 13 November 2026 (D51): "the custodian of institutional and
+   * regulatory compliance". Reads every course, portfolio, assessment
+   * instrument, moderation record and the audit trail; checks staff
+   * credentials; places compliance holds. Writes nothing else. Not
+   * `support:read`, the special personal information behind an
+   * accommodation, which an audit does not need.
+   */
+  quality_assurer: [
+    "records:read",
+    "course:read",
+    "user:read",
+    "enrolment:read_all",
+    "evidence:read_all",
+    "certificate:read_all",
+    "audit:read",
+    "report:tenant",
+    "verification:external_audit",
+    "quality:hold",
+    ...SELF_SERVICE,
+  ],
+
+  /**
+   * Heidi, 13 November 2026 (D51): "the architect of the learning
+   * experience". Builds qualifications, courses, material and assessments,
+   * and previews them as a learner. Holds nothing that opens a learner's
+   * record or grades: no enrolment, people or evidence permission.
+   */
+  instructional_designer: [
+    "extension:use",
+    "course:read",
+    "course:author",
+    "course:publish",
+    "competency:manage",
+    "assessment:author",
+    "qualification:manage",
+    ...SELF_SERVICE,
+  ],
+
+  /**
+   * Heidi, 13 November 2026 (D51): a QCTO or QP verifier with temporary,
+   * view-only access. Previews the qualifications opened to guests and
+   * nothing else: no learner's data, grades, discussions or dashboards, and
+   * none of the learner's own permissions, since a guest is not enrolled.
+   * Their access ends on the date the administrator sets (users.accessEndsAt).
+   * `course:read` reads course content (material, the theory guide) for the
+   * preview; it opens no learner's record, and the menu leaves out the pages
+   * it would otherwise offer (navigation.ts, `notWith`).
+   */
+  guest: ["guest:preview", "course:read", "report:own"],
 };
 
 /**

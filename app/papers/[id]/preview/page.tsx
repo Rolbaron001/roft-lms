@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { pageT, requirePermission, requireTenant } from "@/lib/request";
+import { notFound, redirect } from "next/navigation";
+import { pageT, requireSession, requireTenant } from "@/lib/request";
+import { asPaperReader, guestMayOpenPaper } from "@/lib/guest";
 import { previewPaper, PaperError } from "@/lib/papers";
 import { captureOrigin, wayBackFrom } from "@/lib/capture";
 import { AppShell, Card } from "@/components/app-shell";
@@ -39,10 +40,15 @@ export default async function PaperPreviewPage({
   // Opened from "See it as a learner", the paper is shown as the learner sees
   // it: no correct answers, no marking guidance. Heidi and Cecilia took the
   // answers shown here for answers shown to learners (19 October 2026).
-  const asLearner = answers === "hide";
-  const toggle = new URLSearchParams({ ...(from ? { from } : {}), ...(asLearner ? {} : { answers: "hide" }) }).toString();
   const tenant = await requireTenant();
-  const session = await requirePermission("assessment:author");
+  const signedIn = await requireSession();
+  // A Guest (D51) sees a paper only in a qualification open to guests, and
+  // only as the learner sees it: never the answers or the marking guidance.
+  const guest = !signedIn.permissions.includes("assessment:author");
+  if (guest && !(await guestMayOpenPaper(signedIn, id))) redirect("/not-permitted");
+  const session = guest ? asPaperReader(signedIn) : signedIn;
+  const asLearner = guest || answers === "hide";
+  const toggle = new URLSearchParams({ ...(from ? { from } : {}), ...(asLearner ? {} : { answers: "hide" }) }).toString();
   const t = await pageT();
 
   let paper;
@@ -59,11 +65,11 @@ export default async function PaperPreviewPage({
   // (the learner's-eye preview passes its step). Roland, 5 October 2026:
   // closing an assessment "resets the page to the top". Only a path on this
   // site is followed.
-  const origin = wayBackFrom(await captureOrigin(session, { paperId: id }));
+  const origin = guest ? { href: "/", label: t("preview.guestBack") } : wayBackFrom(await captureOrigin(session, { paperId: id }));
   const back = from && from.startsWith("/") && !from.startsWith("//") ? { href: from, label: origin.label } : origin;
 
   return (
-    <AppShell tenant={tenant} session={session}>
+    <AppShell tenant={tenant} session={signedIn}>
       <div className="mb-6">
         {/*
           Back to where the work started, which after a commit is the
@@ -105,9 +111,11 @@ export default async function PaperPreviewPage({
         <p className="mt-1 text-sm text-[var(--muted)]">
           {asLearner ? t("preview.asLearner") : t("preview.isPreviewIntro")}
         </p>
-        <Link href={`/papers/${id}/preview${toggle ? `?${toggle}` : ""}`} className="mt-2 inline-block text-sm font-medium underline underline-offset-2">
-          {asLearner ? t("preview.showAnswers") : t("preview.hideAnswers")}
-        </Link>
+        {guest ? null : (
+          <Link href={`/papers/${id}/preview${toggle ? `?${toggle}` : ""}`} className="mt-2 inline-block text-sm font-medium underline underline-offset-2">
+            {asLearner ? t("preview.showAnswers") : t("preview.hideAnswers")}
+          </Link>
+        )}
       </div>
 
       {items.length === 0 ? (

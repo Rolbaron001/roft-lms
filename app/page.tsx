@@ -17,6 +17,7 @@ import { AdminDashboardView } from "./admin-dashboard";
 import { RoleDashboardView } from "./role-dashboard";
 import { chooseRoleAction } from "./role-actions";
 import { RoleIntro } from "./role-intro";
+import { accessEndsFor, isGuest, qualificationsOpenToGuests } from "@/lib/guest";
 import { introsFor } from "@/lib/role-intros";
 import { displayRoles, roleLabelKey } from "@/lib/roles";
 import { combineDashboards, type RoleDashboard } from "@/lib/dashboard-kit";
@@ -56,6 +57,48 @@ export default async function HomePage() {
   const { day } = await pageDates();
   const date = (at: Date) => day(at);
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
+
+  // A Guest (D51) holds none of a learner's or staff member's own records, so
+  // their home is the introduction and what has been opened to them.
+  if (isGuest(session)) {
+    const open = await qualificationsOpenToGuests(session);
+    const endsAt = (await accessEndsFor(session))?.toISOString().slice(0, 10) ?? null;
+    return (
+      <AppShell tenant={tenant} session={session}>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold">
+            {session.firstName} {session.lastName}
+          </h1>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded-full px-3 py-1 text-xs font-medium text-white" style={{ background: "var(--brand-primary)" }}>
+              {t("role.guest")}
+            </span>
+          </div>
+          {endsAt ? <p className="mt-2 text-xs text-[var(--muted)]">{t("guestHome.ends", { date: day(endsAt) })}</p> : null}
+        </div>
+        <RoleIntro intros={["guest"]} permissions={session.permissions} t={t} />
+        <section id="open-to-guests" className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="text-sm font-semibold">{t("guestHome.title")}</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">{t("guestHome.intro")}</p>
+          {open.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--muted)]">{t("guestHome.none")}</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {open.map((qualification) => (
+                <li key={qualification.id}>
+                  <Link href={`/qualifications/${qualification.id}/learner`} className="block rounded-md border border-[var(--border)] px-3 py-2 text-sm hover:border-[var(--brand-accent)]">
+                    <span className="font-medium">{qualification.title}</span>
+                    {qualification.saqaId ? <span className="text-[var(--muted)]"> · SAQA {qualification.saqaId}</span> : null}
+                    {qualification.nqfLevel ? <span className="text-[var(--muted)]"> · NQF {qualification.nqfLevel}</span> : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </AppShell>
+    );
+  }
 
   // Feedback forms this person still owes. On the front page rather than behind
   // a notification, because a form nobody sees is a response rate nobody has.

@@ -215,6 +215,11 @@ export const qualifications = pgTable(
 
     status: publishStatus("status").notNull().default("draft"),
     version: text("version").notNull().default("1.0"),
+    /**
+     * Open to Guests (a QCTO or QP verifier, job sheet D51): they may preview
+     * it as a learner would, with nothing saved. Set by an administrator.
+     */
+    openToGuests: boolean("open_to_guests").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

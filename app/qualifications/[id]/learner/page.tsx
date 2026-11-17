@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { courses, exitLevelOutcomes, qualifications, studyUnits } from "@/db/schema";
-import { localeFor, requirePermission, requireTenant } from "@/lib/request";
+import { localeFor, requireSession, requireTenant } from "@/lib/request";
+import { guestMayOpenQualification } from "@/lib/guest";
 import { translator } from "@/lib/i18n";
 import { AppShell } from "@/components/app-shell";
 import { QualificationNav } from "@/components/qualification-nav";
@@ -18,7 +19,10 @@ import { QualificationNav } from "@/components/qualification-nav";
 export default async function LearnerPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const tenant = await requireTenant();
-  const session = await requirePermission("course:author");
+  const session = await requireSession();
+  // Staff who build it, or a Guest where it is open to guests (D51).
+  const guest = !session.permissions.includes("course:author");
+  if (guest && !(await guestMayOpenQualification(session, id))) redirect("/not-permitted");
   const t = translator(localeFor(tenant, session));
 
   const data = await withTenant(session.organisationId, async (tx) => {
@@ -46,8 +50,8 @@ export default async function LearnerPreviewPage({ params }: { params: Promise<{
 
   return (
     <AppShell tenant={tenant} session={session}>
-      <QualificationNav qualificationId={id} current="preview" />
-      <div className="mb-4 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 text-sm">{t("learnPreview.banner")}</div>
+      {guest ? null : <QualificationNav qualificationId={id} current="preview" />}
+      <div className="mb-4 rounded-lg border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-4 py-3 text-sm">{t(guest ? "learnPreview.guestBanner" : "learnPreview.banner")}</div>
       <section className="mb-6 grid gap-6 rounded-2xl p-7 text-white md:grid-cols-3" style={{ background: "var(--brand-primary)" }}>
         <div className="md:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-wide opacity-85">{t("learnUnit.qualification")}</p>
@@ -91,11 +95,13 @@ export default async function LearnerPreviewPage({ params }: { params: Promise<{
           </li>
         ))}
       </ol>
-      <p className="mt-6 text-sm">
-        <Link href={`/qualifications/${id}/preview`} className="underline underline-offset-2">
-          {t("learnPreview.checklist")}
-        </Link>
-      </p>
+      {guest ? null : (
+        <p className="mt-6 text-sm">
+          <Link href={`/qualifications/${id}/preview`} className="underline underline-offset-2">
+            {t("learnPreview.checklist")}
+          </Link>
+        </p>
+      )}
     </AppShell>
   );
 }

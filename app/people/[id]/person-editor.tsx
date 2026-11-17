@@ -7,6 +7,7 @@ import {
   setMailboxAction,
   setRolesAction,
   setStatusAction,
+  setAccessEndAction,
   updatePersonAction,
   type PeopleState,
 } from "../actions";
@@ -54,9 +55,12 @@ export function PersonEditor({
   mailboxAddress,
   proposedMailbox,
   combinedRoles = false,
+  accessEndsOn = null,
 }: {
   /** Facilitator and assessor shown as one role (D50). */
   combinedRoles?: boolean;
+  /** The day this person's access ends, on the provider's clock, or none (D51). */
+  accessEndsOn?: string | null;
   userId: string;
   isSelf: boolean;
   status: string;
@@ -95,6 +99,11 @@ export function PersonEditor({
     PeopleState,
     FormData
   >(anonymiseAction, {});
+
+  const [accessState, accessAction, accessPending] = useActionState<
+    PeopleState,
+    FormData
+  >(setAccessEndAction, {});
 
   const [showAnonymise, setShowAnonymise] = useState(false);
 
@@ -253,6 +262,31 @@ export function PersonEditor({
         </div>
 
         <p className="mt-3 text-xs text-[var(--muted)]">{t("editor.suspendNote")}</p>
+
+        {/* When access ends (D51): a Guest's always does; anyone's may. */}
+        {canManageRoles && !isSelf ? (
+          <form key={accessEndsOn ?? "none"} action={accessAction} className="mt-4 flex flex-wrap items-end gap-3 border-t border-[var(--border)] pt-4">
+            <input type="hidden" name="userId" value={userId} />
+            <label className="block text-sm">
+              <span className="block font-medium">{t("editor.accessEnds")}</span>
+              <input
+                name="accessEndsOn"
+                type="date"
+                defaultValue={accessEndsOn ?? ""}
+                className="mt-1 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={accessPending}
+              className="rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              {accessPending ? t("common.saving") : t("common.save")}
+            </button>
+            <p className="w-full text-xs text-[var(--muted)]">{t("editor.accessEndsNote")}</p>
+            <Message state={accessState} />
+          </form>
+        ) : null}
       </section>
 
       {canAnonymise && !isSelf ? (

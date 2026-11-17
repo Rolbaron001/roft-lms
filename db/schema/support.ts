@@ -1817,6 +1817,37 @@ export const driveConnections = pgTable(
 );
 
 /**
+ * A compliance hold a Quality Assurer places on a qualification or a cohort
+ * when a quality irregularity is found (Heidi, 13 November 2026; job sheet
+ * D51). While it stands, no assessment decision is recorded and no
+ * certificate or Statement of Results is issued for it. Lifting it is
+ * recorded, not deleted, so the record shows every hold there has been.
+ */
+export const complianceHolds = pgTable(
+  "compliance_holds",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** Exactly one of these. */
+    qualificationId: uuid("qualification_id").references(() => qualifications.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    placedById: uuid("placed_by_id").references(() => users.id, { onDelete: "set null" }),
+    placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
+    liftedById: uuid("lifted_by_id").references(() => users.id, { onDelete: "set null" }),
+    liftedAt: timestamp("lifted_at", { withTimezone: true }),
+    liftNote: text("lift_note"),
+  },
+  (t) => [
+    index("compliance_holds_org_idx").on(t.organisationId),
+    index("compliance_holds_qualification_idx").on(t.qualificationId),
+    index("compliance_holds_cohort_idx").on(t.cohortId),
+  ],
+);
+
+/**
  * A provider's Google Meet or Microsoft Teams account, connected once in
  * Settings → Live classes (Roland, 29 October 2026), so the LMS can create
  * each class's meeting and read its attendance afterwards.

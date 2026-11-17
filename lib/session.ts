@@ -161,6 +161,7 @@ export async function signIn(
         passwordHash: users.passwordHash,
         status: users.status,
         mustChangePassword: users.mustChangePassword,
+        accessEndsAt: users.accessEndsAt,
       })
       .from(users)
       .where(eq(users.email, normalisedEmail))
@@ -170,7 +171,10 @@ export async function signIn(
       ? await verifyPassword(password, user.passwordHash)
       : await burnPasswordVerificationTime(password);
 
-    if (!user || !passwordMatches || user.status !== "active") {
+    // Access that has ended (a Guest's, D51) is refused like any other.
+    const accessEnded = user?.accessEndsAt ? user.accessEndsAt.getTime() <= Date.now() : false;
+
+    if (!user || !passwordMatches || user.status !== "active" || accessEnded) {
       await tx.insert(loginAttempts).values({
         organisationId,
         email: normalisedEmail,
@@ -296,6 +300,7 @@ export async function resolveSession(
         userStatus: users.status,
         mustChangePassword: users.mustChangePassword,
         locale: users.locale,
+        accessEndsAt: users.accessEndsAt,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
@@ -307,7 +312,9 @@ export async function resolveSession(
       row.revokedAt !== null ||
       row.absoluteExpiresAt <= now ||
       row.idleExpiresAt <= now ||
-      row.userStatus !== "active"
+      row.userStatus !== "active" ||
+      // Access that has ended stops a session already open (D51).
+      (row.accessEndsAt !== null && row.accessEndsAt <= now)
     ) {
       return null;
     }

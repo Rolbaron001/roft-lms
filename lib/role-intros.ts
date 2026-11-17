@@ -26,7 +26,10 @@ export type IntroKey =
   | "viewer"
   | "learner"
   | "manager"
-  | "platform";
+  | "platform"
+  | "qa"
+  | "designer"
+  | "guest";
 
 /** What a person can do, as a link. Phrase key `intro.item.<key>`. */
 export type IntroItem = { key: string; href: string; anyPermission: Permission[] };
@@ -87,6 +90,21 @@ export const INTRO_ITEMS: Record<IntroKey, IntroItem[]> = {
   ],
   manager: [item("teamReports", "/reports", "report:team")],
   platform: [item("clients", "/platform", "platform:manage_tenants")],
+  qa: [
+    item("auditTrail", "/audit", "audit:read"),
+    item("credentials", "/quality/credentials", "audit:read"),
+    item("holds", "/quality/holds", "quality:hold"),
+    item("programmeQuality", "/reports/programme", "report:tenant"),
+    item("portfolios", "/cohorts", "enrolment:read_all"),
+  ],
+  designer: [
+    item("designQualifications", "/qualifications", "qualification:manage"),
+    item("designCourses", "/courses", "course:author"),
+    item("designMaterial", "/material", "course:author"),
+    item("designAssessments", "/capture", "assessment:author"),
+    item("previewLearner", "/qualifications", "course:author"),
+  ],
+  guest: [item("guestPreview", "/#open-to-guests", "guest:preview")],
 };
 
 const BY_ROLE: Record<Role, IntroKey> = {
@@ -101,6 +119,9 @@ const BY_ROLE: Record<Role, IntroKey> = {
   skills_development_facilitator: "sdf",
   external_verifier: "verifier",
   workplace_coach: "coach",
+  quality_assurer: "qa",
+  instructional_designer: "designer",
+  guest: "guest",
 };
 
 /** The introduction for one role, the pair's one when the provider combines them. */

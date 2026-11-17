@@ -21,6 +21,7 @@ import { FolderPicker } from "@/components/folder-picker";
 import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
+import { setOpenToGuestsAction } from "./guest-actions";
 import { verificationOf } from "@/lib/qualification-build";
 import { BuildForm } from "./verify/verify-forms";
 import { ViewTabs } from "@/components/view-tabs";
@@ -456,6 +457,18 @@ export default async function QualificationPage({
           <div className="mt-3">
             <BuildForm qualificationId={id} again={verification.built} />
           </div>
+        ) : null}
+
+        {/* Open to guests, a QCTO or QP verifier (Heidi, D51). */}
+        {canManage ? (
+          <form action={setOpenToGuestsAction} className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+            <input type="hidden" name="qualificationId" value={id} />
+            <input type="hidden" name="open" value={qualification.openToGuests ? "0" : "1"} />
+            <span className="text-[var(--muted)]">{qualification.openToGuests ? t("openToGuests.on") : t("openToGuests.off")}</span>
+            <button type="submit" className="rounded-md border border-[var(--border)] px-3 py-1.5 font-medium">
+              {qualification.openToGuests ? t("openToGuests.close") : t("openToGuests.open")}
+            </button>
+          </form>
         ) : null}
       </div>
 
