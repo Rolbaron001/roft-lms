@@ -545,6 +545,34 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6z. Quality Assurer, Instructional Designer and Guest (17 November 2026)
+
+Three roles a provider gives on the person's page, like any other.
+
+- **Quality Assurer.** Reads every record and changes none. Under Reports: the
+  **Audit trail** (filter by person, action and dates; **Download** gives a
+  spreadsheet of up to 10,000 rows), **Staff credentials** and **Compliance
+  holds**.
+- **Staff credentials** lists everyone named on a programme as facilitator,
+  assessor or moderator, with their registration: valid, expiring within 60
+  days, expired, or missing. The provider must record each person's
+  registration number and expiry date on the programme's People list for this
+  to be right.
+- **A compliance hold** is placed on a qualification or a cohort, with a reason.
+  While it stands, no assessment decision, certificate or Statement of Results
+  can be issued for the learners it covers. The Quality Assurer lifts it and
+  must say what was resolved. Both are in the audit trail.
+- **Instructional Designer.** Builds, verifies and publishes qualifications,
+  courses, papers and competencies, and may use the AI extension. Sees no
+  learners, cohorts, people or marks.
+- **Guest** (for example a QCTO or Quality Partner verifier). Must have an
+  access end date: 30 days from when the role is given, changed on their person
+  page under **Access ends on**; it cannot be cleared. On that date they are
+  signed out and cannot sign in. A guest sees only qualifications the provider
+  has marked **Open to guests** on the qualification's page, as a learner would
+  see them, without answers, discussions or anybody's records. Close a
+  qualification to guests when the visit ends.
+
 ## 6y. Introductions, and Facilitator / Assessor as one role (17 November 2026)
 
 - **The introduction:** Home opens with who the person is on the platform and
