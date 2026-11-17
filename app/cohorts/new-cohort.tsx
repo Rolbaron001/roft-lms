@@ -31,7 +31,10 @@ export function NewCohort({
   words,
   facilitators = [],
   named = {},
+  startWith,
 }: {
+  /** Open already, walking this: "qualification:<id>", from a qualification's step map. */
+  startWith?: string;
   courses: CourseOption[];
   /** Qualifications a cohort can walk end to end (Roland, 5 October 2026). */
   qualifications?: { id: string; title: string; credits?: number | null }[];
@@ -41,7 +44,7 @@ export function NewCohort({
   named?: Record<string, string[]>;
 }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(startWith));
   const [state, act, pending] = useActionState<CohortActionState, FormData>(
     createCohortAction,
     {},
@@ -49,7 +52,7 @@ export function NewCohort({
 
   const publishable = courses.filter((course) => course.status === "published");
   const [walks, setWalks] = useState<string>(
-    qualifications[0] ? `qualification:${qualifications[0].id}` : publishable[0] ? `course:${publishable[0].id}` : "",
+    startWith ?? (qualifications[0] ? `qualification:${qualifications[0].id}` : publishable[0] ? `course:${publishable[0].id}` : ""),
   );
   const [mode, setMode] = useState<"scheduled" | "open">("scheduled");
   const chosenQualification = walks.startsWith("qualification:") ? qualifications.find((one) => `qualification:${one.id}` === walks) : undefined;

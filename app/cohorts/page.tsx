@@ -19,7 +19,10 @@ import { AssignedNote } from "@/components/assigned-note";
  * The difference between a system that holds a programme and one that runs
  * it: a group with a start date, and every deadline measured from it.
  */
-export default async function CohortsPage() {
+export default async function CohortsPage({ searchParams }: { searchParams: Promise<{ for?: string }> }) {
+  // "?for=qualification:<id>" from a qualification's step map: the form opens
+  // already walking it.
+  const wanted = (await searchParams).for;
   const tenant = await requireTenant();
   const session = await requirePermission("enrolment:read_all");
   const { t, locale, day } = await pageLocale();
@@ -91,6 +94,7 @@ export default async function CohortsPage() {
             qualifications={walkable}
             facilitators={facilitators}
             named={named}
+            startWith={wanted && walkable.some((one) => `qualification:${one.id}` === wanted) ? wanted : undefined}
           />
         </div>
       ) : null}

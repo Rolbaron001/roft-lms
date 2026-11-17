@@ -29,6 +29,7 @@ import { PageNav } from "@/components/page-nav";
 import { qualificationUsage } from "@/lib/qualification-removal";
 import { blueprintFrom } from "@/lib/blueprint-export";
 import { capturableDocuments } from "@/lib/capture-from-documents";
+import { deliveryReadiness } from "@/lib/delivery-readiness";
 import { CaptureList } from "./capture/capture-list";
 import { RemoveQualification } from "./remove-qualification";
 import { connectionsFor } from "@/lib/drive";
@@ -137,6 +138,9 @@ export default async function QualificationPage({
     canManage && canAuthorCourses && session.permissions.includes("assessment:author")
       ? await said(await verificationOf(session, id))
       : null;
+
+  // Its people, cohorts and learners, for the steps after it is live.
+  const delivery = canManage ? await deliveryReadiness(session, id) : null;
 
   const capture = capturable.length
     ? {
@@ -348,6 +352,56 @@ export default async function QualificationPage({
             },
           ]
         : []),
+    /*
+     * After it is live: its people, a cohort, and learners in the cohort
+     * (Roland, 17 November 2026: uploading starts "a whole process", through
+     * to material reaching learners on their cohort's schedule). Shown once
+     * the study units exist, since a cohort walks study units.
+     */
+    ...(delivery && studyUnits.length > 0
+      ? (() => {
+          const missing = [
+            delivery.staff.facilitator ? null : t("qualPage.step.facilitator"),
+            delivery.staff.assessor ? null : t("qualPage.step.assessor"),
+            delivery.staff.moderator ? null : t("qualPage.step.moderator"),
+          ].filter(Boolean);
+          const first = delivery.cohorts[0];
+          return [
+            {
+              title: t("qualPage.step.people"),
+              done: missing.length === 0,
+              state:
+                missing.length === 0
+                  ? t("qualPage.step.peopleDone", {
+                      facilitators: delivery.staff.facilitator,
+                      assessors: delivery.staff.assessor,
+                      moderators: delivery.staff.moderator,
+                    })
+                  : t("qualPage.step.peopleTodo", { missing: missing.join(", ") }),
+              href: "#people",
+              action: t("qualPage.step.peopleAction"),
+            },
+            {
+              title: t("qualPage.step.cohort"),
+              done: delivery.cohorts.length > 0,
+              state: first
+                ? t("qualPage.step.cohortDone", { count: delivery.cohorts.length, date: day(first.startDate) })
+                : delivery.rolloutScheduleFiled
+                  ? t("qualPage.step.cohortSchedule")
+                  : t("qualPage.step.cohortTodo"),
+              href: first ? `/cohorts/${first.id}` : `/cohorts?for=qualification:${id}`,
+              action: t("qualPage.step.cohortAction"),
+            },
+            {
+              title: t("qualPage.step.learners"),
+              done: delivery.learners > 0,
+              state: delivery.learners > 0 ? t("qualPage.step.learnersDone", { count: delivery.learners }) : t("qualPage.step.learnersTodo"),
+              href: first ? `/cohorts/${first.id}` : `/cohorts?for=qualification:${id}`,
+              action: t("qualPage.step.learnersAction"),
+            },
+          ];
+        })()
+      : []),
   ];
 
   const folderExtension = mayUseExtension
@@ -497,7 +551,7 @@ export default async function QualificationPage({
         Who delivers, assesses and moderates it (job sheet D27). Above the
         tabs, so it is seen first (Roland, 13 October 2026).
       */}
-      <div className="mb-8">
+      <div id="people" className="mb-8 scroll-mt-20">
         <StaffCard session={session} scope={{ qualificationId: id }} path={`/qualifications/${id}`} t={t} intro={t("staff.introQualification")} />
       </div>
 

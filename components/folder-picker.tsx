@@ -9,7 +9,6 @@ import {
 import { AiSwitch } from "./ai-switch";
 import { AttentionMascot } from "./tenant-illustration";
 import { useT } from "./i18n";
-import { Rich } from "./rich-text";
 
 /**
  * Choosing a folder to read.
@@ -184,23 +183,17 @@ export function FolderPicker({
     <div className="space-y-3">
       <p className="text-sm text-[var(--muted)]">{label}</p>
 
+      {/*
+        One quiet line since 17 November 2026. The platform now reads a folder
+        holding the qualification's own documents itself, so the extension
+        matters only for a folder without them; a boxed warning of three
+        sentences on every folder screen said otherwise.
+      */}
       {needsExtension && !extensionUsable ? (
-        <div className="max-w-2xl rounded-md border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-3 py-2 text-sm">
-          <p className="font-medium">{t("folderPick.needs")}</p>
-          <p className="mt-1 text-[var(--muted)]">
-            {extensionPossible
-              ? t("folderPick.notOn")
-              : extension
-                ? t("folderPick.cannotRun", { reason: extension.reason ?? t("folderPick.notAvailable") })
-                : t("folderPick.none")}
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            <Rich
-              text={t("folderPick.blueprint")}
-              parts={{ file: <code>_control/blueprint.json</code> }}
-            />
-          </p>
-        </div>
+        <p className="max-w-2xl text-xs text-[var(--muted)]">
+          {t("folderPick.needs")}{" "}
+          {extensionPossible ? t("folderPick.notOn") : extension ? t("folderPick.cannotRun", { reason: extension.reason ?? t("folderPick.notAvailable") }) : t("folderPick.none")}
+        </p>
       ) : null}
 
       {/*

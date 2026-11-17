@@ -35,7 +35,9 @@ export type HowOption = {
   speed: MessageKey;
 };
 
-export const HOW_OPTIONS: HowOption[] = (["documents", "folder", "blank"] as const).map((id) => ({
+// The folder first: since 17 November 2026 it builds the whole qualification
+// from the folder alone (Roland: uploading must be "a good place to start").
+export const HOW_OPTIONS: HowOption[] = (["folder", "documents", "blank"] as const).map((id) => ({
   id,
   title: `how.${id}.title`,
   summary: `how.${id}.summary`,
@@ -79,7 +81,14 @@ export async function HowChooser({
               href={`${basePath}?view=add&how=${option.id}`}
               className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 hover:border-[var(--brand-accent)]"
             >
-              <p className="font-medium">{t(option.title)}</p>
+              <p className="flex flex-wrap items-center gap-2 font-medium">
+                {t(option.title)}
+                {option.id === "folder" ? (
+                  <span className="rounded bg-[var(--brand-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-accent)]">
+                    {t("how.recommended")}
+                  </span>
+                ) : null}
+              </p>
               <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
                 {programme && option.id === "documents" ? t("how.documents.summaryProgramme") : t(option.summary)}
               </p>

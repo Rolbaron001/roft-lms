@@ -53,7 +53,11 @@ export async function ProgressMap({ steps }: { steps: Step[] }) {
     >
       <p className="text-sm font-semibold">{t("progress.done", { done, total: steps.length })}</p>
 
-      <ol className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+      {/* Two rows of four once there are more than five steps: a
+          qualification's map runs to eight since its people, cohort and
+          learners were added (17 November 2026), and in one row the last ran
+          off the card. */}
+      <ol className={`mt-3 flex flex-col gap-2 ${steps.length > 5 ? "sm:grid sm:grid-cols-4" : "sm:flex-row sm:items-stretch"}`}>
         {steps.map((step, index) => {
           const current = step === next;
 
@@ -91,7 +95,7 @@ export async function ProgressMap({ steps }: { steps: Step[] }) {
 
               {/* The way the eye travels, on a wide screen only: stacked on a
                   phone the arrows would point sideways at nothing. */}
-              {index < steps.length - 1 ? (
+              {index < steps.length - 1 && !(steps.length > 5 && index % 4 === 3) ? (
                 <span aria-hidden className="hidden text-[var(--muted)] sm:block">
                   →
                 </span>

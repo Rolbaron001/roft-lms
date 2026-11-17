@@ -494,6 +494,31 @@ export const departureReason = pgEnum("departure_reason", [
   "left",
 ]);
 
+/**
+ * A facilitator's announcement to a cohort (Heidi's role specifications,
+ * job sheet D52 (1), 17 November 2026). Kept, so the cohort and its learners
+ * can read every one again; delivered through the notifications.
+ */
+export const cohortAnnouncements = pgTable(
+  "cohort_announcements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    /** Sent by email as well as in the platform. */
+    emailed: boolean("emailed").notNull().default(false),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("cohort_announcements_org_idx").on(t.organisationId), index("cohort_announcements_cohort_idx").on(t.cohortId, t.postedAt)],
+);
+
 export const cohortMembers = pgTable(
   "cohort_members",
   {

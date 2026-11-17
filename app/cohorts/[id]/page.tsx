@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduling";
 import { cohortClassNotes } from "@/lib/classroom-record";
+import { cohortAnnouncementList } from "@/lib/announcements";
+import { AnnounceForm } from "./announce-form";
 import { cohortLeisa } from "@/lib/statutory-notification";
 import { CohortLeisa } from "./leisa";
 import { CohortFacilitator } from "./cohort-facilitator";
@@ -89,6 +91,7 @@ export default async function CohortPage({
     : [];
   const attendance = await cohortAttendance(session, detail.cohort.id);
   const classNotes = await cohortClassNotes(session, detail.cohort.id);
+  const announcements = await cohortAnnouncementList(session, detail.cohort.id);
   const grid = await cohortGrid(session, detail.cohort.id);
   const wem = await cohortWem(session, detail.cohort.id);
 
@@ -474,6 +477,36 @@ export default async function CohortPage({
                         steps: stalled.map((row) => row.title).join(", "),
                       })}
                 </p>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {/* The facilitator's announcements to the cohort (job sheet D52 (1)). */}
+          {canSchedule || announcements.length > 0 ? (
+            <Card
+              section={{ id: "announcements", label: t("cohortNav.section.announcements") }}
+              title={t("announce.title")}
+              description={t("announce.intro")}
+            >
+              {canSchedule ? <AnnounceForm cohortId={detail.cohort.id} /> : null}
+              {announcements.length > 0 ? (
+                <ul className="mt-4 divide-y divide-[var(--border)] text-sm">
+                  {announcements.map((entry) => (
+                    <li key={entry.id} className="py-2">
+                      <p className="flex flex-wrap items-baseline justify-between gap-3">
+                        <Link href={`/announcements/${entry.id}`} className="font-medium hover:underline">
+                          {entry.subject}
+                        </Link>
+                        <span className="text-xs text-[var(--muted)]">
+                          {day(entry.postedAt)}
+                          {entry.author ? ` · ${entry.author}` : ""}
+                          {entry.emailed ? ` · ${t("announce.emailed")}` : ""}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-[var(--muted)]">{entry.body}</p>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </Card>
           ) : null}

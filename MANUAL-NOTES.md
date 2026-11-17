@@ -823,6 +823,50 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6ab. Announcements to a cohort (17 November 2026)
+
+- **Where:** the cohort's page, **Announcements**. A facilitator posts to the
+  cohorts they are named on; an administrator to any.
+- **What happens:** every learner still in the cohort gets it as a
+  notification, and by email as well when "Send it by email as well" is
+  ticked (it is, by default). It stays listed on the cohort's page, and each
+  opens on a page of its own, which the notification links to.
+- **Needs:** the platform's email set up, for the email copy.
+
+## 6aa. Starting from the folder, through to learners (17 November 2026)
+
+- **Where to start:** Qualifications (or Skills programmes) → Add → **From
+  its folder** (recommended). Choose the whole folder.
+- **What the folder should hold:** the qualification's own documents (at
+  least its curriculum document; with it the SAQA qualification document and
+  assessment specification, or for a skills programme its Skills Programme
+  Document), its alignment document, and its material in any sub-folders.
+  These are recognised by name or, failing that, by what they say: "SAQA
+  118709.pdf" and "…AssessmentSpecificationsDocument.pdf" are both found.
+- **What happens:** the review screen shows the qualification as read, its
+  modules, where every file goes and why, and anything to check. On commit the
+  platform creates the qualification (or, for a part qualification, attaches
+  it to its full qualification and takes its modules), its study units, files
+  and places every document, captures the papers and lays out the steps, all
+  in draft. No AI is needed. A folder without the qualification's own
+  documents still needs an AI extension or a `_control/blueprint.json`.
+- **Already on the platform:** a folder whose SAQA ID or curriculum code is
+  already held creates nothing; the review screen says so. Open that
+  qualification and upload the folder there to add material, or remove it
+  first to replace it.
+- **No title in the documents:** it is named after the folder, and the review
+  screen says so. Change it on its page.
+- **After it is built**, the qualification's page shows eight steps: the
+  curriculum, study units, material, built, checked and live, then **People
+  named** (a facilitator, an assessor and a moderator on the programme),
+  **A cohort** ("Start a cohort" opens the form already set to this
+  qualification) and **Learners** in its cohorts. Material reaches learners on
+  their cohort's schedule. A cohort can be started before the qualification
+  is live.
+- **A study unit with no papers of its own** is accepted when its modules'
+  criteria are assessed in another study unit's papers (for example SU1 and
+  SU2 assessed together in a summative after SU2); the check page says where.
+
 ## 6t. Finding your way: the menu, Find a page and recent pages (19 October 2026)
 
 - **On a laptop:** one row across the top: the provider's name (links to

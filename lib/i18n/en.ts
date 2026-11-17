@@ -420,6 +420,8 @@ export const en = {
   "role.quality_assurer": "Quality Assurer",
   "role.instructional_designer": "Instructional Designer",
   "role.guest": "Guest",
+  // An announcement's page, reached from its notification (job sheet D52 (1)).
+  "announce.home": "Back to your home page",
   "status.assigned": "Assigned",
   "status.in_progress": "In progress",
   "status.completed": "Completed",

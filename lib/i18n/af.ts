@@ -202,6 +202,7 @@ export const af: Catalogue = {
   "role.quality_assurer": "Gehalteversekeraar",
   "role.instructional_designer": "Onderrigontwerper",
   "role.guest": "Gas",
+  "announce.home": "Terug na jou tuisblad",
   "status.assigned": "Toegeken",
   "status.in_progress": "Aan die gang",
   "status.completed": "Voltooi",

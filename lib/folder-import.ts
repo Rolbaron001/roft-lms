@@ -611,6 +611,9 @@ function documentsFor(
     // The blueprint and the manifest describe the folder; filing them as
     // programme documents would put build machinery in front of a learner.
     if (file.path.startsWith("_control/")) continue;
+    // A blueprint kept elsewhere in the folder ("121151-blueprint.json") is
+    // the same machinery, and the upload refuses JSON as a document anyway.
+    if (/blueprint\.json$/i.test(file.filename)) continue;
     if (file.bytes.byteLength > MAX_FILE_BYTES) continue;
 
     const planned = classifyDocument(

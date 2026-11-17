@@ -44,10 +44,10 @@ export async function QualificationsScreen({
   const params = await searchParams;
   const view = params.view === "add" ? "add" : "list";
   const basePath = programme ? "/skills-programmes" : "/qualifications";
-  // A skills programme is added from its documents or by hand. A folder is
-  // read by the qualification's own file names, which a skills programme's
-  // documents do not follow.
-  const offered = programme ? (["documents", "blank"] as const) : HOW_OPTIONS.map((option) => option.id);
+  // A skills programme is added from its folder too since 17 November 2026,
+  // when the folder came to be read by the platform's own readers (the 2021
+  // template's "SP Doc" and "SP Curr" included) rather than by file names alone.
+  const offered = HOW_OPTIONS.map((option) => option.id);
   const how = offered.some((id) => id === params.how) ? params.how : null;
   const tenant = await requireCapability("qualifications");
   const session = await requireAnyPermission([

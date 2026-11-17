@@ -167,9 +167,11 @@ describe("choosing how to add a qualification", () => {
 
   // The wording is in the language catalogue since job sheet D9, stage 4.
   it("offers exactly the three ways Roland named", () => {
-    expect(chooser).toContain('(["documents", "folder", "blank"] as const)');
+    // The folder first and recommended since 17 November 2026, when it came to
+    // build the whole qualification on its own (Roland: "a good place to start").
+    expect(chooser).toContain('(["folder", "documents", "blank"] as const)');
     expect(en["how.documents.title"]).toBe("From its documents");
-    expect(en["how.folder.title"]).toBe("From a folder");
+    expect(en["how.folder.title"]).toBe("From its folder");
     expect(en["how.blank.title"]).toBe("From scratch");
   });
 

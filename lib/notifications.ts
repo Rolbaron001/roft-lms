@@ -87,7 +87,9 @@ export type NotificationKind =
   /** To the facilitator: the class's transcript is ready to check and publish (D41 phase B). */
   | "class.record_ready"
   /** To the cohort's learners: a class's notes are published to read (D41 phase C). */
-  | "class.notes_published";
+  | "class.notes_published"
+  /** To the cohort's learners: their facilitator's announcement (D52, 17 November 2026). */
+  | "cohort.announcement";
 
 export type RaiseInput = {
   organisationId: string;
