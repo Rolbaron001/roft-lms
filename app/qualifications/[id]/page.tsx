@@ -470,6 +470,23 @@ export default async function QualificationPage({
             </button>
           </form>
         ) : null}
+
+        {/*
+          With the page's other actions, on every view. It was at the foot of
+          "Add to it", where Roland and Heidi could not find it (17 November
+          2026). Last in the row, and red, because it is the one that cannot
+          be undone.
+        */}
+        {removal ? (
+          <div className="mt-3">
+            <RemoveQualification
+              qualificationId={id}
+              title={qualification.title}
+              holds={removal.holds}
+              removes={removal.removes}
+            />
+          </div>
+        ) : null}
       </div>
 
       <QualificationNav qualificationId={id} current="overview" />
@@ -651,19 +668,6 @@ export default async function QualificationPage({
             </div>
           ) : null}
 
-          {/*
-            At the foot of the tab that changes things, and nowhere near the
-            curriculum somebody is reading. A destructive control belongs with
-            the other controls, last.
-          */}
-          {removal ? (
-            <RemoveQualification
-              qualificationId={id}
-              title={qualification.title}
-              holds={removal.holds}
-              removes={removal.removes}
-            />
-          ) : null}
         </section>
       ) : (
         <>

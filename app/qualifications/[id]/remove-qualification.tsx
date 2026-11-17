@@ -39,9 +39,28 @@ export function RemoveQualification({
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
 
+  /*
+   * Closed, it is one button among the page's other actions at the top.
+   * Roland, 17 November 2026: it sat at the foot of the "Add to it" view, and
+   * "If I want to remove something, why would I look for the function under
+   * Add to it". Opened, it shows what it always showed.
+   */
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-md border px-3 py-1.5 text-xs font-medium"
+        style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+      >
+        {t("removeQual.start")}
+      </button>
+    );
+  }
+
   if (holds.length > 0) {
     return (
-      <section className="mt-8 rounded-lg border border-[var(--border)] p-4">
+      <section className="mt-2 max-w-2xl rounded-lg border border-[var(--border)] p-4">
         <p className="text-sm font-medium">{t("removeQual.cannot")}</p>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("removeQual.cannotWhy")}</p>
         <ul className="mt-2 space-y-0.5 text-sm">
@@ -52,6 +71,9 @@ export function RemoveQualification({
             </li>
           ))}
         </ul>
+        <button type="button" onClick={() => setOpen(false)} className="mt-3 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm">
+          {t("common.cancel")}
+        </button>
       </section>
     );
   }
@@ -64,7 +86,7 @@ export function RemoveQualification({
 
   return (
     <section
-      className="mt-8 rounded-lg border p-4"
+      className="mt-2 max-w-2xl rounded-lg border p-4"
       style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
     >
       <p className="text-sm font-medium">{t("removeQual.title")}</p>
@@ -80,8 +102,7 @@ export function RemoveQualification({
         </p>
       ) : null}
 
-      {open ? (
-        <form action={action} className="mt-3 space-y-2">
+      <form action={action} className="mt-3 space-y-2">
           <input type="hidden" name="qualificationId" value={qualificationId} />
           <input type="hidden" name="title" value={title} />
 
@@ -119,16 +140,6 @@ export function RemoveQualification({
             </button>
           </div>
         </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mt-3 rounded-md border px-3 py-1.5 text-sm"
-          style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
-        >
-          {t("removeQual.start")}
-        </button>
-      )}
     </section>
   );
 }
