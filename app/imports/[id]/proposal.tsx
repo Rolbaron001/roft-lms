@@ -104,7 +104,21 @@ export function Proposal({
     ImportActionState,
     FormData
   >(discardImportAction, {});
-  const [open, setOpen] = useState<string | null>("warnings");
+  /*
+   * Several open at once, and the documents open from the start. Roland, 17
+   * November 2026: where each file was going sat folded under "Documents 44",
+   * so a folder looked filed with "no indication as to whether they are
+   * properly linked".
+   */
+  const [opened, setOpened] = useState<Set<string>>(() => new Set(["warnings", "documents"]));
+  const open = { has: (key: string) => opened.has(key) };
+  const toggle = (key: string) =>
+    setOpened((now) => {
+      const next = new Set(now);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const live = status === "proposed";
   const error = state.error ?? discardState.error;
@@ -128,12 +142,12 @@ export function Proposal({
   const section = (key: string, label: string, count: number) => (
     <button
       type="button"
-      onClick={() => setOpen(open === key ? null : key)}
+      onClick={() => toggle(key)}
       className="flex w-full items-baseline justify-between border-b border-[var(--border)] py-2 text-left text-sm"
     >
       <span className="font-medium">{label}</span>
       <span className="text-[var(--muted)]">
-        {count} {open === key ? "▴" : "▾"}
+        {count} {open.has(key) ? "▴" : "▾"}
       </span>
     </button>
   );
@@ -243,7 +257,7 @@ export function Proposal({
       {plan.warnings.length > 0 ? (
         <div>
           {section("warnings", t("proposal.readFirst"), plan.warnings.length)}
-          {open === "warnings" ? (
+          {open.has("warnings") ? (
             <ul className="mt-2 space-y-2 text-sm">
               {plan.warnings.map((warning, index) => (
                 <li key={index}>{warning}</li>
@@ -258,7 +272,7 @@ export function Proposal({
           zero that reads as a failure over a successful import. */}
       <div hidden={plan.source === "filing"}>
         {section("modules", t("proposal.curriculum"), plan.modules.length)}
-        {open === "modules" ? (
+        {open.has("modules") ? (
           <ul className="mt-2 space-y-2 text-sm">
             {plan.modules.map((module) => {
               const topics = module.topics ?? [];
@@ -334,7 +348,30 @@ export function Proposal({
           </p>
         ) : null}
 
-        {open === "documents" ? (
+        {/* Where they go, counted per study unit, without opening anything. */}
+        {plan.documents.length > 0 ? (
+          <p className="mt-1 text-sm">
+            <span className="font-medium">{t("proposal.whereTheyGo")}</span>{" "}
+            {(() => {
+              const perUnit = new Map<string, number>();
+              let qualification = 0;
+              let library = 0;
+              for (const one of plan.documents) {
+                if (one.target === "library") library += 1;
+                else if (one.studyUnitCode) perUnit.set(one.studyUnitCode, (perUnit.get(one.studyUnitCode) ?? 0) + 1);
+                else qualification += 1;
+              }
+              const parts = [...perUnit.entries()]
+                .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+                .map(([code, count]) => `${code} ${count}`);
+              if (qualification > 0) parts.push(t("proposal.toQualification", { count: qualification }));
+              if (library > 0) parts.push(t("proposal.toLibrary", { count: library }));
+              return parts.join(" · ");
+            })()}
+          </p>
+        ) : null}
+
+        {open.has("documents") ? (
           <ul className="mt-2 space-y-2 text-sm">
             {plan.documents.map((document) => (
               <li key={document.path}>

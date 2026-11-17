@@ -208,7 +208,10 @@ export function FromDocument({
                   }
                   setChosen({ ...chosen, [source.name]: file?.name ?? "" });
                 }}
-                className="block w-full text-xs file:mr-2 file:rounded-md file:border file:border-[var(--border)] file:bg-[var(--surface)] file:px-2 file:py-1 file:text-xs"
+                // The button's look is the shared one in globals.css. Its own
+                // padding here put the upload arrow over the "C" of "Choose
+                // file" (Roland, 17 November 2026).
+                className="block w-full text-xs"
               />
               <span className="block text-xs text-[var(--muted)]">{t(`fromDoc.source.${source.name}.note`)}</span>
             </label>

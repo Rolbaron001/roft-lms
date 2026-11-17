@@ -1,9 +1,11 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { aiImportJobs } from "@/db/schema";
+import { aiImportJobs, curriculumModules, programmeDocuments, studyUnitModules, studyUnits } from "@/db/schema";
+import { looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
+import { placeMaterial, type PlacementUnit } from "./material-placement";
 import { recordAudit } from "./audit";
 import {
   classifyDocument,
@@ -19,7 +21,7 @@ import {
   type UploadedFile,
 } from "./folder-upload";
 import { extensionState, readJson, runExtension } from "./extensions";
-import { readDocxText, readPdfText } from "./office";
+import { readOfficeText } from "./office";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { buildStorageKey, hashBytes, putObject } from "./storage";
 import { libraryFilingPreview } from "./records";
@@ -196,6 +198,7 @@ export async function ingestUpload(
     }
 
     const plan = await buildPlan(session, shaped.files, shaped.warnings, mode);
+    await placeByContent(session, target.qualificationId ?? null, shaped.files, plan);
     return await finish(session, job.id, { status: "proposed", plan, staged });
   } catch (error) {
     return await finish(session, job.id, {
@@ -259,6 +262,111 @@ async function buildPlan(
     documents: gathered.documents,
     warnings: [...plan.warnings, ...warnings],
   };
+}
+
+/**
+ * The study units, with the modules and topics each takes: from an alignment
+ * document in the folder if there is one, otherwise from the qualification
+ * and the alignment document already filed against it.
+ */
+async function placementUnits(
+  session: AuthenticatedSession,
+  qualificationId: string | null,
+  files: UploadedFile[],
+): Promise<PlacementUnit[]> {
+  for (const file of files) {
+    if (file.kind !== "convert" || !/align/i.test(file.filename)) continue;
+    try {
+      const text = await readOfficeText(file.filename, file.bytes);
+      if (!looksLikeAlignmentDocument(text)) continue;
+      return readAlignmentDocument(text).studyUnits.map((unit) => ({ code: unit.code, moduleCodes: unit.moduleCodes, topics: unit.topics }));
+    } catch {
+      /* not one after all; try the next */
+    }
+  }
+  if (!qualificationId) return [];
+
+  return withTenant(session.organisationId, async (tx) => {
+    const rows = await tx
+      .select({ code: studyUnits.code, module: curriculumModules.code })
+      .from(studyUnits)
+      .leftJoin(studyUnitModules, eq(studyUnitModules.studyUnitId, studyUnits.id))
+      .leftJoin(curriculumModules, eq(curriculumModules.id, studyUnitModules.curriculumModuleId))
+      .where(eq(studyUnits.qualificationId, qualificationId))
+      .orderBy(asc(studyUnits.sortOrder), asc(studyUnits.code));
+    const units: PlacementUnit[] = [];
+    for (const row of rows) {
+      let unit = units.find((one) => one.code === row.code);
+      if (!unit) units.push((unit = { code: row.code, moduleCodes: [], topics: {} }));
+      const code = row.module?.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      if (code && !unit.moduleCodes.includes(code)) unit.moduleCodes.push(code);
+    }
+    // The topics are not stored; the alignment document filed against the
+    // qualification still says them.
+    const [filed] = await tx
+      .select({ text: programmeDocuments.extractedText })
+      .from(programmeDocuments)
+      .where(and(eq(programmeDocuments.qualificationId, qualificationId), eq(programmeDocuments.kind, "alignment_matrix")))
+      .orderBy(desc(programmeDocuments.createdAt))
+      .limit(1);
+    if (filed?.text && looksLikeAlignmentDocument(filed.text)) {
+      try {
+        for (const read of readAlignmentDocument(filed.text).studyUnits) {
+          const unit = units.find((one) => one.code === read.code);
+          if (unit) unit.topics = read.topics;
+        }
+      } catch {
+        /* the modules alone still place most material */
+      }
+    }
+    return units;
+  });
+}
+
+/**
+ * Places material its name does not place, by the modules and topics it
+ * covers. See lib/material-placement.ts.
+ */
+async function placeByContent(
+  session: AuthenticatedSession,
+  qualificationId: string | null,
+  files: UploadedFile[],
+  plan: IngestionPlan,
+): Promise<void> {
+  const waiting = plan.documents.filter((document) => !document.studyUnitCode && document.target !== "library");
+  if (waiting.length === 0) return;
+  const units = await placementUnits(session, qualificationId, files);
+  if (units.length === 0) return;
+
+  const byPath = new Map(files.map((file) => [file.path, file]));
+  let placed = 0;
+  let toCheck = 0;
+  for (const document of waiting) {
+    const file = byPath.get(document.path);
+    let text: string | null = null;
+    if (file?.kind === "convert") {
+      try {
+        text = await readOfficeText(file.filename, file.bytes);
+      } catch {
+        text = null;
+      }
+    }
+    const placement = placeMaterial(units, { filename: document.filename, kind: document.kind, text });
+    if (!placement) continue;
+    document.studyUnitCode = placement.studyUnitCode;
+    document.target = "study_unit";
+    document.because = `${document.because} ${placement.because}`;
+    placed += 1;
+    if (placement.covers.length > 1) toCheck += 1;
+    if (!plan.studyUnits.some((unit) => unit.code === placement.studyUnitCode)) {
+      plan.studyUnits.push({ code: placement.studyUnitCode, title: placement.studyUnitCode });
+    }
+  }
+  if (placed > 0) {
+    plan.warnings.push(
+      `${placed} ${placed === 1 ? "document was" : "documents were"} placed in a study unit by the modules and topics ${placed === 1 ? "it covers" : "they cover"}, read against the alignment document.${toCheck > 0 ? ` ${toCheck} of them ${toCheck === 1 ? "covers" : "cover"} more than one study unit and ${toCheck === 1 ? "was" : "were"} placed in the last; check ${toCheck === 1 ? "it" : "them"} below.` : ""}`,
+    );
+  }
 }
 
 /**
@@ -443,9 +551,7 @@ async function planFromDocuments(
             Buffer.from(file.bytes),
           );
         } else {
-          const text = file.filename.toLowerCase().endsWith(".pdf")
-            ? (await readPdfText(file.bytes)).text
-            : readDocxText(file.bytes);
+          const text = await readOfficeText(file.filename, file.bytes);
           if (text.trim().length === 0) continue;
           await writeFile(join(workdir, `${flat}.txt`), text, "utf8");
         }

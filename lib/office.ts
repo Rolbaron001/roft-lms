@@ -164,6 +164,42 @@ export function readDocxText(bytes: Uint8Array): string {
     .trim();
 }
 
+/**
+ * The text of a PowerPoint deck, slide by slide, one line per paragraph.
+ *
+ * Slides are taught from, so they are searched and placed like any other
+ * material; until 17 November 2026 a deck was stored and shown as "not read".
+ */
+export function readPptxText(bytes: Uint8Array): string {
+  const entries = open(bytes);
+  const slides = Object.keys(entries)
+    .map((name) => ({ name, number: Number(/^ppt\/slides\/slide(\d+)\.xml$/.exec(name)?.[1] ?? NaN) }))
+    .filter((slide) => Number.isFinite(slide.number))
+    .sort((a, b) => a.number - b.number);
+
+  return slides
+    .map((slide) =>
+      xmlOf(entries, slide.name)
+        .replace(/<a:br\b[^>]*\/>/g, "\n")
+        .replace(/<\/a:p>/g, "\n")
+        .replace(/<[^>]*>/g, "")
+        .split("\n")
+        .map((line) => unescapeXml(line).trim())
+        .filter(Boolean)
+        .join("\n"),
+    )
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** The text of a PDF, Word document or PowerPoint deck, by its name. */
+export async function readOfficeText(filename: string, bytes: Uint8Array): Promise<string> {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf")) return (await readPdfText(bytes)).text;
+  if (lower.endsWith(".pptx")) return readPptxText(bytes);
+  return readDocxText(bytes);
+}
+
 // ----------------------------------------------------------------------- xlsx
 
 export type Sheet = {

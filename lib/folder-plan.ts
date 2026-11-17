@@ -104,6 +104,8 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   // "SP Cur Doc Assessment Practitioner 5 20.pdf" and "SP Doc ..." (D39).
   // The curriculum first, since "SP Cur Doc" also contains "Doc".
   { match: /\bSP Cur(riculum)? Doc\b/i, kind: "curriculum_document" },
+  // "SP Curr - Recognition of Prior Learning Advisor.pdf" (SP-260508).
+  { match: /\bSP Curr?(iculum)?\b(?! Doc)/i, kind: "curriculum_document" },
   { match: /\bSP Doc\b|skills program+e document/i, kind: "qualification_document" },
   { match: /qualification document/i, kind: "qualification_document" },
   { match: /curriculum document/i, kind: "curriculum_document" },
@@ -247,8 +249,8 @@ export function classifyDocument(
         title: cleanTitle(filename),
         version: versionFromName(filename),
         because: unit
-          ? `Recognised as a ${rule.kind.replace(/_/g, " ")}, and the filename names ${unit}.`
-          : `Recognised as a ${rule.kind.replace(/_/g, " ")}.`,
+          ? `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}, and the filename names ${unit}.`
+          : `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}.`,
       };
     }
   }

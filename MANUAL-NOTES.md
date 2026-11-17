@@ -802,6 +802,26 @@ Three roles a provider gives on the person's page, like any other.
   carry "Assessor Guide", "Memo" or "AG" in its name.
 - **Build** needs study units. Before the alignment document has been read it
   says so and builds nothing.
+- **Where material goes when its name gives no study unit (17 November
+  2026).** Upload the alignment document before the folder, or include it in
+  the folder. Then:
+  - a file named by module and topic ("RPL KM1 KT1.pptx") goes to the study
+    unit the alignment document gives that topic;
+  - a workbook, summative, assessor guide or theory guide is read for the
+    modules and topics it names, and goes to the last study unit they cover,
+    so it comes after what it covers. Where that is more than one study unit
+    the review screen says "Check this";
+  - anything named FISA, and handbooks and matrices, stay with the
+    qualification.
+  The review screen states, for every file, where it goes and why, and counts
+  them per study unit ("Where they go"). Check the "Check this" lines before
+  you commit.
+- **Answer guides** may set their answers out as a table, or one per line:
+  "Q1. … Correct Answer: FALSE" and "Q2. … Correct Option: B)". A paper and
+  its guide are paired by name, ignoring the words that only say which half
+  is which ("Summative_Assessment_1_X" with "Summative_Assessor_Guide_1_X").
+- **Removing a qualification:** the red "Remove this qualification…" button
+  at the top of its page. Only possible while nothing is recorded against it.
 
 ## 6t. Finding your way: the menu, Find a page and recent pages (19 October 2026)
 

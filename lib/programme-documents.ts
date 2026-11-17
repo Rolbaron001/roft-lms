@@ -13,6 +13,7 @@ import { buildStorageKey, getObject, putObject } from "./storage";
 import {
   readDocxText,
   readPdfText,
+  readPptxText,
   readXlsxSheets,
   OfficeReadError,
 } from "./office";
@@ -188,6 +189,10 @@ async function extractText(
   try {
     if (mimeType.includes("wordprocessingml")) {
       return { text: readDocxText(bytes).slice(0, 500_000) };
+    }
+
+    if (mimeType.includes("presentationml")) {
+      return { text: readPptxText(bytes).slice(0, 500_000) };
     }
 
     if (mimeType.includes("spreadsheetml")) {

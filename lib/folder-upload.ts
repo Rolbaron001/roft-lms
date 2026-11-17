@@ -26,9 +26,9 @@ import { extname } from "node:path";
 /** Read straight through as text. */
 export const READABLE = new Set([".txt", ".md", ".csv", ".json", ".xml", ".html"]);
 /** Converted first, with the extractors the platform already has. */
-export const CONVERTIBLE = new Set([".pdf", ".docx"]);
+export const CONVERTIBLE = new Set([".pdf", ".docx", ".pptx"]);
 /** Stored and indexed but not read for structure. */
-export const STORABLE = new Set([".xlsx", ".pptx", ".png", ".jpg", ".jpeg"]);
+export const STORABLE = new Set([".xlsx", ".png", ".jpg", ".jpeg"]);
 
 /**
  * How many files, and how much, before it refuses.

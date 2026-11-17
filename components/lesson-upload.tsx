@@ -121,7 +121,7 @@ export function LessonUpload({
           const file = event.target.files?.[0];
           if (file) upload(file);
         }}
-        className="block w-full text-xs file:mr-3 file:rounded-md file:border file:border-[var(--border)] file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium"
+        className="block w-full text-xs"
       />
 
       {progress !== null ? (

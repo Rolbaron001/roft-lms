@@ -56,6 +56,14 @@ export type AlignedStudyUnit = {
    * downstream has to know.
    */
   moduleCodes: string[];
+  /**
+   * Where the document names which topics of a module this unit takes -
+   * "KM-01 (KT01, KT04)", "PM-02 (PS02)" - those topics, by module: KM01 →
+   * ["KT01", "KT04"]. A module named without topics is absent, meaning all of
+   * it. Used to place material named by topic ("RPL KM1 KT1.pptx") in the
+   * study unit that teaches that topic.
+   */
+  topics: Record<string, string[]>;
 };
 
 export type AlignmentReading = {
@@ -141,7 +149,7 @@ export function readAlignmentDocument(text: string): AlignmentReading {
         current = seen;
         awaitingTitle = null;
       } else {
-        current = { code, title: unit[2].trim(), outcome: null, moduleCodes: [] };
+        current = { code, title: unit[2].trim(), outcome: null, moduleCodes: [], topics: {} };
         studyUnits.push(current);
         awaitingTitle = current.title ? null : current;
       }
@@ -186,6 +194,10 @@ export function readAlignmentDocument(text: string): AlignmentReading {
       const code = moduleLine[1].replace(/[-\s]/g, "").toUpperCase();
       if (!current.moduleCodes.includes(code)) current.moduleCodes.push(code);
       if (/^\(\s*(?:(?:KT|PS|WE)\s?\d|Part\b|Core\b)/i.test(moduleLine[2])) splitByTopic.add(code);
+      const named = Array.from(moduleLine[2].matchAll(/\b(KT|PS|WE)\s?0?(\d{1,2})\b/gi)).map(
+        (match) => `${match[1].toUpperCase()}${match[2].padStart(2, "0")}`,
+      );
+      if (named.length > 0) current.topics[code] = [...new Set([...(current.topics[code] ?? []), ...named])];
       collectingCriteria = false;
       continue;
     }

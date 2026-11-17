@@ -90,10 +90,21 @@ function artefactKey(
   }
 
   const marker = convention?.memorandumMarker ?? "AG";
-  return bareFilename(filename)
-    .replace(new RegExp(`\\b${marker}\\b`, "gi"), "")
-    .replace(/[^a-z0-9]+/gi, "")
-    .toUpperCase();
+  return (
+    bareFilename(filename)
+      .replace(/_/g, " ")
+      .replace(new RegExp(`\\b${marker}\\b`, "gi"), "")
+      /*
+       * The words that only say which half of the pair a file is. SP-260508
+       * names a paper "Summative_Assessment_1_Governance_Research_Policy" and
+       * its guide "Summative_Assessor_Guide_1_Governance_Research_Policy"
+       * (17 November 2026); with these left in, no paper found its guide and
+       * each would have been captured without its answers.
+       */
+      .replace(/\b(assessment|assessor'?s?|guide|memo(randum)?|marking|answers?|rubric|instrument)\b/gi, "")
+      .replace(/[^a-z0-9]+/gi, "")
+      .toUpperCase()
+  );
 }
 
 /**

@@ -1085,6 +1085,41 @@ export function parseMemorandum(text: string): ParsedMemo {
     } as MemoAnswer & { statement: string });
   }
 
+  /*
+   * Answers written one per line rather than in a table, as the SP-260508
+   * assessor guides set them out (17 November 2026):
+   *   "• Q1. SAQA Parity of Esteem: Correct Answer: FALSE"
+   *   "• Q2. ...: Correct Option: B) Knowles' Andragogy ..."
+   * with the marking criteria on the line after. A True/False answer joins
+   * the others in order; an option answer is filed under its number.
+   */
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].replace(/^[•▪●\-]\s*/, "");
+    const verdict = /^Q(\d+)[.)]?\s.*?\bCorrect\s+Answer\s*[::]\s*(TRUE|FALSE)\b/i.exec(line);
+    const option = /^Q(\d+)[.)]?\s.*?\bCorrect\s+Option\s*[::]\s*([A-H])[).:]/i.exec(line);
+    if (!verdict && !option) continue;
+    const following = lines[index + 1] ?? "";
+    const explanation = /^Marking\s+Criteria\s*[::]/i.test(following) ? following.replace(/^Marking\s+Criteria\s*[::]\s*/i, "") : null;
+    answers.push(
+      verdict
+        ? ({
+            number: "",
+            correctLetter: null,
+            trueFalse: verdict[2].toUpperCase() as "TRUE" | "FALSE",
+            modelAnswer: explanation,
+            criterionCodes: codesIn(`${line} ${following}`),
+            ...({ statement: line } as object),
+          } as MemoAnswer & { statement: string })
+        : {
+            number: option![1],
+            correctLetter: option![2].toUpperCase(),
+            trueFalse: null,
+            modelAnswer: line.replace(/^.*?\bCorrect\s+Option\s*[::]\s*/i, ""),
+            criterionCodes: codesIn(line),
+          },
+    );
+  }
+
   if (answers.length === 0) {
     problems.push(
       "No answers were found in the guide. Check that it has a table of question numbers and correct options.",

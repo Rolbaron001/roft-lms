@@ -3544,7 +3544,7 @@ export const staff = {
   "imports.readAt": "Read {time} · {count} files",
   "imports.contents": "What was in the folder",
   "imports.contentsNote":
-    "Everything found, and what was done with it. PDFs and Word documents are converted with the same extractor as Capture.",
+    "Everything found, and what was done with it. PDFs, Word documents and PowerPoint slides are read for their text.",
   "imports.kb": "{size} KB",
   "imports.file.read": "read",
   "imports.file.converted": "converted and read",
@@ -3567,10 +3567,10 @@ export const staff = {
   "proposal.fromDocuments":
     "Read from the documents by the AI model. Check it against the curriculum document before you commit.",
   "proposal.byName":
-    "Filed by name, without a blueprint or AI model: each document goes where its file name says it belongs. The curriculum is not changed.",
+    "Filed without a blueprint or AI model: each document goes to the study unit its file name gives, or else to the one the alignment document gives for the modules and topics it covers. The curriculum is not changed.",
   "proposal.toFile": "{count} documents",
   "proposal.toFileRest": "to file.",
-  "proposal.unitsNamed": "{count} study units are named by their filenames.",
+  "proposal.unitsNamed": "They go to {count} study units.",
   "proposal.nothingChanged": "No module, topic or criterion is added or changed by this.",
   "proposal.qualification": "Qualification",
   "proposal.notStated": "Not stated",
@@ -3593,6 +3593,9 @@ export const staff = {
     "{count} could not be recognised from their names and are filed as “other”, which is visible to everyone.",
   "proposal.unknownNote":
     "Check these below before you commit. An answer guide with an unrecognised name would appear here.",
+  "proposal.whereTheyGo": "Where they go:",
+  "proposal.toQualification": "the qualification itself {count}",
+  "proposal.toLibrary": "the document library {count}",
   "proposal.as": "as {kind}",
   "proposal.withheldTag": "withheld",
   "proposal.unknownTag": "not recognised · visible to all",
