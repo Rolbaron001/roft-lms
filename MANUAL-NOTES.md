@@ -823,6 +823,16 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6ad. Choosing decisions to moderate (17 November 2026)
+
+- **Where:** Moderate → **All decisions, to choose a sample**.
+- **What it shows:** every assessor's decision on the programmes the moderator
+  is named on, latest first, narrowed by cohort, qualification or assessor,
+  with whether each is in the sample and how it was moderated.
+- **Choosing:** tick decisions and add them to the sample; they join the
+  moderation queue beside those the platform chose at random, marked "Chosen
+  by the moderator".
+
 ## 6ac. Observations of a learner (17 November 2026)
 
 - **Where:** the learner's page under People, **Observations**.

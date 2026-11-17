@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { listModerationQueue } from "@/lib/assessment";
 import { maybe } from "@/lib/i18n/maybe";
@@ -17,6 +18,12 @@ export default async function ModerationQueuePage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">{t("moderating.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{t("moderating.intro")}</p>
+        {/* Every decision, to choose more for the sample (job sheet D52 (3)). */}
+        <p className="mt-3 flex flex-wrap gap-2">
+          <Link href="/moderate/decisions" className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium">
+            {t("sample.open")}
+          </Link>
+        </p>
       </div>
 
       {queue.length === 0 ? (
