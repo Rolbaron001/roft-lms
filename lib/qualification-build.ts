@@ -583,6 +583,11 @@ export async function qualificationOfCourse(session: AuthenticatedSession, cours
 /** One sentence saying what a build did, for the notice after it. */
 export function buildSummary(report: BuildReport): string {
   const units = report.units.length;
+  // Heidi, 17 November 2026, building SP-260508 before its alignment document
+  // had been read: four times "Built 0 study units ... make it live".
+  if (units === 0) {
+    return "Nothing was built: this qualification has no study units yet. Upload the alignment document first, then build.";
+  }
   const captured = report.units.reduce((sum, unit) => sum + unit.captured, 0);
   const steps = report.units.reduce((sum, unit) => sum + unit.stepsAdded, 0);
   const reread = report.units.reduce((sum, unit) => sum + unit.reread, 0);

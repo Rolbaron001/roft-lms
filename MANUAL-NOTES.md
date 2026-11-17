@@ -778,6 +778,30 @@ Three roles a provider gives on the person's page, like any other.
   qualification is, and takes its modules from it.
 - **Not yet:** reading a skills programme from a folder; add it from its two
   documents instead.
+- **Both QCTO layouts are read (17 November 2026):** the earlier one
+  (SP220320, details numbered 1 to 13) and the 2021 OQSF template
+  (SP-260508, sections 1.3 Title Descriptor to 7.x Exit Level Outcomes, with
+  module and topic codes written in full, such as 900537-000-00-KM-01-KT01).
+  Where a curriculum gives one module two codes, the platform files it under
+  the code its module list gives and says so on the import screen: check it
+  against the document.
+- **The alignment document** need not name an Exit Level Outcome per study
+  unit. A Word or Excel document that calls itself an alignment document and
+  lists modules under at least two study units ("Study Unit 1" in one cell,
+  its name in the next, then "KM-01 (KT01, KT04)") is read as one, whatever
+  kind it was uploaded as. A module may be named in several study units
+  against different topics; that is not reported as a fault. A schedule
+  further down that names study units again does not create more.
+- **Folder size:** a folder of up to 250 MB can be uploaded in one go.
+- **File names in the material folder** may use spaces or underscores.
+  Recognised, among others: Workbook, Summative Assessment, Assessor Guide or
+  Memo (withheld from learners as a memorandum), FISA (filed as summative and
+  withheld from learners), Learner Handbook, and slides (.pptx, filed as
+  teaching material). Anything not recognised is listed as "other" for a
+  person to re-file, and "other" can be seen by learners: an answer guide must
+  carry "Assessor Guide", "Memo" or "AG" in its name.
+- **Build** needs study units. Before the alignment document has been read it
+  says so and builds nothing.
 
 ## 6t. Finding your way: the menu, Find a page and recent pages (19 October 2026)
 

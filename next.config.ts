@@ -36,6 +36,15 @@ const nextConfig: NextConfig = {
      * same point rather than one of them failing obscurely first.
      */
     serverActions: { bodySizeLimit: "250mb" },
+    /**
+     * The same ceiling for the request on its way through proxy.ts, which
+     * every page passes. Next 16 buffers a request there and stops at 10 MB by
+     * default, so a larger folder arrived cut short ("Unexpected end of form")
+     * and the page showed only "This page couldn't load". Found 17 November
+     * 2026 when Heidi uploaded the SP-260508 folder (12.9 MB): the 250 MB
+     * above was never reached.
+     */
+    proxyClientMaxBodySize: "250mb",
   },
 
   /**

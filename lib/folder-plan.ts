@@ -138,6 +138,20 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
    */
   { match: /\bWB\s?\d[^/]*\b(AG|memo)\b/i, kind: "workbook_memorandum" },
   { match: /\bSA\s?\d[^/]*\b(AG|memo)\b/i, kind: "summative_memorandum" },
+  /*
+   * The SP-260508 folder (17 November 2026): "Summative_Assessor_Guide_1_
+   * Governance_Research_Policy.docx" and "FISA_3_Assessor_Guide_Memo_Rubric
+   * .docx". Both hold the answers, so both are memoranda and withheld from
+   * learners; the first was read as a summative assessment and the second as
+   * "other", which learners can open. An assessor guide of any kind is
+   * treated as a memorandum: withholding one wrongly costs a click to
+   * release, publishing one wrongly cannot be undone.
+   */
+  { match: /\b(summative|FISA)\b[^/]*\b(assessor guide|memo|memorandum|marking guide)\b/i, kind: "summative_memorandum" },
+  { match: /\bassessor'?s? guide\b|\bmarking guide\b/i, kind: "summative_memorandum" },
+  // A skills programme's Final Integrated Supervised Assessment: its
+  // instrument, task brief and sample portfolio are summative material.
+  { match: /\bFISA\b/i, kind: "summative_assessment" },
   { match: /workbook memo|memorandum.*workbook/i, kind: "workbook_memorandum" },
   { match: /workbook/i, kind: "workbook" },
   { match: /\bWB\s?\d/i, kind: "workbook" },
@@ -152,6 +166,9 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   { match: /rollout|roll.?out schedule/i, kind: "rollout_schedule" },
   { match: /induction/i, kind: "induction" },
   { match: /roadmap/i, kind: "learning_roadmap" },
+  // Slides for a topic ("RPL KM1 KT1.pptx") are taught from, as a theory
+  // guide is.
+  { match: /\.pptx?$/i, kind: "theory_guide" },
 ];
 
 /**
@@ -194,7 +211,10 @@ export function classifyDocument(
   filename: string,
   bytes: number,
 ): PlannedDocument {
-  const haystack = `${relativePath} ${filename}`;
+  // Underscores read as spaces: "Summative_Assessor_Guide_1" is "Summative
+  // Assessor Guide 1" to whoever named it, and an underscore is a word
+  // character, so no rule with \b or a space in it could match it.
+  const haystack = `${relativePath} ${filename}`.replace(/_/g, " ");
 
   for (const rule of LIBRARY_RULES) {
     if (rule.match.test(haystack)) {

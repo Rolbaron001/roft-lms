@@ -69,6 +69,111 @@ function detail(lines: string[], index: number): string | null {
     .trim();
 }
 
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
+/** "14 May 2026", as the 2021 template's cover writes its dates. */
+function dayInWords(value: string | undefined): Date | null {
+  const match = value ? /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/.exec(value.trim()) : null;
+  if (!match) return null;
+  const month = MONTHS.indexOf(match[2].toLowerCase());
+  if (month === -1) return null;
+  return new Date(Date.UTC(Number(match[3]), month, Number(match[1])));
+}
+
+/** The lines under a heading, up to the first line matching `stop`. */
+function under(lines: string[], heading: RegExp, stop: RegExp): string[] {
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return [];
+  const end = lines.findIndex((line, at) => at > start && stop.test(line));
+  return lines.slice(start + 1, end === -1 ? undefined : end);
+}
+
+const joined = (lines: string[]) => lines.join(" ").replace(/\s+/g, " ").trim() || null;
+
+/**
+ * The QCTO's 2021 Skills Programme Document template ("IN LINE WITH OQSF
+ * POLICY (2021)"), found 17 November 2026 in SP-260508 Recognition of Prior
+ * Learning Advisor. Its details are numbered sections (1.3 Title Descriptor,
+ * 1.4 NQF Level, 1.5 Credits, 3 Purpose, 4 Entry Requirements, 6.1
+ * Components, 7.x Exit Level Outcomes) where SP220320's are a numbered list 1
+ * to 13, so the earlier reader found nothing and Heidi typed the details in.
+ */
+function parseOqsf2021(lines: string[], all: string): ParsedSkillsProgramme {
+  const notes: string[] = [];
+  const spId = /\bSP-?\s?(\d{5,})\b/.exec(all)?.[1];
+  const firstNumber = (heading: RegExp, stop: RegExp) => number(/(\d+)/.exec(under(lines, heading, stop).join(" "))?.[1]);
+
+  const title = joined(under(lines, /^1\.3\s+Title\s+Descriptor/i, /^1\.4\b/));
+  const nqfLevel = firstNumber(/^1\.4\s+NQF\s+Level/i, /^1\.5\b/);
+  const totalCredits = firstNumber(/^1\.5\s+Credits/i, /^1\.6\b/);
+  const qualityPartner = joined(under(lines, /^1\.8\.1\b/, /^1\.8\.2\b|^1\.9\b/));
+  const ofoCode = /\b(\d{6})\s*:\s*[A-Z]/.exec(joined(under(lines, /^1\.1\.1\b/, /^1\.1\.2\b/)) ?? "")?.[1] ?? null;
+
+  const purpose =
+    joined(under(lines, /^3\.2\s/, /^3\.3\b|^4\.\s/)) ?? joined(under(lines, /^3\.\s+PURPOSE/i, /^4\.\s/));
+  const entryRequirements = joined(under(lines, /^4\.\s+ENTRY\s+REQUIREMENTS/i, /^5\.\s/));
+
+  // The cover: four headings, then the four dates in the same order.
+  const cover = /START\s+DATE\s+END\s+DATE\s+LAST\s+DATE\s+FOR\s+ENROLMENT\s+LAST\s+DATE\s+FOR\s+ACH\w*\s+((?:\d{1,2}\s+[A-Za-z]+\s+\d{4}\s*){4})/i.exec(
+    all.replace(/\s+/g, " "),
+  );
+  const dates = cover ? Array.from(cover[1].matchAll(/\d{1,2}\s+[A-Za-z]+\s+\d{4}/g)).map((one) => dayInWords(one[0])) : [];
+
+  // The modules, as listed under 6.1 Components: "900537-000-00-KM-01".
+  const components = under(lines, /^6\.\s+RULES\s+OF\s+COMBINATION/i, /^7\.\s/).join(" ");
+  const moduleCodes = [
+    ...new Set(Array.from(components.matchAll(/\b(\d{6}-\d{3}-\d{2})-(KM|PM|WM)-(\d{2})\b/g)).map((match) => match[0])),
+  ];
+
+  // 7.1 Exit Level Outcomes (ELO) 1: the outcome, then its criteria as bullets
+  // that run onto further lines.
+  const exitLevelOutcomes: ParsedSkillsProgramme["exitLevelOutcomes"] = [];
+  let current: (typeof exitLevelOutcomes)[number] | null = null;
+  let inCriteria = false;
+  for (const line of under(lines, /^7\.\s+EXIT\s+LEVEL\s+OUTCOMES/i, /^8\.\s/)) {
+    const heading = /^7\.(\d+)\s+Exit\s+Level\s+Outcomes?\b/i.exec(line);
+    if (heading) {
+      current = { number: Number(heading[1]), description: "", criteria: [] };
+      exitLevelOutcomes.push(current);
+      inCriteria = false;
+      continue;
+    }
+    if (!current) continue;
+    if (/^Associated\s+Assessment\s+Criteria/i.test(line)) {
+      inCriteria = true;
+      continue;
+    }
+    const bullet = /^(?:o|•||-)\s+(.+)/.exec(line);
+    if (inCriteria && bullet) current.criteria.push(bullet[1].trim());
+    else if (inCriteria && current.criteria.length > 0) current.criteria[current.criteria.length - 1] += ` ${line}`;
+    else if (!inCriteria) current.description = current.description ? `${current.description} ${line}` : line;
+  }
+
+  if (!spId) notes.push("No Skills Programme ID (SP-number) was found. Enter it by hand.");
+  if (exitLevelOutcomes.length === 0) notes.push("No Exit Level Outcomes were found in the Skills Programme Document.");
+  if (moduleCodes.length === 0) notes.push("The Skills Programme Document lists no module codes under Rules of Combination.");
+
+  return {
+    spId: spId ? `SP-${spId}` : null,
+    title,
+    nqfLevel,
+    totalCredits,
+    durationDays: null,
+    ofoCode,
+    qualityPartner,
+    relatedQualification: null,
+    purpose,
+    entryRequirements,
+    startDate: dates[0] ?? null,
+    endDate: dates[1] ?? null,
+    lastEnrolmentDate: dates[2] ?? null,
+    lastAchievementDate: dates[3] ?? null,
+    moduleCodes,
+    exitLevelOutcomes,
+    notes,
+  };
+}
+
 export function parseSkillsProgrammeDocument(text: string): ParsedSkillsProgramme {
   const notes: string[] = [];
   const lines = text
@@ -76,8 +181,16 @@ export function parseSkillsProgrammeDocument(text: string): ParsedSkillsProgramm
     .map((line) => line.trim())
     // Page footers ("SP Doc Assessment Practitioner 5 20 Page 2 of 6") break a
     // detail across pages; they are not part of any field.
-    .filter((line) => line !== "" && !/Page \d+ of \d+$/.test(line));
+    .filter((line) => line !== "" && !/Page \d+ of \d+$/.test(line))
+    // The 2021 template's page header: "SP Doc: Recognition of Prior Learning
+    // Advisor 7 60" over "©Copyright: QCTO".
+    .filter((line) => !/^SP\s+(?:Doc|Curriculum)\s*:/i.test(line) && !/^©\s*Copyright/i.test(line))
+    // Table of contents entries ("1.3 Title Descriptor: ........ 4") repeat
+    // every heading with a page number, and would be read as the heading.
+    .filter((line) => !/\.{5,}\s*\d*\s*$/.test(line));
   const all = lines.join("\n");
+
+  if (lines.some((line) => /^1\.3\s+Title\s+Descriptor/i.test(line))) return parseOqsf2021(lines, all);
 
   const spRaw = /Skills\s+Programme\s+ID\s+(SP)-?\s?(\d{5,})/i.exec(all);
   const spId = spRaw ? `SP-${spRaw[2]}` : null;

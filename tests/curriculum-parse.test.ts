@@ -80,6 +80,10 @@ describe("parseCurriculumText", () => {
      */
     it("reports the document's own numbering faults, and nothing else", () => {
       expect(parsed.notes).toEqual([
+        // Its statement of work experience lists "WM04: Organisational
+        // Communication Processes", which is WM03's title everywhere else.
+        // A real fault, first reported 17 November 2026.
+        'The curriculum heads "Organisational Communication Processes" as WM04 in one place; its module list gives it as WM03. It is read as WM03. Check the document.',
         "WM01 / WE0102: the document uses WA0201 more than once. Only the first can be stored; the rest need their own codes.",
       ]);
     });

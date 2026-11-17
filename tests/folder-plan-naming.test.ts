@@ -139,3 +139,34 @@ describe("the version, which they keep two of", () => {
     expect(planned.studyUnitCode).toBe("SU1");
   });
 });
+
+describe("the SP-260508 RPL Advisor folder, named with underscores (17 November 2026)", () => {
+  const kindOf = (name: string) => classifyDocument(`Learning Material/${name}`, name, 1000).kind;
+
+  it("withholds every assessor guide as a memorandum", () => {
+    for (const name of [
+      "Summative_Assessor_Guide_1_Governance_Research_Policy.docx",
+      "Summative_Assessor_Guide_3_Ethics_Mediation_Resilience.docx",
+      "FISA_3_Assessor_Guide_Memo_Rubric.docx",
+    ]) {
+      expect(kindOf(name)).toBe("summative_memorandum");
+    }
+  });
+
+  it("files the FISA material and the summatives as summative assessments", () => {
+    for (const name of [
+      "FISA_1_Written_Scenario_Assessment_Instrument.docx",
+      "FISA_2_Practical_Performance_Task_Brief.docx",
+      "FISA_2_Practical_Task4_Candidate_PoE_Sample_File.docx",
+      "Summative_Assessment_2_Implementation_Evidence_Execution.docx",
+    ]) {
+      expect(kindOf(name)).toBe("summative_assessment");
+    }
+  });
+
+  it("recognises the workbooks, the handbook and the slides", () => {
+    expect(kindOf("Formative_Workbook_1_Part1_Theory_Governance.docx")).toBe("workbook");
+    expect(kindOf("Master_Learner_Handbook_RPL_Advisor_NQF7.docx")).toBe("learner_handbook");
+    expect(kindOf("RPL KM1 KT1.pptx")).toBe("theory_guide");
+  });
+});

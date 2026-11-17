@@ -132,8 +132,14 @@ const MODULE_HEADER =
  * credits recorded five.
  */
 const LEVEL_ANYWHERE = /\bNQF\s*Level[:\s\-]*(\d{1,2})\b/i;
+/*
+ * The second form, "NQF Level 7, 10 Credits", is how the QCTO's 2021 skills
+ * programme template writes its module list (SP-260508, 17 November 2026).
+ * Only after a comma or bracket, so that "NQF Level 6 Credits 8" is not read
+ * as six credits.
+ */
 const CREDITS_ANYWHERE =
-  /\b(?:Credits?(?:\s*Value)?|Cr)[:\s\-]*(\d{1,3})\b/i;
+  /\b(?:Credits?(?:\s*Value)?|Cr)[:\s\-]*(\d{1,3})\b|[,;(]\s*(\d{1,3})\s*Credits?\b/i;
 
 /** Where a title stops and the header's other fields begin. */
 const TITLE_ENDS_AT =
@@ -229,7 +235,7 @@ function bare(line: string): string {
  * knowledge". Stripped before a heading is matched, so a house style that
  * numbers its sections reads the same as one that does not.
  */
-const HEADING_NUMBER = /^\d+(?:\.\d+)*[.)]?\s+/;
+const HEADING_NUMBER = /^(?:\d+(?:\.\d+)*[.)]?|\(?[a-z]\))\s+/;
 
 /**
  * How each component is laid out. Keeping this as data rather than as branches
@@ -311,6 +317,11 @@ const SECTION_END = new RegExp(
       // because the topic it follows, KM0403, was being read as empty; once
       // its criteria were recovered the last of them ran on into this heading.
       "Provider Accreditation Requirements",
+      // The 2021 skills programme template's section after each module's
+      // topics ("3.1.2 Criteria for accreditation", then "3.1.3 Exemptions").
+      // Without it the last criterion of every module ran on into it.
+      "Criteria for accreditation",
+      String.raw`Exemptions\s*$`,
       "Physical Requirements",
       "Human Resource Requirements",
       "Legal Requirements",
@@ -454,6 +465,34 @@ export function parseQualificationDetails(lines: string[]): ParsedQualification 
     }
   }
 
+  /*
+   * The QCTO's 2021 skills programme cover is a different table: "SKILLS
+   * PROGRAMME ID | TITLE (DESCRIPTOR) | NQF LEVEL | CREDITS", then
+   * "SP-260508 Recognition of Prior Learning" / "Advisor" / "7 60", then
+   * "CURRICULUM CODE 900537-000-00-00" (SP-260508, 17 November 2026).
+   */
+  if (!result.curriculumCode) {
+    const cover = lines.slice(0, 40);
+    const code = cover.map((line) => /^CURRICULUM\s+CODE\s+(\d{5,6}-\d{3}-\d{2}(?:-\d{2})?)\b/i.exec(line)).find(Boolean);
+    if (code) result.curriculumCode = code[1];
+    const at = cover.findIndex((line) => /^SP-?\s?\d{5,}\s+\S/.test(line));
+    if (at !== -1 && !result.title) {
+      const parts = [cover[at].replace(/^SP-?\s?\d{5,}\s+/, "")];
+      for (let next = at + 1; next < Math.min(at + 5, cover.length); next++) {
+        const figures = /^(\d{1,2})\s+(\d{1,4})$/.exec(cover[next]);
+        if (figures) {
+          result.nqfLevel ??= Number(figures[1]);
+          result.totalCredits ??= Number(figures[2]);
+          break;
+        }
+        if (/^CURRICULUM\s+CODE/i.test(cover[next])) break;
+        parts.push(cover[next]);
+      }
+      const title = parts.join(" ").replace(/\s{2,}/g, " ").trim();
+      if (title.length >= 3) result.title = title;
+    }
+  }
+
   const stated = QUALIFICATION_CREDITS.exec(lines.join("\n"));
   if (stated) {
     result.totalCredits = Number(stated[1]);
@@ -514,15 +553,30 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
         .replace(/^[-–—]\s+/, "")
         .trim(),
     )
+    /*
+     * The QCTO's 2021 skills programme template writes every module and topic
+     * code in full: "900537-000-00-KM-01-KT01: Introduction to RPL (15%)".
+     * A line opening with the curriculum code is otherwise the running page
+     * header and skipped, so every topic of SP-260508 was skipped and its
+     * elements (KT0101 and on) read as topics in their place. Found 17
+     * November 2026. The curriculum code is taken off where a module code
+     * follows it, which leaves "KM-01-KT01", a form already read.
+     */
+    .map((line) => line.replace(/^\d{5,6}-\d{3}-\d{2}(?:-\d{2})?-(?=(?:KM|PM|WM)-?\d{2}\b)/i, ""))
     .filter(
       (line) =>
         line.length > 0 &&
         !PAGE_HEADER.test(line) &&
-        !CONTENTS_LINE.test(line),
+        !CONTENTS_LINE.test(line) &&
+        // The 2021 template's running header, "SP Curriculum: Recognition of
+        // Prior Learning Advisor 7 60", over "©Copyright: QCTO Page 9 of 36".
+        !/^SP\s+(?:Curriculum|Cur|Doc)\s*:/i.test(line) &&
+        !/^©\s*Copyright/i.test(line),
     );
 
   const candidates = findModuleHeaders(lines);
   const notes: string[] = [];
+  reassignMisnumbered(candidates, notes);
 
   if (candidates.length === 0) {
     return {
@@ -687,7 +741,7 @@ function findModuleHeaders(lines: string[]) {
         code: `${best.prefix.toUpperCase()}${best.number}`,
         component: COMPONENT_BY_PREFIX[best.prefix.toUpperCase()],
         title,
-        credits: credits ? Number(credits[1]) : 0,
+        credits: credits ? Number(credits[1] ?? credits[2]) : 0,
         nqfLevel: level ? Number(level[1]) : 0,
         topics: [],
       },
@@ -1039,7 +1093,15 @@ function collectTopics(
      * where no heading has been seen, so a document that does announce its
      * sections is unaffected.
      */
-    if (!collecting && coded && CRITERION_CODE.test(coded[1])) {
+    /*
+     * An IAC code is a criterion wherever it appears. SP-260508 heads its
+     * criteria "(d) Internal Assessment Criteria (IAC) and Weight"; until the
+     * lettering was stripped that heading went unrecognised, and every
+     * criterion was filed as a topic element under the heading before it.
+     */
+    if (coded && CRITERION_CODE.test(coded[1]) && plan.sections.some((entry) => entry.collect === "criteria")) {
+      collecting = "criteria";
+    } else if (!collecting && coded && CRITERION_CODE.test(coded[1])) {
       collecting = "criteria";
     } else if (!collecting && coded) {
       const fallback = plan.sections.find(
@@ -1071,6 +1133,19 @@ function collectTopics(
       collecting === "criteria" ? current.criteria : current.elements;
     const last = target[target.length - 1];
     if (last) last.description = `${last.description} ${line}`.trim();
+  }
+
+  /*
+   * A table with a "% OF TIME TO BE SPENT" column (the QCTO's 2021 skills
+   * programme template) ends every element and criterion with that figure:
+   * "Definition and purpose of RPL. 15". It is a weight, not wording.
+   */
+  if (body.some((line) => /%\s*OF\s+TIME/i.test(line))) {
+    const unweighted = (text: string) => text.replace(/\s+\d{1,3}$/, "").trim();
+    for (const topic of topics) {
+      for (const element of topic.elements) element.description = unweighted(element.description);
+      for (const criterion of topic.criteria) criterion.description = unweighted(criterion.description);
+    }
   }
 
   return mergeRepeatedTopics(topics);
@@ -1186,5 +1261,68 @@ function repeats(codes: string[]): string[] {
 
 /** Trailing punctuation from the document's sentence style, not part of a title. */
 function cleanTitle(value: string): string {
-  return value.trim().replace(/[.,;:]+$/, "").trim();
+  return (
+    value
+      .trim()
+      // The level, credits and mode of delivery that follow a title in the
+      // 2021 template's module tables: "RPL implementation practices 7 10
+      // Blended Learning".
+      .replace(/\s+\d{1,2}\s+\d{1,3}(?:\s+(?:Blended|Face|Online|Contact|Distance|Work|Mixed)\b.*)?$/i, "")
+      .replace(/[.,;:]+$/, "")
+      .trim()
+  );
+}
+
+/** A title reduced to its letters and digits, for telling whether two name the same module. */
+function titleKey(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function sameTitle(a: string, b: string): boolean {
+  const [x, y] = [titleKey(a), titleKey(b)];
+  if (x.length < 8 || y.length < 8) return x === y && x.length > 0;
+  return x === y || x.startsWith(y) || y.startsWith(x);
+}
+
+/**
+ * A module specified under another module's code.
+ *
+ * SP-260508's curriculum lists "PM-02, Conduct RPL, NQF Level 7, 20 credits",
+ * then heads that module's specification "900537-000-00-PM-01 Conduct RPL 7
+ * 20" and codes its topics PM-01-PS01. Read by code, Conduct RPL's content
+ * displaced PM-01's own and PM-02 came out empty (17 November 2026).
+ *
+ * A heading is moved only when its title matches no other heading of its own
+ * code and matches exactly one other code's: then the document has said
+ * twice which module this is, and once otherwise. The move is reported.
+ */
+function reassignMisnumbered(found: { index: number; entry: ParsedModule }[], notes: string[]) {
+  const named = (title: string) => /[a-z]{3}/i.test(title);
+  const titlesByCode = new Map<string, string[]>();
+  /** Codes the document lists with a level or credits: its own module list. */
+  const listed = new Set<string>();
+  for (const { entry } of found) {
+    if (entry.title && named(entry.title)) titlesByCode.set(entry.code, [...(titlesByCode.get(entry.code) ?? []), entry.title]);
+    if ((entry.credits ?? 0) > 0 || (entry.nqfLevel ?? 0) > 0) listed.add(entry.code);
+  }
+  const reported = new Set<string>();
+  for (const candidate of found) {
+    const { code, title } = candidate.entry;
+    if (!title || !named(title)) continue;
+    const own = (titlesByCode.get(code) ?? []).filter((other) => other !== title);
+    if (own.length === 0 || own.some((other) => sameTitle(other, title))) continue;
+    // A code the module list never gives (SP-260508 also calls Conduct RPL
+    // "242401-003-00-PM-07", another qualification's) is not a candidate.
+    const elsewhere = [...titlesByCode.entries()].filter(
+      ([other, titles]) => other !== code && listed.has(other) && titles.some((one) => sameTitle(one, title)),
+    );
+    if (elsewhere.length !== 1) continue;
+    const [target] = elsewhere[0];
+    candidate.entry = { ...candidate.entry, code: target };
+    const message = `The curriculum heads "${title}" as ${code} in one place; its module list gives it as ${target}. It is read as ${target}. Check the document.`;
+    if (!reported.has(message)) {
+      reported.add(message);
+      notes.push(message);
+    }
+  }
 }

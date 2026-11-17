@@ -121,22 +121,50 @@ export function readAlignmentDocument(text: string): AlignmentReading {
 
   let current: AlignedStudyUnit | null = null;
   let collectingCriteria = false;
+  /** The unit just opened by a heading with no title on it; its title is the next cell. */
+  let awaitingTitle: AlignedStudyUnit | null = null;
+  /** Modules the document splits between units by topic: "KM-01 (KT01, KT04)". */
+  const splitByTopic = new Set<string>();
 
   for (const line of lines) {
     const unit = STUDY_UNIT.exec(line);
     if (unit) {
-      current = {
-        code: `SU${Number(unit[1])}`,
-        title: unit[2].trim(),
-        outcome: null,
-        moduleCodes: [],
-      };
-      studyUnits.push(current);
+      const code = `SU${Number(unit[1])}`;
+      /*
+       * A study unit named a second time is the same unit. Found 17 November
+       * 2026 in the RPL Advisor rollout document (SP-260508): its alignment
+       * matrix is followed by a week-by-week schedule that names "Study Unit 1"
+       * on every lecture row, and each mention became another, empty SU1.
+       */
+      const seen = studyUnits.find((one) => one.code === code);
+      if (seen) {
+        current = seen;
+        awaitingTitle = null;
+      } else {
+        current = { code, title: unit[2].trim(), outcome: null, moduleCodes: [] };
+        studyUnits.push(current);
+        awaitingTitle = current.title ? null : current;
+      }
       collectingCriteria = false;
       continue;
     }
 
     if (!current) continue;
+
+    /*
+     * A Word table puts "Study Unit 1" in one cell and its name, "Foundations
+     * & Policy Framework of RPL", in the next, so the name arrives as the line
+     * after the heading. Taken only when it is not itself a module, an
+     * outcome or a criteria heading.
+     */
+    if (awaitingTitle) {
+      const target = awaitingTitle;
+      awaitingTitle = null;
+      if (!OUTCOME.test(line) && !MODULE_LINE.test(line) && !CRITERIA_HEADING.test(line) && line.length <= 120) {
+        target.title = line;
+        continue;
+      }
+    }
 
     const outcome = OUTCOME.exec(line);
     if (outcome) {
@@ -157,6 +185,7 @@ export function readAlignmentDocument(text: string): AlignmentReading {
       // describing one qualification.
       const code = moduleLine[1].replace(/[-\s]/g, "").toUpperCase();
       if (!current.moduleCodes.includes(code)) current.moduleCodes.push(code);
+      if (/^\(\s*(?:(?:KT|PS|WE)\s?\d|Part\b|Core\b)/i.test(moduleLine[2])) splitByTopic.add(code);
       collectingCriteria = false;
       continue;
     }
@@ -211,7 +240,9 @@ export function readAlignmentDocument(text: string): AlignmentReading {
     }
   }
   for (const [code, units] of seen) {
-    if (units.length > 1) {
+    // Named against topics ("KM-01 (KT01, KT04)") in each unit: the document
+    // shares the module out deliberately, which is not a question to raise.
+    if (units.length > 1 && !splitByTopic.has(code)) {
       notes.push(
         `${code} is listed under ${units.join(" and ")}. A module belongs to one study unit; check which.`,
       );
@@ -229,5 +260,21 @@ export function readAlignmentDocument(text: string): AlignmentReading {
  * so the decision is made on what a document contains.
  */
 export function looksLikeAlignmentDocument(text: string): boolean {
-  return /study\s+unit\s+\d/i.test(text) && /\bELO\s*\d/i.test(text);
+  if (!/study\s+unit\s+\d/i.test(text)) return false;
+  if (/\bELO\s*\d/i.test(text)) return true;
+  /*
+   * Not every provider names an outcome per unit. The RPL Advisor rollout
+   * document (SP-260508, 17 November 2026) calls itself a "Module Alignment
+   * Document" and lists the modules of five study units with no ELO, and was
+   * filed as an ordinary document, leaving the qualification still asking for
+   * one. Without an ELO it must say it is about alignment and place modules
+   * under at least two study units, which a theory guide mentioning "Study
+   * Unit 1" does not.
+   */
+  if (!/alignment/i.test(text)) return false;
+  try {
+    return readAlignmentDocument(text).studyUnits.filter((unit) => unit.moduleCodes.length > 0).length >= 2;
+  } catch {
+    return false;
+  }
 }
