@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession, said } from "@/lib/request";
-import { updateOwnBranding, setTenantClassroom, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
+import { updateOwnBranding, setTenantClassroom, setTenantCombinedRoles, setTenantDateStyle, setTenantLeisaTarget, setTenantTimeZone } from "@/lib/provisioning";
 import { FeedbackError, saveQuestionnaire } from "@/lib/feedback";
 import { PreAssessmentError, saveChecklist } from "@/lib/pre-assessment";
 import { modelsAvailableTo, setMyExtension } from "@/lib/extensions";
@@ -254,6 +254,27 @@ export async function updateClassroomAction(_previous: ClockState, formData: For
     notice: withoutRoom
       ? `Saved. Online sessions without an outside meeting link are now held in the LMS classroom. It has no room for ${withoutRoom} of them: they are listed above.`
       : "Saved. Online sessions without an outside meeting link are now held in the LMS classroom.",
+  });
+}
+
+/** Facilitator and assessor as one role (D50). */
+export async function updateCombinedRolesAction(_previous: ClockState, formData: FormData): Promise<ClockState> {
+  const session = await requireSession();
+  const combined = formData.get("combined") === "on";
+  let granted = 0;
+  try {
+    ({ granted } = await setTenantCombinedRoles(session, combined));
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) return said({ error: "Your role does not allow that." });
+    console.error(error);
+    return said({ error: "That could not be saved. Try again." });
+  }
+  revalidatePath("/", "layout");
+  if (!combined) return said({ notice: "Saved. Facilitator and Assessor are shown as two roles." });
+  return said({
+    notice: granted
+      ? `Saved. Facilitator and Assessor are one role, Facilitator / Assessor. ${granted} ${granted === 1 ? "person was" : "people were"} given the other half of the role.`
+      : "Saved. Facilitator and Assessor are one role, Facilitator / Assessor.",
   });
 }
 

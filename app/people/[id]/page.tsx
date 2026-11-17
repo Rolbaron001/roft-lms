@@ -229,6 +229,7 @@ export default async function PersonPage({
       ) : (
         <div id="details" data-page-section={t("personPage.detailsSection")} className="scroll-mt-28">
         <PersonEditor
+          combinedRoles={tenant.combinedFacilitatorAssessor}
           userId={person.id}
           isSelf={isSelf}
           mailboxAddress={person.mailboxAddress}

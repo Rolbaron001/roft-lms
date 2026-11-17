@@ -319,6 +319,14 @@ export const organisations = pgTable(
     attendanceTargetPercent: integer("attendance_target_percent"),
 
     /**
+     * Facilitator and assessor as one role, "Facilitator / Assessor" (Heidi,
+     * 13 November 2026). Underneath they stay two roles, since a provider may
+     * keep a facilitator who does not assess; with this on, holding either is
+     * holding both, and the screens show one (lib/roles.ts).
+     */
+    combinedFacilitatorAssessor: boolean("combined_facilitator_assessor").notNull().default(false),
+
+    /**
      * The language this provider's people read the platform in unless they
      * choose their own (job sheet D9). A code from lib/i18n/locales.ts.
      */

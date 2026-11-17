@@ -1,7 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, count, eq, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
-import { loginAttempts, sessions, userRoles, users } from "@/db/schema";
+import { loginAttempts, organisations, sessions, userRoles, users } from "@/db/schema";
+import { actingRoles, displayRoles, withCombined } from "./roles";
 import { recordAudit } from "./audit";
 import {
   burnPasswordVerificationTime,
@@ -84,12 +85,27 @@ export async function loadRoles(
   tx: TenantDatabase,
   userId: string,
 ): Promise<Role[]> {
+  return (await loadRolesAndSetting(tx, userId)).roles;
+}
+
+/**
+ * The roles a person holds, with their provider's Facilitator / Assessor
+ * setting applied (lib/roles.ts): combined, either of the pair brings the
+ * other. Done here, where roles are read, so every session and every view of
+ * one agrees.
+ */
+export async function loadRolesAndSetting(
+  tx: TenantDatabase,
+  userId: string,
+): Promise<{ roles: Role[]; combined: boolean }> {
   const rows = await tx
-    .select({ role: userRoles.role })
+    .select({ role: userRoles.role, combined: organisations.combinedFacilitatorAssessor })
     .from(userRoles)
+    .innerJoin(organisations, eq(organisations.id, userRoles.organisationId))
     .where(and(eq(userRoles.userId, userId), isNull(userRoles.revokedAt)));
 
-  return rows.map((row) => row.role);
+  const combined = rows[0]?.combined ?? false;
+  return { roles: withCombined(rows.map((row) => row.role), combined), combined };
 }
 
 export type SignInResult =
@@ -306,11 +322,13 @@ export async function resolveSession(
         .where(eq(sessions.id, row.sessionId));
     }
 
-    const held = await loadRoles(tx, row.userId);
+    const { roles: held, combined } = await loadRolesAndSetting(tx, row.userId);
     // A chosen role counts only while the person still holds it, and only
-    // when there is a choice to make.
-    const acting = row.actingRole && held.length > 1 && held.includes(row.actingRole) ? row.actingRole : null;
-    const roles = acting ? [acting] : held;
+    // when there is a choice to make. A combined Facilitator / Assessor is
+    // one choice that brings both.
+    const acting =
+      row.actingRole && displayRoles(held, combined).length > 1 && held.includes(row.actingRole) ? row.actingRole : null;
+    const roles = acting ? actingRoles(acting, held, combined) : held;
 
     return {
       sessionId: row.sessionId,

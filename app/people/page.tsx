@@ -2,6 +2,8 @@ import Link from "next/link";
 import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { listPeople, possibleLineManagers } from "@/lib/people";
 import { maybe } from "@/lib/i18n/maybe";
+import { displayRoles, roleLabelKey, withCombined } from "@/lib/roles";
+import type { Role } from "@/lib/rbac";
 import { AppShell, Card, StatusBadge } from "@/components/app-shell";
 import { InviteForm } from "./invite-form";
 import { RosterForm } from "./roster-form";
@@ -18,6 +20,8 @@ export default async function PeoplePage({
 }) {
   const { search } = await searchParams;
   const tenant = await requireTenant();
+  // Facilitator and assessor shown as one role (D50).
+  const combined = tenant.combinedFacilitatorAssessor;
   const session = await requirePermission("user:read");
   const t = await pageT();
 
@@ -91,7 +95,7 @@ export default async function PeoplePage({
           </h2>
           <p className="mt-1 text-xs text-[var(--muted)]">{t("viewAs.strip.intro")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {viewAsByRole.map(({ role, person }) => (
+            {viewAsByRole.filter(({ role }) => !(combined && role === "assessor")).map(({ role, person }) => (
               <form key={role} action={startViewAsAction} data-own-sitting>
                 <input type="hidden" name="userId" value={person.id} />
                 <button
@@ -99,7 +103,7 @@ export default async function PeoplePage({
                   className="flex flex-col items-start rounded-md px-3 py-2 text-left text-white shadow-sm"
                   style={{ background: "var(--brand-primary)" }}
                 >
-                  <span className="text-sm font-semibold">{maybe(t, `role.${role}`) ?? role}</span>
+                  <span className="text-sm font-semibold">{maybe(t, roleLabelKey(role, combined)) ?? role}</span>
                   <span className="text-xs opacity-80">{person.firstName} {person.lastName}</span>
                 </button>
               </form>
@@ -158,7 +162,7 @@ export default async function PeoplePage({
                     <span className="text-xs">
                       {person.roles.length === 0
                         ? "—"
-                        : person.roles.map((role) => maybe(t, `role.${role}`) ?? role).join(", ")}
+                        : displayRoles(withCombined(person.roles, combined), combined).map((role) => maybe(t, roleLabelKey(role, combined)) ?? role).join(", ")}
                     </span>
                   </td>
                   <td className="py-2.5 pr-4 text-xs text-[var(--muted)]">
@@ -210,6 +214,7 @@ export default async function PeoplePage({
         <div className="mt-6">
           <InviteForm
             canManageRoles={canManageRoles}
+            combinedRoles={tenant.combinedFacilitatorAssessor}
             managers={managers.map((manager) => ({
               id: manager.id,
               label: `${manager.firstName} ${manager.lastName}`,

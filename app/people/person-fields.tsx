@@ -2,6 +2,7 @@
 
 import { useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
+import { roleLabelKey } from "@/lib/roles";
 
 /**
  * The fields describing a person, shared by the add and edit forms so the two
@@ -143,18 +144,24 @@ const ROLES = [
 export function RoleChecklist({
   selected = [],
   registrationNumbers = {},
+  combined = false,
 }: {
   selected?: string[];
   registrationNumbers?: Record<string, string | null>;
+  /** Facilitator and assessor shown as one role (D50): one box, which stands for both. */
+  combined?: boolean;
 }) {
   const t = useT();
   return (
     <fieldset className="space-y-2 rounded-md border border-[var(--border)] p-4">
       <legend className="px-1 text-sm font-medium">{t("person.roles")}</legend>
 
-      {ROLES.map((role) => {
-        const label = t(`role.${role}`);
-        const note = maybe(t, `person.roleNote.${role}`);
+      {ROLES.filter((role) => !(combined && role === "assessor")).map((role) => {
+        const label = t(roleLabelKey(role, combined));
+        const note = combined && role === "instructor" ? t("person.roleNote.facilitatorAssessor") : maybe(t, `person.roleNote.${role}`);
+        // The pair's registration is the assessor's.
+        const registrationRole = combined && role === "instructor" ? "assessor" : role;
+        const checked = selected.includes(role) || (combined && role === "instructor" && selected.includes("assessor"));
         return (
           <div key={role}>
             <label className="flex items-start gap-2 text-sm">
@@ -162,7 +169,7 @@ export function RoleChecklist({
                 type="checkbox"
                 name="roles"
                 value={role}
-                defaultChecked={selected.includes(role)}
+                defaultChecked={checked}
                 className="mt-1"
               />
               <span>
@@ -171,10 +178,10 @@ export function RoleChecklist({
               </span>
             </label>
 
-            {role === "assessor" || role === "moderator" ? (
+            {registrationRole === "assessor" || registrationRole === "moderator" ? (
               <input
-                name={`registration:${role}`}
-                defaultValue={registrationNumbers[role] ?? ""}
+                name={`registration:${registrationRole}`}
+                defaultValue={registrationNumbers[registrationRole] ?? ""}
                 placeholder={t("person.registration", { role: label })}
                 className={`${inputClass} mt-1.5 ml-6 w-[calc(100%-1.5rem)] text-xs`}
               />

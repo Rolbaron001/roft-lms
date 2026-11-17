@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/login/actions";
 import { chooseRoleAction } from "@/app/role-actions";
+import { roleLabelKey } from "@/lib/roles";
 import { extensionState } from "@/lib/extensions";
 import { AiSwitch } from "./ai-switch";
 import { NavMenu } from "./nav-menu";
@@ -239,7 +240,7 @@ export async function AppShell({
             with the way back to all of them. */}
         {session.actingRole && !session.viewAs ? (
           <div className="flex flex-wrap items-center justify-center gap-3 bg-white/95 px-6 py-2 text-center text-sm" style={{ color: "var(--brand-primary)" }}>
-            <span>{t("acting.banner", { role: maybe(t, `role.${session.actingRole}`) ?? session.actingRole })}</span>
+            <span>{t("acting.banner", { role: maybe(t, roleLabelKey(session.actingRole, tenant.combinedFacilitatorAssessor)) ?? session.actingRole })}</span>
             <form action={chooseRoleAction}>
               <input type="hidden" name="role" value="" />
               <button type="submit" className="rounded-full border px-3 py-0.5 text-xs font-medium hover:bg-[var(--background)]" style={{ borderColor: "var(--brand-primary)" }}>

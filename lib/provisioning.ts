@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { structureFrom } from "./features";
 import { z } from "zod";
 import { withPlatformScope, withTenant } from "@/db/client";
@@ -708,6 +708,57 @@ export async function setTenantLeisaTarget(session: AuthenticatedSession, hours:
     });
   });
   clearTenantCache();
+}
+
+/**
+ * Facilitator and assessor as one role (Heidi, 13 November 2026; D50).
+ * Switching it on gives everyone who holds one of the pair the other as well,
+ * so every list of facilitators or assessors includes them. Switching it off
+ * takes nothing away: the people keep both, now shown apart, and a person can
+ * be given one again on their own page.
+ */
+export async function setTenantCombinedRoles(session: AuthenticatedSession, combined: boolean): Promise<{ granted: number }> {
+  assertSessionCan(session, "tenant:manage_settings");
+
+  const granted = await withTenant(session.organisationId, async (tx) => {
+    const [before] = await tx
+      .select({ combined: organisations.combinedFacilitatorAssessor })
+      .from(organisations)
+      .where(eq(organisations.id, session.organisationId));
+    await tx.update(organisations).set({ combinedFacilitatorAssessor: combined, updatedAt: new Date() }).where(eq(organisations.id, session.organisationId));
+
+    let added = 0;
+    if (combined) {
+      const held = await tx
+        .select({ userId: userRoles.userId, role: userRoles.role })
+        .from(userRoles)
+        .where(and(inArray(userRoles.role, ["instructor", "assessor"]), isNull(userRoles.revokedAt)));
+      const byPerson = new Map<string, Set<string>>();
+      for (const row of held) byPerson.set(row.userId, (byPerson.get(row.userId) ?? new Set()).add(row.role));
+      for (const [userId, roles] of byPerson) {
+        for (const role of ["instructor", "assessor"] as const) {
+          if (roles.has(role)) continue;
+          // A revoked row for the same role would block the insert (one row per person and role).
+          await tx.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.role, role)));
+          await tx.insert(userRoles).values({ organisationId: session.organisationId, userId, role });
+          added += 1;
+        }
+      }
+    }
+
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "tenant.combined_roles_set",
+      entityType: "organisation",
+      entityId: session.organisationId,
+      before: { combinedFacilitatorAssessor: before?.combined ?? false },
+      after: { combinedFacilitatorAssessor: combined, rolesAdded: added },
+    });
+    return added;
+  });
+  clearTenantCache();
+  return { granted };
 }
 
 /**

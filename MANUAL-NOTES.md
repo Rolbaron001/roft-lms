@@ -545,6 +545,21 @@ person going through it question by question.
 - **What it depends on:** at least one active person in the role; a role
   with nobody in it has no button.
 
+## 6y. Introductions, and Facilitator / Assessor as one role (17 November 2026)
+
+- **The introduction:** Home opens with who the person is on the platform and
+  "What you can do here", each item a link. Someone with one role, or working
+  in one, sees its introduction open; someone with several sees one folded
+  introduction per role. It can be folded away on the page.
+- **Facilitator and Assessor as one role:** Settings → Roles → "Facilitator
+  and Assessor are one role". Off by default. On, the two show as one role,
+  "Facilitator / Assessor", with one introduction and one box on a person's
+  roles; giving it gives both, and the box carries the assessor's registration
+  number. Switching it on gives everyone who holds one of the two the other.
+  Switching it off takes nothing away: people keep both, now shown apart.
+- **What the provider must decide:** whether its facilitators also assess. A
+  provider with facilitators who may not assess leaves the setting off.
+
 ## 6x. Working in one role (30 October 2026)
 
 - **Who sees it:** anyone holding more than one role. Their roles show as

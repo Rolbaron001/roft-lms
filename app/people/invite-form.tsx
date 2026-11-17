@@ -8,9 +8,12 @@ import { useT } from "@/components/i18n";
 export function InviteForm({
   canManageRoles,
   managers,
+  combinedRoles = false,
 }: {
   canManageRoles: boolean;
   managers: { id: string; label: string }[];
+  /** Facilitator and assessor shown as one role (D50). */
+  combinedRoles?: boolean;
 }) {
   const t = useT();
   const [state, action, pending] = useActionState<PeopleState, FormData>(
@@ -44,7 +47,7 @@ export function InviteForm({
       <form action={action} className="mt-4 space-y-4">
         <PersonFields managers={managers} />
 
-        {canManageRoles ? <RoleChecklist selected={["learner"]} /> : null}
+        {canManageRoles ? <RoleChecklist selected={["learner"]} combined={combinedRoles} /> : null}
 
         <button
           type="submit"

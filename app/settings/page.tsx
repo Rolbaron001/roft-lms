@@ -20,6 +20,7 @@ import { DateForm } from "./date-form";
 import { LeisaTargetForm } from "./leisa-target-form";
 import { ClassroomForm } from "./classroom-form";
 import { MeetingAccounts } from "./meeting-accounts";
+import { RolesForm } from "./roles-form";
 import { meetingConnectionsFor } from "@/lib/meetings";
 import { mediaConfigured } from "@/lib/classroom-media";
 import { transcriptionAvailable } from "@/lib/classroom-notice";
@@ -348,6 +349,16 @@ export default async function SettingsPage({
               ))}
             </div>
           </Card>
+        </div>
+      ) : null}
+
+      {canManageSettings ? (
+        <div
+          id="roles"
+          data-settings-section={t("settings.section.roles")}
+          className="mt-6 scroll-mt-24"
+        >
+          <RolesForm combined={tenant.combinedFacilitatorAssessor} />
         </div>
       ) : null}
 

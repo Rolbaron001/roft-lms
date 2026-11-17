@@ -53,7 +53,10 @@ export function PersonEditor({
   canAnonymise,
   mailboxAddress,
   proposedMailbox,
+  combinedRoles = false,
 }: {
+  /** Facilitator and assessor shown as one role (D50). */
+  combinedRoles?: boolean;
   userId: string;
   isSelf: boolean;
   status: string;
@@ -130,7 +133,7 @@ export function PersonEditor({
               <Message state={roleState} />
               <form action={roleAction} className="mt-4 space-y-4">
                 <input type="hidden" name="userId" value={userId} />
-                <RoleChecklist selected={roles} registrationNumbers={registrationNumbers} />
+                <RoleChecklist selected={roles} registrationNumbers={registrationNumbers} combined={combinedRoles} />
                 <button
                   type="submit"
                   disabled={rolePending}

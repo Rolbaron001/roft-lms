@@ -6,8 +6,9 @@ import {
   withTenant,
   type TenantDatabase,
 } from "@/db/client";
-import { certificates, enrolments, userRoles, users } from "@/db/schema";
+import { certificates, enrolments, organisations, userRoles, users } from "@/db/schema";
 import { recordAudit } from "./audit";
+import { withCombined } from "./roles";
 import {
   assertPasswordAcceptable,
   hashPassword,
@@ -289,9 +290,10 @@ export async function invitePerson(
       })
       .returning({ id: users.id });
 
-    if (parsed.roles.length > 0) {
+    const storedRoles = await rolesToStore(tx, session.organisationId, parsed.roles);
+    if (storedRoles.length > 0) {
       await tx.insert(userRoles).values(
-        parsed.roles.map((role) => ({
+        storedRoles.map((role) => ({
           organisationId: session.organisationId,
           userId: created.id,
           role,
@@ -398,6 +400,19 @@ async function otherAdministratorCount(
   return total;
 }
 
+/**
+ * The roles to write for a person: those chosen, with the Facilitator /
+ * Assessor pair stored together when the provider combines them (D50), so
+ * every list that reads roles from the database agrees with the screens.
+ */
+async function rolesToStore(tx: TenantDatabase, organisationId: string, roles: Role[]): Promise<Role[]> {
+  const [provider] = await tx
+    .select({ combined: organisations.combinedFacilitatorAssessor })
+    .from(organisations)
+    .where(eq(organisations.id, organisationId));
+  return withCombined(roles, provider?.combined ?? false);
+}
+
 export async function setRoles(
   session: AuthenticatedSession,
   userId: string,
@@ -436,9 +451,10 @@ export async function setRoles(
 
     await tx.delete(userRoles).where(eq(userRoles.userId, userId));
 
-    if (roles.length > 0) {
+    const storedRoles = await rolesToStore(tx, session.organisationId, roles);
+    if (storedRoles.length > 0) {
       await tx.insert(userRoles).values(
-        roles.map((role) => ({
+        storedRoles.map((role) => ({
           organisationId: session.organisationId,
           userId,
           role,

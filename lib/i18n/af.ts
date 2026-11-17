@@ -198,6 +198,7 @@ export const af: Catalogue = {
   "role.external_verifier": "Eksterne verifieerder",
   "role.workplace_coach": "Werkplekafrigter",
   "role.tenant_viewer": "Administrateur (slegs kyk)",
+  "role.facilitatorAssessor": "Fasiliteerder / Assessor",
   "status.assigned": "Toegeken",
   "status.in_progress": "Aan die gang",
   "status.completed": "Voltooi",

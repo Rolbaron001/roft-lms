@@ -53,6 +53,8 @@ export type TenantIdentity = {
   attendanceTargetPercent: number | null;
   /** Classes transcribed for their notes (D41 phase B). */
   classroomTranscribe: boolean;
+  /** Facilitator and assessor shown and granted as one role (D50). */
+  combinedFacilitatorAssessor: boolean;
   /** How this provider arranged their menu, or null for the built-in one. */
   navigation: { label: string | null; items: string[] }[] | null;
   /** What this provider calls things, where it differs from the default. */
@@ -224,6 +226,7 @@ export async function resolveTenant(
           classroomPresentPercent: organisations.classroomPresentPercent,
           attendanceTargetPercent: organisations.attendanceTargetPercent,
           classroomTranscribe: organisations.classroomTranscribe,
+          combinedFacilitatorAssessor: organisations.combinedFacilitatorAssessor,
           navigation: organisations.navigation,
           terminology: organisations.terminology,
           offlineEnabled: organisations.offlineEnabled,
