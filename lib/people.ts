@@ -245,11 +245,18 @@ export async function invitePerson(
   session: AuthenticatedSession,
   input: PersonInput,
 ): Promise<{ userId: string; initialPassword: string }> {
-  assertSessionCan(session, "user:invite");
   const parsed = personInput.parse(input);
+  /*
+   * A learner, and only a learner, may also be created by somebody who holds
+   * learner:create: a skills development facilitator enrolling an employer's
+   * staff (job sheet D52 (6), 18 November 2026). Any other role still needs
+   * user:invite and user:manage_roles.
+   */
+  const learnerOnly = parsed.roles.length === 1 && parsed.roles[0] === "learner" && session.permissions.includes("learner:create");
+  if (!learnerOnly) assertSessionCan(session, "user:invite");
   assertIdentityNumberIsUsable(parsed.nationalId);
 
-  if (parsed.roles.length > 0) {
+  if (parsed.roles.length > 0 && !learnerOnly) {
     assertSessionCan(session, "user:manage_roles");
   }
 

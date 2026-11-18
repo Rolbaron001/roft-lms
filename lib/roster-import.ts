@@ -3,6 +3,10 @@ import { extname } from "node:path";
 import { readXlsxSheets } from "./office";
 import { extensionState, readJson, runExtension } from "./extensions";
 import { invitePerson, PeopleError } from "./people";
+import { addMember } from "./cohorts";
+import { eq } from "drizzle-orm";
+import { withTenant } from "@/db/client";
+import { users } from "@/db/schema";
 import {
   detectColumns,
   findHeaderRow,
@@ -162,7 +166,7 @@ export async function proposeRoster(
   session: AuthenticatedSession,
   file: { filename: string; bytes: Uint8Array },
 ): Promise<RosterProposal> {
-  assertSessionCan(session, "user:invite");
+  if (!session.permissions.includes("learner:create")) assertSessionCan(session, "user:invite");
 
   const grid = readGrid(file.filename, file.bytes);
   if (grid.length === 0) {
@@ -304,7 +308,16 @@ export type RosterReport = {
   refused: string[];
   /** Who was created and the password they were given. */
   people: { line: number; email: string; initialPassword: string }[];
+  /** Added to the chosen cohort, new or already on the platform. */
+  enrolled: number;
+  /** Already on the platform under their email, so not created again. */
+  existing: number;
 };
+
+async function userIdByEmail(session: AuthenticatedSession, email: string): Promise<string | null> {
+  const [row] = await withTenant(session.organisationId, (tx) => tx.select({ id: users.id }).from(users).where(eq(users.email, email.trim().toLowerCase())));
+  return row?.id ?? null;
+}
 
 /**
  * Creates the people a proposal describes.
@@ -320,15 +333,37 @@ export type RosterReport = {
 export async function commitRoster(
   session: AuthenticatedSession,
   proposal: RosterProposal,
-  options: { roles?: string[] } = {},
+  options: { roles?: string[]; cohortId?: string } = {},
 ): Promise<RosterReport> {
-  assertSessionCan(session, "user:invite");
+  // Learners only, for somebody who may create learners and nothing more
+  // (an SDF, job sheet D52 (6)); invitePerson enforces the same.
+  const mayChooseRoles = session.permissions.includes("user:invite") && session.permissions.includes("user:manage_roles");
+  if (!mayChooseRoles && !session.permissions.includes("learner:create")) assertSessionCan(session, "user:invite");
+  const roles = mayChooseRoles ? (options.roles ?? ["learner"]) : ["learner"];
 
   const report: RosterReport = {
     created: 0,
     skipped: 0,
     refused: [],
     people: [],
+    enrolled: 0,
+    existing: 0,
+  };
+
+  /*
+   * Into a cohort as well, where one is chosen: each person created, and each
+   * already on the platform under that email, joins it and so is enrolled on
+   * its study units (Heidi's role specifications: enrol or bulk-upload
+   * employees into specific learning programmes, D52 (6)).
+   */
+  const enrol = async (userId: string, line: number, email: string) => {
+    if (!options.cohortId) return;
+    try {
+      await addMember(session, options.cohortId, userId);
+      report.enrolled += 1;
+    } catch (error) {
+      report.refused.push(`Line ${line} (${email}): not added to the cohort: ${error instanceof Error ? error.message : "it could not be done."}`);
+    }
   };
 
   for (const row of proposal.rows) {
@@ -352,7 +387,7 @@ export async function commitRoster(
         disabilityCode: row.values.disabilityCode,
         nationality: row.values.nationality,
         ofoCode: row.values.ofoCode,
-        roles: (options.roles ?? ["learner"]) as never,
+        roles: roles as never,
       });
 
       report.created += 1;
@@ -361,7 +396,17 @@ export async function commitRoster(
         email: row.values.email as string,
         initialPassword: made.initialPassword,
       });
+      await enrol(made.userId, row.line, row.values.email as string);
     } catch (error) {
+      // Already on the platform: not created again, and still enrolled.
+      if (error instanceof PeopleError && error.code === "duplicate" && options.cohortId) {
+        const existing = await userIdByEmail(session, row.values.email as string);
+        if (existing) {
+          report.existing += 1;
+          await enrol(existing, row.line, row.values.email as string);
+          continue;
+        }
+      }
       report.skipped += 1;
       report.refused.push(
         `Line ${row.line} (${row.values.email}): ${

@@ -6918,5 +6918,12 @@
   "said.document-linking.a7bf7d0d": 6917,
   "said.document-linking.aaa8ee24": 6918,
   "said.folder-import.0194f457": 6919,
-  "said.folder-import.7916f678": 6920
+  "said.folder-import.7916f678": 6920,
+  "roster.intoCohort": 6921,
+  "roster.noCohort": 6922,
+  "cohort.addFromSheet": 6923,
+  "cohort.addFromSheetIntro": 6924,
+  "said.people-roster-actions.86e0d7ca": 6925,
+  "said.people-roster-actions.c14605bc": 6926,
+  "said.roster-import.fc4e0d4e": 6927
 }

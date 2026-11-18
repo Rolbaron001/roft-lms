@@ -4,6 +4,7 @@ import { cohortAttendance, cohortSchedule, sessionChoices } from "@/lib/scheduli
 import { cohortClassNotes } from "@/lib/classroom-record";
 import { cohortAnnouncementList } from "@/lib/announcements";
 import { AnnounceForm } from "./announce-form";
+import { RosterForm } from "@/app/people/roster-form";
 import { cohortLeisa } from "@/lib/statutory-notification";
 import { CohortLeisa } from "./leisa";
 import { CohortFacilitator } from "./cohort-facilitator";
@@ -251,6 +252,15 @@ export default async function CohortPage({
                   email: person.email,
                 }))}
               />
+            </div>
+          ) : null}
+
+          {/* A list of learners straight into this cohort (job sheet D52 (6)). */}
+          {canManage && (session.permissions.includes("user:invite") || session.permissions.includes("learner:create")) ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <p className="text-sm font-medium">{t("cohort.addFromSheet")}</p>
+              <p className="mb-2 text-xs text-[var(--muted)]">{t("cohort.addFromSheetIntro")}</p>
+              <RosterForm extension={null} cohortId={detail.cohort.id} learnersOnly />
             </div>
           ) : null}
         </Card>

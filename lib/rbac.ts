@@ -166,6 +166,12 @@ export const PERMISSIONS = [
   // A Guest's preview of the qualifications opened to guests (D51): the
   // learner's view, with nothing saved and no learner's data in it.
   "guest:preview",
+
+  // Creating learners, and only learners, as a skills development facilitator
+  // does when enrolling an employer's staff from a spreadsheet (Heidi's role
+  // specifications, job sheet D52 (6), 18 November 2026). Narrower than
+  // user:invite with user:manage_roles, which can create any role.
+  "learner:create",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -341,6 +347,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "report:tenant",
     "report:statutory",
     "certificate:read_all",
+    "learner:create",
     ...SELF_SERVICE,
   ],
 

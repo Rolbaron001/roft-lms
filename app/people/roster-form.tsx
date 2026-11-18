@@ -27,9 +27,18 @@ const CREATE_AS = ["learner", "assessor", "moderator", "instructor", "workplace_
  */
 export function RosterForm({
   extension,
+  cohorts = [],
+  cohortId,
+  learnersOnly = false,
 }: {
   /** Null where this person's role has no model assistance at all. */
   extension: { on: boolean; available: boolean } | null;
+  /** Cohorts the people can be put into as they are created (job sheet D52 (6)). */
+  cohorts?: { id: string; name: string }[];
+  /** Always into this cohort: the import on a cohort's own page. */
+  cohortId?: string;
+  /** Learners only, for somebody who may create learners and no other role (an SDF). */
+  learnersOnly?: boolean;
 }) {
   const t = useT();
   const [readState, readAction, reading] = useActionState<
@@ -155,20 +164,39 @@ export function RosterForm({
 
           {usable.length > 0 ? (
             <form action={commitAction} className="flex flex-wrap items-center gap-2">
-              <label className="text-sm">
-                <span className="mr-2 text-[var(--muted)]">{t("roster.createAs")}</span>
-                <select
-                  name="role"
-                  defaultValue="learner"
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
-                >
-                  {CREATE_AS.map((role) => (
-                    <option key={role} value={role}>
-                      {t(`roster.as.${role}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {learnersOnly ? (
+                <input type="hidden" name="role" value="learner" />
+              ) : (
+                <label className="text-sm">
+                  <span className="mr-2 text-[var(--muted)]">{t("roster.createAs")}</span>
+                  <select
+                    name="role"
+                    defaultValue="learner"
+                    className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+                  >
+                    {CREATE_AS.map((role) => (
+                      <option key={role} value={role}>
+                        {t(`roster.as.${role}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {cohortId ? (
+                <input type="hidden" name="cohortId" value={cohortId} />
+              ) : cohorts.length > 0 ? (
+                <label className="text-sm">
+                  <span className="mr-2 text-[var(--muted)]">{t("roster.intoCohort")}</span>
+                  <select name="cohortId" defaultValue="" className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
+                    <option value="">{t("roster.noCohort")}</option>
+                    {cohorts.map((cohort) => (
+                      <option key={cohort.id} value={cohort.id}>
+                        {cohort.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <button
                 type="submit"
                 disabled={committing}

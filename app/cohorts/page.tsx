@@ -31,7 +31,9 @@ export default async function CohortsPage({ searchParams }: { searchParams: Prom
   // A cohort usually arrives as a spreadsheet of names, so the same import that
   // sits under People is offered here too - this is where somebody is when
   // they have one in front of them.
-  const canInvite = session.permissions.includes("user:invite");
+  // An SDF may import learners only (learner:create, job sheet D52 (6)).
+  const canInvite = session.permissions.includes("user:invite") || session.permissions.includes("learner:create");
+  const learnersOnly = !(session.permissions.includes("user:invite") && session.permissions.includes("user:manage_roles"));
   const extension = canInvite ? await said(await extensionState(session)) : null;
   const cohorts = await listCohorts(session);
 
@@ -148,6 +150,8 @@ export default async function CohortsPage({ searchParams }: { searchParams: Prom
                     }
                   : null
               }
+              cohorts={canManage ? cohorts.filter((one) => one.status !== "finished" && one.status !== "cancelled").map((one) => ({ id: one.id, name: one.name })) : []}
+              learnersOnly={learnersOnly}
             />
           </Card>
         </div>

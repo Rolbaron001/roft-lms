@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission, said } from "@/lib/request";
+import { requireAnyPermission, said } from "@/lib/request";
 import {
   commitRoster,
   proposeRoster,
@@ -43,7 +43,8 @@ export async function readRosterAction(
   _previous: RosterActionState,
   formData: FormData,
 ): Promise<RosterActionState> {
-  const session = await requirePermission("user:invite");
+  // An SDF creates learners only (learner:create, job sheet D52 (6)).
+  const session = await requireAnyPermission(["user:invite", "learner:create"]);
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -70,7 +71,7 @@ export async function commitRosterAction(
   previous: RosterActionState,
   formData: FormData,
 ): Promise<RosterActionState> {
-  const session = await requirePermission("user:invite");
+  const session = await requireAnyPermission(["user:invite", "learner:create"]);
 
   if (!previous.proposal) {
     return said({ error: "Read a spreadsheet first." });
@@ -83,18 +84,23 @@ export async function commitRosterAction(
   const role = String(formData.get("role") ?? "learner");
 
   try {
+    const cohortId = String(formData.get("cohortId") ?? "") || undefined;
     const report = await commitRoster(session, previous.proposal, {
       roles: [role],
+      cohortId,
     });
     revalidatePath("/people");
+    if (cohortId) revalidatePath(`/cohorts/${cohortId}`);
 
     const refused =
       report.refused.length > 0
         ? ` ${report.skipped} were skipped: ${report.refused.slice(0, 6).join(" ")}${report.refused.length > 6 ? ` There are ${report.refused.length - 6} more.` : ""}`
         : "";
 
+    const existing = report.existing > 0 ? ` ${report.existing} ${report.existing === 1 ? "was" : "were"} already on the platform and not created again.` : "";
+    const enrolled = cohortId ? ` ${report.enrolled} added to the cohort.` : "";
     return said({
-      notice: `Created ${report.created} ${report.created === 1 ? "person" : "people"}.${refused}`,
+      notice: `Created ${report.created} ${report.created === 1 ? "person" : "people"}.${existing}${enrolled}${refused}`,
       passwords: report.people.map((person) => ({
         email: person.email,
         initialPassword: person.initialPassword,

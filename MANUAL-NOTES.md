@@ -1091,6 +1091,17 @@ Three roles a provider gives on the person's page, like any other.
   readiness, records, enrolment notifications, a qualification) list their
   sections in a bar that stays at the top while scrolling.
 
+## 7a. Enrolling a list into a cohort (18 November 2026)
+
+- **Where:** a cohort's page, **Learners**, "Add learners from a spreadsheet";
+  or Cohorts, the spreadsheet import, choosing "And put them in" a cohort.
+- **Who:** an administrator, and a skills development facilitator, who may
+  create learners and no other role.
+- **What happens:** each person in the sheet is created as a learner and added
+  to the cohort, so enrolled on its study units. Anyone already on the
+  platform under the same email is added to the cohort without being created
+  again. The sheet needs the columns in section 7.
+
 ## 7. Adding people from a spreadsheet
 
 - **Needed:** columns for first name, last name and email address at least,
