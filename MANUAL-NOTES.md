@@ -823,6 +823,24 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6af. When names do not say what belongs with what (18 November 2026)
+
+- **Naming conventions still help most** (section 2): a paper and its guide
+  named alike are paired at once.
+- **When they are not followed,** the build links what it can by content: a
+  guide that answers a paper's question headings under the same words is
+  taken as its guide; an answer headed with a question's words is taken as
+  its answer; a file whose name says nothing is read and filed as a guide,
+  workbook or summative where its text plainly is one.
+- **Each such link is listed** on the qualification's check page with its
+  reason. Confirm it once. Where two guides are equally likely, or none is
+  clearly right, nothing is guessed and the paper is listed as needing a
+  person.
+- **Headings help:** number each question with its title on its own line
+  ("1.1 Critical Analysis of RPL Intent:") and head its answer in the guide
+  with the same number and title ("1.1 Critical Analysis of RPL Intent (Model
+  Answer)").
+
 ## 6ae. Moderation Reports, and locking for external verification (17 November 2026)
 
 - **Where:** Assessment → **Moderation reports**. A moderator starts a report

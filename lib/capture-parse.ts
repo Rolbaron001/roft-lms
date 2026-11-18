@@ -12,6 +12,7 @@
  * the parser is built to report what it could not work out rather than to fill
  * the gap with a guess.
  */
+import { answerByTitle } from "./document-linking";
 
 export type ParsedItem = {
   /** The number as printed, which is how the memorandum refers back to it. */
@@ -871,7 +872,7 @@ export type ParsedMemo = {
    * answer, the criteria in its heading's brackets, and the part of the paper
    * it was found under. Keyed "question 1.3.1" or "task A".
    */
-  guides?: Record<string, { text: string; codes: string[]; part: string | null }>;
+  guides?: Record<string, { text: string; codes: string[]; part: string | null; title?: string }>;
   answers: MemoAnswer[];
   total: number | null;
   problems: string[];
@@ -1011,7 +1012,7 @@ function guideBlocks(lines: string[]): NonNullable<ParsedMemo["guides"]> {
     // Part D "Question 1" are different answers (job sheet D26).
     const stored = `${heading.key}@${part ?? ""}`;
     if (body.length > 0 && (heading.own || !guides[stored])) {
-      guides[stored] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part };
+      guides[stored] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part, title: line };
     }
   }
   return guides;
@@ -1263,7 +1264,16 @@ export function mergeMemorandum(
     };
     // A task first from a task, a question from a question; the other only
     // where the guide calls it something else and nothing else matches.
-    return item.task ? (find("task") ?? find("question")) : (find("question") ?? find("task"));
+    const byNumber = item.task ? (find("task") ?? find("question")) : (find("question") ?? find("task"));
+    if (byNumber) return byNumber;
+    /*
+     * By title, where the numbers do not meet: a guide that numbers its
+     * answers its own way but heads them with the question's words (Roland,
+     * 18 November 2026: link what is there before reporting it missing).
+     * Within the same part only, and only when clearly the best.
+     */
+    const inPart = Object.values(guides).filter((guide) => guide.title && samePart(guide.part));
+    return answerByTitle(item.stem, inPart.map((guide) => ({ ...guide, title: guide.title! }))) ?? undefined;
   };
   const applyGuide = (merged: ParsedItem, sectionTitle: string) => {
     const guide = guideFor(merged, sectionTitle);

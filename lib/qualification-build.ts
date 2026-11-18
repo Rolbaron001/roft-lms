@@ -452,6 +452,15 @@ export async function buildQualification(
     const capture = async (document: (typeof documents)[number], replacing?: { paperId: string; assessmentId: string; code: string }) => {
       const paper = await readProgrammeDocumentForAuthoring(session, document.documentId);
       const guide = document.guide ? await readProgrammeDocumentForAuthoring(session, document.guide.documentId) : null;
+      // Linked by what the two documents say rather than by their names: done,
+      // and listed once for a person to confirm (Roland, 18 November 2026).
+      if (document.guide?.linkedBy) {
+        report.toCheck.push({
+          studyUnit: unit.code,
+          what: `${document.filename} was paired with ${document.guide.filename} by its content: ${document.guide.linkedBy} Check that this is its guide.`,
+          href: null,
+        });
+      }
       const proposed = await proposeCapture(session, {
         qualificationId,
         paper: { filename: paper.filename, bytes: paper.bytes },

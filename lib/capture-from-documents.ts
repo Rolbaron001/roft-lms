@@ -1,4 +1,5 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { bestGuide } from "./document-linking";
 import { withTenant } from "@/db/client";
 import {
   assessments,
@@ -50,8 +51,12 @@ export type Capturable = {
   kind: string;
   studyUnitId: string | null;
   studyUnitCode: string | null;
-  /** The answer guide filed beside it, matched by the naming convention. */
-  guide: { documentId: string; filename: string } | null;
+  /**
+   * The answer guide filed beside it: matched by the naming convention, by
+   * number, or failing those by what the two documents say, in which case
+   * `linkedBy` says why (lib/document-linking.ts).
+   */
+  guide: { documentId: string; filename: string; linkedBy?: string } | null;
   /**
    * Whether these exact bytes have been through Capture already.
    *
@@ -217,7 +222,7 @@ export async function capturableDocuments(
       Object.values(MEMORANDUM_FOR).includes(row.kind),
     );
 
-    return papers
+    const listed = papers
       .map((paper) => {
         const wanted = MEMORANDUM_FOR[paper.kind];
         const key = artefactKey(paper.filename, convention);
@@ -249,7 +254,7 @@ export async function capturableDocuments(
           studyUnitId: paper.studyUnitId,
           studyUnitCode: paper.studyUnitCode,
           guide: guide
-            ? { documentId: guide.id, filename: guide.filename }
+            ? ({ documentId: guide.id, filename: guide.filename } as Capturable["guide"])
             : null,
           captured: captured.has(paper.sha256),
         };
@@ -259,6 +264,39 @@ export async function capturableDocuments(
           (a.studyUnitCode ?? "").localeCompare(b.studyUnitCode ?? "") ||
           a.filename.localeCompare(b.filename),
       );
+
+    /*
+     * Papers the names and numbers found no guide for: matched by what the
+     * documents say (Roland, 18 November 2026: the platform must first try to
+     * link them itself). Text is read only here, for these papers and the
+     * guides that could be theirs, since this list is opened every time a
+     * qualification is looked at.
+     */
+    const unguided = listed.filter((one) => !one.guide);
+    if (unguided.length > 0 && memoranda.length > 0) {
+      const texts = new Map(
+        (
+          await tx
+            .select({ id: programmeDocuments.id, text: programmeDocuments.extractedText })
+            .from(programmeDocuments)
+            .where(inArray(programmeDocuments.id, [...unguided.map((one) => one.documentId), ...memoranda.map((one) => one.id)]))
+        ).map((row) => [row.id, row.text]),
+      );
+      // A guide another paper already took by its name is not offered again.
+      const taken = new Set(listed.map((one) => one.guide?.documentId).filter(Boolean));
+      for (const paper of unguided) {
+        const pool = memoranda.filter((one) => !taken.has(one.id));
+        const near = pool.filter((one) => one.studyUnitId === paper.studyUnitId);
+        const asCandidates = (list: typeof pool) => list.map((one) => ({ id: one.id, filename: one.filename, text: texts.get(one.id) ?? null }));
+        const subject = { filename: paper.filename, text: texts.get(paper.documentId) ?? null };
+        const link = bestGuide(subject, asCandidates(near)) ?? bestGuide(subject, asCandidates(pool));
+        if (!link) continue;
+        const found = memoranda.find((one) => one.id === link.id)!;
+        paper.guide = { documentId: found.id, filename: found.filename, linkedBy: link.because };
+        taken.add(found.id);
+      }
+    }
+    return listed;
   });
 }
 

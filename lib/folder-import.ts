@@ -6,6 +6,7 @@ import { withTenant } from "@/db/client";
 import { aiImportJobs, curriculumModules, programmeDocuments, studyUnitModules, studyUnits } from "@/db/schema";
 import { looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
 import { placeMaterial, type PlacementUnit } from "./material-placement";
+import { kindFromContent } from "./document-linking";
 import { recordAudit } from "./audit";
 import {
   classifyDocument,
@@ -479,6 +480,27 @@ async function placeByContent(
   files: UploadedFile[],
   plan: IngestionPlan,
 ): Promise<void> {
+  /*
+   * What a file is, read from its content where its name said nothing
+   * (Roland, 18 November 2026: read the documents, starting with the file
+   * names). Only a guide, a workbook or a summative, the kinds the build
+   * depends on, and only where the text plainly says so.
+   */
+  const fileAt = new Map(files.map((file) => [file.path, file]));
+  for (const document of plan.documents) {
+    if (document.kind !== "other" || document.target === "library") continue;
+    const file = fileAt.get(document.path);
+    if (file?.kind !== "convert") continue;
+    try {
+      const kind = kindFromContent(await readOfficeText(file.filename, file.bytes));
+      if (!kind) continue;
+      document.kind = kind;
+      document.because = `${document.because} Its content reads as ${/^[aeiou]/.test(kind) ? "an" : "a"} ${kind.replace(/_/g, " ")}, so it is filed as one.`;
+    } catch {
+      /* unreadable: it stays as it was */
+    }
+  }
+
   const waiting = plan.documents.filter((document) => !document.studyUnitCode && document.target !== "library");
   if (waiting.length === 0) return;
   const units = await placementUnits(session, qualificationId, files);
