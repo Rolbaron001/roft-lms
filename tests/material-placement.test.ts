@@ -11,6 +11,8 @@ import { readDocxText, readPptxText } from "@/lib/office";
 import { readAlignmentDocument } from "@/lib/alignment-document";
 import { placeMaterial, type PlacementUnit } from "@/lib/material-placement";
 import { mergeMemorandum, parseMemorandum, parseWorkbook } from "@/lib/capture-parse";
+import { classifyDocument } from "@/lib/folder-plan";
+import { artefactNumber } from "@/lib/capture-from-documents";
 
 const fixture = (name: string) => new Uint8Array(readFileSync(join(__dirname, "fixtures", name)));
 
@@ -76,6 +78,23 @@ describe("reading the material itself", () => {
     const text = readPptxText(fixture("SP260508-KM1-KT4.pptx"));
     expect(text.length).toBeGreaterThan(200);
     expect(text).toMatch(/RPL/);
+  });
+
+  it("reads a workbook headed '1.1 Title:' against a guide headed '1.1 Title (Exemplar Key)', every question with its guidance", () => {
+    const paper = parseWorkbook(readDocxText(fixture("SP260508-workbook-1.docx")));
+    const merged = mergeMemorandum(paper, parseMemorandum(readDocxText(fixture("SP260508-workbook-1-guide.docx"))));
+    const items = merged.sections.flatMap((section) => section.items);
+    expect(items.map((item) => item.number)).toEqual(["1.1", "1.2", "1.3", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2", "5.3"]);
+    expect(items.filter((item) => !item.markingGuide)).toEqual([]);
+    // "Curriculum Mapping: …" is the activity's note, not a question.
+    expect(items.some((item) => /^Curriculum Mapping/.test(item.stem))).toBe(false);
+  });
+
+  it("files the workbook's guide as a workbook memorandum, and pairs it by number", () => {
+    expect(classifyDocument("Learning Material/Assessor_Guide_Memo_Formative_Workbook_1.docx", "Assessor_Guide_Memo_Formative_Workbook_1.docx", 1).kind).toBe("workbook_memorandum");
+    expect(artefactNumber("Formative_Workbook_1_Part1_Theory_Governance.docx")).toBe("1");
+    expect(artefactNumber("Assessor_Guide_Memo_Formative_Workbook_1.docx")).toBe("1");
+    expect(artefactNumber("Summative_Assessor_Guide_2_Implementation_Evidence_Execution.docx")).toBe("2");
   });
 
   it("takes the answers from a guide that writes them one per line", () => {

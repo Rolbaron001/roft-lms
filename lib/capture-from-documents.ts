@@ -125,6 +125,32 @@ export function versionOf(filename: string): string | null {
  * Version 2 papers each took whichever guide was filed first, and Version 1
  * was read against Version 2's guide (job sheet D10).
  */
+/**
+ * The number a paper or guide carries after its kind: "Workbook 1", "WB1",
+ * "Summative Assessment 2", "Assessor Guide 2". Null where it carries none.
+ */
+export function artefactNumber(filename: string): string | null {
+  const name = bareFilename(filename).replace(/_/g, " ");
+  const match =
+    /\b(?:workbook|WB)\s*(\d{1,2})\b/i.exec(name) ??
+    /\b(?:summative(?:\s+assessment)?|assessment|assessor'?s?\s+guide|guide|SA)\s*(\d{1,2})\b/i.exec(name);
+  return match ? String(Number(match[1])) : null;
+}
+
+/**
+ * The guide of the same number, when the names differ by more than the words
+ * that say which half is which: "Formative_Workbook_1_Part1_Theory_Governance"
+ * and "Assessor_Guide_Memo_Formative_Workbook_1" (18 November 2026). Only
+ * where exactly one guide in the study unit carries that number, or one of
+ * them is that paper's version.
+ */
+function byNumber<T extends { filename: string }>(paperFilename: string, candidates: T[]): T | null {
+  const number = artefactNumber(paperFilename);
+  if (!number) return null;
+  const same = candidates.filter((one) => artefactNumber(one.filename) === number);
+  return same.length === 1 ? same[0] : chooseGuide(paperFilename, same);
+}
+
 export function chooseGuide<T extends { filename: string }>(paperFilename: string, candidates: T[]): T | null {
   const version = versionOf(paperFilename);
   const same = candidates.find((one) => versionOf(one.filename) === version);
@@ -196,15 +222,24 @@ export async function capturableDocuments(
         const wanted = MEMORANDUM_FOR[paper.kind];
         const key = artefactKey(paper.filename, convention);
 
-        const guide = chooseGuide(
-          paper.filename,
-          memoranda.filter(
-            (one) =>
-              one.kind === wanted &&
-              one.studyUnitId === paper.studyUnitId &&
-              artefactKey(one.filename, convention) === key,
-          ),
-        );
+        /*
+         * A guide for this kind of paper: filed as its memorandum, or named as
+         * one. Roland, 18 November 2026: "Assessor_Guide_Memo_Formative_
+         * Workbook_1.docx" was filed as a summative memorandum ("Assessor
+         * Guide" was matched before "Workbook"), so no workbook found its guide
+         * and every written question showed "no marking guidance".
+         */
+        const forThisKind = (one: (typeof memoranda)[number]) =>
+          paper.kind === "workbook"
+            ? one.kind === "workbook_memorandum" || /workbook|\bWB\s?\d/i.test(one.filename)
+            : one.kind === wanted && !/workbook|\bWB\s?\d/i.test(one.filename);
+        const sameUnit = memoranda.filter((one) => forThisKind(one) && one.studyUnitId === paper.studyUnitId);
+
+        const guide =
+          chooseGuide(
+            paper.filename,
+            sameUnit.filter((one) => artefactKey(one.filename, convention) === key),
+          ) ?? byNumber(paper.filename, sameUnit);
 
         return {
           documentId: paper.id,

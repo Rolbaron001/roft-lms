@@ -164,6 +164,9 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
    * treated as a memorandum: withholding one wrongly costs a click to
    * release, publishing one wrongly cannot be undone.
    */
+  // "Assessor_Guide_Memo_Formative_Workbook_1.docx" (18 November 2026): a
+  // workbook's guide, whichever way round the name has it.
+  { match: /\b(assessor'?s? guide|memo|memorandum|marking guide)\b[^/]*\bworkbook\b|\bworkbook\b[^/]*\b(assessor'?s? guide|memo|memorandum|marking guide)\b/i, kind: "workbook_memorandum" },
   { match: /\b(summative|FISA)\b[^/]*\b(assessor guide|memo|memorandum|marking guide)\b/i, kind: "summative_memorandum" },
   { match: /\bassessor'?s? guide\b|\bmarking guide\b/i, kind: "summative_memorandum" },
   // A skills programme's Final Integrated Supervised Assessment: its

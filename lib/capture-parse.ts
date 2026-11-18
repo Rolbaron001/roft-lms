@@ -202,6 +202,18 @@ const ITEM_HEADING =
   /^Question\s+([A-Z]?[0-9]+(?:[.][0-9]+)*)\s*(\([^)]*\))?\s*[::]\s*(.+)$/i;
 
 /**
+ * "1.1 Critical Analysis of RPL Intent & NQF Objectives:" with the task on
+ * the lines below: a question headed by its number and title, as the SP-260508
+ * workbooks set them (18 November 2026). Its guide heads the answer the same
+ * way, "1.1 … (Model Answer Guidelines)", so the two meet by number.
+ */
+const DOTTED_HEADING = /^(\d{1,2}\.\d{1,2}(?:\.\d{1,2})*)\s+(.{3,160}?)\s*[::]\s*$/;
+/** The guide's side: "1.1 Critical Analysis … (Model Answer Guidelines)", "1.2 … (Exemplar Key)". */
+const DOTTED_GUIDE = /^(\d{1,2}\.\d{1,2}(?:\.\d{1,2})*)\s+.+?\([^)]*\b(?:Model|Exemplar|Marking|Memo|Memorandum|Assessor|Rubric|Answers?|Key|Guidelines?)\b[^)]*\)\s*:?\s*$/i;
+/** "Curriculum Mapping: Aligned to KM-01-KT01 & IAC0101 …": what an activity covers, not a question. */
+const MAPPING_LINE = /^(?:Curriculum\s+)?(?:Mapping|Alignment)\s*[::]/i;
+
+/**
  * The other template.
  *
  * Curiosa's later workbooks abandon numbered activities for a single case
@@ -561,6 +573,38 @@ export function parseWorkbook(text: string): ParsedPaper {
       continue;
     }
 
+    // "Curriculum Mapping: …" under an activity heading says what it covers.
+    if (MAPPING_LINE.test(line) && !pending) {
+      if (!current.instruction) current.instruction = line;
+      continue;
+    }
+
+    // "1.1 Critical Analysis of RPL Intent & NQF Objectives:" opens question
+    // 1.1, and the lines below are its task (SP-260508, 18 November 2026).
+    const dotted = DOTTED_HEADING.exec(line);
+    if (dotted && !inStimulus) {
+      closeItem();
+      inTask = false;
+      headedWithMarks = null;
+      const marks = MARKS_IN_HEADING.exec(dotted[2]);
+      pending = {
+        number: dotted[1],
+        type: "long_answer",
+        stem: stripCriteria(dotted[2].replace(MARKS_IN_HEADING, "")).trim(),
+        options: [],
+        correctIndex: null,
+        points: marks ? markValue(marks[1]) : null,
+        criterionCodes: criteriaOf(dotted[2]),
+        markingGuide: null,
+        markedBy: "assessor",
+        headed: true,
+      };
+      // Its table's numbered rows ("1. Pre-Assessment & Preparation") are
+      // part of it, as a headed question's numbered parts are.
+      headedWithMarks = pending;
+      continue;
+    }
+
     // "Question C1: Work Profiling (20 Marks) [PM-01, PS0101]" opens a
     // question in its own right, and the lines under it are its context
     // rather than more questions.
@@ -915,11 +959,22 @@ const GUIDE_BLOCK_ENDS = /^(?:SECTION|PART|Activity|MEMORANDUM\b|(?!■).*\b(?:R
  * The question or task a guide line heads, as "question 3" or "task 1", or
  * null. `inRubric` is whether the line falls inside a long question's rubric.
  */
-function guideHeading(line: string, inRubric: boolean): { key: string; own: boolean } | null {
+function guideHeading(line: string, inRubric: boolean, dottedStyle = false): { key: string; own: boolean } | null {
   const heading = GUIDE_ITEM.exec(line);
   if (heading) return { key: `${heading[3] ? "task" : "question"} ${heading[4].toUpperCase()}`, own: Boolean(heading[1]) };
   const model = GUIDE_Q_MODEL.exec(line);
   if (model) return { key: `question ${model[1]}`, own: true };
+  // "1.1 Critical Analysis … (Model Answer Guidelines)", "1.2 … (Exemplar Key)":
+  // the answer to the paper's question 1.1 (SP-260508, 18 November 2026).
+  const dotted = DOTTED_GUIDE.exec(line);
+  if (dotted) return { key: `question ${dotted[1]}`, own: true };
+  // The same heading with its bracket describing the scenario instead, "3.2
+  // Ethical Dilemma Scenario Analysis (Bribe / Ghostwriting Offer)", or with
+  // none. A short numbered title with no full stop in it is a heading in a
+  // guide, not a sentence of guidance. Only in a guide that heads its answers
+  // this way: 121151's guides number sub-headings inside one task's answer.
+  const titled = dottedStyle ? /^(\d{1,2}\.\d{1,2}(?:\.\d{1,2})*)\s+[A-Z0-9][^.]{2,150}$/.exec(line) : null;
+  if (titled) return { key: `question ${titled[1]}`, own: true };
   const row = inRubric ? GUIDE_RUBRIC_ROW.exec(line) : null;
   if (row) return { key: `question ${row[1].toUpperCase()}`, own: true };
   return null;
@@ -930,9 +985,11 @@ function guideBlocks(lines: string[]): NonNullable<ParsedMemo["guides"]> {
   const guides: NonNullable<ParsedMemo["guides"]> = {};
   let part: string | null = null;
   let inRubric = false;
+  // A guide that heads its answers "1.1 Title (Exemplar Key)", at least twice.
+  const dottedStyle = lines.filter((line) => DOTTED_GUIDE.test(line)).length >= 2;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    const heading = guideHeading(line, inRubric);
+    const heading = guideHeading(line, inRubric, dottedStyle);
     if (!heading) {
       // "MEMORANDUM - SECTION C" names the paper's part; "PART 2: ASSESSOR
       // MEMORANDUM" is the guide's own division and is overridden by it.
@@ -945,7 +1002,7 @@ function guideBlocks(lines: string[]): NonNullable<ParsedMemo["guides"]> {
     const body: string[] = [];
     for (let ahead = index + 1; ahead < lines.length && body.length < 80; ahead += 1) {
       const next = lines[ahead];
-      if (guideHeading(next, inRubric) || GUIDE_BLOCK_ENDS.test(next)) break;
+      if (guideHeading(next, inRubric, dottedStyle) || GUIDE_BLOCK_ENDS.test(next)) break;
       if (next) body.push(next);
     }
     // The memorandum's own copy wins over a heading that merely repeats the
