@@ -188,6 +188,7 @@ export const en = {
   "nav./enrolment-form": "Enrolment form",
   "nav./assess": "To assess",
   "nav./moderate": "To moderate",
+  "nav./moderate/reports": "Moderation reports",
   "nav./reassessments": "Held for review",
   "nav./appeals": "Appeals",
   "nav./my-appeals": "Appeals and concerns",

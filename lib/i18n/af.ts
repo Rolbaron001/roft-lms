@@ -50,6 +50,7 @@ export const af: Catalogue = {
   "nav./enrolment-form": "Inskrywingsvorm",
   "nav./assess": "Om te assesseer",
   "nav./moderate": "Om te modereer",
+  "nav./moderate/reports": "Moderasieverslae",
   "nav./reassessments": "Teruggehou vir hersiening",
   "nav./appeals": "Appèlle",
   "nav./my-appeals": "Appèlle en klagtes",

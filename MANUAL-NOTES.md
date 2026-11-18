@@ -823,6 +823,25 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6ae. Moderation Reports, and locking for external verification (17 November 2026)
+
+- **Where:** Assessment → **Moderation reports**. A moderator starts a report
+  for a qualification or cohort they are named on as moderator.
+- **Figures:** drafted by the platform from the decisions and moderation in
+  that scope (decisions, sampled, moderated, endorsed, referred back,
+  overridden, and the same per assessor). They are fixed when signed.
+- **Findings and recommendations:** written by the moderator, saved as a
+  draft as often as needed. Findings are required before signing.
+- **Sign off:** records the moderator's name, registration number (taken from
+  the programme's People where it is recorded there, and changeable), the time
+  and a fingerprint of what was signed. It cannot be undone.
+- **The lock:** signing locks every moderated decision the report covers. No
+  further assessment decision or moderation can be recorded on that work.
+  Record each moderator's registration number on the programme's People, so it
+  appears on the report.
+- **External verifier and Quality Assurer:** read every signed report, its
+  figures, signature and the decisions it locked.
+
 ## 6ad. Choosing decisions to moderate (17 November 2026)
 
 - **Where:** Moderate → **All decisions, to choose a sample**.

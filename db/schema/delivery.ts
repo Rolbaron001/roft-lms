@@ -21,7 +21,7 @@ import {
   qualifications,
   studyUnits,
 } from "./curriculum";
-import { assessments } from "./assessment";
+import { assessmentDecisions, assessments } from "./assessment";
 
 /**
  * The spine: the one ordered list a learner walks through a course.
@@ -517,6 +517,61 @@ export const cohortAnnouncements = pgTable(
     postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("cohort_announcements_org_idx").on(t.organisationId), index("cohort_announcements_cohort_idx").on(t.cohortId, t.postedAt)],
+);
+
+/**
+ * A Moderation Report, which the moderator completes and signs off (Heidi's
+ * role specifications, job sheet D52 (4) and (5), 17 November 2026). For a
+ * cohort or a qualification; its figures are drafted from the moderation done,
+ * its findings and recommendations are the moderator's. Signing it snapshots
+ * the moderated decisions it covers (moderation_report_decisions), and those
+ * are locked: no further decision or moderation on them, ready for the
+ * external verifier.
+ */
+export const moderationReports = pgTable(
+  "moderation_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id").references(() => qualifications.id, { onDelete: "cascade" }),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }),
+    moderatorId: uuid("moderator_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    findings: text("findings").notNull().default(""),
+    recommendations: text("recommendations").notNull().default(""),
+    /** The figures as they stood when it was signed. */
+    summary: jsonb("summary"),
+    moderatorRegistrationNumber: text("moderator_registration_number"),
+    signedAt: timestamp("signed_at", { withTimezone: true }),
+    signatureHash: text("signature_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("moderation_reports_org_idx").on(t.organisationId), index("moderation_reports_scope_idx").on(t.qualificationId, t.cohortId)],
+);
+
+export const moderationReportDecisions = pgTable(
+  "moderation_report_decisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Foreign keys named below: the generated names run past PostgreSQL's
+    // 63 characters (tests/constraint-names.test.ts).
+    organisationId: uuid("organisation_id").notNull(),
+    reportId: uuid("report_id").notNull(),
+    decisionId: uuid("decision_id").notNull(),
+  },
+  (t) => [
+    foreignKey({ name: "moderation_report_decisions_organisation_fk", columns: [t.organisationId], foreignColumns: [organisations.id] }).onDelete("cascade"),
+    foreignKey({ name: "moderation_report_decisions_report_fk", columns: [t.reportId], foreignColumns: [moderationReports.id] }).onDelete("cascade"),
+    foreignKey({ name: "moderation_report_decisions_decision_fk", columns: [t.decisionId], foreignColumns: [assessmentDecisions.id] }).onDelete("cascade"),
+    index("moderation_report_decisions_org_idx").on(t.organisationId),
+    uniqueIndex("moderation_report_decisions_pair_idx").on(t.reportId, t.decisionId),
+    index("moderation_report_decisions_decision_idx").on(t.decisionId),
+  ],
 );
 
 export const cohortMembers = pgTable(

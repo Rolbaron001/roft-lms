@@ -39,6 +39,7 @@ import { assertOralRecorded } from "./reassessment";
 import { getMarkedPaper, proposeCriterionOutcomes } from "./marking";
 import { coursesWithin, reachWithin, submissionCourse, submissionInReach } from "./staff-scope";
 import { holdBlocking, holdMessage } from "./quality";
+import { assertNotLocked } from "./moderation-report";
 
 /**
  * Assessment, assessor decisions and moderation.
@@ -1646,6 +1647,9 @@ export async function recordAssessorDecision(
     const hold = await holdBlocking(tx, { learnerId: submission.userId, courseId: assessment?.courseId ?? null });
     if (hold) throw new AssessmentError(holdMessage(hold, "No assessment decision can be recorded"), "not_permitted");
 
+    // Locked for external verification by a signed Moderation Report (D52 (5)).
+    await assertNotLocked(tx, parsed.submissionId, (message) => new AssessmentError(message, "not_permitted"));
+
     const [{ priorDecisions }] = await tx
       .select({ priorDecisions: count() })
       .from(assessmentDecisions)
@@ -1931,6 +1935,8 @@ export async function recordModeration(
     if (!(await submissionInReach(tx, await reachWithin(tx, session, "moderator"), decision.submissionId))) {
       throw new AssessmentError("This is not one of the programmes you moderate.", "not_permitted");
     }
+    // Locked for external verification by a signed Moderation Report (D52 (5)).
+    await assertNotLocked(tx, decision.submissionId, (message) => new AssessmentError(message, "not_permitted"));
 
     const [existing] = await tx
       .select({ id: moderationRecords.id })

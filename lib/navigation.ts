@@ -172,6 +172,8 @@ export const NAV: NavSection[] = [
         label: "To moderate",
         permission: "assessment:moderate",
       },
+      // Moderation Reports, signed and locked for the external verifier (D52 (4), (5)).
+      { href: "/moderate/reports", label: "Moderation reports", anyPermission: ["assessment:moderate", "verification:external_audit"] },
       // Learners held after a second not-yet-competent result. Work waiting to
       // be done rather than a register to browse.
       {
