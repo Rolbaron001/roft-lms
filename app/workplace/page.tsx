@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireCapability, requireSession } from "@/lib/request";
 import { vocabulary } from "@/lib/terms";
 import { myLogbooks } from "@/lib/workplace";
+import { coachLearners } from "@/lib/coach";
 import { AppShell, Card } from "@/components/app-shell";
 import { maybe, translator } from "@/lib/i18n";
 import { localeFor } from "@/lib/i18n/locales";
@@ -18,6 +19,7 @@ export default async function WorkplacePage() {
   const tenant = await requireCapability("workplace_experience");
   const session = await requireSession();
   const logbooks = await myLogbooks(session);
+  const coached = await coachLearners(session);
   const locale = localeFor(tenant, session);
   const t = translator(locale);
   // The client calls this a workplace experience sign-off rather than a
@@ -49,6 +51,38 @@ export default async function WorkplacePage() {
           </p>
         ) : null}
       </div>
+
+      {coached.length > 0 ? (
+        <div className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold">{t("work.yourLearners")}</h2>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {coached.map((learner) => {
+              const done = learner.logbooks.reduce((sum, book) => sum + book.done, 0);
+              const total = learner.logbooks.reduce((sum, book) => sum + book.total, 0);
+              return (
+                <li key={learner.learnerId}>
+                  <Link
+                    href={`/workplace/learners/${learner.learnerId}`}
+                    className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 transition hover:border-[var(--brand-primary)]"
+                  >
+                    <p className="text-sm font-medium">{learner.name}</p>
+                    <p className="text-xs text-[var(--muted)]">{learner.employer}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{t("coachView.done", { done, total })}</p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
+      {!isCoach && !canManage && logbooks.length > 0 ? (
+        <p className="mb-4 text-sm">
+          <Link href={`/workplace/learners/${session.userId}`} className="underline-offset-2 hover:underline">
+            {t("work.myRecords")}
+          </Link>
+        </p>
+      ) : null}
 
       {isCoach && waiting > 0 ? (
         <div

@@ -823,6 +823,26 @@ Three roles a provider gives on the person's page, like any other.
 - **Removing a qualification:** the red "Remove this qualification…" button
   at the top of its page. Only possible while nothing is recorded against it.
 
+## 6ag. The workplace coach's page for a learner (18 November 2026)
+
+- **Where:** Work experience → **Your learners** → a learner. The coach sees
+  only learners whose workplace agreement names them.
+- **What the provider must have in place:** a workplace agreement naming the
+  coach, and a logbook opened for each work experience module. The
+  observation checklist is drafted from that logbook's work activities, so a
+  curriculum imported with its work activities gives the coach a ready list.
+- **Who is told:** the learner's facilitators and assessors are the people
+  named on the learner's programme (People on the qualification) and the
+  facilitator of each cohort the learner is in. If nobody is named, a coach's
+  message is refused with a note to ask the provider, so name them before the
+  workplace phase begins.
+- **What a signature means:** the coach's name, the time and a fingerprint of
+  what was recorded. A signed record cannot be changed; a correction is a new
+  record.
+- **Who reads what:** the learner reads the signed checklists, testimonies and
+  readiness feedback about them; a coach's message to staff is not shown to the
+  learner.
+
 ## 6af. When names do not say what belongs with what (18 November 2026)
 
 - **Naming conventions still help most** (section 2): a paper and its guide

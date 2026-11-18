@@ -89,7 +89,10 @@ export type NotificationKind =
   /** To the cohort's learners: a class's notes are published to read (D41 phase C). */
   | "class.notes_published"
   /** To the cohort's learners: their facilitator's announcement (D52, 17 November 2026). */
-  | "cohort.announcement";
+  | "cohort.announcement"
+  /** A workplace coach's signed record, and a coach's message to staff (D52 (8) to (10)). */
+  | "coach.record"
+  | "coach.message";
 
 export type RaiseInput = {
   organisationId: string;

@@ -855,6 +855,49 @@ export const workplaceLogbookEntries = pgTable(
 );
 
 /**
+ * What a workplace coach records about a learner beyond the logbook (Heidi's
+ * role specifications, job sheet D52 (8) to (10), 18 November 2026): practical
+ * observation checklists and witness testimonies the coach signs, structured
+ * feedback on workplace readiness, and messages to the learner's facilitator
+ * and assessor. The learner and their staff read them; the assessor takes the
+ * signed ones as evidence.
+ */
+export const coachRecordKind = pgEnum("coach_record_kind", ["observation_checklist", "witness_testimony", "readiness_feedback", "message"]);
+
+export const coachRecords = pgTable(
+  "coach_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    coachId: uuid("coach_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    logbookId: uuid("logbook_id").references(() => workplaceLogbooks.id, { onDelete: "set null" }),
+    kind: coachRecordKind("kind").notNull(),
+    title: text("title").notNull(),
+    /**
+     * By kind: a checklist's items [{ label, observed, comment }]; readiness
+     * ratings { dimension: 1-4 } with a recommendation; a message's recipients.
+     */
+    details: jsonb("details"),
+    /** A testimony's statement, the feedback's comments, a message's text. */
+    body: text("body").notNull().default(""),
+    witnessName: text("witness_name"),
+    witnessRole: text("witness_role"),
+    observedOn: date("observed_on"),
+    signedAt: timestamp("signed_at", { withTimezone: true }),
+    signatureHash: text("signature_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("coach_records_org_idx").on(t.organisationId), index("coach_records_learner_idx").on(t.learnerId, t.createdAt)],
+);
+
+/**
  * The Statement of Results.
  *
  * The document that admits a learner to the External Integrated Summative
