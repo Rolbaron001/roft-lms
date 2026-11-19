@@ -39,10 +39,22 @@ export function ImportNotice({ qualificationId }: { qualificationId: string }) {
   }, [key, stored]);
 
   if (!stored || closed) return null;
+  let notice = stored;
+  let attention = false;
+  try {
+    const parsed = JSON.parse(stored) as { notice: string; attention: boolean };
+    notice = parsed.notice;
+    attention = parsed.attention;
+  } catch {
+    /* plain text */
+  }
+  // Light red when it holds something to act on: a warning shaded green is
+  // not read (Roland, 19 November 2026).
+  const tone = attention ? "border-[var(--danger)]/40 bg-[var(--danger)]/5" : "border-[var(--success)]/40 bg-[var(--success)]/5";
   return (
-    <div role="status" className="mb-4 rounded-md border border-[var(--success)]/40 bg-[var(--success)]/5 p-3">
+    <div role={attention ? "alert" : "status"} className={`mb-4 rounded-md border p-3 ${tone}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm">{stored}</p>
+        <p className="text-sm">{notice}</p>
         <button type="button" onClick={() => setClosed(true)} className="shrink-0 text-sm text-[var(--muted)] hover:underline">
           {t("common.cancel")}
         </button>

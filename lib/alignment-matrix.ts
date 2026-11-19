@@ -9,7 +9,7 @@ import {
   qualifications,
   topicElementAlignment,
 } from "@/db/schema";
-import { readXlsxSheets, type Sheet } from "./office";
+import { readDocxTables, readXlsxSheets, type Sheet } from "./office";
 import { recordAudit } from "./audit";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { modulesOfCondition } from "./part-qualifications";
@@ -294,18 +294,13 @@ function readSheet(sheet: Sheet, headerRow: number): SheetReading {
  */
 export function readAlignmentMatrix(bytes: Uint8Array): MatrixReading {
   /*
-   * A Word document handed to a spreadsheet reader. Curiosa's alignment
-   * document is a Word table, and Heidi uploaded exactly this during the test
-   * on 16 September. Checked by looking inside rather than by trusting the
-   * extension.
+   * A matrix written as a Word table is read from its tables, the same way as
+   * a spreadsheet's sheets. It used to be refused with a request to save it
+   * as a spreadsheet; Roland, 19 November 2026: the platform converts what it
+   * needs itself, and does not hand the work back to the user. Checked by
+   * looking inside rather than by trusting the extension.
    */
-  if (looksLikeWord(bytes)) {
-    throw new AlignmentMatrixError(
-      "That is a Word document. It is filed and searchable, but not read: the alignment matrix is read from a spreadsheet, with one row per curriculum line and a column headed such as “Topic Elements”. Save the matrix as a spreadsheet and upload that as well.",
-    );
-  }
-
-  const sheets = readXlsxSheets(bytes)
+  const sheets = (looksLikeWord(bytes) ? readDocxTables(bytes) : readXlsxSheets(bytes))
     .map((sheet) => ({ sheet, headerRow: findHeaderRow(sheet) }))
     .filter((candidate) => candidate.headerRow !== -1)
     .map(({ sheet, headerRow }) => readSheet(sheet, headerRow))

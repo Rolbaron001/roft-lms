@@ -23,6 +23,8 @@ export type ImportActionState = {
    * the Qualification page."
    */
   committedTo?: string;
+  /** The notice carries something to act on: shown in light red, not green (Roland, 19 November 2026). */
+  attention?: boolean;
 };
 
 function field(formData: FormData, name: string): string {
@@ -220,6 +222,7 @@ export async function commitPlanAction(
   return said({
     notice: `${made}Committed: ${built}.${held}${refused}${afterBuild}`,
     committedTo: report.qualificationId || undefined,
+    attention: report.refused.length > 0 || /could not be built/.test(afterBuild),
   });
 }
 

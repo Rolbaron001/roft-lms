@@ -17,7 +17,7 @@ import {
   readXlsxSheets,
   OfficeReadError,
 } from "./office";
-import { importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
+import { AlignmentMatrixError, importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
 import {
   looksLikeAlignmentDocument,
   readAlignmentDocument,
@@ -482,7 +482,28 @@ export async function uploadProgrammeDocument(
       if (extractedText && looksLikeAlignmentDocument(extractedText)) {
         alignment = await applyAlignmentDocument(session, target, extractedText);
       } else {
-        matrix = await importAlignmentMatrix(session, target, file.bytes);
+        /*
+         * A matrix for another programme is said plainly: SP-260508's folder
+         * held "CA LD_Advisor_Alignment_Matrix.docx", which maps curriculum
+         * 242401002, not the RPL Advisor's 900537 (19 November 2026).
+         */
+        const [own] = await withTenant(session.organisationId, (tx) =>
+          tx.select({ code: qualifications.curriculumCode }).from(qualifications).where(eq(qualifications.id, target)),
+        );
+        const foreign = foreignCurriculum(extractedText ?? "", own?.code ?? null);
+        if (foreign) {
+          throw new AlignmentMatrixError(
+            `This matrix maps curriculum ${foreign}, not this programme's ${own?.code}. It is filed, and is not used for this programme. Check whether it belongs in this folder.`,
+          );
+        }
+        try {
+          matrix = await importAlignmentMatrix(session, target, file.bytes);
+        } catch (error) {
+          // A Word matrix whose tables do not map curriculum lines to
+          // criteria is still filed and searchable. The user is not asked to
+          // convert it (Roland, 19 November 2026).
+          if (!(error instanceof AlignmentMatrixError && /\.docx$/i.test(file.filename))) throw error;
+        }
       }
     }
   }
@@ -497,6 +518,20 @@ export async function uploadProgrammeDocument(
  * nowhere to be seen, because only an assessor was shown them. An instructor,
  * a facilitator and a learner still are not.
  */
+/**
+ * The curriculum a matrix names, when it is not this programme's: curriculum
+ * codes written before module codes ("242401002-KM-01"), compared by their
+ * digits with the programme's own ("900537-000-00-00"). Null when the matrix
+ * names this programme, names none, or the programme has no code.
+ */
+export function foreignCurriculum(text: string, ownCode: string | null): string | null {
+  const own = (ownCode ?? "").replace(/\D/g, "").slice(0, 9);
+  if (own.length < 6) return null;
+  const named = new Set(Array.from(text.matchAll(/\b(\d{6})-?(\d{3})-?(?:KM|PM|WM)\b/g)).map((match) => `${match[1]}${match[2]}`));
+  if (named.size === 0 || named.has(own)) return null;
+  return [...named][0];
+}
+
 export function maySeeMemoranda(session: AuthenticatedSession): boolean {
   return (
     session.permissions.includes("assessment:assess") ||

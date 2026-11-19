@@ -200,6 +200,46 @@ export async function readOfficeText(filename: string, bytes: Uint8Array): Promi
   return readDocxText(bytes);
 }
 
+/**
+ * A Word document's tables, each as a sheet of rows and cells (Roland, 19
+ * November 2026: an alignment matrix written as a Word table is read, not
+ * sent back with a request to save it as a spreadsheet). A cell spanning
+ * columns fills them, so the columns stay in line with the heading row; a
+ * cell merged down from the row above carries that row's text, the way a
+ * module code spanning its topics reads.
+ */
+export function readDocxTables(bytes: Uint8Array): Sheet[] {
+  const xml = withoutStruckRuns(xmlOf(open(bytes), "word/document.xml"));
+  const textOf = (fragment: string) =>
+    fragment
+      .replace(/<w:tab\b[^>]*\/>/g, " ")
+      .replace(/<w:br\b[^>]*\/>/g, "\n")
+      .replace(/<\/w:p>/g, "\n")
+      .replace(/<[^>]*>/g, "")
+      .split("\n")
+      .map((line) => unescapeXml(line).trim())
+      .filter(Boolean)
+      .join("\n");
+  const sheets: Sheet[] = [];
+  for (const [index, table] of Array.from(xml.matchAll(/<w:tbl>([\s\S]*?)<\/w:tbl>/g)).entries()) {
+    const rows: string[][] = [];
+    for (const row of table[1].matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)) {
+      const cells: string[] = [];
+      for (const cell of row[0].matchAll(/<w:tc>([\s\S]*?)<\/w:tc>/g)) {
+        const span = Number(/<w:gridSpan w:val="(\d+)"/.exec(cell[1])?.[1] ?? 1);
+        const continued = /<w:vMerge\s*\/>|<w:vMerge w:val="continue"/.test(cell[1]);
+        const text = continued ? (rows[rows.length - 1]?.[cells.length] ?? "") : textOf(cell[1]);
+        cells.push(text);
+        for (let extra = 1; extra < span; extra++) cells.push("");
+      }
+      while (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+      if (cells.length > 0) rows.push(cells);
+    }
+    if (rows.length > 0) sheets.push({ name: `Table ${index + 1}`, rows });
+  }
+  return sheets;
+}
+
 // ----------------------------------------------------------------------- xlsx
 
 export type Sheet = {

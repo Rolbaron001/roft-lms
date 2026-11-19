@@ -199,17 +199,18 @@ describe("an alignment matrix that is not a spreadsheet", () => {
    * Told apart by looking inside rather than by the extension, because a Word
    * document renamed .xlsx reaches the same dead end by a longer road.
    */
-  it("says it is a Word document, and what to do instead", () => {
-    // A minimal zip whose directory names the Word part.
+  it("is read from its tables, never sent back to be saved as a spreadsheet (Roland, 19 November 2026)", () => {
+    // A minimal zip whose directory names the Word part, with no tables.
     const asWord = new TextEncoder().encode(
       "PK\u0003\u0004" + " ".repeat(30) + "word/document.xml" + " ".repeat(40),
     );
-
-    expect(() => readAlignmentMatrix(asWord)).toThrow(/Word document/i);
-    expect(() => readAlignmentMatrix(asWord)).toThrow(/spreadsheet/i);
-    // And says the document itself is not lost, which it is not: the caller
-    // files it before it reads it, so only the reading failed.
-    expect(() => readAlignmentMatrix(asWord)).toThrow(/filed and searchable/i);
+    let message = "";
+    try {
+      readAlignmentMatrix(asWord);
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).not.toMatch(/save the matrix as a spreadsheet/i);
   });
 });
 

@@ -164,12 +164,15 @@ export function Proposal({
   useEffect(() => {
     if (!state.committedTo) return;
     try {
-      window.sessionStorage.setItem(`${IMPORT_NOTICE_KEY}${state.committedTo}`, state.notice ?? "");
+      window.sessionStorage.setItem(
+        `${IMPORT_NOTICE_KEY}${state.committedTo}`,
+        JSON.stringify({ notice: state.notice ?? "", attention: state.attention === true }),
+      );
     } catch {
       /* the page still opens; only the summary is lost */
     }
     router.push(`/qualifications/${state.committedTo}`);
-  }, [state.committedTo, state.notice, router]);
+  }, [state.committedTo, state.notice, state.attention, router]);
 
   return (
     <div className="space-y-4">
@@ -183,7 +186,9 @@ export function Proposal({
         being stranded on.
       */}
       {state.notice ? (
-        <div className="rounded-md border border-[var(--success)]/40 bg-[var(--success)]/5 p-3">
+        <div
+          className={`rounded-md border p-3 ${state.attention ? "border-[var(--danger)]/40 bg-[var(--danger)]/5" : "border-[var(--success)]/40 bg-[var(--success)]/5"}`}
+        >
           <p className="text-sm">{state.notice}</p>
           {state.committedTo ? (
             <p className="mt-2">
@@ -279,7 +284,8 @@ export function Proposal({
         <div>
           {section("warnings", t("proposal.readFirst"), plan.warnings.length)}
           {open.has("warnings") ? (
-            <ul className="mt-2 space-y-2 text-sm">
+            // In light red: a warning shaded like good news is not read (Roland, 19 November 2026).
+            <ul className="mt-2 space-y-2 rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-3 text-sm">
               {plan.warnings.map((warning, index) => (
                 <li key={index}>{warning}</li>
               ))}

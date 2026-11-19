@@ -71,6 +71,9 @@ happens without it**. Where a provider can change a rule, it says where.
   most papers, then the most study units, is used.
 - **FISA instruments** are kept with the qualification and are not captured
   into a study unit; the external integrated assessment is the QCTO's.
+- **The alignment matrix** may be a spreadsheet or a Word table; both are read
+  (19 November 2026). A matrix that names another programme's curriculum code
+  is filed and flagged, and not used.
 
 ## 2. Naming files
 
