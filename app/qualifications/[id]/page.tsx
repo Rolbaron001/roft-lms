@@ -316,9 +316,11 @@ export default async function QualificationPage({
       ? [
           {
             title: t("qualPage.step.built"),
-            done: verification.built && (!capture || capture.captured === capture.total),
+            // Done once built and every paper captured, and in any case once it
+            // is live: a live qualification was built (Roland, 19 November 2026).
+            done: verification.live || (verification.built && (!capture || capture.captured === capture.total)),
             state:
-              verification.built && (!capture || capture.captured === capture.total)
+              verification.live || (verification.built && (!capture || capture.captured === capture.total))
                 ? t("qualPage.step.builtDone", { units: verification.units.length, papers: capture?.captured ?? 0 })
                 : t("qualPage.step.builtTodo"),
             href: `/qualifications/${id}/verify`,
@@ -919,7 +921,7 @@ export default async function QualificationPage({
                           {(materialByUnit.get(unit.code) ?? []).map((document) => (
                             <li key={document.id} className="text-sm">
                               <Link
-                                href={`/api/programme-documents/${document.id}`}
+                                href={`/documents/${document.id}`}
                                 className="underline-offset-2 hover:underline"
                               >
                                 {document.title}
@@ -967,8 +969,9 @@ export default async function QualificationPage({
                     {documents.map((document) => (
                       <tr key={document.id} className="border-b border-[var(--border)] last:border-0">
                         <td className="px-4 py-3">
+                          {/* Read in the page; anything not a PDF or Word file downloads. */}
                           <a
-                            href={`/api/programme-documents/${document.id}`}
+                            href={`/documents/${document.id}`}
                             className="font-medium underline-offset-2 hover:underline"
                           >
                             {document.title}

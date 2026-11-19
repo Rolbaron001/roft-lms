@@ -6,7 +6,7 @@ import { libraryItems } from "@/db/schema";
 import { localeFor, requireSession, requireTenant } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { AppShell } from "@/components/app-shell";
-import { PdfViewer } from "@/components/document-viewer";
+import { PageReader } from "@/components/page-reader";
 
 /**
  * A PDF from a study unit's material, read in the page with the same viewer
@@ -14,6 +14,9 @@ import { PdfViewer } from "@/components/document-viewer";
  * files are served sandboxed, and some browsers will not show a PDF that way.
  * Who may read it is checked where the bytes are served.
  */
+/** What the page reader draws: a PDF, or a Word document (.docx). */
+const READABLE = /^application\/pdf$|wordprocessingml/;
+
 export default async function MaterialViewPage({ params }: { params: Promise<{ id: string; itemId: string }> }) {
   const { id, itemId } = await params;
   const tenant = await requireTenant();
@@ -22,7 +25,7 @@ export default async function MaterialViewPage({ params }: { params: Promise<{ i
   const [item] = await withTenant(session.organisationId, (tx) =>
     tx.select({ title: libraryItems.title, mimeType: libraryItems.mimeType }).from(libraryItems).where(eq(libraryItems.id, itemId)),
   );
-  if (!item) notFound();
+  if (!item || !READABLE.test(item.mimeType ?? "")) notFound();
   const src = `/api/learn/${id}/material/${itemId}`;
 
   return (
@@ -32,7 +35,7 @@ export default async function MaterialViewPage({ params }: { params: Promise<{ i
       </Link>
       <h1 className="mb-4 mt-2 text-xl font-semibold">{item.title}</h1>
       <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-        <PdfViewer src={src} downloadHref={`${src}?download`} />
+        <PageReader src={src} downloadHref={`${src}?download`} kind={item.mimeType === "application/pdf" ? "pdf" : "word"} />
       </section>
     </AppShell>
   );

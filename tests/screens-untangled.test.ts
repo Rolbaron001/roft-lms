@@ -119,11 +119,9 @@ describe("a study unit's material", () => {
     expect(detail).toMatch(/materialByUnit\.get\(unit\.code\)/);
   });
 
-  it("opens", () => {
+  it("opens in the page reader (Roland, 19 November 2026), which downloads what it cannot show", () => {
     const block = detail.slice(detail.indexOf("Material filed against this unit"));
-    expect(block.slice(0, 900)).toMatch(
-      /href=\{`\/api\/programme-documents\/\$\{document\.id\}`\}/,
-    );
+    expect(block.slice(0, 900)).toMatch(/href=\{`\/documents\/\$\{document\.id\}`\}/);
   });
 
   it("marks what a learner may not see", () => {

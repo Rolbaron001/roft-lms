@@ -3,12 +3,10 @@ import type { Translate } from "@/lib/i18n";
 import type { AuthenticatedSession } from "@/lib/session";
 import { pageDates } from "@/lib/request";
 import { recordStepOpened, type StepView } from "@/lib/spine";
-import { learnerMaterial, readLearnerDocument, unitOverview, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
+import { learnerMaterial, unitOverview, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
 import { listLibrary } from "@/lib/library";
-import { readProgrammeDocument } from "@/lib/programme-documents";
-import { wordChapters } from "@/lib/word-chapters";
 import { describeSize } from "@/lib/media";
-import { ChapterViewer, PdfViewer } from "@/components/document-viewer";
+import { PageReader } from "@/components/page-reader";
 import { StepList } from "./step-list";
 
 /** What a study unit is about, what the learner will learn, and its modules. */
@@ -111,13 +109,10 @@ export async function StudyUnitView({
 
   const documentHref = guide ? (preview ? `/api/programme-documents/${guide.targetId}` : `/api/learn/${enrolmentId}/documents/${guide.targetId}`) : null;
   const downloadHref = documentHref ? (preview ? documentHref : `${documentHref}?download`) : null;
+  // Read as its own pages (components/page-reader.tsx): a PDF, or a Word file
+  // drawn at its own page size and orientation (Roland, 19 November 2026).
   const isPdf = guide?.document?.mimeType === "application/pdf";
-  const chapters =
-    guide?.open && guide.document && !isPdf && /wordprocessingml|msword/.test(guide.document.mimeType)
-      ? await (preview ? readProgrammeDocument(session, guide.targetId) : readLearnerDocument(session, enrolmentId, guide.targetId))
-          .then((file) => wordChapters(file.bytes))
-          .catch(() => null)
-      : null;
+  const isWord = Boolean(guide?.document && /wordprocessingml/.test(guide.document.mimeType));
 
   return (
     <div className="space-y-6">
@@ -168,10 +163,8 @@ export async function StudyUnitView({
       {guide?.open && documentHref && downloadHref ? (
         <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
           <h2 className="px-5 pt-4 text-lg font-semibold">{t("learnUnit.guideTitle")}</h2>
-          {isPdf ? (
-            <PdfViewer src={documentHref} downloadHref={downloadHref} />
-          ) : chapters ? (
-            <ChapterViewer chapters={chapters} downloadHref={downloadHref} />
+          {isPdf || isWord ? (
+            <PageReader src={documentHref} downloadHref={downloadHref} kind={isPdf ? "pdf" : "word"} />
           ) : (
             <p className="p-5 text-sm">
               <a href={downloadHref} className="underline underline-offset-2">
@@ -220,7 +213,8 @@ export async function StudyUnitView({
                     {item.description ? <span className="text-sm text-[var(--muted)]">{item.description}</span> : null}
                     {item.open ? (
                       <div className="mt-2 flex gap-4 text-sm">
-                        {item.mimeType === "application/pdf" ? (
+                        {/* PDFs and Word documents open in the page reader. */}
+                        {item.mimeType === "application/pdf" || /wordprocessingml/.test(item.mimeType ?? "") ? (
                           <Link href={pdfViewHref(item.id)} className="underline underline-offset-2">
                             {t("learnUnit.view")}
                           </Link>

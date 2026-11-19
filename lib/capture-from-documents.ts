@@ -196,7 +196,10 @@ export async function capturableDocuments(
       .leftJoin(studyUnits, eq(studyUnits.id, programmeDocuments.studyUnitId))
       .where(eq(programmeDocuments.qualificationId, qualificationId));
 
-    const papers = rows.filter((row) => PAPERS.has(row.kind));
+    // Not a FISA instrument: the external integrated assessment is set and run
+    // under the QCTO, not captured into a study unit (SP-260508, 19 November
+    // 2026: its FISA papers held "Built from the folder" open after it was live).
+    const papers = rows.filter((row) => PAPERS.has(row.kind) && !/\bFISA\b/i.test(row.filename.replace(/[_-]+/g, " ")));
     if (papers.length === 0) return [];
 
     // Everything already captured, by digest. One query rather than one per

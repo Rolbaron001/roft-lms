@@ -34,6 +34,8 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { addPrerequisite, addStep } from "./spine";
 import { getObject } from "./storage";
 import { bareFilename } from "./naming-convention";
+import { bestAlignmentUnits } from "./alignment-document";
+import { paperKey } from "./material-placement";
 
 /**
  * Building a qualification from what the platform already holds, and making it
@@ -626,6 +628,12 @@ export type UnitVerification = {
   blocking: Finding[];
   /** Worth a look; does not hold it back. */
   toCheck: Finding[];
+  /**
+   * Papers the alignment document lists for this unit that are done in a
+   * later one: "SU2: Formative Workbook 1". SP-260508 lists Workbook 1 for SU1
+   * and SU2; it is done once, after SU2 (Roland, 19 November 2026).
+   */
+  assessedWith: { code: string; title: string }[];
 };
 
 export type Verification = {
@@ -820,7 +828,30 @@ export async function verificationOf(
       assessments: [...byAssessment.values()],
       blocking,
       toCheck,
+      assessedWith: [],
     });
+  }
+
+  // Where the alignment document lists one paper for several units.
+  const alignment = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ text: programmeDocuments.extractedText })
+      .from(programmeDocuments)
+      .where(and(eq(programmeDocuments.qualificationId, qualificationId), eq(programmeDocuments.kind, "alignment_matrix"))),
+  );
+  const listed = bestAlignmentUnits(alignment.map((one) => one.text));
+  const keyOf = (assessment: UnitVerification["assessments"][number]) =>
+    paperKey(assessment.title, assessment.purpose === "summative" ? "summative_assessment" : "workbook");
+  for (const unit of result) {
+    const keys = listed.find((one) => one.code === unit.code)?.papers ?? [];
+    for (const key of keys) {
+      if (unit.assessments.some((assessment) => keyOf(assessment) === key)) continue;
+      for (const other of result) {
+        if (other === unit) continue;
+        const found = other.assessments.find((assessment) => keyOf(assessment) === key);
+        if (found) unit.assessedWith.push({ code: other.code, title: found.title });
+      }
+    }
   }
 
   return {

@@ -33,7 +33,29 @@ export type PlacementUnit = {
   moduleCodes: string[];
   /** Topics taken from a module, where the alignment document names them: KM01 → ["KT01"]. */
   topics: Record<string, string[]>;
+  /** Papers the alignment document lists for the unit: "workbook:1", "summative:2". */
+  papers?: string[];
 };
+
+/**
+ * A workbook's or summative's number, as the alignment document lists it:
+ * "Formative_Workbook_1_Part1..." and "Assessor_Guide_Memo_Formative_Workbook_1"
+ * are both "workbook:1"; "Summative_Assessment_2_..." and
+ * "Summative_Assessor_Guide_2_..." are "summative:2". Null for anything else.
+ */
+export function paperKey(filename: string, kind: string | null): string | null {
+  const name = filename.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ");
+  if (/\bFISA\b/i.test(name)) return null;
+  if (kind === "workbook" || kind === "workbook_memorandum") {
+    const match = /\bWorkbook\s*0?(\d{1,2})\b/i.exec(name);
+    return match ? `workbook:${Number(match[1])}` : null;
+  }
+  if (kind === "summative_assessment" || kind === "summative_memorandum") {
+    const match = /\bSummative\s+(?:Assessment|Assessor\s+Guide|Memo(?:randum)?)?\s*0?(\d{1,2})\b/i.exec(name);
+    return match ? `summative:${Number(match[1])}` : null;
+  }
+  return null;
+}
 
 export type Placement = {
   studyUnitCode: string;
@@ -86,6 +108,27 @@ export function placeMaterial(
   if (units.length === 0) return null;
   // The Final Integrated Supervised Assessment is the whole programme's.
   if (/\bFISA\b/i.test(document.filename.replace(/_/g, " "))) return null;
+
+  /*
+   * Where the alignment document lists the workbooks and summatives for each
+   * unit, that settles it (Heidi added the column to SP-260508's for this,
+   * 19 November 2026). A paper listed for SU1 and SU2 is done once, after SU2;
+   * SU1 shows it as assessed with SU2.
+   */
+  const key = paperKey(document.filename, document.kind);
+  const listing = key ? units.filter((unit) => unit.papers?.includes(key)) : [];
+  if (listing.length > 0) {
+    const listed = listing.map((unit) => unit.code);
+    const at = listed[listed.length - 1];
+    return {
+      studyUnitCode: at,
+      covers: listed,
+      because:
+        listed.length === 1
+          ? `The alignment document lists it for ${at}.`
+          : `The alignment document lists it for ${listed.join(", ")}. Placed in ${at}, the last of them, so it is done after what it covers; ${listed.slice(0, -1).join(", ")} ${listed.length === 2 ? "shows" : "show"} it as assessed with ${at}.`,
+    };
+  }
 
   const fromName = referencesIn(document.filename.replace(/\.[a-z0-9]+$/i, ""));
   const fromText = fromName.length === 0 && document.text && READ_FOR_COVERAGE.has(document.kind ?? "") ? referencesIn(document.text) : [];

@@ -139,8 +139,17 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
                   ))}
                 </tbody>
               </table>
-            ) : unit.courseId ? (
+            ) : unit.courseId && unit.assessedWith.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--muted)]">{t("verify.noAssessments")}</p>
+            ) : null}
+
+            {/* Papers the alignment document lists for this unit, done after a later one. */}
+            {unit.assessedWith.length > 0 ? (
+              <ul className="mt-2 space-y-0.5 text-sm text-[var(--muted)]">
+                {unit.assessedWith.map((one) => (
+                  <li key={`${one.code}-${one.title}`}>{t("verify.assessedWith", { unit: one.code, title: one.title })}</li>
+                ))}
+              </ul>
             ) : null}
 
             {unit.blocking.length > 0 ? (

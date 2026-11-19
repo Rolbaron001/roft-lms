@@ -64,7 +64,41 @@ export type AlignedStudyUnit = {
    * study unit that teaches that topic.
    */
   topics: Record<string, string[]>;
+  /**
+   * The workbooks and summatives the document lists for this unit, as keys:
+   * "workbook:1", "summative:1" (lib/material-placement.ts, paperKey). Heidi
+   * added a column for them to SP-260508's alignment (19 November 2026). One
+   * paper listed for two units is done once, after the later of them.
+   */
+  papers: string[];
 };
+
+/** "Formative Workbook 1", "Summative Assessment 2" in a line, as paper keys. */
+export function paperKeysIn(line: string): string[] {
+  const keys: string[] = [];
+  for (const match of line.matchAll(/\bWorkbook\s*0?(\d{1,2})\b/gi)) keys.push(`workbook:${Number(match[1])}`);
+  for (const match of line.matchAll(/\bSummative\s+Assessment\s*0?(\d{1,2})\b(?!\s*(?:&|and)\s*\d)/gi)) keys.push(`summative:${Number(match[1])}`);
+  return keys;
+}
+
+/**
+ * Of several alignment documents' texts, the units of the one that says most:
+ * the most papers listed, then the most units. Empty when none reads as one.
+ */
+export function bestAlignmentUnits(texts: (string | null)[]): AlignedStudyUnit[] {
+  let best: AlignedStudyUnit[] = [];
+  const score = (units: AlignedStudyUnit[]) => units.reduce((sum, unit) => sum + unit.papers.length, 0) * 100 + units.length;
+  for (const text of texts) {
+    if (!text || !looksLikeAlignmentDocument(text)) continue;
+    try {
+      const units = readAlignmentDocument(text).studyUnits;
+      if (score(units) > score(best)) best = units;
+    } catch {
+      /* not one after all */
+    }
+  }
+  return best;
+}
 
 export type AlignmentReading = {
   studyUnits: AlignedStudyUnit[];
@@ -133,6 +167,8 @@ export function readAlignmentDocument(text: string): AlignmentReading {
   let awaitingTitle: AlignedStudyUnit | null = null;
   /** Modules the document splits between units by topic: "KM-01 (KT01, KT04)". */
   const splitByTopic = new Set<string>();
+  /** Whether the current unit is being read for the first time, in the alignment rows. */
+  let listingPapers = false;
 
   for (const line of lines) {
     const unit = STUDY_UNIT.exec(line);
@@ -148,10 +184,15 @@ export function readAlignmentDocument(text: string): AlignmentReading {
       if (seen) {
         current = seen;
         awaitingTitle = null;
+        // The schedule that follows names units again with its own assessment
+        // weeks ("Summative Assessment 1 & 2"); only the alignment rows list a
+        // unit's papers.
+        listingPapers = false;
       } else {
-        current = { code, title: unit[2].trim(), outcome: null, moduleCodes: [], topics: {} };
+        current = { code, title: unit[2].trim(), outcome: null, moduleCodes: [], topics: {}, papers: [] };
         studyUnits.push(current);
         awaitingTitle = current.title ? null : current;
+        listingPapers = true;
       }
       collectingCriteria = false;
       continue;
@@ -170,6 +211,14 @@ export function readAlignmentDocument(text: string): AlignmentReading {
       awaitingTitle = null;
       if (!OUTCOME.test(line) && !MODULE_LINE.test(line) && !CRITERIA_HEADING.test(line) && line.length <= 120) {
         target.title = line;
+        continue;
+      }
+    }
+
+    if (listingPapers && !MODULE_LINE.test(line)) {
+      const keys = paperKeysIn(line);
+      if (keys.length > 0) {
+        for (const key of keys) if (!current.papers.includes(key)) current.papers.push(key);
         continue;
       }
     }

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { aiImportJobs, curriculumModules, programmeDocuments, studyUnitModules, studyUnits } from "@/db/schema";
-import { looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
+import { bestAlignmentUnits, looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
 import { placeMaterial, type PlacementUnit } from "./material-placement";
 import { kindFromContent } from "./document-linking";
 import { recordAudit } from "./audit";
@@ -421,16 +421,25 @@ async function placementUnits(
   qualificationId: string | null,
   files: UploadedFile[],
 ): Promise<PlacementUnit[]> {
+  /*
+   * Of the alignment documents in the folder, the one that says most: the
+   * most papers listed, then the most units. SP-260508 carries two, and the
+   * first by name was not the one with the units' papers in it.
+   */
+  let best: PlacementUnit[] | null = null;
+  const score = (units: PlacementUnit[]) => units.reduce((sum, unit) => sum + (unit.papers?.length ?? 0), 0) * 100 + units.length;
   for (const file of files) {
     if (file.kind !== "convert" || !/align/i.test(file.filename)) continue;
     try {
       const text = await readOfficeText(file.filename, file.bytes);
       if (!looksLikeAlignmentDocument(text)) continue;
-      return readAlignmentDocument(text).studyUnits.map((unit) => ({ code: unit.code, moduleCodes: unit.moduleCodes, topics: unit.topics }));
+      const units = readAlignmentDocument(text).studyUnits.map((unit) => ({ code: unit.code, moduleCodes: unit.moduleCodes, topics: unit.topics, papers: unit.papers }));
+      if (units.length > 0 && (!best || score(units) > score(best))) best = units;
     } catch {
       /* not one after all; try the next */
     }
   }
+  if (best) return best;
   if (!qualificationId) return [];
 
   return withTenant(session.organisationId, async (tx) => {
@@ -450,20 +459,16 @@ async function placementUnits(
     }
     // The topics are not stored; the alignment document filed against the
     // qualification still says them.
-    const [filed] = await tx
+    const filed = await tx
       .select({ text: programmeDocuments.extractedText })
       .from(programmeDocuments)
       .where(and(eq(programmeDocuments.qualificationId, qualificationId), eq(programmeDocuments.kind, "alignment_matrix")))
-      .orderBy(desc(programmeDocuments.createdAt))
-      .limit(1);
-    if (filed?.text && looksLikeAlignmentDocument(filed.text)) {
-      try {
-        for (const read of readAlignmentDocument(filed.text).studyUnits) {
-          const unit = units.find((one) => one.code === read.code);
-          if (unit) unit.topics = read.topics;
-        }
-      } catch {
-        /* the modules alone still place most material */
+      .orderBy(desc(programmeDocuments.createdAt));
+    for (const read of bestAlignmentUnits(filed.map((one) => one.text))) {
+      const unit = units.find((one) => one.code === read.code);
+      if (unit) {
+        unit.topics = read.topics;
+        unit.papers = read.papers;
       }
     }
     return units;

@@ -4822,6 +4822,7 @@ export const staff = {
   "verify.workbook": "Workbook",
   "verify.answerable": "{answerable} of {papers}",
   "verify.noAssessments": "No workbooks or assessments yet.",
+  "verify.assessedWith": "{title}: done with {unit}, as the alignment document lists it for both.",
   "verify.blocking": "Holds it back",
   "verify.check": "To review",
   "unitGuide.title": "Built from the qualification's folder",

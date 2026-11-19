@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "docx-preview": "0.4.1",
     "drizzle-orm": "^0.45.2",
     "fflate": "^0.8.3",
     "livekit-client": "2.22.4",

@@ -63,9 +63,11 @@ export async function ProgressMap({ steps }: { steps: Step[] }) {
 
           return (
             <li key={step.title} className="flex flex-1 items-center gap-2">
-              <div
+              {/* Each box opens its own area (Roland, 19 November 2026), done or not. */}
+              <Link
+                href={step.href}
                 aria-current={current ? "step" : undefined}
-                className={`flex-1 rounded-md border px-3 py-2 ${
+                className={`flex-1 self-stretch rounded-md border px-3 py-2 transition hover:border-[var(--brand-primary)] hover:shadow-sm ${
                   current
                     ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10"
                     : step.done
@@ -91,7 +93,7 @@ export async function ProgressMap({ steps }: { steps: Step[] }) {
                 <p className="mt-0.5 text-xs text-[var(--muted)]">
                   {step.done ? step.state : current ? t("progress.here") : t("progress.after")}
                 </p>
-              </div>
+              </Link>
 
               {/* The way the eye travels, on a wide screen only: stacked on a
                   phone the arrows would point sideways at nothing. */}

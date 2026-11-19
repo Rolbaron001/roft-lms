@@ -61,6 +61,16 @@ happens without it**. Where a provider can change a rule, it says where.
   and modules already placed are reported as already there.
 - **Without module codes:** the study units are created with nothing under
   them, and the platform says the document names no module codes.
+- **Workbooks and summatives per study unit (19 November 2026):** a column
+  listing each unit's papers, written as `Formative Workbook 1` and
+  `Summative Assessment 1`, settles where each paper goes. A paper listed for
+  two units is done once, after the later one, and the earlier unit's check
+  shows it as done with that unit. Without the column, papers are placed by
+  the modules and topics they name.
+- **More than one alignment document in a folder:** the one that lists the
+  most papers, then the most study units, is used.
+- **FISA instruments** are kept with the qualification and are not captured
+  into a study unit; the external integrated assessment is the QCTO's.
 
 ## 2. Naming files
 
