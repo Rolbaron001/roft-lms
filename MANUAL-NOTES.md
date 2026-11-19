@@ -840,8 +840,9 @@ Three roles a provider gives on the person's page, like any other.
   what was recorded. A signed record cannot be changed; a correction is a new
   record.
 - **Who reads what:** the learner reads the signed checklists, testimonies and
-  readiness feedback about them; a coach's message to staff is not shown to the
-  learner.
+  readiness feedback about them. A coach's message to staff is not shown to the
+  learner unless the coach ticks that the learner should take note of it too;
+  then the learner sees it and is told (Roland, 19 November 2026).
 
 ## 6af. When names do not say what belongs with what (18 November 2026)
 

@@ -127,6 +127,7 @@ function Record({ record, t, day }: { record: CoachRecord; t: Translate; day: (v
             : t("coachView.sent", { coach: record.coach, date: day(record.createdAt) })}
         </p>
       </div>
+      {record.kind === "message" && record.sharedWithLearner ? <p className="text-xs text-[var(--muted)]">{t("coachView.sharedWithLearner")}</p> : null}
       {record.observedOn ? <p className="text-xs text-[var(--muted)]">{t("coachView.observedOn", { date: day(record.observedOn) })}</p> : null}
       {record.witnessName ? (
         <p className="text-xs text-[var(--muted)]">

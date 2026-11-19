@@ -180,4 +180,12 @@ describe("a workplace coach's view of a learner", () => {
     const coachSees = await coachLearnerView(coach(), ids.learner);
     expect(coachSees?.records.some((one) => one.kind === "message")).toBe(true);
   });
+
+  it("shows a message to the learner, and tells them, when the coach chooses to", async () => {
+    await messageStaff(coach(), { learnerId: ids.learner, body: "Please bring your safety boots on Monday.", shareWithLearner: true });
+    expect(await notified(ids.learner, "coach.message")).toHaveLength(1);
+    const own = await coachLearnerView(learner(), ids.learner);
+    const messages = own?.records.filter((one) => one.kind === "message") ?? [];
+    expect(messages.map((one) => one.body)).toEqual(["Please bring your safety boots on Monday."]);
+  });
 });

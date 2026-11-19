@@ -892,6 +892,8 @@ export const coachRecords = pgTable(
     observedOn: date("observed_on"),
     signedAt: timestamp("signed_at", { withTimezone: true }),
     signatureHash: text("signature_hash"),
+    /** A message to staff the coach chose to show the learner too (Roland, 19 November 2026). Not shown by default. */
+    sharedWithLearner: boolean("shared_with_learner").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("coach_records_org_idx").on(t.organisationId), index("coach_records_learner_idx").on(t.learnerId, t.createdAt)],

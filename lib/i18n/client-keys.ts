@@ -364,6 +364,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "coach.message.intro",
   "coach.message.send",
   "coach.message.sending",
+  "coach.message.share",
   "coach.readiness.intro",
   "coach.readiness.overall",
   "coach.sign",

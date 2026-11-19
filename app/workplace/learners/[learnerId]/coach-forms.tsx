@@ -202,6 +202,10 @@ function Message({ learnerId }: { learnerId: string }) {
       <input type="hidden" name="learnerId" value={learnerId} />
       <p className="text-sm text-[var(--muted)]">{t("coach.message.intro")}</p>
       <textarea name="body" required rows={5} className={`${field} w-full`} />
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="shareWithLearner" value="yes" className="mt-1" />
+        {t("coach.message.share")}
+      </label>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={pending} className={button}>{pending ? t("coach.message.sending") : t("coach.message.send")}</button>
         <Said state={state} />

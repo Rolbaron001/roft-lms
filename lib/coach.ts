@@ -13,7 +13,7 @@
  * read it too, and the assessor takes the signed records as evidence.
  */
 import { createHash } from "node:crypto";
-import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { withTenant, type TenantDatabase } from "@/db/client";
 import {
   coachRecords,
@@ -123,6 +123,7 @@ export type CoachRecord = {
   signedAt: Date | null;
   coach: string;
   createdAt: Date;
+  sharedWithLearner: boolean;
 };
 
 export type CoachLearnerView = {
@@ -170,6 +171,7 @@ export async function coachLearnerView(session: AuthenticatedSession, learnerId:
         observedOn: coachRecords.observedOn,
         signedAt: coachRecords.signedAt,
         createdAt: coachRecords.createdAt,
+        sharedWithLearner: coachRecords.sharedWithLearner,
         firstName: coach.firstName,
         lastName: coach.lastName,
       })
@@ -177,8 +179,9 @@ export async function coachLearnerView(session: AuthenticatedSession, learnerId:
       .innerJoin(coach, eq(coach.id, coachRecords.coachId))
       .where(
         session.userId === learnerId
-          ? // A coach's message to staff is between them; the learner reads the signed records.
-            and(eq(coachRecords.learnerId, learnerId), ne(coachRecords.kind, "message"))
+          ? // A coach's message to staff is between them unless the coach chose to show the
+            // learner; the learner reads the signed records.
+            and(eq(coachRecords.learnerId, learnerId), or(ne(coachRecords.kind, "message"), eq(coachRecords.sharedWithLearner, true)))
           : eq(coachRecords.learnerId, learnerId),
       )
       .orderBy(desc(coachRecords.createdAt));
@@ -234,7 +237,8 @@ async function writeRecord(
       .values({ ...record, organisationId: session.organisationId, learnerId, coachId: session.userId, signedAt: record.kind === "message" ? null : signedAt, signatureHash })
       .returning({ id: coachRecords.id });
     const staff = await learnerStaff(tx, learnerId);
-    for (const userId of [...staff, ...(record.kind === "message" ? [] : [learnerId])]) {
+    const learnerTold = record.kind !== "message" || record.sharedWithLearner === true;
+    for (const userId of [...staff, ...(learnerTold ? [learnerId] : [])]) {
       await raise(tx, {
         organisationId: session.organisationId,
         userId,
@@ -328,14 +332,19 @@ export async function recordReadiness(
   );
 }
 
-/** A message to the learner's facilitators and assessors (D52 (10)). */
-export async function messageStaff(session: AuthenticatedSession, input: { learnerId: string; body: string }): Promise<number> {
+/**
+ * A message to the learner's facilitators and assessors (D52 (10)). Not shown
+ * to the learner unless the coach ticks that they should take note of it too
+ * (Roland, 19 November 2026); then the learner is told as well.
+ */
+export async function messageStaff(session: AuthenticatedSession, input: { learnerId: string; body: string; shareWithLearner?: boolean }): Promise<number> {
   const body = input.body.trim();
   if (body.length < 3) throw new CoachError("Write the message.", "invalid");
   const name = await learnerName(session, input.learnerId);
   const recipients = await withTenant(session.organisationId, (tx) => learnerStaff(tx, input.learnerId));
   if (recipients.length === 0) throw new CoachError("Nobody is named yet as this learner's facilitator or assessor. Ask the provider.", "invalid");
-  await writeRecord(session, input.learnerId, { kind: "message", title: "Message to the facilitator and assessor", details: { recipients }, body }, {
+  const shared = input.shareWithLearner === true;
+  await writeRecord(session, input.learnerId, { kind: "message", title: "Message to the facilitator and assessor", details: { recipients }, body, sharedWithLearner: shared }, {
     subject: `From ${session.firstName} ${session.lastName}, workplace coach of ${name}`,
     body,
   });

@@ -434,6 +434,7 @@ export const af: Catalogue = {
   "coachView.signed": "Onderteken deur {coach}, {date}",
   "coachView.sent": "Gestuur deur {coach}, {date}",
   "coachView.observedOn": "Waargeneem {date}",
+  "coachView.sharedWithLearner": "Aan die leerder gewys",
   "coach.readiness.overall": "Algeheel",
   "coach.recommendation.ready": "Gereed",
   "coach.recommendation.nearly_ready": "Byna gereed",

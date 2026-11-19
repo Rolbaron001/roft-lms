@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { en, type MessageKey } from "@/lib/i18n/en";
+import { fillPhrase } from "@/lib/i18n/fill";
 import type { Translate } from "@/lib/i18n";
 import { DEFAULT_DATE_STYLE, dateWriter, type DateStyle, type DateWriter } from "@/lib/date-format";
 import { DEFAULT_TIME_ZONE } from "@/lib/timezone";
@@ -72,10 +73,9 @@ export function useT(): Translate {
   const messages = useContext(Messages);
   return useMemo<Translate>(
     () => (key: MessageKey, values?: Record<string, string | number>) => {
-      const phrase = messages[key] ?? en[key] ?? key;
-      return values
-        ? phrase.replace(/\{(\w+)\}/g, (all, name) => (name in values ? String(values[name]) : all))
-        : phrase;
+      // The browser holds only the language's own phrases; English is the fallback.
+      const own = messages[key];
+      return fillPhrase(own ?? en[key] ?? key, values, own === undefined);
     },
     [messages],
   );

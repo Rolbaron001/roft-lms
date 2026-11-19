@@ -864,6 +864,7 @@ export const en = {
   "coachView.signed": "Signed by {coach}, {date}",
   "coachView.sent": "Sent by {coach}, {date}",
   "coachView.observedOn": "Observed {date}",
+  "coachView.sharedWithLearner": "Shown to the learner",
   "coach.readiness.overall": "Overall",
   "coach.recommendation.ready": "Ready",
   "coach.recommendation.nearly_ready": "Nearly ready",

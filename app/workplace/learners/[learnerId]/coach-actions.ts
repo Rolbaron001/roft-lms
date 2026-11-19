@@ -85,7 +85,9 @@ export async function messageAction(_previous: CoachState, formData: FormData): 
   const session = await requireSession();
   const learnerId = text(formData, "learnerId");
   return run(learnerId, async () => {
-    const sent = await messageStaff(session, { learnerId, body: text(formData, "body") });
-    return sent === 1 ? "Sent to 1 person." : `Sent to ${sent} people.`;
+    const shareWithLearner = formData.get("shareWithLearner") === "yes";
+    const sent = await messageStaff(session, { learnerId, body: text(formData, "body"), shareWithLearner });
+    const to = sent === 1 ? "Sent to 1 person" : `Sent to ${sent} people`;
+    return shareWithLearner ? `${to}, and shown to the learner.` : `${to}.`;
   });
 }

@@ -1,6 +1,7 @@
 import { af } from "./af";
 import { CLIENT_KEYS, CLIENT_PREFIXES } from "./client-keys";
 import { en, type Catalogue, type MessageKey } from "./en";
+import { fillPhrase } from "./fill";
 import { DEFAULT_LOCALE, LOCALES, isLocale } from "./locales";
 import type { Translation } from "./phrase-document";
 import translatedData from "./translated.json";
@@ -49,8 +50,9 @@ export type Translate = (key: MessageKey, values?: Record<string, string | numbe
 export function translator(locale: string | null | undefined): Translate {
   const catalogue = CATALOGUES[isLocale(locale) ? locale : DEFAULT_LOCALE] ?? {};
   return (key, values) => {
-    const phrase = catalogue[key] ?? en[key] ?? key;
-    return values ? phrase.replace(/\{(\w+)\}/g, (all, name) => (name in values ? String(values[name]) : all)) : phrase;
+    const own = catalogue === en ? undefined : catalogue[key];
+    // English when the language has no phrase of its own for this key.
+    return fillPhrase(own ?? en[key] ?? key, values, own === undefined);
   };
 }
 
