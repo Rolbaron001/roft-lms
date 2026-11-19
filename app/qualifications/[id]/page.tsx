@@ -538,6 +538,7 @@ export default async function QualificationPage({
               title={qualification.title}
               holds={removal.holds}
               removes={removal.removes}
+              programme={qualification.kind === "skills_programme"}
             />
           </div>
         ) : null}

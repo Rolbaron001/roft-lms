@@ -35,18 +35,7 @@ export function AdminDashboardView({ data, t, day }: { data: AdminDashboard; t: 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <Link href="/cohorts" className="rounded-md px-4 py-2.5 text-sm font-semibold text-white" style={{ background: "var(--brand-primary)" }}>
-          {t("dash.action.newCohort")}
-        </Link>
-        <Link href="/people" className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold">
-          {t("dash.action.people")}
-        </Link>
-        <Link href="/qualifications" className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold">
-          {t("dash.action.qualification")}
-        </Link>
-      </div>
-
+      {/* The quick actions moved to Home's Shortcuts pane (components/shortcuts.tsx). */}
       <Card section={{ id: "today", label: t("dash.today") }} title={t("dash.today")} description={t("dash.todayIntro")}>
         {data.urgent.length === 0 ? (
           <p className="text-sm text-[var(--success)]">{t("dash.nothingUrgent")}</p>

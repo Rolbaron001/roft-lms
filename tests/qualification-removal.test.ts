@@ -103,6 +103,7 @@ describe("the control itself", () => {
   });
 
   it("goes somewhere afterwards, since the page it was on is gone", () => {
-    expect(action).toMatch(/redirect\("\/qualifications"\)/);
+    // A skills programme goes back to its own list (Roland, 19 November 2026).
+    expect(action).toMatch(/redirect\(formData\.get\("programme"\) === "yes" \? "\/skills-programmes" : "\/qualifications"\)/);
   });
 });

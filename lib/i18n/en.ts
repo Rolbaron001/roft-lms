@@ -845,6 +845,8 @@ export const en = {
   "work.status.coach_signed": "Signed, with the assessor",
   "work.status.accepted_by_assessor": "Received by the assessor",
   // A learner as their workplace coach sees them; the learner reads it too (D52 (7) to (10))
+  "shortcuts.title": "Shortcuts",
+  "shortcuts.recent": "You have been using this page",
   "work.yourLearners": "Your learners",
   "work.myRecords": "What your workplace coach has recorded about you",
   "coachView.logbooks": "Work experience",

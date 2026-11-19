@@ -2043,6 +2043,8 @@ export const CLIENT_KEYS: readonly string[] = [
   "shell.findShortcut",
   "shell.menu",
   "shell.recent",
+  "shortcuts.recent",
+  "shortcuts.title",
   "sitting.camera",
   "sitting.choose",
   "sitting.closesAfter",

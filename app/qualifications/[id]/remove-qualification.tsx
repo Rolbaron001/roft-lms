@@ -26,8 +26,11 @@ export function RemoveQualification({
   title,
   holds,
   removes,
+  programme = false,
 }: {
   qualificationId: string;
+  /** A skills programme: once removed, back to the skills programmes rather than the qualifications. */
+  programme?: boolean;
   title: string;
   /** Why it may not be removed. Empty means it may. */
   holds: { what: string; count: number }[];
@@ -105,6 +108,7 @@ export function RemoveQualification({
       <form action={action} className="mt-3 space-y-2">
           <input type="hidden" name="qualificationId" value={qualificationId} />
           <input type="hidden" name="title" value={title} />
+          {programme ? <input type="hidden" name="programme" value="yes" /> : null}
 
           <label className="block max-w-xl text-sm">
             <span className="text-[var(--muted)]">

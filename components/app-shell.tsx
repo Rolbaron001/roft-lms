@@ -25,41 +25,22 @@ import { localeFor, pageDates } from "@/lib/request";
 import { dateLocale } from "@/lib/i18n/locales";
 
 /**
- * The shared frame. Navigation is filtered by permission rather than by role,
- * so a link never appears for a page the person would be refused.
+ * The menu this person sees. Also read by Home's shortcuts, so a shortcut is
+ * always a page the menu offers them.
+ *
+ * Filtered by permission rather than by role, so a link never appears for a
+ * page the person would be refused. A section left with nothing in it is
+ * dropped by the menu rather than shown empty. With the structure, so a
+ * provider who chose study units reads "Study units" where the menu would
+ * otherwise say "Courses". In the person's own language (job sheet D9). A
+ * heading or item the provider named themselves has no catalogue entry and
+ * keeps their words.
  */
-export async function AppShell({
-  tenant,
-  session,
-  children,
-}: {
-  tenant: TenantIdentity;
-  session: AuthenticatedSession;
-  children: React.ReactNode;
-}) {
-  // Read here rather than on each page, so every screen shows the same count
-  // and no page can forget to.
-  const unread = await unreadCount(session);
-  const viewOnly = !session.viewAs && isViewOnly(session);
-
-  // The AI switch belongs in the header for the same reason. Somebody switches
-  // it on for one job and off again afterwards, which only works if it is
-  // reachable from wherever that job happens rather than from a settings page
-  // two clicks away. Absent entirely for anybody who has not set one up, so
-  // nobody is shown a control that would only tell them no.
-  const extension = await extensionState(session);
-
-  // Filtered by permission rather than by role, so a link never appears for a
-  // page the person would be refused. A section left with nothing in it is
-  // dropped by the menu rather than shown empty.
-  // With the structure, so a provider who chose study units reads "Study
-  // units" where the menu would otherwise say "Courses".
-  // In the person's own language (job sheet D9). A heading or item the
-  // provider named themselves has no catalogue entry and keeps their words.
+export function menuSections(tenant: TenantIdentity, session: AuthenticatedSession) {
   const locale = localeFor(tenant, session);
   const t = translator(locale);
   const words = vocabulary(tenant.terminology, tenant.featureFlags, locale);
-  const sections = arrangeNavigation(tenant.navigation ?? null, words)
+  return arrangeNavigation(tenant.navigation ?? null, words)
     .map((section) => ({
       label: section.label === null ? null : (maybe(t, `nav.heading.${section.label}`) ?? section.label),
       items: section.items
@@ -89,6 +70,36 @@ export async function AppShell({
         })),
     }))
     .filter((section) => section.items.length > 0);
+}
+
+/**
+ * The shared frame. Navigation is filtered by permission rather than by role,
+ * so a link never appears for a page the person would be refused.
+ */
+export async function AppShell({
+  tenant,
+  session,
+  children,
+}: {
+  tenant: TenantIdentity;
+  session: AuthenticatedSession;
+  children: React.ReactNode;
+}) {
+  // Read here rather than on each page, so every screen shows the same count
+  // and no page can forget to.
+  const unread = await unreadCount(session);
+  const viewOnly = !session.viewAs && isViewOnly(session);
+
+  // The AI switch belongs in the header for the same reason. Somebody switches
+  // it on for one job and off again afterwards, which only works if it is
+  // reachable from wherever that job happens rather than from a settings page
+  // two clicks away. Absent entirely for anybody who has not set one up, so
+  // nobody is shown a control that would only tell them no.
+  const extension = await extensionState(session);
+
+  const locale = localeFor(tenant, session);
+  const t = translator(locale);
+  const sections = menuSections(tenant, session);
 
   // The person's name, their account and signing out: under the initials on a
   // laptop, at the foot of the Menu panel on a phone.
@@ -149,9 +160,12 @@ export async function AppShell({
           navigation left a 13-inch screen little room for the page (Cecelia
           and Heidi, 19 October 2026). Below 1024 pixels the menu folds into
           one Menu button (components/shell-nav.tsx). Wider than the page
-          column, so the row fits at 1280 pixels.
+          column, so the row fits at 1280 pixels. The words beside the
+          magnifier and the bell appear only from 1536 pixels, where the row
+          has room for them: below that they ran into the menu (Roland, 19
+          November 2026).
         */}
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 sm:px-6">
+        <div className="mx-auto flex max-w-[96rem] items-center gap-3 px-4 py-2 sm:px-6">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-3">
             {tenant.logoUrl ? (
               // Sits on the tenant's own header colour, so a logo with a
@@ -168,7 +182,10 @@ export async function AppShell({
             </div>
           </Link>
 
-          <NavMenu groups={sections} className="hidden min-w-0 flex-1 lg:flex" />
+          {/* Folds into the Menu button below 1280 pixels: between 1024 and
+              1280 a provider with a logo, six headings and the AI switch ran
+              out of row. */}
+          <NavMenu groups={sections} className="hidden min-w-0 flex-1 xl:flex" />
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {session.viewAs ? (
@@ -196,7 +213,7 @@ export async function AppShell({
                 <path d="M10 3a4.5 4.5 0 0 0-4.5 4.5c0 4-1.5 5.5-1.5 5.5h12s-1.5-1.5-1.5-5.5A4.5 4.5 0 0 0 10 3Z" />
                 <path d="M8.5 15.5a1.6 1.6 0 0 0 3 0" strokeLinecap="round" />
               </svg>
-              <span className="ml-2 hidden xl:inline">{t("shell.notifications")}</span>
+              <span className="ml-2 hidden 2xl:inline">{t("shell.notifications")}</span>
               {unread > 0 ? (
                 <span
                   className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold"
@@ -216,10 +233,10 @@ export async function AppShell({
               </div>
             ) : null}
 
-            <div className="hidden lg:block">
+            <div className="hidden xl:block">
               <AccountMenu name={`${session.firstName} ${session.lastName}`}>{account}</AccountMenu>
             </div>
-            <div className="lg:hidden">
+            <div className="xl:hidden">
               <MobileMenu groups={sections} account={account} />
             </div>
           </div>

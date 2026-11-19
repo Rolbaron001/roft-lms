@@ -54,6 +54,8 @@ export async function removeQualificationAction(
   }
 
   revalidatePath("/qualifications");
-  // Nowhere to go back to - the page this was pressed on no longer exists.
-  redirect("/qualifications");
+  revalidatePath("/skills-programmes");
+  // Nowhere to go back to - the page this was pressed on no longer exists. A
+  // skills programme goes back to its own list (Roland, 19 November 2026).
+  redirect(formData.get("programme") === "yes" ? "/skills-programmes" : "/qualifications");
 }

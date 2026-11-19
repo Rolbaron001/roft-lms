@@ -21,8 +21,9 @@ import { useT } from "./i18n";
  *     with each heading folded until it is opened.
  */
 
-const RECENT_KEY = "roft:recent-pages";
-const RECENT_MAX = 5;
+/** Also read by Home's shortcuts (components/shortcuts.tsx). */
+export const RECENT_KEY = "roft:recent-pages";
+const RECENT_MAX = 8;
 
 type Entry = NavLink & { group: string | null };
 
@@ -47,7 +48,10 @@ function entryFor(entries: Entry[], pathname: string): Entry | null {
 function readRecent(entries: Entry[]): Entry[] {
   try {
     const hrefs = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]") as string[];
-    return hrefs.map((href) => entries.find((entry) => entry.href === href)).filter((entry): entry is Entry => Boolean(entry));
+    return hrefs
+      .map((href) => entries.find((entry) => entry.href === href))
+      .filter((entry): entry is Entry => Boolean(entry))
+      .slice(0, 5);
   } catch {
     // Storage refused: nothing is remembered, and nothing breaks.
     return [];
@@ -152,7 +156,7 @@ export function FindPage({ groups }: { groups: NavGroup[] }) {
         className="inline-flex items-center gap-2 rounded-md border border-white/30 px-2.5 py-1.5 text-sm transition hover:bg-white/10"
       >
         <SearchIcon />
-        <span className="hidden xl:inline">{t("shell.find")}</span>
+        <span className="hidden 2xl:inline">{t("shell.find")}</span>
       </button>
 
       {open ? (

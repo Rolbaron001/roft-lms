@@ -415,6 +415,8 @@ export const af: Catalogue = {
   "work.status.returned_by_coach": "Teruggestuur na die leerder",
   "work.status.coach_signed": "Onderteken, by die assessor",
   "work.status.accepted_by_assessor": "Deur die assessor ontvang",
+  "shortcuts.title": "Kortpaaie",
+  "shortcuts.recent": "Jy het hierdie bladsy onlangs gebruik",
   "work.yourLearners": "Jou leerders",
   "work.myRecords": "Wat jou werkplekafrigter oor jou aangeteken het",
   "coachView.logbooks": "Werkservaring",

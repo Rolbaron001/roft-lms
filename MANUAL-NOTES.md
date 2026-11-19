@@ -958,7 +958,16 @@ Three roles a provider gives on the person's page, like any other.
 - **Recently opened:** the last five pages a person used, first in Find a
   page and in the phone menu. Kept in that browser only.
 - **On a phone or tablet:** the **Menu** button opens the whole menu, each
-  heading folded until opened, the account at the foot.
+  heading folded until opened, the account at the foot. Since 19 November
+  2026 this applies to any screen narrower than 1280 pixels, so a small
+  laptop window shows the Menu button too; the words "Find a page" and
+  "Notifications" appear beside their icons from 1536 pixels.
+- **Shortcuts on Home (19 November 2026):** a pane of buttons under "On this
+  page". An administrator always has New cohort, Add people and Load a
+  qualification; after them come up to four pages the person has recently
+  opened from the menu, for example Skills programmes after working on one.
+  Like Recently opened, these are remembered in that browser only, so a
+  different computer starts with the fixed buttons alone.
 
 ## 6s. The pre-assessment checklist (19 October 2026)
 

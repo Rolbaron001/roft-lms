@@ -7,7 +7,8 @@ import { listMyCertificates } from "@/lib/certificates";
 import { listStatementsFor } from "@/lib/statement-of-results";
 import { myLearningPaths } from "@/lib/learning-paths";
 import { learnerQualifications } from "@/lib/learner-qualification";
-import { AppShell, Card, StatusBadge } from "@/components/app-shell";
+import { AppShell, Card, StatusBadge, menuSections } from "@/components/app-shell";
+import { Shortcuts } from "@/components/shortcuts";
 import { feedbackOwedBy } from "@/lib/feedback";
 import { learnerBadges } from "@/lib/badges";
 import { listAssessorQueue, listModerationQueue } from "@/lib/assessment";
@@ -259,6 +260,20 @@ export default async function HomePage() {
       <RoleIntro intros={introsFor(displayRoles(session.roles, combined), combined)} permissions={session.permissions} t={t} />
 
       {anyDashboard ? <PageNav /> : null}
+
+      {/* Shortcuts: the role's own, then the pages this person has been using (Roland, 19 November 2026). */}
+      <Shortcuts
+        groups={menuSections(tenant, session)}
+        fixed={
+          dashboard
+            ? [
+                { href: "/cohorts", label: t("dash.action.newCohort"), primary: true },
+                { href: "/people", label: t("dash.action.people") },
+                { href: "/qualifications", label: t("dash.action.qualification") },
+              ]
+            : []
+        }
+      />
 
       {dashboard ? <AdminDashboardView data={dashboard} t={t} day={day} /> : null}
 
