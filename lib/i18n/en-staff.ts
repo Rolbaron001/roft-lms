@@ -170,7 +170,7 @@ export const staff = {
   "sample.any": "Any",
   "sample.show": "Show",
   "sample.none": "No decisions match.",
-  "sample.count": "{count} decisions, {sampled} of them in the sample.",
+  "sample.count": "Decisions: {count}. In the sample: {sampled}.",
   "sample.learner": "Learner",
   "sample.assessment": "Assessment",
   "sample.outcome": "Decision",
@@ -201,7 +201,7 @@ export const staff = {
   "modReport.figuresDraft": "Worked out now from the decisions and moderation within this report's scope. They are fixed when you sign.",
   "modReport.figuresSigned": "As they stood when the report was signed.",
   "modReport.figuresLine":
-    "{decisions} decisions; {sampled} in the sample; {moderated} moderated: {endorsed} endorsed, {referred} referred back, {overridden} overridden.",
+    "Decisions: {decisions}. In the sample: {sampled}. Moderated: {moderated} (endorsed {endorsed}, referred back {referred}, overridden {overridden}).",
   "modReport.colDecisions": "Decisions",
   "modReport.colModerated": "Moderated",
   "modReport.findings": "Findings",
