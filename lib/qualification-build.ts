@@ -634,6 +634,8 @@ export type UnitVerification = {
    * and SU2; it is done once, after SU2 (Roland, 19 November 2026).
    */
   assessedWith: { code: string; title: string }[];
+  /** The other side: papers done here that the alignment document also lists for an earlier unit. */
+  alsoCovers: { code: string; title: string }[];
 };
 
 export type Verification = {
@@ -829,6 +831,7 @@ export async function verificationOf(
       blocking,
       toCheck,
       assessedWith: [],
+      alsoCovers: [],
     });
   }
 
@@ -849,7 +852,10 @@ export async function verificationOf(
       for (const other of result) {
         if (other === unit) continue;
         const found = other.assessments.find((assessment) => keyOf(assessment) === key);
-        if (found) unit.assessedWith.push({ code: other.code, title: found.title });
+        if (found) {
+          unit.assessedWith.push({ code: other.code, title: found.title });
+          other.alsoCovers.push({ code: unit.code, title: found.title });
+        }
       }
     }
   }

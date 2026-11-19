@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { IMPORT_NOTICE_KEY } from "@/components/import-notice";
 import {
   commitPlanAction,
   discardImportAction,
@@ -151,6 +153,23 @@ export function Proposal({
       </span>
     </button>
   );
+
+  /*
+   * Straight to the qualification once it is committed (Roland, 19 November
+   * 2026: a button that only takes you there "just creates confusion"). The
+   * summary goes with it and is shown at the top of that page
+   * (components/import-notice.tsx).
+   */
+  const router = useRouter();
+  useEffect(() => {
+    if (!state.committedTo) return;
+    try {
+      window.sessionStorage.setItem(`${IMPORT_NOTICE_KEY}${state.committedTo}`, state.notice ?? "");
+    } catch {
+      /* the page still opens; only the summary is lost */
+    }
+    router.push(`/qualifications/${state.committedTo}`);
+  }, [state.committedTo, state.notice, router]);
 
   return (
     <div className="space-y-4">

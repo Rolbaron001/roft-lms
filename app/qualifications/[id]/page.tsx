@@ -32,6 +32,7 @@ import { capturableDocuments } from "@/lib/capture-from-documents";
 import { deliveryReadiness } from "@/lib/delivery-readiness";
 import { CaptureList } from "./capture/capture-list";
 import { RemoveQualification } from "./remove-qualification";
+import { ImportNotice } from "@/components/import-notice";
 import { connectionsFor } from "@/lib/drive";
 
 /**
@@ -548,6 +549,9 @@ export default async function QualificationPage({
 
       <QualificationNav qualificationId={id} current="overview" />
 
+      {/* What a folder import just did, when it opened this page. */}
+      <ImportNotice qualificationId={id} />
+
       {canManage ? <ProgressMap steps={steps} /> : null}
 
       {/*
@@ -940,6 +944,28 @@ export default async function QualificationPage({
                         </ul>
                       </div>
                     ) : null}
+                    {/*
+                      A paper the alignment document lists for more than one
+                      unit, noted under each (Roland, 19 November 2026), so it
+                      is plain that the listing was taken into account.
+                    */}
+                    {(() => {
+                      const shared = verification?.units.find((one) => one.code === unit.code);
+                      const lines = [
+                        ...(shared?.assessedWith ?? []).map((one) => t("qualPage.sharedDoneWith", { title: one.title, unit: one.code })),
+                        ...(shared?.alsoCovers ?? []).map((one) => t("qualPage.sharedAlsoCovers", { title: one.title, unit: one.code })),
+                      ];
+                      return lines.length > 0 ? (
+                        <div className="mt-3 border-t border-[var(--border)] pt-3">
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">{t("qualPage.sharedPapers")}</p>
+                          <ul className="space-y-1 text-sm">
+                            {lines.map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null;
+                    })()}
                   </Card>
                 ))}
               </div>
