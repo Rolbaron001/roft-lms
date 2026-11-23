@@ -78,7 +78,17 @@ export function paperKeysIn(line: string): string[] {
   const keys: string[] = [];
   for (const match of line.matchAll(/\bWorkbook\s*0?(\d{1,2})\b/gi)) keys.push(`workbook:${Number(match[1])}`);
   for (const match of line.matchAll(/\bSummative\s+Assessment\s*0?(\d{1,2})\b(?!\s*(?:&|and)\s*\d)/gi)) keys.push(`summative:${Number(match[1])}`);
-  return keys;
+  // Lettered parts, SP-220320 (23 November 2026): "Formative Workbook: Part A
+  // Formative Workbook & Assessor Guide", "Summative Assessment: Part B (KM-05)
+  // Summative Script". Part A is the first, as 1 is.
+  for (const match of line.matchAll(/\bWorkbook\s*:?\s*Part\s+([A-Z])\b/gi)) keys.push(`workbook:${partNumber(match[1])}`);
+  for (const match of line.matchAll(/\bSummative\s+Assessment\s*:?\s*Part\s+([A-Z])\b/gi)) keys.push(`summative:${partNumber(match[1])}`);
+  return [...new Set(keys)];
+}
+
+/** A part letter as the number it stands for: A is 1, B is 2. */
+export function partNumber(letter: string): number {
+  return letter.toUpperCase().charCodeAt(0) - 64;
 }
 
 /**
@@ -113,7 +123,9 @@ const STUDY_UNIT = /^study\s+unit\s+(\d{1,2})\s*[-–—:.]?\s*(.*)$/i;
 const OUTCOME = /^ELO\s+(\d{1,2})\b(.*)$/i;
 
 /** "KM-01, Creating and…, NQF Level 6, 8 Credits." */
-const MODULE_LINE = /^((?:KM|PM|WM|WEM)[-\s]?\d{1,2})\b\s*[,:.]?\s*(.*)$/i;
+// The curriculum's full identifier may come first: SP-220320 writes
+// "242401001-KM-05" (23 November 2026). The module is KM-05 either way.
+const MODULE_LINE = /^(?:\d{6,9}[-\s]?)?((?:KM|PM|WM|WEM)[-\s]?\d{1,2})\b\s*[,:.]?\s*(.*)$/i;
 
 /** The heading above the Associated Assessment Criteria. */
 const CRITERIA_HEADING =
@@ -207,6 +219,10 @@ export function readAlignmentDocument(text: string): AlignmentReading {
      * outcome or a criteria heading.
      */
     if (awaitingTitle) {
+      // SP-220320 writes "Study Unit 1 / (Part A)" in the first cell: the part
+      // is a second name for the unit, not its title, which is the next cell
+      // (23 November 2026; the units read as "SU2 (Part B)").
+      if (/^\(?\s*part\s+[A-Z0-9]{1,2}\s*\)?$/i.test(line)) continue;
       const target = awaitingTitle;
       awaitingTitle = null;
       if (!OUTCOME.test(line) && !MODULE_LINE.test(line) && !CRITERIA_HEADING.test(line) && line.length <= 120) {
@@ -237,6 +253,13 @@ export function readAlignmentDocument(text: string): AlignmentReading {
     }
 
     const moduleLine = MODULE_LINE.exec(line);
+    /*
+     * A unit named again in the schedule after the alignment ("Week 2 ...
+     * Study Unit 2 ... WM-06 Candidate 1") is not saying which modules it
+     * takes; SP-220320's put WM-06 under SU2 that way (23 November 2026). Once
+     * a unit's own row has named its modules, a later mention adds none.
+     */
+    if (moduleLine && !listingPapers && current.moduleCodes.length > 0) continue;
     if (moduleLine) {
       // KM-01 and KM01 are the same module written two ways, in two documents
       // describing one qualification.

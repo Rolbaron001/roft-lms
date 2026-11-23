@@ -285,8 +285,143 @@ function codesIn(text: string): string[] {
  * Marks and correct answers are not in this document, so they come back null
  * and the answer guide supplies them.
  */
+// ---------------------------------------------------------------------------
+// The labelled layout: "Task 1.1 [IAC0101]  [9 Marks]", "Question 1.1  [2 Marks]"
+// ---------------------------------------------------------------------------
+
+/**
+ * SP-220320's papers (23 November 2026) put each question on a line of its
+ * own as "Task 1.1 [IAC0101]  [9 Marks]" or "Question 2.1  [12 Marks]", with
+ * the question beneath, under "ACTIVITY 1: …" or "SECTION A: …" headings.
+ * Read by the general rules, the cover page and the notes on how to use the
+ * workbook became the questions and the real ones were lost; every question
+ * then showed "no marking guidance". The marks in square brackets on the
+ * same line are what tells this layout apart, so no other paper is read
+ * this way.
+ */
+const LABELLED_ITEM = /^(Task|Question)\s+(\d{1,2}(?:\.\d{1,2})+)\b([^:]*?)\[\s*(\d+(?:[.,]\d+)?)\s*Marks?\s*\]\s*$/i;
+const LABELLED_SECTION = /^(ACTIVITY\s+\d+|SECTION\s+[A-Z0-9]{1,2})\s*[:.]\s*(.+)$/i;
+/** Where the learner's answer space starts: nothing after it is the question. */
+const ANSWER_PROMPT = /^(?:Candidate Answer|Learner(?: Workbook)? Response|Write your answer|Answer\s*[::])/i;
+
+function isLabelledPaper(lines: string[]): boolean {
+  return lines.filter((line) => LABELLED_ITEM.test(line)).length >= 3;
+}
+
+function parseLabelledPaper(lines: string[]): ParsedPaper {
+  const sections: ParsedSection[] = [];
+  let current: ParsedSection | null = null;
+  const title = lines.find((line) => /^(?:FORMATIVE|SUMMATIVE)\b.*\b(?:WORKBOOK|ASSESSMENT|SCRIPT)\b/i.test(line)) ?? null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const heading = LABELLED_SECTION.exec(line);
+    if (heading) {
+      const marks = MARKS_IN_HEADING.exec(line) ?? /\((\d+)\s*MARKS?\b/i.exec(line);
+      current = { title: line.replace(/\s*\(\d+\s*MARKS?[^)]*\)\s*$/i, "").trim(), instruction: null, markTotal: marks ? markValue(marks[1]) : null, items: [] };
+      sections.push(current);
+      continue;
+    }
+    const item = LABELLED_ITEM.exec(line);
+    if (!item) continue;
+    if (!current) {
+      current = { title: title ?? "Questions", instruction: null, markTotal: null, items: [] };
+      sections.push(current);
+    }
+    // The question: the lines beneath, up to a blank line, the answer space,
+    // the options or the next question.
+    const stem: string[] = [];
+    const options: string[] = [];
+    for (let ahead = index + 1; ahead < lines.length; ahead += 1) {
+      const next = lines[ahead];
+      if (LABELLED_ITEM.test(next) || LABELLED_SECTION.test(next)) break;
+      if (ANSWER_PROMPT.test(next) || isWritingSpace(next)) break;
+      const option = OPTION.exec(next);
+      if (option && (options.length > 0 || stem.length > 0)) {
+        options.push(option[2].trim());
+        continue;
+      }
+      if (options.length > 0) break;
+      if (!next) {
+        if (stem.length > 0) break;
+        continue;
+      }
+      stem.push(next);
+    }
+    const isChoice = options.length >= 2;
+    current.items.push({
+      number: item[2],
+      type: isChoice ? "multiple_choice" : "long_answer",
+      stem: stem.join(" ").trim() || line,
+      options,
+      correctIndex: null,
+      points: markValue(item[4]),
+      criterionCodes: codesIn(item[3]),
+      markingGuide: null,
+      markedBy: isChoice ? "app" : "assessor",
+      ...(item[1].toLowerCase() === "task" ? { task: true as const } : {}),
+    });
+  }
+
+  return {
+    title,
+    declaredCriteria: [],
+    sections: sections.filter((section) => section.items.length > 0),
+    problems: [],
+    notes: [],
+  };
+}
+
+/**
+ * The guides that go with them: "Task: Task 1.1 [IAC0101] — Six Principles
+ * … (9 Marks)" or "Question: Question 2.1 — … (12 Marks)" with the model
+ * answer beneath, and "Q1.1: B (Reliability)" for a multiple choice.
+ */
+const LABELLED_GUIDE = /^(?:Task|Question)s?\s*:\s*(Task|Question)s?\s+(\d{1,2}(?:\.\d{1,2})+)\b(.*)$/i;
+const LABELLED_KEY = /^Q(\d{1,2}(?:\.\d{1,2})+)\s*[::]\s*([A-H])\b\s*(.*)$/;
+
+function isLabelledGuide(lines: string[]): boolean {
+  return lines.filter((line) => LABELLED_GUIDE.test(line)).length >= 2 || lines.filter((line) => LABELLED_KEY.test(line)).length >= 3;
+}
+
+function parseLabelledGuide(lines: string[]): ParsedMemo {
+  const questionMarks: Record<string, number> = {};
+  const taskMarks: Record<string, number> = {};
+  const guides: NonNullable<ParsedMemo["guides"]> = {};
+  const answers: MemoAnswer[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const key = LABELLED_KEY.exec(line);
+    if (key) {
+      answers.push({ number: key[1], correctLetter: key[2], trueFalse: null, modelAnswer: key[3].replace(/^\(|\)$/g, "").trim() || null, criterionCodes: [] });
+      continue;
+    }
+    const heading = LABELLED_GUIDE.exec(line);
+    if (!heading) continue;
+    const kind = heading[1].toLowerCase() === "task" ? "task" : "question";
+    const number = heading[2];
+    const marks = /\((\d+(?:[.,]\d+)?)\s*Marks?\)\s*$/i.exec(line);
+    if (marks) (kind === "task" ? taskMarks : questionMarks)[number] = markValue(marks[1]);
+    // "Questions 1.1 – 1.10" heads the answer key, not one question.
+    if (/^\s*[–-]\s*\d/.test(heading[3])) continue;
+    const body: string[] = [];
+    for (let ahead = index + 1; ahead < lines.length && body.length < 80; ahead += 1) {
+      const next = lines[ahead];
+      if (LABELLED_GUIDE.test(next) || LABELLED_KEY.test(next) || /^(?:SECTION|Activity|PART)\b/i.test(next)) break;
+      if (next) body.push(next);
+    }
+    if (body.length > 0) {
+      guides[`${kind} ${number}@`] = { text: body.join("\n").slice(0, 6000), codes: codesIn(line), part: null, title: line };
+    }
+  }
+
+  return { sectionMarks: {}, questionMarks, taskMarks, guides, answers, total: null, problems: [] };
+}
+
 export function parseWorkbook(text: string): ParsedPaper {
   const lines = text.split("\n").map((line) => line.replace(/\t/g, " ").trim());
+  if (isLabelledPaper(lines)) return parseLabelledPaper(lines);
   const problems: string[] = [];
 
   const titleLine = lines.find((line) =>
@@ -1040,6 +1175,7 @@ const NUMBER_ONLY = /^Q?(\d+)$/i;
  */
 export function parseMemorandum(text: string): ParsedMemo {
   const lines = text.split("\n").map((line) => line.replace(/\t/g, " ").trim());
+  if (isLabelledGuide(lines)) return parseLabelledGuide(lines);
 
   const sectionMarks: Record<string, number> = {};
   const questionMarks: Record<string, number> = {};

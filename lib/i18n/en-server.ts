@@ -161,6 +161,7 @@ export const server = {
   "said.capture-parse.84237d06": "\"{stem}\" has two options that say the same thing.",
   "said.capture-parse.9517d7d6": "The guide reads like the learner's paper",
   "said.capture-parse.988d942d": "\"{stem}\" has no TRUE or FALSE in the guide.",
+  "said.capture-parse.9a1fc173": "Questions",
   "said.capture-parse.b0d2f461": "In \"{stem}\" the correct answer is much longer than the others. Make the options similar in length.",
   "said.capture-parse.b0e5f3a1": "The guide reads like the learner's paper: it has \"Instructions to Learners\" and no assessor's heading. Check that the paper and guide are not named the wrong way round.",
   "said.capture-parse.b1c2076d": "No activities or sections were recognised. Use headings such as “Activity 1.1: …” or “SECTION A: …”.",

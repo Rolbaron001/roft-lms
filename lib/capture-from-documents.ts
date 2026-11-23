@@ -139,7 +139,11 @@ export function artefactNumber(filename: string): string | null {
   const match =
     /\b(?:workbook|WB)\s*(\d{1,2})\b/i.exec(name) ??
     /\b(?:summative(?:\s+assessment)?|assessment|assessor'?s?\s+guide|guide|SA)\s*(\d{1,2})\b/i.exec(name);
-  return match ? String(Number(match[1])) : null;
+  if (match) return String(Number(match[1]));
+  // A lettered part: "Formative_Workbook_Part_A" with
+  // "Formative_Assessor_Guide_Part_A" (SP-220320, 23 November 2026).
+  const part = /\bPart\s+([A-Z])\b/i.exec(name);
+  return part ? String(part[1].toUpperCase().charCodeAt(0) - 64) : null;
 }
 
 /**

@@ -167,6 +167,10 @@ const DOCUMENT_RULES: { match: RegExp; kind: string }[] = [
   // "Assessor_Guide_Memo_Formative_Workbook_1.docx" (18 November 2026): a
   // workbook's guide, whichever way round the name has it.
   { match: /\b(assessor'?s? guide|memo|memorandum|marking guide)\b[^/]*\bworkbook\b|\bworkbook\b[^/]*\b(assessor'?s? guide|memo|memorandum|marking guide)\b/i, kind: "workbook_memorandum" },
+  // "Formative_Assessor_Guide_Part_A.docx" (SP-220320, 23 November 2026): a
+  // formative guide is a workbook's, though it never says "workbook". It was
+  // filed as a summative guide, so no workbook found it.
+  { match: /\bformative\b[^/]*\b(assessor'?s? guide|memo|memorandum|marking guide)\b|\b(assessor'?s? guide|memo|memorandum|marking guide)\b[^/]*\bformative\b/i, kind: "workbook_memorandum" },
   { match: /\b(summative|FISA)\b[^/]*\b(assessor guide|memo|memorandum|marking guide)\b/i, kind: "summative_memorandum" },
   { match: /\bassessor'?s? guide\b|\bmarking guide\b/i, kind: "summative_memorandum" },
   // A skills programme's Final Integrated Supervised Assessment: its

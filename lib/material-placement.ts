@@ -46,13 +46,17 @@ export type PlacementUnit = {
 export function paperKey(filename: string, kind: string | null): string | null {
   const name = filename.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ");
   if (/\bFISA\b/i.test(name)) return null;
+  // A lettered part stands for its number: "Formative_Workbook_Part_A",
+  // "Assessor_Guide_Part_A" (SP-220320, 23 November 2026).
+  const part = /\bPart\s+([A-Z])\b/i.exec(name);
+  const lettered = part ? part[1].toUpperCase().charCodeAt(0) - 64 : null;
   if (kind === "workbook" || kind === "workbook_memorandum") {
     const match = /\bWorkbook\s*0?(\d{1,2})\b/i.exec(name);
-    return match ? `workbook:${Number(match[1])}` : null;
+    return match ? `workbook:${Number(match[1])}` : lettered ? `workbook:${lettered}` : null;
   }
   if (kind === "summative_assessment" || kind === "summative_memorandum") {
     const match = /\bSummative\s+(?:Assessment|Assessor\s+Guide|Memo(?:randum)?)?\s*0?(\d{1,2})\b/i.exec(name);
-    return match ? `summative:${Number(match[1])}` : null;
+    return match ? `summative:${Number(match[1])}` : lettered ? `summative:${lettered}` : null;
   }
   return null;
 }
