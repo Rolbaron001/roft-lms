@@ -684,11 +684,12 @@ export async function createQualificationFromDocuments(
     modules: curriculum.modules.map((module) => {
       // A code has to be unique within its topic - a criterion as well as an
       // element. The real documents still break that: 121151 numbers five
-      // different work activities WA0201 under one topic, and uses AK0105
-      // twice. Only the first of each can be stored, so the rest are dropped
-      // here and named in the result - the alternative is the whole import
-      // failing on a constraint, which loses four hundred good lines over a
-      // numbering slip.
+      // different work activities WA0201 under one topic, and SP-220320 uses
+      // PA0204 twice. Since 23 November (D58) the reader keeps every one,
+      // storing the second as "PA0204 (2)" and saying so in its notes, so
+      // nothing should reach this filter. It stays as the last guard: the
+      // alternative is the whole import failing on a constraint, which loses
+      // four hundred good lines over a numbering slip.
       //
       // Criteria were scoped to the module until 16 September, and that was
       // wrong rather than strict. 121151's PM01 restarts at IAC0101 under its

@@ -208,8 +208,8 @@ describe("what it still refuses to guess at", () => {
     // A module lists a practical skill in its summary and then never gives
     // guidelines for it.
     expect(notes.join(" ")).toContain("PM-01-PS03");
-    // Two codes are used twice in the document.
-    expect(notes.join(" ")).toContain("more than once");
+    // Two codes are used twice in the document; both are kept and named (D58).
+    expect(notes.join(" ")).toContain("the same code");
     // One module's topic weights do not come to 100.
     expect(notes.join(" ")).toContain("not 100");
   });

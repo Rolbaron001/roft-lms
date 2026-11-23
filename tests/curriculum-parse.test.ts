@@ -84,7 +84,19 @@ describe("parseCurriculumText", () => {
         // Communication Processes", which is WM03's title everywhere else.
         // A real fault, first reported 17 November 2026.
         'The curriculum heads "Organisational Communication Processes" as WM04 in one place; its module list gives it as WM03. It is read as WM03. Check the document.',
-        "WM01 / WE0102: the document uses WA0201 more than once. Only the first can be stored; the rest need their own codes.",
+        // Since 23 November (D58) every one is kept and named, not dropped.
+        'WM01 / WE0102: the curriculum document gives five activities the same code, WA0201: "Verify the accuracy and completeness of the data being processed.", "Enter data into the appropriate HRM systems or databases.", "Maintain the security and confidentiality of the data being processed.", "Perform quality control checks to identify and correct errors in the processed data." and "Generate reports and analyses of the processed data to inform HRM decision- making.". All five are kept; the others are stored as WA0201 (2), WA0201 (3), WA0201 (4) and WA0201 (5). The curriculum document has a numbering slip here, which its author may wish to correct.',
+      ]);
+    });
+
+    it("keeps all five activities the document numbers WA0201", () => {
+      const topic = parsed.modules.find((m) => m.code === "WM01")?.topics.find((one) => one.code === "WE0102");
+      expect(topic?.elements.map((element) => element.code).filter((code) => code.startsWith("WA0201"))).toEqual([
+        "WA0201",
+        "WA0201 (2)",
+        "WA0201 (3)",
+        "WA0201 (4)",
+        "WA0201 (5)",
       ]);
     });
 
@@ -289,6 +301,22 @@ describe("parseCurriculumText", () => {
      */
     it("reads the curriculum code the QCTO assigned", () => {
       expect(parsed.qualification?.curriculumCode).toBe("900096-000-00-00");
+    });
+
+    /**
+     * PM-06-PS02 numbers two different activities PA0204. Until 23 November
+     * the second was dropped with "Only the first can be stored", which
+     * Roland could not act on (D58). Both are kept, and the note names them.
+     */
+    it("keeps both activities numbered PA0204 and names them", () => {
+      const topic = parsed.modules.flatMap((m) => m.topics).find((t) => t.elements.some((e) => e.code === "PA0204"));
+      const twins = topic?.elements.filter((e) => e.code.startsWith("PA0204")) ?? [];
+      expect(twins.map((e) => e.code)).toEqual(["PA0204", "PA0204 (2)"]);
+      expect(twins[0].description).not.toBe(twins[1].description);
+      const note = parsed.notes.find((one) => one.includes("PA0204"));
+      expect(note).toMatch(/gives two activities the same code, PA0204/);
+      expect(note).toMatch(/Both are kept; the second is stored as PA0204 \(2\)/);
+      expect(note).not.toMatch(/Only the first can be stored/);
     });
 
     it("finds all three modules, with their components and credits", () => {

@@ -665,6 +665,7 @@ export function parseCurriculumText(text: string): ParsedCurriculum {
   modules.push(...byCode.values());
   modules.sort((a, b) => a.code.localeCompare(b.code));
 
+  notes.push(...keepRepeatedCodes(modules));
   notes.push(...review(modules));
 
   return { qualification: parseQualificationDetails(lines), modules, notes };
@@ -1172,38 +1173,6 @@ function review(modules: ParsedModule[]): string[] {
       );
     }
 
-    // A code repeated where the platform requires a unique one. This is a
-    // fault in the document rather than in the reading of it, and it is the
-    // kind that is invisible on the page: 121150's first work experience
-    // module numbers five different activities WA0201. Only the first of them
-    // can be stored, so it has to be said before somebody accepts the module
-    // and quietly loses the other four.
-    //
-    // Both are scoped to the topic, because that is where the document makes
-    // them unique and, since 16 September, where the platform does too.
-    //
-    // The criterion check used to span the whole module, and it reported a
-    // fault that was not one. The QCTO's documents do not agree with
-    // themselves: in 121151, PM03 numbers criteria continuously across its
-    // module while PM01 restarts at IAC0101 under every topic. Both are
-    // unambiguous on the page. Treating the second as a duplicate meant PM01
-    // kept four of its eight criteria and the note blamed the document.
-    for (const topic of entry.topics) {
-      for (const code of repeats(topic.elements.map((e) => e.code))) {
-        notes.push(
-          `${entry.code} / ${topic.code}: the document uses ${code} more than once. Only the first can be stored; the rest need their own codes.`,
-        );
-      }
-    }
-
-    for (const topic of entry.topics) {
-      for (const code of repeats(topic.criteria.map((c) => c.code))) {
-        notes.push(
-          `${entry.code} / ${topic.code}: the document uses criterion ${code} more than once under this topic. Only the first can be stored; the rest need their own codes.`,
-        );
-      }
-    }
-
     for (const topic of entry.topics) {
       if (topic.elements.length === 0) {
         notes.push(`${entry.code} / ${topic.code}: nothing to teach was read.`);
@@ -1246,17 +1215,96 @@ function stripRepeatedCode(title: string, code: string): string {
     : title;
 }
 
-/** Codes that appear more than once in a list where each must be distinct. */
-function repeats(codes: string[]): string[] {
-  const seen = new Set<string>();
-  const repeated = new Set<string>();
+/**
+ * Every element and criterion kept, where the document gives two of them one
+ * code (job sheet D58).
+ *
+ * A code has to be unique within its topic, because that is where the document
+ * makes it unique and, since 16 September, where the platform does too. The
+ * real documents still break it: 121150's first work experience module numbers
+ * five different activities WA0201, and SP-220320's PM-06-PS02 lists PA0204
+ * twice ("guidance on remedial" and "guidance on remediation"). Until 23
+ * November only the first was stored and the rest were dropped, which broke
+ * the rule that the platform records what a document says and reports the
+ * disagreement. Now the second is stored as "PA0204 (2)", the third as
+ * "PA0204 (3)", and the note names every one of them.
+ *
+ * Criteria are scoped to the topic as well, not the module. The QCTO's
+ * documents do not agree with themselves: in 121151, PM03 numbers criteria
+ * continuously across its module while PM01 restarts at IAC0101 under every
+ * topic. Both are unambiguous on the page.
+ */
+function keepRepeatedCodes(modules: ParsedModule[]): string[] {
+  const notes: string[] = [];
 
-  for (const code of codes) {
-    if (seen.has(code)) repeated.add(code);
-    seen.add(code);
+  for (const entry of modules) {
+    for (const topic of entry.topics) {
+      const noun =
+        entry.component === "knowledge" ? "topic elements" : "activities";
+      notes.push(
+        ...renumberRepeats(topic.elements, `${entry.code} / ${topic.code}`, noun),
+        ...renumberRepeats(topic.criteria, `${entry.code} / ${topic.code}`, "assessment criteria"),
+      );
+    }
   }
 
-  return [...repeated];
+  return notes;
+}
+
+const COUNT_WORDS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+
+/** "a", "a and b", "a, b and c". */
+function listed(items: string[]): string {
+  return items.length <= 1
+    ? (items[0] ?? "")
+    : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function renumberRepeats(
+  items: { code: string; description: string }[],
+  where: string,
+  noun: string,
+): string[] {
+  const groups = new Map<string, { code: string; description: string }[]>();
+  for (const item of items) {
+    const group = groups.get(item.code) ?? [];
+    group.push(item);
+    groups.set(item.code, group);
+  }
+
+  const taken = new Set(items.map((item) => item.code));
+  const notes: string[] = [];
+
+  for (const [code, group] of groups) {
+    if (group.length < 2) continue;
+
+    const renamed: string[] = [];
+    let suffix = 2;
+    for (const item of group.slice(1)) {
+      while (taken.has(`${code} (${suffix})`)) suffix += 1;
+      item.code = `${code} (${suffix})`;
+      taken.add(item.code);
+      renamed.push(item.code);
+      suffix += 1;
+    }
+
+    const quoted = group.map((item) => {
+      const text = item.description.trim();
+      return `"${text.length > 110 ? `${text.slice(0, 107).trimEnd()}...` : text}"`;
+    });
+    const howMany = COUNT_WORDS[group.length] ?? String(group.length);
+    const kept = group.length === 2 ? "Both are kept" : `All ${howMany} are kept`;
+    const stored =
+      renamed.length === 1
+        ? `the second is stored as ${renamed[0]}`
+        : `the others are stored as ${listed(renamed)}`;
+
+    notes.push(
+      `${where}: the curriculum document gives ${howMany} ${noun} the same code, ${code}: ${listed(quoted)}. ${kept}; ${stored}. The curriculum document has a numbering slip here, which its author may wish to correct.`,
+    );
+  }
+
+  return notes;
 }
 
 /** Trailing punctuation from the document's sentence style, not part of a title. */

@@ -225,7 +225,8 @@ describe("what is still a genuine duplicate", () => {
    */
   it("is still reported, within a topic", () => {
     const said = notes.join(" ");
-    expect(said).toMatch(/AK0105 more than once/);
+    // Since 23 November (D58) both are kept and the note names them.
+    expect(said).toMatch(/the same code, AK0105/);
   });
 });
 
