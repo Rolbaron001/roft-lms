@@ -1,6 +1,9 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { withTenant } from "@/db/client";
+import { bestAlignmentUnits } from "./alignment-document";
+import { paperKey } from "./material-placement";
 import {
+  assessments,
   courseSteps,
   courses,
   curriculumModules,
@@ -59,6 +62,52 @@ async function enrolmentFor(session: AuthenticatedSession, enrolmentId: string) 
     throw new LearnerUnitError("That belongs to someone else.", "not_permitted");
   }
   return enrolment;
+}
+
+/**
+ * Workbooks the alignment document lists for this unit that are handed in
+ * with a later one (job sheet D57; Heidi and Roland, 20 November 2026): one
+ * workbook and one mark, begun here and handed in at the end of the later
+ * unit. Each with a link to the learner's later unit, where the workbook
+ * itself is, open from the start.
+ */
+export async function workbooksBegunHere(
+  session: AuthenticatedSession,
+  enrolmentId: string,
+): Promise<{ title: string; unit: string; href: string | null }[]> {
+  const enrolment = await enrolmentFor(session, enrolmentId);
+  if (!enrolment.studyUnitId) return [];
+  return withTenant(session.organisationId, async (tx) => {
+    const [here] = await tx.select({ code: studyUnits.code, qualificationId: studyUnits.qualificationId }).from(studyUnits).where(eq(studyUnits.id, enrolment.studyUnitId!));
+    if (!here) return [];
+    const alignment = await tx
+      .select({ text: programmeDocuments.extractedText })
+      .from(programmeDocuments)
+      .where(and(eq(programmeDocuments.qualificationId, here.qualificationId), eq(programmeDocuments.kind, "alignment_matrix")));
+    const listed = bestAlignmentUnits(alignment.map((one) => one.text));
+    const at = listed.findIndex((one) => one.code === here.code);
+    if (at === -1) return [];
+    const keys = listed[at].papers.filter((key) => key.startsWith("workbook:"));
+    const found: { title: string; unit: string; href: string | null }[] = [];
+    for (const key of keys) {
+      const later = listed.slice(at + 1).filter((one) => one.papers.includes(key)).pop();
+      if (!later) continue;
+      const rows = await tx
+        .select({ title: assessments.title, courseId: courses.id })
+        .from(assessments)
+        .innerJoin(courses, eq(courses.id, assessments.courseId))
+        .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+        .where(and(eq(studyUnits.qualificationId, here.qualificationId), eq(studyUnits.code, later.code), eq(assessments.purpose, "formative")));
+      const workbook = rows.find((row) => paperKey(row.title, "workbook") === key);
+      if (!workbook) continue;
+      const [theirs] = await tx
+        .select({ id: enrolments.id })
+        .from(enrolments)
+        .where(and(eq(enrolments.userId, enrolment.userId), eq(enrolments.courseId, workbook.courseId)));
+      found.push({ title: workbook.title, unit: later.code, href: theirs ? `/learn/${theirs.id}` : null });
+    }
+    return found;
+  });
 }
 
 /** The study unit behind an enrolment, or null when its course is not one. */

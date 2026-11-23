@@ -35,7 +35,7 @@ import { addPrerequisite, addStep } from "./spine";
 import { getObject } from "./storage";
 import { bareFilename } from "./naming-convention";
 import { bestAlignmentUnits } from "./alignment-document";
-import { paperKey } from "./material-placement";
+import { paperKey, placeMaterial, type PlacementUnit } from "./material-placement";
 
 /**
  * Building a qualification from what the platform already holds, and making it
@@ -91,6 +91,99 @@ export type BuildReport = {
 
 /** The kinds of document a learner works through as a step of their own. */
 const LEARNER_MATERIAL = new Set<DocumentKind>(["theory_guide", "learner_handbook", "learning_roadmap", "induction"]);
+
+// ---------------------------------------------------------------------------
+// Material and papers shared between study units (job sheet D57)
+// ---------------------------------------------------------------------------
+
+export type SharedLinks = {
+  /** Learner material filed in a later unit that also covers this one, by this unit's code. */
+  material: Map<string, { id: string; title: string; kind: string; filename: string; from: string }[]>;
+  /**
+   * Paper keys ("workbook:1") a unit shares with an earlier unit, by the later
+   * unit's code: its workbook opens from the start rather than after the
+   * guide, so it can be begun in the earlier unit (Heidi and Roland, 20
+   * November 2026).
+   */
+  sharedWithEarlier: Map<string, Set<string>>;
+};
+
+/**
+ * What the alignment document and the documents' own names and text say about
+ * material that covers more than one study unit. A document is filed once, in
+ * the last unit it covers, so that it comes after what it covers; Roland, 23
+ * November 2026: it "must be reachable from every study unit it is linked to".
+ * Worked out from what is filed, by the same rule the folder import placed it
+ * with, so nothing extra is stored and a document filed by hand is treated
+ * the same way.
+ */
+export async function sharedLinksOf(session: AuthenticatedSession, qualificationId: string): Promise<SharedLinks> {
+  const { units, documents, alignment } = await withTenant(session.organisationId, async (tx) => {
+    const rows = await tx
+      .select({ code: studyUnits.code, module: curriculumModules.code })
+      .from(studyUnits)
+      .leftJoin(studyUnitModules, eq(studyUnitModules.studyUnitId, studyUnits.id))
+      .leftJoin(curriculumModules, eq(curriculumModules.id, studyUnitModules.curriculumModuleId))
+      .where(eq(studyUnits.qualificationId, qualificationId))
+      .orderBy(asc(studyUnits.sortOrder), asc(studyUnits.code));
+    const units: PlacementUnit[] = [];
+    for (const row of rows) {
+      let unit = units.find((one) => one.code === row.code);
+      if (!unit) units.push((unit = { code: row.code, moduleCodes: [], topics: {} }));
+      const code = row.module?.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      if (code && !unit.moduleCodes.includes(code)) unit.moduleCodes.push(code);
+    }
+    const documents = await tx
+      .select({
+        id: programmeDocuments.id,
+        title: programmeDocuments.title,
+        kind: programmeDocuments.kind,
+        filename: programmeDocuments.filename,
+        text: programmeDocuments.extractedText,
+        unit: studyUnits.code,
+      })
+      .from(programmeDocuments)
+      .innerJoin(studyUnits, eq(studyUnits.id, programmeDocuments.studyUnitId))
+      .where(eq(studyUnits.qualificationId, qualificationId));
+    const alignment = await tx
+      .select({ text: programmeDocuments.extractedText })
+      .from(programmeDocuments)
+      .where(and(eq(programmeDocuments.qualificationId, qualificationId), eq(programmeDocuments.kind, "alignment_matrix")));
+    return { units, documents, alignment };
+  });
+
+  for (const read of bestAlignmentUnits(alignment.map((one) => one.text))) {
+    const unit = units.find((one) => one.code === read.code);
+    if (unit) {
+      unit.topics = read.topics;
+      unit.papers = read.papers;
+    }
+  }
+
+  const material: SharedLinks["material"] = new Map();
+  for (const doc of documents) {
+    if (!LEARNER_MATERIAL.has(doc.kind as DocumentKind) || NOT_A_LEARNER_STEP.has(doc.kind as DocumentKind)) continue;
+    const placed = placeMaterial(units, { filename: doc.filename, kind: doc.kind, text: doc.text });
+    // Only where it sits in the last unit it covers, as the import placed it:
+    // a document somebody moved by hand stays where they put it.
+    if (!placed || placed.covers.length < 2 || placed.studyUnitCode !== doc.unit) continue;
+    for (const code of placed.covers) {
+      if (code === doc.unit) continue;
+      const list = material.get(code) ?? [];
+      list.push({ id: doc.id, title: doc.title, kind: doc.kind, filename: doc.filename, from: doc.unit });
+      material.set(code, list);
+    }
+  }
+
+  const sharedWithEarlier: SharedLinks["sharedWithEarlier"] = new Map();
+  units.forEach((unit, index) => {
+    const earlier = new Set(units.slice(0, index).flatMap((one) => one.papers ?? []));
+    const shared = (unit.papers ?? []).filter((key) => key.startsWith("workbook:") && earlier.has(key));
+    if (shared.length > 0) sharedWithEarlier.set(unit.code, new Set(shared));
+  });
+
+  return { material, sharedWithEarlier };
+}
 
 // ---------------------------------------------------------------------------
 // The study unit's criteria, as the resolver wants them
@@ -347,6 +440,7 @@ async function buildSteps(
   session: AuthenticatedSession,
   courseId: string,
   studyUnitId: string,
+  shared: { material: { id: string; kind: string; filename: string }[]; openWorkbooks: Set<string> } = { material: [], openWorkbooks: new Set() },
 ): Promise<{ added: number; kept: boolean }> {
   const { existing, guides, papers, workplace } = await withTenant(session.organisationId, async (tx) => {
     const existing = await tx.select({ id: courseSteps.id }).from(courseSteps).where(eq(courseSteps.courseId, courseId)).limit(1);
@@ -371,7 +465,9 @@ async function buildSteps(
   if (existing.length > 0) return { added: 0, kept: true };
 
   let added = 0;
-  const material = guides
+  // Its own material, and material filed in a later unit that also covers
+  // this one, so a learner reaches it from here too (D57).
+  const material = [...guides, ...shared.material.filter((one) => !guides.some((own) => own.id === one.id))]
     .filter((doc) => LEARNER_MATERIAL.has(doc.kind as DocumentKind) && !NOT_A_LEARNER_STEP.has(doc.kind as DocumentKind))
     .sort((a, b) => natural(a.filename, b.filename));
   for (const doc of material) {
@@ -384,11 +480,15 @@ async function buildSteps(
 
   const workbookSteps: string[] = [];
   for (const [index, workbook] of workbooks.entries()) {
+    // A workbook the alignment also lists for an earlier unit opens from the
+    // start, so it can be begun there; it is handed in here (D57).
+    const key = paperKey(workbook.title, "workbook");
+    const startsEarlier = key !== null && shared.openWorkbooks.has(key);
     const step = await addStep(session, {
       courseId,
       kind: "assessment",
       assessmentId: workbook.id,
-      release: material.length === 0 && index === 0 ? "open" : "sequential",
+      release: startsEarlier || (material.length === 0 && index === 0) ? "open" : "sequential",
       // The first once the guide is opened; each after that once the one before is handed in.
       sequentialRule: index === 0 ? "opened" : "submitted",
     });
@@ -438,6 +538,7 @@ export async function buildQualification(
       .orderBy(asc(studyUnits.sortOrder), asc(studyUnits.code)),
   );
   const documents = await capturableDocuments(session, qualificationId);
+  const shared = await sharedLinksOf(session, qualificationId);
 
   const report: BuildReport = { units: [], toCheck: [], waiting: [] };
 
@@ -538,7 +639,10 @@ export async function buildQualification(
     }
 
     const relinked = await relinkCourse(session, courseId, candidates);
-    const steps = await buildSteps(session, courseId, unit.id);
+    const steps = await buildSteps(session, courseId, unit.id, {
+      material: shared.material.get(unit.code) ?? [],
+      openWorkbooks: shared.sharedWithEarlier.get(unit.code) ?? new Set(),
+    });
     report.units.push({ code: unit.code, courseId, captured, reread, relinked, stepsAdded: steps.added, stepsKept: steps.kept });
   }
 

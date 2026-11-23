@@ -4826,6 +4826,7 @@ export const staff = {
   "qualPage.sharedPapers": "Shared with another study unit",
   "qualPage.sharedDoneWith": "{title}: also covers this unit; filed and handed in with {unit}.",
   "qualPage.sharedAlsoCovers": "{title}: also covers {unit}, as the alignment document lists it for both.",
+  "qualPage.sharedMaterial": "{title}: filed with {unit}, and also covers this unit; learners reach it from here too.",
   "verify.blocking": "Holds it back",
   "verify.check": "To review",
   "unitGuide.title": "Built from the qualification's folder",

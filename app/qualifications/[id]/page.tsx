@@ -22,7 +22,7 @@ import { DrivePicker } from "@/components/drive-picker";
 import { PointHere, ProgressMap } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { setOpenToGuestsAction } from "./guest-actions";
-import { verificationOf } from "@/lib/qualification-build";
+import { sharedLinksOf, verificationOf } from "@/lib/qualification-build";
 import { BuildForm } from "./verify/verify-forms";
 import { ViewTabs } from "@/components/view-tabs";
 import { PageNav } from "@/components/page-nav";
@@ -142,6 +142,8 @@ export default async function QualificationPage({
 
   // Its people, cohorts and learners, for the steps after it is live.
   const delivery = canManage ? await deliveryReadiness(session, id) : null;
+  // Material a later unit shares with an earlier one, noted under each (D57).
+  const sharedMaterial = canManage ? (await sharedLinksOf(session, id).catch(() => null))?.material ?? null : null;
 
   const capture = capturable.length
     ? {
@@ -954,6 +956,9 @@ export default async function QualificationPage({
                       const lines = [
                         ...(shared?.assessedWith ?? []).map((one) => t("qualPage.sharedDoneWith", { title: one.title, unit: one.code })),
                         ...(shared?.alsoCovers ?? []).map((one) => t("qualPage.sharedAlsoCovers", { title: one.title, unit: one.code })),
+                        // Material filed in a later unit that also covers this one,
+                        // and is a step here too when the unit is built (D57).
+                        ...(sharedMaterial?.get(unit.code) ?? []).map((one) => t("qualPage.sharedMaterial", { title: one.title, unit: one.from })),
                       ];
                       return lines.length > 0 ? (
                         <div className="mt-3 border-t border-[var(--border)] pt-3">

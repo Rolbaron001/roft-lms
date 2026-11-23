@@ -851,6 +851,9 @@ export const en = {
   "work.status.coach_signed": "Signed, with the assessor",
   "work.status.accepted_by_assessor": "Received by the assessor",
   // A learner as their workplace coach sees them; the learner reads it too (D52 (7) to (10))
+  "learnUnit.guidesHere": "Reading for this study unit",
+  "learnUnit.begunHere": "{title} also covers {unit}: start it now, and hand it in at the end of {unit}.",
+  "learnUnit.openIt": "Open it",
   "shortcuts.title": "Shortcuts",
   "shortcuts.recent": "You have been using this page",
   "work.yourLearners": "Your learners",

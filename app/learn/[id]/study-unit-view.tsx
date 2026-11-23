@@ -3,7 +3,7 @@ import type { Translate } from "@/lib/i18n";
 import type { AuthenticatedSession } from "@/lib/session";
 import { pageDates } from "@/lib/request";
 import { recordStepOpened, type StepView } from "@/lib/spine";
-import { learnerMaterial, unitOverview, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
+import { learnerMaterial, unitOverview, workbooksBegunHere, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
 import { listLibrary } from "@/lib/library";
 import { describeSize } from "@/lib/media";
 import { PageReader } from "@/components/page-reader";
@@ -59,6 +59,8 @@ export async function StudyUnitView({
   isOwn,
   t,
   preview = null,
+  chosenDoc = null,
+  basePath = "",
 }: {
   session: AuthenticatedSession;
   /** The learner's enrolment; empty in an administrator's preview. */
@@ -76,6 +78,10 @@ export async function StudyUnitView({
    * Files come through the staff routes; workbooks open in the paper preview.
    */
   preview?: { qualificationId: string; papers: Map<string, string> } | null;
+  /** The guide chosen to read (its document id), from `?doc=`; the first otherwise. */
+  chosenDoc?: string | null;
+  /** Where this page is, so each guide links back to it with `?doc=`. */
+  basePath?: string;
 }) {
   const overview = await unitOverview(session, studyUnitId);
   if (!overview) return null;
@@ -94,8 +100,16 @@ export async function StudyUnitView({
   const materialHref = (itemId: string) => (preview ? `/api/material/${itemId}` : `/api/learn/${enrolmentId}/material/${itemId}`);
   const pdfViewHref = (itemId: string) => (preview ? `/api/material/${itemId}` : `/learn/${enrolmentId}/material/${itemId}`);
 
-  const guide = steps.find((step) => step.category === "theory_guide") ?? null;
+  /*
+   * Every guide in the unit, not only the first (23 November 2026): SP-260508's
+   * SU2 has eight (slides and practical tools as well as the guide), and seven
+   * could not be reached. The chosen one is read below; the others are listed
+   * above it. Material another unit shares with this one is among them (D57).
+   */
+  const guides = steps.filter((step) => step.category === "theory_guide");
+  const guide = guides.find((step) => step.targetId === chosenDoc) ?? guides[0] ?? null;
   const work = steps.filter((step) => step.category !== "theory_guide");
+  const begunHere = preview || !enrolmentId ? [] : await workbooksBegunHere(session, enrolmentId).catch(() => []);
   const hasWork = work.length > 0;
   const done = steps.filter((step) => step.state === "done").length;
   const waitingForCohort = !preview && steps.length > 0 && steps.every((step) => step.blockedBy.some((reason) => /placed in a cohort/.test(reason)));
@@ -160,9 +174,51 @@ export async function StudyUnitView({
         ) : null}
       </UnitIntro>
 
+      {/* A workbook this unit begins and a later unit hands in (D57). */}
+      {begunHere.length > 0 ? (
+        <section className="rounded-xl border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/5 px-5 py-4">
+          <ul className="space-y-1 text-sm">
+            {begunHere.map((one) => (
+              <li key={one.title}>
+                {t("learnUnit.begunHere", { title: one.title, unit: one.unit })}{" "}
+                {one.href ? (
+                  <Link href={one.href} className="font-medium underline underline-offset-2">
+                    {t("learnUnit.openIt")}
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Every guide in the unit; the chosen one is read below. */}
+      {guides.length > 1 ? (
+        <nav aria-label={t("learnUnit.guidesHere")} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <h2 className="mb-2 text-sm font-semibold">{t("learnUnit.guidesHere")}</h2>
+          <ul className="grid gap-1 text-sm sm:grid-cols-2">
+            {guides.map((one) => (
+              <li key={one.id}>
+                {one.open ? (
+                  <Link
+                    href={`${basePath}?doc=${one.targetId}#reader`}
+                    aria-current={one === guide ? "true" : undefined}
+                    className={`underline-offset-2 hover:underline ${one === guide ? "font-semibold" : ""}`}
+                  >
+                    {one.title}
+                  </Link>
+                ) : (
+                  <span className="text-[var(--muted)]">{one.title}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+
       {guide?.open && documentHref && downloadHref ? (
-        <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-          <h2 className="px-5 pt-4 text-lg font-semibold">{t("learnUnit.guideTitle")}</h2>
+        <section id="reader" className="scroll-mt-24 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          <h2 className="px-5 pt-4 text-lg font-semibold">{guides.length > 1 ? guide.title : t("learnUnit.guideTitle")}</h2>
           {isPdf || isWord ? (
             <PageReader src={documentHref} downloadHref={downloadHref} kind={isPdf ? "pdf" : "word"} />
           ) : (

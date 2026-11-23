@@ -17,8 +17,15 @@ import { StudyUnitView } from "@/app/learn/[id]/study-unit-view";
  * preview: no cohort is needed, nothing is recorded, and each workbook opens
  * in the paper preview where nothing can be handed in.
  */
-export default async function UnitPreviewPage({ params }: { params: Promise<{ id: string; unitId: string }> }) {
+export default async function UnitPreviewPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string; unitId: string }>;
+  searchParams: Promise<{ doc?: string }>;
+}) {
   const { id, unitId } = await params;
+  const { doc } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
   // Staff who build it, or a Guest where it is open to guests (D51).
@@ -61,6 +68,8 @@ export default async function UnitPreviewPage({ params }: { params: Promise<{ id
     t,
     dateLocale: locale,
     preview: { qualificationId: id, papers },
+    chosenDoc: doc ?? null,
+    basePath: `/qualifications/${id}/learner/${unitId}`,
   });
   if (!view) notFound();
 

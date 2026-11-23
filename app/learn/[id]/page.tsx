@@ -14,10 +14,13 @@ import { stepsForLearner } from "@/lib/spine";
 
 export default async function LearnPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ doc?: string }>;
 }) {
   const { id } = await params;
+  const { doc } = await searchParams;
   const tenant = await requireTenant();
   const session = await requireSession();
 
@@ -84,6 +87,8 @@ export default async function LearnPage({
           isOwn={delivery.isOwn}
           t={t}
           dateLocale={locale}
+          chosenDoc={doc ?? null}
+          basePath={`/learn/${id}`}
         />
       </AppShell>
     );

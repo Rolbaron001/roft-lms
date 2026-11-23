@@ -71,6 +71,24 @@ happens without it**. Where a provider can change a rule, it says where.
   most papers, then the most study units, is used.
 - **FISA instruments** are kept with the qualification and are not captured
   into a study unit; the external integrated assessment is the QCTO's.
+- **Shared between units (23 November 2026):** a document filed in the last
+  of several units it covers is also a step in each earlier unit, so learners
+  reach it from every unit it covers. A workbook the alignment lists for two
+  units is one workbook with one mark: it opens from the start, the earlier
+  unit's page tells the learner to start it there, and it is handed in at the
+  end of the later unit. Summatives come after the later unit. The
+  qualification page notes each shared item under every unit it covers.
+- **Several guides in one unit:** a learner's unit page lists every guide,
+  slide set and tools document in the unit, and opens the one chosen in the
+  page reader.
+- **Papers numbered by letter** ("Part A", "Part B") are treated as 1, 2 and
+  so on, in file names and in the alignment's material column; a "Formative
+  Assessor Guide" is a workbook's guide. Questions written as "Task 1.1
+  [IAC0101] [9 Marks]" or "Question 1.1 [2 Marks]", with guides written as
+  "Task: Task 1.1 ... (9 Marks)" and "Q1.1: B", are read as they stand.
+- **A curriculum that gives two lines one code** has both kept: the second is
+  stored as, for example, "PA0204 (2)", and the import names both so the
+  numbering slip can be corrected in the document.
 - **The alignment matrix** may be a spreadsheet or a Word table; both are read
   (19 November 2026). A matrix that names another programme's curriculum code
   is filed and flagged, and not used.
