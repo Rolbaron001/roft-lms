@@ -106,8 +106,14 @@ COPY --chown=nextjs:nodejs scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
 # run one deck at a time by lib/slides-to-pdf.ts. The fonts are there so a
 # deck renders as written: DejaVu and Liberation for the common faces, Carlito
 # because it is drawn to Calibri's measurements and most decks use Calibri.
-# Package names checked on pkgs.alpinelinux.org, v3.22, 23 November 2026.
-RUN apk add --no-cache libreoffice-impress font-dejavu font-liberation font-carlito
+#
+# Writer is needed too, though no Word file is converted: with Impress alone
+# LibreOffice stopped at start-up with "terminate called after throwing an
+# instance of 'com::sun::star::uno::RuntimeException'", even for --version.
+# Found on the development site, 23 November 2026; with Writer added it ran
+# and converted SP-260508's KM1 KT4 deck to 12 pages in 19 seconds, the
+# container staying inside its 384 MB.
+RUN apk add --no-cache libreoffice-impress libreoffice-writer font-dejavu font-liberation font-carlito
 
 # Evidence uploads live here; the compose file mounts a volume over it so they
 # survive a redeploy.
