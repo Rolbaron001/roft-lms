@@ -22,18 +22,28 @@ export default async function DocumentReadPage({ params }: { params: Promise<{ i
   const tenant = await requireTenant();
   const session = await requireSession();
   const [document] = await withTenant(session.organisationId, (tx) =>
-    tx.select({ title: programmeDocuments.title, mimeType: programmeDocuments.mimeType }).from(programmeDocuments).where(eq(programmeDocuments.id, id)),
+    tx
+      .select({ title: programmeDocuments.title, mimeType: programmeDocuments.mimeType, pdf: programmeDocuments.pdfStorageKey, note: programmeDocuments.pdfNote })
+      .from(programmeDocuments)
+      .where(eq(programmeDocuments.id, id)),
   );
   if (!document) notFound();
   const src = `/api/programme-documents/${id}`;
-  if (!READABLE.test(document.mimeType)) redirect(src);
+  // A deck converted to a PDF reads as the PDF; the download stays the deck (D56).
+  const asPdf = Boolean(document.pdf);
+  if (!asPdf && !READABLE.test(document.mimeType)) redirect(src);
 
   return (
     <AppShell tenant={tenant} session={session}>
       <BackLink />
       <h1 className="mb-4 mt-2 text-xl font-semibold">{document.title}</h1>
+      {document.note ? <p className="mb-3 text-sm text-[var(--muted)]">{document.note}</p> : null}
       <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-        <PageReader src={src} downloadHref={src} kind={document.mimeType === "application/pdf" ? "pdf" : "word"} />
+        <PageReader
+          src={asPdf ? `${src}?as=pdf` : src}
+          downloadHref={src}
+          kind={asPdf || document.mimeType === "application/pdf" ? "pdf" : "word"}
+        />
       </section>
     </AppShell>
   );

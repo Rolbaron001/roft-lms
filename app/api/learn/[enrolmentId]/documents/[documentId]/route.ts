@@ -16,7 +16,9 @@ export async function GET(
   if (!session) return new Response(await said("Sign in first."), { status: 401 });
   const { enrolmentId, documentId } = await params;
   try {
-    const file = await readLearnerDocument(session, enrolmentId, documentId);
+    // ?as=pdf: a deck's converted PDF, for the page reader (D56).
+    const asPdf = new URL(request.url).searchParams.get("as") === "pdf";
+    const file = await readLearnerDocument(session, enrolmentId, documentId, { asPdf });
     return rangeResponse(request, file, new URL(request.url).searchParams.has("download"));
   } catch (error) {
     return errorResponse(error);

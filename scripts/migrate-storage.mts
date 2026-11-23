@@ -65,6 +65,8 @@ const SOURCES: { table: string; column: string; archived?: boolean }[] = [
   { table: "enrolment_documents", column: "storage_key", archived: true },
   { table: "lessons", column: "storage_key" },
   { table: "programme_documents", column: "storage_key" },
+  // A deck's converted PDF (D56, 23 November 2026).
+  { table: "programme_documents", column: "pdf_storage_key" },
   { table: "capture_jobs", column: "paper_storage_key" },
   { table: "capture_jobs", column: "guide_storage_key" },
   { table: "library_documents", column: "storage_key" },

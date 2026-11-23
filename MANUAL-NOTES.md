@@ -71,6 +71,15 @@ happens without it**. Where a provider can change a rule, it says where.
   most papers, then the most study units, is used.
 - **FISA instruments** are kept with the qualification and are not captured
   into a study unit; the external integrated assessment is the QCTO's.
+- **PowerPoint decks (23 November 2026):** a .pptx is turned into a PDF in
+  the background after it is filed, one deck at a time; learners and staff
+  read the PDF in the page reader and the deck stays as the download. A deck
+  whose package has the "ns0:" fault some software cannot open is repaired
+  in a copy before converting; the original is never changed. The PDF must
+  have one page per slide. A deck that cannot be converted stays
+  downloadable and is listed on the qualification's check page. Decks filed
+  before this existed are converted when the qualification's page is next
+  opened. Supplying PDFs as well is still the surest way.
 - **Shared between units (23 November 2026):** a document filed in the last
   of several units it covers is also a step in each earlier unit, so learners
   reach it from every unit it covers. A workbook the alignment lists for two

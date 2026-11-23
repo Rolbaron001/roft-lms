@@ -212,11 +212,13 @@ export async function readLearnerDocument(
   session: AuthenticatedSession,
   enrolmentId: string,
   documentId: string,
+  /** `asPdf`: a deck's converted PDF where there is one (D56); the deck otherwise. */
+  options: { asPdf?: boolean } = {},
 ): Promise<ServableFile> {
   const enrolment = await enrolmentFor(session, enrolmentId);
   const document = await withTenant(session.organisationId, async (tx) => {
     const [row] = await tx
-      .select({ stepId: courseSteps.id, kind: programmeDocuments.kind, storageKey: programmeDocuments.storageKey, filename: programmeDocuments.filename })
+      .select({ stepId: courseSteps.id, kind: programmeDocuments.kind, storageKey: programmeDocuments.storageKey, filename: programmeDocuments.filename, pdfStorageKey: programmeDocuments.pdfStorageKey })
       .from(courseSteps)
       .innerJoin(programmeDocuments, eq(programmeDocuments.id, courseSteps.programmeDocumentId))
       .where(and(eq(courseSteps.courseId, enrolment.courseId!), eq(courseSteps.programmeDocumentId, documentId)));
@@ -225,6 +227,14 @@ export async function readLearnerDocument(
   if (!document || RESTRICTED_TO_ASSESSORS.has(document.kind as DocumentKind)) throw new LearnerUnitError("Not found.", "not_found");
   const steps = await stepsForLearner(session, enrolment.courseId!, enrolment.userId);
   if (!steps.find((step) => step.id === document.stepId)?.open) throw new LearnerUnitError("That is not open yet.", "not_permitted");
+  if (options.asPdf && document.pdfStorageKey) {
+    return {
+      bytes: await getObject(document.pdfStorageKey),
+      mimeType: "application/pdf",
+      filename: document.filename.replace(/\.pptx$/i, ".pdf"),
+      safeToEmbed: true,
+    };
+  }
   const bytes = await getObject(document.storageKey);
   const detected = detectMedia(bytes, document.filename);
   return {

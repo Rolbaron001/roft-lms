@@ -23,6 +23,7 @@ import { PointHere, ProgressMap } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { setOpenToGuestsAction } from "./guest-actions";
 import { sharedLinksOf, verificationOf } from "@/lib/qualification-build";
+import { convertWaitingDecks } from "@/lib/slides-to-pdf";
 import { BuildForm } from "./verify/verify-forms";
 import { ViewTabs } from "@/components/view-tabs";
 import { PageNav } from "@/components/page-nav";
@@ -142,6 +143,8 @@ export default async function QualificationPage({
 
   // Its people, cohorts and learners, for the steps after it is live.
   const delivery = canManage ? await deliveryReadiness(session, id) : null;
+  // Decks filed before conversion existed, turned into PDFs in the background (D56).
+  if (canManage) await convertWaitingDecks(session, id).catch(() => 0);
   // Material a later unit shares with an earlier one, noted under each (D57).
   const sharedMaterial = canManage ? (await sharedLinksOf(session, id).catch(() => null))?.material ?? null : null;
 

@@ -105,7 +105,8 @@ export type StepView = {
    */
   category: "theory_guide" | "material" | "workbook" | "summative" | "workplace" | "lesson";
   /** For a document step, its type and filename, so it can be shown. */
-  document: { mimeType: string; filename: string } | null;
+  /** `hasPdf`: a deck converted to a PDF, read in the page reader (D56). */
+  document: { mimeType: string; filename: string; hasPdf?: boolean } | null;
   /** True when this step's own gate is satisfied for this learner. */
   open: boolean;
   /** Why it is not, in words a learner can act on. Empty when open. */
@@ -425,7 +426,7 @@ async function computeSteps(
     (documentIds.length === 0
       ? []
       : await tx
-          .select({ id: programmeDocuments.id, kind: programmeDocuments.kind, mimeType: programmeDocuments.mimeType, filename: programmeDocuments.filename })
+          .select({ id: programmeDocuments.id, kind: programmeDocuments.kind, mimeType: programmeDocuments.mimeType, filename: programmeDocuments.filename, pdf: programmeDocuments.pdfStorageKey })
           .from(programmeDocuments)
           .where(inArray(programmeDocuments.id, documentIds))
     ).map((row) => [row.id, row]),
@@ -589,7 +590,7 @@ async function computeSteps(
       document: step.programmeDocumentId
         ? (() => {
             const found = documents.get(step.programmeDocumentId);
-            return found ? { mimeType: found.mimeType, filename: found.filename } : null;
+            return found ? { mimeType: found.mimeType, filename: found.filename, hasPdf: Boolean(found.pdf) } : null;
           })()
         : null,
       open,

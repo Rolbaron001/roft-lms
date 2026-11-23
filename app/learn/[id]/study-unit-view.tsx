@@ -125,8 +125,11 @@ export async function StudyUnitView({
   const downloadHref = documentHref ? (preview ? documentHref : `${documentHref}?download`) : null;
   // Read as its own pages (components/page-reader.tsx): a PDF, or a Word file
   // drawn at its own page size and orientation (Roland, 19 November 2026).
-  const isPdf = guide?.document?.mimeType === "application/pdf";
-  const isWord = Boolean(guide?.document && /wordprocessingml/.test(guide.document.mimeType));
+  // A deck reads as its converted PDF; the download stays the deck (D56).
+  const asPdf = Boolean(guide?.document?.hasPdf);
+  const isPdf = guide?.document?.mimeType === "application/pdf" || asPdf;
+  const isWord = !asPdf && Boolean(guide?.document && /wordprocessingml/.test(guide.document.mimeType));
+  const readerSrc = documentHref && asPdf ? `${documentHref}?as=pdf` : documentHref;
 
   return (
     <div className="space-y-6">
@@ -220,7 +223,7 @@ export async function StudyUnitView({
         <section id="reader" className="scroll-mt-24 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
           <h2 className="px-5 pt-4 text-lg font-semibold">{guides.length > 1 ? guide.title : t("learnUnit.guideTitle")}</h2>
           {isPdf || isWord ? (
-            <PageReader src={documentHref} downloadHref={downloadHref} kind={isPdf ? "pdf" : "word"} />
+            <PageReader src={readerSrc ?? documentHref} downloadHref={downloadHref} kind={isPdf ? "pdf" : "word"} />
           ) : (
             <p className="p-5 text-sm">
               <a href={downloadHref} className="underline underline-offset-2">

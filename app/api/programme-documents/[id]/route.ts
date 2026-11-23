@@ -14,14 +14,16 @@ import {
  * memorandum cannot be reached by any other caller either.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const session = await requireSession();
 
   try {
-    const document = await readProgrammeDocument(session, id);
+    // ?as=pdf: a deck's converted PDF, for the page reader (D56).
+    const asPdf = new URL(request.url).searchParams.get("as") === "pdf";
+    const document = await readProgrammeDocument(session, id, { asPdf });
 
     return new Response(new Uint8Array(document.bytes), {
       headers: {

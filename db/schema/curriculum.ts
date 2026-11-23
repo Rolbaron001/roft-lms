@@ -1115,6 +1115,14 @@ export const programmeDocuments = pgTable(
 
     /** Plain text pulled out of the file, for searching. Null for PDFs. */
     extractedText: text("extracted_text"),
+    /**
+     * A PowerPoint deck turned into a PDF, so it reads in the page reader on
+     * any device (job sheet D56, Roland, 19 November 2026). The deck itself
+     * stays as the download. Null until converted.
+     */
+    pdfStorageKey: text("pdf_storage_key"),
+    /** What happened when it was converted: a repair made, or why it failed. */
+    pdfNote: text("pdf_note"),
 
     uploadedById: uuid("uploaded_by_id").references(() => users.id, {
       onDelete: "set null",

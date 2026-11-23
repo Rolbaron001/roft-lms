@@ -18,6 +18,7 @@ import {
   OfficeReadError,
 } from "./office";
 import { AlignmentMatrixError, importAlignmentMatrix, type MatrixImportSummary } from "./alignment-matrix";
+import { convertInBackground, isDeck } from "./slides-to-pdf";
 import {
   looksLikeAlignmentDocument,
   readAlignmentDocument,
@@ -508,6 +509,10 @@ export async function uploadProgrammeDocument(
     }
   }
 
+  // A deck is turned into a PDF in the background, one at a time; the upload
+  // does not wait for it and is not affected if it fails (D56).
+  if (isDeck(file.filename, null)) convertInBackground(session, id);
+
   return { id, matrix, alignment, notice, kind, reclassified };
 }
 
@@ -590,7 +595,8 @@ export async function listProgrammeDocuments(
 export async function readProgrammeDocument(
   session: AuthenticatedSession,
   documentId: string,
-  options: { forAuthoring?: boolean } = {},
+  /** `asPdf`: a deck's converted PDF where there is one (D56); the deck otherwise. */
+  options: { forAuthoring?: boolean; asPdf?: boolean } = {},
 ) {
   assertSessionCan(session, "course:read");
 
@@ -615,6 +621,14 @@ export async function readProgrammeDocument(
       "Marking memoranda and summative assessments are limited to assessors.",
       "not_found",
     );
+  }
+
+  if (options.asPdf && document.pdfStorageKey) {
+    return {
+      bytes: await getObject(document.pdfStorageKey),
+      filename: document.filename.replace(/\.pptx$/i, ".pdf"),
+      mimeType: "application/pdf",
+    };
   }
 
   const bytes = await getObject(document.storageKey);

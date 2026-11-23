@@ -101,6 +101,14 @@ COPY --from=deps --chown=nextjs:nodejs /app/node_modules/pdfjs-dist ./node_modul
 # The check that proves the above actually worked, on the image that serves.
 COPY --chown=nextjs:nodejs scripts/smoke-pdf.mjs ./scripts/smoke-pdf.mjs
 
+# LibreOffice Impress, to turn PowerPoint decks into PDFs (job sheet D56;
+# Roland's option A, 19 November 2026). Impress only, not the whole suite, and
+# run one deck at a time by lib/slides-to-pdf.ts. The fonts are there so a
+# deck renders as written: DejaVu and Liberation for the common faces, Carlito
+# because it is drawn to Calibri's measurements and most decks use Calibri.
+# Package names checked on pkgs.alpinelinux.org, v3.22, 23 November 2026.
+RUN apk add --no-cache libreoffice-impress font-dejavu font-liberation font-carlito
+
 # Evidence uploads live here; the compose file mounts a volume over it so they
 # survive a redeploy.
 RUN mkdir -p /app/storage && chown nextjs:nodejs /app/storage

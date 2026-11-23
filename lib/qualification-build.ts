@@ -923,6 +923,17 @@ export async function verificationOf(
     for (const job of waitingJobs) {
       blocking.push({ studyUnit: unit.code, what: `${job.filename} is waiting for a person to review it in Capture.`, href: `/capture/${job.id}` });
     }
+    // A deck that could not be turned into a PDF: learners can still download
+    // it, so it holds nothing back, but it is said (D56).
+    const unconverted = await withTenant(session.organisationId, (tx) =>
+      tx
+        .select({ id: programmeDocuments.id, filename: programmeDocuments.filename, note: programmeDocuments.pdfNote })
+        .from(programmeDocuments)
+        .where(and(eq(programmeDocuments.studyUnitId, unit.id), isNull(programmeDocuments.pdfStorageKey), isNotNull(programmeDocuments.pdfNote))),
+    );
+    for (const deck of unconverted) {
+      toCheck.push({ studyUnit: unit.code, what: `${deck.filename}: ${deck.note}`, href: `/documents/${deck.id}` });
+    }
 
     result.push({
       id: unit.id,
