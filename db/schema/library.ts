@@ -29,11 +29,17 @@ export const libraryItems = pgTable(
     description: text("description"),
     /** What the file is, from its contents: video, image, audio, document, slides… */
     kind: text("kind").notNull(),
-    storageKey: text("storage_key").notNull(),
-    filename: text("filename").notNull(),
-    mimeType: text("mime_type").notNull(),
-    sizeBytes: integer("size_bytes").notNull(),
-    sha256: text("sha256").notNull(),
+    /**
+     * The file's details. Empty for a YouTube video (D46, 24 November 2026),
+     * which is played from YouTube and has no file here.
+     */
+    storageKey: text("storage_key"),
+    filename: text("filename"),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    sha256: text("sha256"),
+    /** A YouTube video's identifier (lib/youtube.ts), in place of a file. */
+    youtubeId: text("youtube_id"),
     uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

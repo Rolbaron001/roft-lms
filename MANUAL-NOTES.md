@@ -112,8 +112,10 @@ happens without it**. Where a provider can change a rule, it says where.
   a paper's guide, without removing the qualification. A paper's new guide
   takes effect when you build again, for a draft paper nobody has answered;
   a paper already live or answered stays as it is. A document moved to
-  another unit after building keeps its step in the first unit's course
-  until that step is moved.
+  another unit moves to that unit's steps when you build again, placed
+  after the steps of its own kind; a paper moves with it while nobody has
+  answered it. A step a learner has already opened stays where it is as
+  well, and the build lists it for you to check.
 - **Corrections remembered:** when you correct what a file is, the platform
   remembers the shape of its name for your organisation ("Model_Answers_
   Part_A" teaches "model answers part x"), and files the next file of that
@@ -329,6 +331,16 @@ person going through it question by question.
   each time "released with" one of that unit's steps, so it reaches a cohort
   together with that step. Video: MP4 or WebM, up to 500 MB. Learners can
   download everything to use without a signal.
+- **YouTube videos** (24 November 2026): "Add a YouTube video" on the same
+  page takes the video's link, copied from its Share button, and plays it
+  on the study unit's page. Nothing is stored on the platform, which saves
+  the server's bandwidth for live classes. On YouTube, the video must be
+  **Unlisted** with **Allow embedding** ticked (YouTube Studio, the video's
+  Details, Show more). A **Private** video does not play, because YouTube
+  only shows it to invited, signed-in accounts. An Unlisted video uploaded
+  before 2017 may have been made Private by YouTube; upload it again. A
+  YouTube video cannot be downloaded for use without a signal. A course
+  lesson whose link is a YouTube video plays it in the lesson as well.
 - **Criterion coverage is shown, not enforced** for a study unit. A
   workbook's activities may cover criteria as a whole, and the platform
   takes workbooks as they are.

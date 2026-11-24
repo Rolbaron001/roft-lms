@@ -1334,6 +1334,8 @@ export const CLIENT_KEYS: readonly string[] = [
   "material.upload",
   "material.uploading",
   "material.use",
+  "material.videoLink",
+  "material.videoLinkHint",
   "media.document",
   "media.download",
   "media.downloadInstead",

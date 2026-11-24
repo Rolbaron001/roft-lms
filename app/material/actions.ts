@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission, said } from "@/lib/request";
-import { linkLibraryItem, removeLibraryItem, unlinkLibraryItem } from "@/lib/library";
+import { addYoutubeItem, linkLibraryItem, removeLibraryItem, unlinkLibraryItem } from "@/lib/library";
 import { UploadError } from "@/lib/uploads";
 import { PermissionDeniedError } from "@/lib/rbac";
 
@@ -18,6 +18,23 @@ async function run(work: () => Promise<unknown>, done: string): Promise<Material
   revalidatePath("/material");
   revalidatePath("/courses", "layout");
   return said({ done });
+}
+
+/** A YouTube video by its link (D46). A server action: nothing large is sent. */
+export async function addVideoLinkAction(_previous: MaterialState, formData: FormData): Promise<MaterialState> {
+  const session = await requirePermission("course:author");
+  const text = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
+  return run(
+    () =>
+      addYoutubeItem(session, {
+        link: text("link") ?? "",
+        title: text("title"),
+        description: text("description"),
+        studyUnitId: text("studyUnitId"),
+        releaseWithStepId: text("releaseWithStepId"),
+      }),
+    "Added to the library.",
+  );
 }
 
 export async function linkMaterialAction(_previous: MaterialState, formData: FormData): Promise<MaterialState> {

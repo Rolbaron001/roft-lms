@@ -7,6 +7,7 @@ import { assertSessionCan, type AuthenticatedSession } from "./session";
 import { detectMedia } from "./media";
 import { acceptFile, UploadError, type ServableFile } from "./uploads";
 import { resolveTitles } from "./spine";
+import { youtubeIdOf } from "./youtube";
 
 /**
  * The provider's library of learning material (db/schema/library.ts).
@@ -24,6 +25,8 @@ export type LibraryItem = {
   filename: string;
   mimeType: string;
   sizeBytes: number;
+  /** A YouTube video in place of a file (D46); its file fields are then empty. */
+  youtubeId: string | null;
   createdAt: Date;
   links: { id: string; studyUnitId: string; studyUnitCode: string; studyUnitTitle: string; qualificationTitle: string; releaseWithStepId: string | null; releaseWithTitle: string | null }[];
 };
@@ -64,6 +67,46 @@ export async function uploadLibraryItem(
     return item.id;
   });
 
+  if (input.studyUnitId) await linkLibraryItem(session, id, input.studyUnitId, input.releaseWithStepId || null);
+  return { id };
+}
+
+/**
+ * Adds a YouTube video to the library by its link (D46, 24 November 2026).
+ * Nothing is stored but its identifier; it plays from YouTube in place.
+ */
+export async function addYoutubeItem(
+  session: AuthenticatedSession,
+  input: { link: string; title?: string; description?: string; studyUnitId?: string; releaseWithStepId?: string },
+): Promise<{ id: string }> {
+  assertSessionCan(session, "course:author");
+  const youtubeId = youtubeIdOf(input.link);
+  if (!youtubeId) {
+    throw new UploadError("That is not a link to a YouTube video. Copy the link from the video's Share button.", "rejected");
+  }
+  const title = input.title?.trim() || "YouTube video";
+  const id = await withTenant(session.organisationId, async (tx) => {
+    const [item] = await tx
+      .insert(libraryItems)
+      .values({
+        organisationId: session.organisationId,
+        title,
+        description: input.description?.trim() || null,
+        kind: "video",
+        youtubeId,
+        uploadedById: session.userId,
+      })
+      .returning({ id: libraryItems.id });
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "library.item_added",
+      entityType: "library_item",
+      entityId: item.id,
+      after: { title, kind: "video", youtubeId },
+    });
+    return item.id;
+  });
   if (input.studyUnitId) await linkLibraryItem(session, id, input.studyUnitId, input.releaseWithStepId || null);
   return { id };
 }
@@ -171,9 +214,10 @@ export async function listLibrary(session: AuthenticatedSession, studyUnitId?: s
         title: item.title,
         description: item.description,
         kind: item.kind,
-        filename: item.filename,
-        mimeType: item.mimeType,
-        sizeBytes: item.sizeBytes,
+        filename: item.filename ?? "",
+        mimeType: item.mimeType ?? "",
+        sizeBytes: item.sizeBytes ?? 0,
+        youtubeId: item.youtubeId,
         createdAt: item.createdAt,
         links: links
           .filter((link) => link.itemId === item.id)
@@ -202,7 +246,9 @@ export async function readLibraryItem(session: AuthenticatedSession, itemId: str
 }
 
 /** Served as what the bytes are, re-checked on the way out. */
-export async function servable(item: { storageKey: string; filename: string }): Promise<ServableFile> {
+export async function servable(item: { storageKey: string | null; filename: string | null }): Promise<ServableFile> {
+  // A YouTube video has no file here to hand over.
+  if (!item.storageKey || !item.filename) throw new UploadError("No file here.", "not_found");
   const bytes = await getObject(item.storageKey);
   const detected = detectMedia(bytes, item.filename);
   return {

@@ -161,6 +161,8 @@ export type LearnerMaterial = {
   kind: string;
   mimeType: string;
   sizeBytes: number;
+  /** A YouTube video, played in place rather than served as a file (D46). */
+  youtubeId: string | null;
   open: boolean;
   /** Why not, where it is not open yet. */
   waiting: string | null;
@@ -192,6 +194,7 @@ export async function learnerMaterial(
         kind: libraryItems.kind,
         mimeType: libraryItems.mimeType,
         sizeBytes: libraryItems.sizeBytes,
+        youtubeId: libraryItems.youtubeId,
         releaseWithStepId: libraryLinks.releaseWithStepId,
       })
       .from(libraryLinks)
@@ -199,7 +202,12 @@ export async function learnerMaterial(
       .where(eq(libraryLinks.studyUnitId, studyUnitId))
       .orderBy(asc(libraryLinks.sortOrder), asc(libraryLinks.createdAt)),
   );
-  return rows.map(({ releaseWithStepId, ...row }) => ({ ...row, ...openWith(steps, releaseWithStepId) }));
+  return rows.map(({ releaseWithStepId, mimeType, sizeBytes, ...row }) => ({
+    ...row,
+    mimeType: mimeType ?? "",
+    sizeBytes: sizeBytes ?? 0,
+    ...openWith(steps, releaseWithStepId),
+  }));
 }
 
 /**

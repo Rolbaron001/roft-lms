@@ -7,6 +7,7 @@ import { learnerMaterial, unitOverview, workbooksBegunHere, type LearnerMaterial
 import { listLibrary } from "@/lib/library";
 import { describeSize } from "@/lib/media";
 import { PageReader } from "@/components/page-reader";
+import { YoutubePlayer } from "@/components/youtube-player";
 import { StepList } from "./step-list";
 
 /** What a study unit is about, what the learner will learn, and its modules. */
@@ -93,6 +94,7 @@ export async function StudyUnitView({
         kind: item.kind,
         mimeType: item.mimeType,
         sizeBytes: item.sizeBytes,
+        youtubeId: item.youtubeId,
         open: true,
         waiting: null,
       }))
@@ -246,7 +248,9 @@ export async function StudyUnitView({
               return (
                 <article key={item.id} className="flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
                   {item.open ? (
-                    item.kind === "video" ? (
+                    item.youtubeId ? (
+                      <YoutubePlayer id={item.youtubeId} title={item.title} />
+                    ) : item.kind === "video" ? (
                       <video controls preload="metadata" src={href} className="aspect-video w-full bg-black" />
                     ) : item.kind === "image" ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -266,11 +270,12 @@ export async function StudyUnitView({
                   )}
                   <div className="flex flex-1 flex-col gap-1 p-4">
                     <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-                      {item.kind} · {describeSize(item.sizeBytes)}
+                      {item.kind} · {item.youtubeId ? "YouTube" : describeSize(item.sizeBytes)}
                     </span>
                     <span className="font-medium">{item.title}</span>
                     {item.description ? <span className="text-sm text-[var(--muted)]">{item.description}</span> : null}
-                    {item.open ? (
+                    {/* A YouTube video plays above; there is no file to download. */}
+                    {item.open && !item.youtubeId ? (
                       <div className="mt-2 flex gap-4 text-sm">
                         {/* PDFs and Word documents open in the page reader. */}
                         {item.mimeType === "application/pdf" || /wordprocessingml/.test(item.mimeType ?? "") ? (

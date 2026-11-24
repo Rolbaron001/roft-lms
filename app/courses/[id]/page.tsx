@@ -18,7 +18,8 @@ import { PointHere } from "@/components/progress-map";
 import { QualificationNav } from "@/components/qualification-nav";
 import { qualificationOfCourse, verificationOf } from "@/lib/qualification-build";
 import { BuildForm } from "@/app/qualifications/[id]/verify/verify-forms";
-import { UploadMaterial } from "@/app/material/material-forms";
+import { AddVideoLink, UploadMaterial } from "@/app/material/material-forms";
+import { youtubeWatchUrl } from "@/lib/youtube";
 import { linkableUnits, listLibrary } from "@/lib/library";
 import { CourseEditor } from "./course-editor";
 
@@ -211,11 +212,16 @@ export default async function CoursePage({
                   const link = item.links.find((one) => one.studyUnitId === detail.course.studyUnitId);
                   return (
                     <li key={item.id} className="flex flex-wrap items-baseline gap-2">
-                      <a href={`/api/material/${item.id}`} className="underline-offset-2 hover:underline">
+                      <a
+                        href={item.youtubeId ? youtubeWatchUrl(item.youtubeId) : `/api/material/${item.id}`}
+                        target={item.youtubeId ? "_blank" : undefined}
+                        rel={item.youtubeId ? "noopener noreferrer" : undefined}
+                        className="underline-offset-2 hover:underline"
+                      >
                         {item.title}
                       </a>
                       <span className="text-xs text-[var(--muted)]">
-                        {item.kind} ·{" "}
+                        {item.kind} · {item.youtubeId ? "YouTube · " : ""}
                         {link?.releaseWithTitle ? t("material.releasedWith", { step: link.releaseWithTitle }) : t("material.releasedWithUnit")}
                       </span>
                     </li>
@@ -224,6 +230,8 @@ export default async function CoursePage({
               </ul>
             ) : null}
             <UploadMaterial units={unitMaterial.units} fixedUnitId={detail.course.studyUnitId!} />
+            <h3 className="mb-2 mt-5 text-sm font-semibold">{t("material.videoTitle")}</h3>
+            <AddVideoLink units={unitMaterial.units} fixedUnitId={detail.course.studyUnitId!} />
             <Link href="/material" className="mt-3 inline-block text-sm underline underline-offset-2">
               {t("material.manage")}
             </Link>

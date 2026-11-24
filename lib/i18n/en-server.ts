@@ -717,6 +717,7 @@ export const server = {
   "said.library.1afc8861": "No file here.",
   "said.library.3bd91aaf": "That step is not on this study unit.",
   "said.library.719930fc": "That item or study unit was not found.",
+  "said.library.d72dc4bc": "That is not a link to a YouTube video. Copy the link from the video's Share button.",
   "said.login.f4cc48ac": "This address does not belong to a known organisation.",
   "said.mail.3936a4a0": "Fill in the address, a subject and a message.",
   "said.mail.53e32fd4": "No mail server is configured (MAIL_HOST and MAIL_FROM are unset).",

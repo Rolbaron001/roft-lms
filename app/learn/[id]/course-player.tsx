@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { markLessonCompleteAction, type LearnState } from "../actions";
 import { LessonMediaView } from "@/components/lesson-media";
 import { ScormPlayer } from "@/components/scorm-player";
+import { YoutubePlayer } from "@/components/youtube-player";
+import { youtubeIdOf } from "@/lib/youtube";
 import { useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
 
@@ -57,6 +59,7 @@ export function CoursePlayer({
   );
 
   const selected = allLessons.find((lesson) => lesson.id === selectedId);
+  const selectedVideo = selected?.externalUrl ? youtubeIdOf(selected.externalUrl) : null;
 
   if (allLessons.length === 0) {
     return (
@@ -182,11 +185,14 @@ export function CoursePlayer({
                     sizeBytes: selected.mediaSizeBytes,
                   }}
                 />
+              ) : selectedVideo ? (
+                // A lesson whose link is a YouTube video plays it here (D46).
+                <YoutubePlayer key={selected.id} id={selectedVideo} title={selected.title} />
               ) : null}
 
               {selected.body ? (
                 <div className="whitespace-pre-wrap">{selected.body}</div>
-              ) : selected.mediaMimeType || selected.contentType === "scorm" ? null : selected.externalUrl ? (
+              ) : selected.mediaMimeType || selected.contentType === "scorm" || selectedVideo ? null : selected.externalUrl ? (
                 <a
                   href={selected.externalUrl}
                   target="_blank"

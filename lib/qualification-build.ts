@@ -14,6 +14,7 @@ import {
   curriculumModules,
   curriculumTopics,
   programmeDocuments,
+  stepProgress,
   studyUnitModules,
   studyUnits,
 } from "@/db/schema";
@@ -31,7 +32,7 @@ import { paperProblems, publishPaper } from "./papers";
 import { enrolCohortsOnCourse } from "./cohorts";
 import { NOT_A_LEARNER_STEP, readProgrammeDocumentForAuthoring, type DocumentKind } from "./programme-documents";
 import { assertSessionCan, type AuthenticatedSession } from "./session";
-import { addPrerequisite, addStep } from "./spine";
+import { addPrerequisite, addStep, reorderSteps } from "./spine";
 import { getObject } from "./storage";
 import { bareFilename } from "./naming-convention";
 import { bestAlignmentUnits } from "./alignment-document";
@@ -547,6 +548,158 @@ async function buildSteps(
 }
 
 // ---------------------------------------------------------------------------
+// Following the map after a change (D60 stage 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Moves a learner step to the study unit its document is now filed in.
+ *
+ * Roland's programme map (24 November 2026) lets a person change a built
+ * qualification's links. Until this, a guide or workbook moved to another
+ * unit kept its step in the unit it was first built into, because steps a
+ * person may have arranged are left alone. A step is now moved when the map
+ * says it belongs elsewhere and no learner has opened it: the old step goes
+ * and one is added in the new unit, after that unit's steps of the same
+ * kind. A paper moves with its assessment only while nobody has sat it. A
+ * step a learner has already opened stays where it is, and is listed for a
+ * person to check, since moving it would lose that learner's record.
+ *
+ * Material shared with an earlier unit (D57) is in the right place in both.
+ */
+async function followTheMap(
+  session: AuthenticatedSession,
+  units: { id: string; code: string }[],
+  shared: SharedLinks,
+  report: BuildReport,
+): Promise<number> {
+  const codeOf = new Map(units.map((unit) => [unit.id, unit.code]));
+  const unitIds = units.map((unit) => unit.id);
+  if (unitIds.length === 0) return 0;
+
+  const found = await withTenant(session.organisationId, async (tx) => {
+    const placed = await tx
+      .select({
+        stepId: courseSteps.id,
+        courseId: courseSteps.courseId,
+        stepUnit: courses.studyUnitId,
+        kind: courseSteps.kind,
+        documentId: courseSteps.programmeDocumentId,
+        assessmentId: courseSteps.assessmentId,
+      })
+      .from(courseSteps)
+      .innerJoin(courses, eq(courses.id, courseSteps.courseId))
+      .where(and(inArray(courses.studyUnitId, unitIds), inArray(courseSteps.kind, ["document", "assessment"])));
+    const documents = await tx
+      .select({ id: programmeDocuments.id, unit: programmeDocuments.studyUnitId, kind: programmeDocuments.kind, filename: programmeDocuments.filename, sha256: programmeDocuments.sha256 })
+      .from(programmeDocuments)
+      .where(inArray(programmeDocuments.studyUnitId, unitIds));
+    // Which document each captured paper was read from.
+    const papersRead = await tx
+      .select({ assessmentId: assessmentPapers.assessmentId, sha256: captureJobs.paperSha256, purpose: assessments.purpose })
+      .from(captureJobs)
+      .innerJoin(assessmentPapers, eq(assessmentPapers.id, captureJobs.paperId))
+      .innerJoin(assessments, eq(assessments.id, assessmentPapers.assessmentId))
+      .where(isNotNull(captureJobs.committedAt));
+    const opened = placed.length
+      ? await tx.select({ stepId: stepProgress.stepId }).from(stepProgress).where(inArray(stepProgress.stepId, placed.map((one) => one.stepId)))
+      : [];
+    const sat = await tx
+      .select({ assessmentId: assessmentPapers.assessmentId })
+      .from(assessmentSubmissions)
+      .innerJoin(assessmentPapers, eq(assessmentPapers.id, assessmentSubmissions.paperId));
+    return { placed, documents, papersRead, opened: new Set(opened.map((one) => one.stepId)), sat: new Set(sat.map((one) => one.assessmentId)) };
+  });
+
+  const documentById = new Map(found.documents.map((one) => [one.id, one]));
+  const documentBySha = new Map(found.documents.map((one) => [one.sha256, one]));
+  const readFrom = new Map(found.papersRead.map((one) => [one.assessmentId, { document: documentBySha.get(one.sha256), purpose: one.purpose }]));
+  const sharedInto = (documentId: string) =>
+    new Set([...shared.material.entries()].filter(([, list]) => list.some((one) => one.id === documentId)).map(([code]) => code));
+
+  let moved = 0;
+  for (const step of found.placed) {
+    const document =
+      step.kind === "document" ? (step.documentId ? documentById.get(step.documentId) : undefined) : step.assessmentId ? readFrom.get(step.assessmentId)?.document : undefined;
+    if (!document?.unit || !step.stepUnit || document.unit === step.stepUnit) continue;
+    const here = codeOf.get(step.stepUnit) ?? "";
+    const there = codeOf.get(document.unit) ?? "";
+    if (step.kind === "document" && sharedInto(document.id).has(here)) continue;
+
+    if (found.opened.has(step.stepId) || (step.assessmentId && found.sat.has(step.assessmentId))) {
+      report.toCheck.push({
+        studyUnit: here,
+        what: `${document.filename} is now filed in ${there}, but learners have already opened it in ${here}, so it stays a step there as well. Remove that step by hand if it should not be there.`,
+        href: null,
+      });
+      continue;
+    }
+
+    const targetCourse = await courseForStudyUnit(session, document.unit);
+    const purpose = step.assessmentId ? readFrom.get(step.assessmentId)?.purpose : null;
+    await withTenant(session.organisationId, async (tx) => {
+      await tx.delete(courseSteps).where(eq(courseSteps.id, step.stepId));
+      // The paper belongs to the unit it is filed in now.
+      if (step.assessmentId) await tx.update(assessments).set({ courseId: targetCourse }).where(eq(assessments.id, step.assessmentId));
+      await recordAudit(tx, {
+        organisationId: session.organisationId,
+        actorId: session.userId,
+        action: "course.step_moved",
+        entityType: "course_step",
+        entityId: step.stepId,
+        before: { studyUnit: here },
+        after: { studyUnit: there, document: document.filename },
+      });
+    });
+
+    // A unit not built yet gets every step when its turn comes; one already
+    // built gets this one, after its steps of the same kind.
+    const [already] = await withTenant(session.organisationId, (tx) =>
+      tx.select({ id: courseSteps.id }).from(courseSteps).where(eq(courseSteps.courseId, targetCourse)).limit(1),
+    );
+    if (already) {
+      const added =
+        step.kind === "document"
+          ? await addStep(session, { courseId: targetCourse, kind: "document", programmeDocumentId: document.id, release: "open" })
+          : await addStep(session, {
+              courseId: targetCourse,
+              kind: "assessment",
+              assessmentId: step.assessmentId!,
+              release: "sequential",
+              sequentialRule: purpose === "summative" ? "opened" : "submitted",
+            });
+      await placeAmongItsKind(session, targetCourse, added.id, step.kind === "document" ? "document" : purpose === "summative" ? "summative" : "workbook");
+    }
+    report.toCheck.push({ studyUnit: there, what: `${document.filename} moved from ${here} to ${there}, as the programme map says.`, href: null });
+    moved += 1;
+  }
+  return moved;
+}
+
+/** Puts a step just after the last step of its own kind, keeping the rest of the order. */
+async function placeAmongItsKind(session: AuthenticatedSession, courseId: string, stepId: string, group: "document" | "workbook" | "summative"): Promise<void> {
+  const steps = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ id: courseSteps.id, kind: courseSteps.kind, purpose: assessments.purpose })
+      .from(courseSteps)
+      .leftJoin(assessments, eq(assessments.id, courseSteps.assessmentId))
+      .where(eq(courseSteps.courseId, courseId))
+      .orderBy(asc(courseSteps.sortOrder)),
+  );
+  const groupOf = (one: (typeof steps)[number]) =>
+    one.kind === "document" ? "document" : one.kind === "assessment" ? (one.purpose === "summative" ? "summative" : "workbook") : "other";
+  const rank = { document: 0, workbook: 1, summative: 2 } as const;
+  const rest = steps.filter((one) => one.id !== stepId);
+  // After the last step of its group, or of an earlier group where it has none.
+  let at = 0;
+  rest.forEach((one, index) => {
+    const g = groupOf(one);
+    if (g !== "other" && rank[g] <= rank[group]) at = index + 1;
+  });
+  const order = [...rest.slice(0, at).map((one) => one.id), stepId, ...rest.slice(at).map((one) => one.id)];
+  await reorderSteps(session, courseId, order);
+}
+
+// ---------------------------------------------------------------------------
 // The build
 // ---------------------------------------------------------------------------
 
@@ -568,6 +721,8 @@ export async function buildQualification(
   const shared = await sharedLinksOf(session, qualificationId);
 
   const report: BuildReport = { units: [], toCheck: [], waiting: [] };
+  // Steps first moved to where the programme map now files their documents.
+  await followTheMap(session, units, shared, report);
 
   for (const unit of units) {
     const courseId = await courseForStudyUnit(session, unit.id);

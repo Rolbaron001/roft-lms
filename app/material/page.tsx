@@ -2,7 +2,8 @@ import { pageT, requirePermission, requireTenant } from "@/lib/request";
 import { linkableUnits, listLibrary } from "@/lib/library";
 import { describeSize } from "@/lib/media";
 import { AppShell, Card } from "@/components/app-shell";
-import { LinkMaterial, RemoveMaterial, UnlinkMaterial, UploadMaterial } from "./material-forms";
+import { youtubeWatchUrl } from "@/lib/youtube";
+import { AddVideoLink, LinkMaterial, RemoveMaterial, UnlinkMaterial, UploadMaterial } from "./material-forms";
 
 /**
  * The provider's learning material: videos, diagrams and other files, kept
@@ -27,6 +28,10 @@ export default async function MaterialPage() {
         <UploadMaterial units={units} />
       </Card>
 
+      <Card title={t("material.videoTitle")}>
+        <AddVideoLink units={units} />
+      </Card>
+
       <h2 className="mb-3 mt-8 font-semibold">{t("material.listTitle", { count: items.length })}</h2>
       {items.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">{t("material.empty")}</p>
@@ -36,11 +41,16 @@ export default async function MaterialPage() {
             <Card key={item.id}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div>
-                  <a href={`/api/material/${item.id}`} className="font-medium underline-offset-2 hover:underline">
+                  <a
+                    href={item.youtubeId ? youtubeWatchUrl(item.youtubeId) : `/api/material/${item.id}`}
+                    target={item.youtubeId ? "_blank" : undefined}
+                    rel={item.youtubeId ? "noopener noreferrer" : undefined}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
                     {item.title}
                   </a>
                   <span className="ml-2 text-xs text-[var(--muted)]">
-                    {item.kind} · {describeSize(item.sizeBytes)} · {item.filename}
+                    {item.youtubeId ? `${item.kind} · YouTube` : `${item.kind} · ${describeSize(item.sizeBytes)} · ${item.filename}`}
                   </span>
                   {item.description ? <p className="mt-1 text-sm text-[var(--muted)]">{item.description}</p> : null}
                 </div>

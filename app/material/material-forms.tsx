@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/i18n";
-import { linkMaterialAction, removeMaterialAction, unlinkMaterialAction, type MaterialState } from "./actions";
+import { addVideoLinkAction, linkMaterialAction, removeMaterialAction, unlinkMaterialAction, type MaterialState } from "./actions";
 
 export type LinkableUnit = { id: string; label: string; steps: { id: string; title: string }[] };
 
@@ -106,6 +106,45 @@ export function UploadMaterial({ units, fixedUnitId }: { units: LinkableUnit[]; 
           <p role={message.ok ? undefined : "alert"} className={`mt-2 text-sm ${message.ok ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
             {message.text}
           </p>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Adding a YouTube video by its link (D46, 24 November 2026): kept on the
+ * provider's own channel, played on the study unit's page.
+ */
+export function AddVideoLink({ units, fixedUnitId }: { units: LinkableUnit[]; fixedUnitId?: string }) {
+  const t = useT();
+  const [state, action, pending] = useActionState<MaterialState, FormData>(addVideoLinkAction, {});
+  return (
+    <form action={action} className="grid gap-3 sm:grid-cols-2">
+      <label className="block text-sm sm:col-span-2">
+        <span className="mb-1 block font-medium">{t("material.videoLink")}</span>
+        <input name="link" type="url" required className={field} placeholder="https://youtu.be/…" />
+        <span className="mt-1 block text-xs text-[var(--muted)]">{t("material.videoLinkHint")}</span>
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium">{t("material.title")}</span>
+        <input name="title" required className={field} />
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium">{t("material.description")}</span>
+        <input name="description" className={field} />
+      </label>
+      <UnitAndStep units={units} fixedUnitId={fixedUnitId} />
+      <div className="sm:col-span-2">
+        <button type="submit" disabled={pending} className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          {t("material.upload")}
+        </button>
+        {state.error ? (
+          <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+            {state.error}
+          </p>
+        ) : state.done ? (
+          <p className="mt-2 text-sm text-[var(--success)]">{state.done}</p>
         ) : null}
       </div>
     </form>
