@@ -3,7 +3,8 @@ import type { Translate } from "@/lib/i18n";
 import type { AuthenticatedSession } from "@/lib/session";
 import { pageDates } from "@/lib/request";
 import { recordStepOpened, type StepView } from "@/lib/spine";
-import { learnerMaterial, unitOverview, workbooksBegunHere, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
+import { learnerMaterial, programmeHandbooks, unitOverview, workbooksBegunHere, type LearnerMaterial, type UnitOverview } from "@/lib/learner-unit";
+import { HandbookLink } from "@/components/programme-handbooks";
 import { listLibrary } from "@/lib/library";
 import { describeSize } from "@/lib/media";
 import { PageReader } from "@/components/page-reader";
@@ -112,6 +113,7 @@ export async function StudyUnitView({
   const guide = guides.find((step) => step.targetId === chosenDoc) ?? guides[0] ?? null;
   const work = steps.filter((step) => step.category !== "theory_guide");
   const begunHere = preview || !enrolmentId ? [] : await workbooksBegunHere(session, enrolmentId).catch(() => []);
+  const handbooks = await programmeHandbooks(session, overview.qualification.id).catch(() => ({ items: [], open: false }));
   const hasWork = work.length > 0;
   const done = steps.filter((step) => step.state === "done").length;
   const waitingForCohort = !preview && steps.length > 0 && steps.every((step) => step.blockedBy.some((reason) => /placed in a cohort/.test(reason)));
@@ -168,6 +170,9 @@ export async function StudyUnitView({
           <p className="mt-1 text-sm text-[var(--muted)]">{t("learnUnit.waitingBody")}</p>
         </div>
       ) : null}
+
+      {/* The programme's own handbook, filed for every unit at once. */}
+      <HandbookLink qualificationId={overview.qualification.id} items={handbooks.items} open={handbooks.open} t={t} />
 
       <UnitIntro overview={overview} t={t}>
         {guide?.open && downloadHref ? (

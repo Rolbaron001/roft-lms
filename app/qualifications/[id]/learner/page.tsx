@@ -8,6 +8,8 @@ import { guestMayOpenQualification } from "@/lib/guest";
 import { translator } from "@/lib/i18n";
 import { AppShell } from "@/components/app-shell";
 import { QualificationNav } from "@/components/qualification-nav";
+import { ProgrammeHandbooks } from "@/components/programme-handbooks";
+import { programmeHandbooks } from "@/lib/learner-unit";
 
 /**
  * The qualification as a learner sees it, for an administrator checking that
@@ -42,6 +44,8 @@ export default async function LearnerPreviewPage({ params }: { params: Promise<{
   });
   if (!data) notFound();
   const { qualification, units } = data;
+  // Not for a Guest, who previews the units without the provider's documents.
+  const handbooks = guest ? { items: [], open: false } : await programmeHandbooks(session, id);
   const facts = [
     qualification.saqaId ? t("learnQual.saqa", { id: qualification.saqaId }) : null,
     qualification.nqfLevel ? t("learnQual.nqf", { level: qualification.nqfLevel }) : null,
@@ -65,6 +69,8 @@ export default async function LearnerPreviewPage({ params }: { params: Promise<{
           <p className="mt-2 text-sm opacity-90">{t("learnQual.unitsDone", { done: 0, total: units.length })}</p>
         </div>
       </section>
+
+      <ProgrammeHandbooks qualificationId={id} items={handbooks.items} open={handbooks.open} t={t} />
 
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{t("learnQual.units")}</h2>

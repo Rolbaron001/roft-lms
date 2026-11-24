@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { bestAlignmentUnits } from "./alignment-document";
 import { paperKey } from "./material-placement";
@@ -336,6 +336,118 @@ export async function readQualificationResource(session: AuthenticatedSession, d
     throw new LearnerUnitError("Not found.", "not_found");
   }
   if (!(await onQualification(session, document.qualificationId))) throw new LearnerUnitError("Not found.", "not_found");
+  const bytes = await getObject(document.storageKey);
+  const detected = detectMedia(bytes, document.filename);
+  return {
+    bytes,
+    mimeType: detected.ok ? detected.mimeType : "application/octet-stream",
+    filename: document.filename,
+    safeToEmbed: detected.ok ? detected.safeToEmbed : false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Material for the whole programme (24 November 2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * A learner handbook, learning roadmap or induction pack filed for the whole
+ * programme rather than one study unit. Roland, 24 November 2026, after
+ * uploading SP-220320: its handbook was filed and no learner page showed it,
+ * because only a document filed in a unit becomes a learner's step. It is now
+ * shown on the learner's programme page and linked from every unit's page.
+ *
+ * It follows the cohort (Roland: "cohort scheduling will always trump what is
+ * made available to Learners"): a learner opens it once their cohort has
+ * released something of the programme to them, not merely on enrolment.
+ */
+export const PROGRAMME_LEARNER_KINDS = ["learner_handbook", "learning_roadmap", "induction"] as const;
+
+export type ProgrammeHandbook = { id: string; kind: string; title: string; mimeType: string; hasPdf: boolean };
+
+/** The programme's handbooks, and whether this person may open them yet. */
+export async function programmeHandbooks(
+  session: AuthenticatedSession,
+  qualificationId: string,
+): Promise<{ items: ProgrammeHandbook[]; open: boolean }> {
+  if (!(await onQualification(session, qualificationId))) return { items: [], open: false };
+  const rows = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({
+        id: programmeDocuments.id,
+        kind: programmeDocuments.kind,
+        title: programmeDocuments.title,
+        mimeType: programmeDocuments.mimeType,
+        pdf: programmeDocuments.pdfStorageKey,
+        supersedesId: programmeDocuments.supersedesId,
+      })
+      .from(programmeDocuments)
+      .where(
+        and(
+          eq(programmeDocuments.qualificationId, qualificationId),
+          isNull(programmeDocuments.studyUnitId),
+          inArray(programmeDocuments.kind, [...PROGRAMME_LEARNER_KINDS]),
+        ),
+      )
+      .orderBy(asc(programmeDocuments.title)),
+  );
+  const replaced = new Set(rows.map((row) => row.supersedesId).filter(Boolean));
+  const items = rows
+    .filter((row) => !replaced.has(row.id))
+    .map((row) => ({ id: row.id, kind: row.kind, title: row.title, mimeType: row.mimeType, hasPdf: Boolean(row.pdf) }));
+  return { items, open: items.length > 0 && (await releasedToMe(session, qualificationId)) };
+}
+
+/**
+ * Whether the cohort has released anything of this programme to this person.
+ * Staff who build or oversee it may always read it.
+ */
+async function releasedToMe(session: AuthenticatedSession, qualificationId: string): Promise<boolean> {
+  if (can(session, "course:author") || can(session, "enrolment:read_all")) return true;
+  const mine = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ courseId: enrolments.courseId })
+      .from(enrolments)
+      .innerJoin(courses, eq(courses.id, enrolments.courseId))
+      .innerJoin(studyUnits, eq(studyUnits.id, courses.studyUnitId))
+      .where(and(eq(enrolments.userId, session.userId), eq(studyUnits.qualificationId, qualificationId))),
+  );
+  for (const enrolment of mine) {
+    if (!enrolment.courseId) continue;
+    const steps = await stepsForLearner(session, enrolment.courseId, session.userId);
+    if (steps.some((step) => step.open)) return true;
+  }
+  return false;
+}
+
+/** A programme handbook's file, for someone on the programme once it is released to them. */
+export async function readProgrammeHandbook(
+  session: AuthenticatedSession,
+  documentId: string,
+  options: { asPdf?: boolean } = {},
+): Promise<ServableFile> {
+  const document = await withTenant(session.organisationId, async (tx) => {
+    const [row] = await tx
+      .select({
+        qualificationId: programmeDocuments.qualificationId,
+        unit: programmeDocuments.studyUnitId,
+        kind: programmeDocuments.kind,
+        storageKey: programmeDocuments.storageKey,
+        pdfStorageKey: programmeDocuments.pdfStorageKey,
+        filename: programmeDocuments.filename,
+      })
+      .from(programmeDocuments)
+      .where(eq(programmeDocuments.id, documentId));
+    return row;
+  });
+  if (!document?.qualificationId || document.unit || !(PROGRAMME_LEARNER_KINDS as readonly string[]).includes(document.kind)) {
+    throw new LearnerUnitError("Not found.", "not_found");
+  }
+  if (!(await onQualification(session, document.qualificationId))) throw new LearnerUnitError("Not found.", "not_found");
+  if (!(await releasedToMe(session, document.qualificationId))) throw new LearnerUnitError("That opens when your cohort starts.", "not_permitted");
+  if (options.asPdf && document.pdfStorageKey) {
+    return { bytes: await getObject(document.pdfStorageKey), mimeType: "application/pdf", filename: document.filename.replace(/\.pptx$/i, ".pdf"), safeToEmbed: true };
+  }
   const bytes = await getObject(document.storageKey);
   const detected = detectMedia(bytes, document.filename);
   return {

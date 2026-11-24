@@ -694,6 +694,7 @@ export const server = {
   "said.learn.d2be2373": "That could not be opened. Try again.",
   "said.learner-unit.24fbd5b4": "That belongs to someone else.",
   "said.learner-unit.56d57bf2": "That is not open yet.",
+  "said.learner-unit.b635bb55": "That opens when your cohort starts.",
   "said.learning-paths.08d1db9a": "A course is not published yet: {title}.",
   "said.learning-paths.1b935b92": "This programme is published and in use. Its steps cannot be changed.",
   "said.learning-paths.316b5b3b": "This programme is already published.",

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { localeFor, pageDates, requireSession, requireTenant } from "@/lib/request";
 import { translator } from "@/lib/i18n";
 import { learnerQualifications, type LearnerUnit } from "@/lib/learner-qualification";
-import { qualificationResources } from "@/lib/learner-unit";
+import { programmeHandbooks, qualificationResources } from "@/lib/learner-unit";
+import { ProgrammeHandbooks } from "@/components/programme-handbooks";
 import { myClassNotes } from "@/lib/classroom-record";
 import { maybe } from "@/lib/i18n/maybe";
 import { AppShell } from "@/components/app-shell";
@@ -22,6 +23,7 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
   const qualification = (await learnerQualifications(session)).find((one) => one.id === id);
   if (!qualification) notFound();
   const resources = await qualificationResources(session, id);
+  const handbooks = await programmeHandbooks(session, id);
   const classNotes = await myClassNotes(session, id);
   const { day } = await pageDates();
 
@@ -50,6 +52,8 @@ export default async function LearnerQualificationPage({ params }: { params: Pro
           <p className="mt-2 text-sm opacity-90">{t("learnQual.unitsDone", { done: completed, total: qualification.units.length })}</p>
         </div>
       </section>
+
+      <ProgrammeHandbooks qualificationId={id} items={handbooks.items} open={handbooks.open} t={t} />
 
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">{t("learnQual.units")}</h2>

@@ -331,6 +331,15 @@ person going through it question by question.
   each time "released with" one of that unit's steps, so it reaches a cohort
   together with that step. Video: MP4 or WebM, up to 500 MB. Learners can
   download everything to use without a signal.
+- **A learner handbook for the whole programme** (24 November 2026): a
+  learner handbook, learning roadmap or induction pack whose file name names
+  no study unit is filed for the whole programme. Learners find it at the
+  top of their programme page, under "Your learner handbook", and through a
+  link on every study unit's page. It opens once the cohort has released
+  something of the programme to the learner; until then it is listed with
+  "It opens when your cohort starts". To place it in one study unit only,
+  put that unit in its file name (for example "SU1") or change its unit on
+  the programme map.
 - **YouTube videos** (24 November 2026): "Add a YouTube video" on the same
   page takes the video's link, copied from its Share button, and plays it
   on the study unit's page. Nothing is stored on the platform, which saves
