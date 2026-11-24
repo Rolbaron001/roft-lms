@@ -84,6 +84,17 @@ happens without it**. Where a provider can change a rule, it says where.
   units, so no file is asked for one. What is confirmed here is what the
   build follows: a paper's guide and the other units a file covers are kept
   with the documents.
+- **Folders for study units (24 November 2026):** a file in a folder named
+  for a unit ("SU2", "SU 2 Research", "Study Unit 2", "Unit 2", "Part B") is
+  filed in that unit. The file's own name still comes first ("... SU3
+  WB1.docx" in folder SU2 is SU3), and the programme's own documents
+  (curriculum, qualification document, alignment, schedule) are never placed
+  in a unit by their folder. Where a folder and the alignment document
+  disagree, the folder is kept and the disagreement is shown on the map for
+  a glance. Recommended layout: one folder for the programme documents, one
+  folder per study unit, one for FISA material.
+- **A matrix for another programme** (one whose curriculum codes are not
+  this programme's) is asked about on the map: leave it out, or keep it filed.
 - **PowerPoint decks (23 November 2026):** a .pptx is turned into a PDF in
   the background after it is filed, one deck at a time; learners and staff
   read the PDF in the page reader and the deck stays as the download. A deck

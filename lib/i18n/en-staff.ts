@@ -4839,6 +4839,8 @@ export const staff = {
   "map.ask.unit": "Which study unit is it for?",
   "map.ask.guide": "Which is its guide?",
   "map.ask.paper": "Which paper does it guide?",
+  "map.ask.foreign": "This seems to belong to another programme. What should happen to it?",
+  "map.keepAnyway": "Keep it filed with this programme",
   "map.leaveOut": "Leave it out",
   "map.noGuide": "It has no guide",
   "map.alsoCovers": "also covers {units}",

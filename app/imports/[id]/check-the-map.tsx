@@ -143,7 +143,12 @@ function groups(items: MapItem[], units: ProgrammeMap["units"], t: ReturnType<ty
 function Question({ item, units, live, save }: { item: MapItem; units: ProgrammeMap["units"]; live: boolean; save: (answer: MapAnswer) => void }) {
   const t = useT();
   const options: { label: string; answer: MapAnswer }[] =
-    item.question === "what"
+    item.question === "foreign"
+      ? [
+          { label: t("map.leaveOut"), answer: { path: item.path, field: "ignore" } },
+          { label: t("map.keepAnyway"), answer: { path: item.path, field: "keep" } },
+        ]
+      : item.question === "what"
       ? [
           ...KIND_CHOICES.map((kind) => ({ label: maybe(t, `docKind.${kind}`) ?? kind, answer: { path: item.path, field: "kind", value: kind } as MapAnswer })),
           { label: t("map.leaveOut"), answer: { path: item.path, field: "ignore" } },

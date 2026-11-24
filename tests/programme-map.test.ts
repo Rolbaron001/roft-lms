@@ -139,6 +139,24 @@ describe("answers on 'Check the map'", () => {
     expect(mapOf(plan).items[0].question).toBe("guide");
   });
 
+  it("asks about a matrix for another programme, and lets it be left out or kept", () => {
+    const plan = base();
+    plan.documents.push({ path: "a/Other matrix.docx", filename: "Other matrix.docx", bytes: 1, target: "qualification", kind: "alignment_matrix", category: null, studyUnitCode: null, title: "Other matrix", version: null, because: "", foreign: "242401002" });
+    const asked = mapOf(plan).items.find((item) => item.title === "Other matrix");
+    expect(asked?.question).toBe("foreign");
+    expect(asked?.why).toMatch(/242401002/);
+    applyAnswer(plan, { path: "a/Other matrix.docx", field: "keep" });
+    expect(mapOf(plan).items.find((item) => item.title === "Other matrix")?.state).toBe("settled");
+  });
+
+  it("shows a folder that disagrees with the alignment as worth a glance", () => {
+    const plan = base();
+    Object.assign(plan.documents[2], { kind: "theory_guide", studyUnitCode: "SU1", target: "study_unit", source: "folder", conflict: "Its folder says SU1; the alignment document lists it for SU2." });
+    const item = mapOf(plan).items.find((one) => one.title === "Notes");
+    expect(item?.state).toBe("look");
+    expect(item?.why).toMatch(/Its folder says SU1/);
+  });
+
   it("lets a paper be marked as having no guide on purpose", () => {
     const plan = base();
     applyAnswer(plan, { path: "a/Workbook 1.docx", field: "unit", value: "SU1" });

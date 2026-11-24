@@ -1236,6 +1236,7 @@ export const CLIENT_KEYS: readonly string[] = [
   "map.guideIs",
   "map.guides",
   "map.intro",
+  "map.keepAnyway",
   "map.leaveOut",
   "map.looksRight",
   "map.needYou",

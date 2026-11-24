@@ -61,8 +61,17 @@ export type PlannedDocument = {
    */
   /** Earlier study units it also covers; it is filed in `studyUnitCode`, the last. */
   also?: string[];
-  /** Where its study unit came from: name, alignment, content, fallback, or a person. */
-  source?: "name" | "alignment" | "content" | "fallback" | "person";
+  /** Where its study unit came from: name, folder, alignment, content, fallback, or a person. */
+  source?: "name" | "folder" | "alignment" | "content" | "fallback" | "person";
+  /**
+   * On an alignment matrix or schedule: the other programme's curriculum code
+   * it maps, where it is not this one's (D60 stage 2).
+   */
+  foreign?: string | null;
+  /** Kept on purpose although it maps another programme. */
+  keepForeign?: boolean;
+  /** Where its folder and the alignment document disagree, in plain words. */
+  conflict?: string | null;
   /** On a workbook or summative: the path of its guide. */
   guidePath?: string | null;
   /** How the guide was found: by its name and number, by content, or by a person. */
@@ -258,6 +267,26 @@ export function studyUnitFromName(name: string): string | null {
   return match ? `SU${match[1]}` : null;
 }
 
+/**
+ * The study unit a sub-folder is named for: "SU2", "SU 2 Research", "Study
+ * Unit 2", "Unit 2", "Part B" (job sheet D60 stage 2, 24 November 2026). A
+ * provider who puts each unit's files in a folder of its own is giving the
+ * clearest signal there is, and until now only the file's own name was read.
+ * Only the folder's name at its start counts, so "Learning Material" or
+ * "Unit Standards" names no unit. The nearest folder to the file wins.
+ */
+export function studyUnitFromFolder(relativePath: string): string | null {
+  const folders = relativePath.replace(/\\/g, "/").split("/").slice(0, -1).reverse();
+  for (const folder of folders) {
+    const name = folder.replace(/_/g, " ").trim();
+    const number = /^(?:SU\s?|study\s+unit\s+|unit\s+)0?(\d{1,2})\b/i.exec(name);
+    if (number) return `SU${Number(number[1])}`;
+    const part = /^part\s+([A-Z])$/i.exec(name) ?? /^part\s+([A-Z])\s*[-–:]/i.exec(name);
+    if (part) return `SU${part[1].toUpperCase().charCodeAt(0) - 64}`;
+  }
+  return null;
+}
+
 export function classifyDocument(
   relativePath: string,
   filename: string,
@@ -287,7 +316,12 @@ export function classifyDocument(
 
   for (const rule of DOCUMENT_RULES) {
     if (rule.match.test(haystack)) {
-      const unit = studyUnitFromName(filename);
+      const named = studyUnitFromName(filename);
+      // The programme's own documents belong to the whole programme, whatever
+      // folder they sit in.
+      const fromFolder = named || PROGRAMME_KINDS.has(rule.kind) ? null : studyUnitFromFolder(relativePath);
+      const unit = named ?? fromFolder;
+      const recognised = `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}`;
       return {
         path: relativePath,
         filename,
@@ -298,10 +332,12 @@ export function classifyDocument(
         studyUnitCode: unit,
         title: cleanTitle(filename),
         version: versionFromName(filename),
-        because: unit
-          ? `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}, and the filename names ${unit}.`
-          : `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}.`,
-        ...(unit ? { source: "name" as const } : {}),
+        because: named
+          ? `${recognised}, and the filename names ${named}.`
+          : fromFolder
+            ? `${recognised}, in a folder named for ${fromFolder}.`
+            : `${recognised}.`,
+        ...(named ? { source: "name" as const } : fromFolder ? { source: "folder" as const } : {}),
       };
     }
   }
@@ -313,13 +349,23 @@ export function classifyDocument(
     target: "qualification",
     kind: "other",
     category: null,
-    studyUnitCode: studyUnitFromName(filename),
+    studyUnitCode: studyUnitFromName(filename) ?? studyUnitFromFolder(relativePath),
     title: cleanTitle(filename),
     version: null,
     because:
       "Not recognised by name. Filed against the qualification as 'other'. Change it after import.",
   };
 }
+
+/** A programme's own documents: never placed in a study unit by their folder. */
+const PROGRAMME_KINDS = new Set([
+  "qualification_document",
+  "curriculum_document",
+  "assessment_specification",
+  "alignment_matrix",
+  "rollout_schedule",
+  "learning_programme_guide",
+]);
 
 /** A filename without its extension, its SAQA prefix, or its underscores. */
 function cleanTitle(filename: string): string {

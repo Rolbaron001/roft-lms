@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
-import { aiImportJobs, curriculumModules, programmeDocuments, studyUnitModules, studyUnits } from "@/db/schema";
+import { aiImportJobs, curriculumModules, programmeDocuments, qualifications, studyUnitModules, studyUnits } from "@/db/schema";
+import { foreignCurriculum } from "./programme-documents";
 import { bestAlignmentUnits, looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
 import { placeMaterial, type PlacementUnit } from "./material-placement";
 import { GUIDE_KINDS, PAPER_KINDS, applyAnswer, confirmAll, pairPapers, type MapAnswer } from "./programme-map";
@@ -526,8 +527,43 @@ async function placeByContent(
   };
 
   const waiting = plan.documents.filter((document) => !document.studyUnitCode && document.target !== "library");
-  const units = waiting.length > 0 ? await placementUnits(session, qualificationId, files) : [];
+  const inFolders = plan.documents.filter((document) => document.source === "folder");
+  const units = waiting.length > 0 || inFolders.length > 0 ? await placementUnits(session, qualificationId, files) : [];
   await placeWaiting(waiting, units, plan, textOf);
+
+  /*
+   * A file in a folder named for a unit keeps that unit (D60 stage 2). Where
+   * the alignment document says otherwise it is said on the map, not
+   * overruled; where the alignment lists it for earlier units as well, those
+   * are recorded as the units it also covers.
+   */
+  for (const document of inFolders) {
+    if (units.length === 0) break;
+    const placed = placeMaterial(units, { filename: document.filename, kind: document.kind, text: await textOf(document.path) });
+    if (!placed) continue;
+    const at = placed.covers.indexOf(document.studyUnitCode!);
+    if (at === -1) {
+      document.conflict = `Its folder says ${document.studyUnitCode}; ${placed.source === "alignment" ? "the alignment document lists it for" : "what it covers points to"} ${placed.covers.join(", ")}.`;
+    } else if (at > 0) {
+      document.also = placed.covers.slice(0, at);
+    }
+  }
+
+  /*
+   * A matrix or schedule that maps another programme's curriculum, asked
+   * about on the map rather than only refused at the commit (D60 stage 2).
+   */
+  const ownCode =
+    plan.qualification.curriculumCode ??
+    (qualificationId
+      ? ((await withTenant(session.organisationId, (tx) =>
+          tx.select({ code: qualifications.curriculumCode }).from(qualifications).where(eq(qualifications.id, qualificationId)),
+        ))[0]?.code ?? null)
+      : null);
+  for (const document of plan.documents) {
+    if (document.kind !== "alignment_matrix" && document.kind !== "rollout_schedule") continue;
+    document.foreign = foreignCurriculum((await textOf(document.path)) ?? "", ownCode);
+  }
 
   /*
    * Every workbook and summative given its guide now, while the files are in

@@ -68,7 +68,7 @@ export function pairPapers(plan: IngestionPlan, texts: Map<string, string | null
 // ------------------------------------------------------------------ the map
 
 export type MapState = "decide" | "look" | "settled";
-export type MapQuestion = "what" | "unit" | "guide" | "paper";
+export type MapQuestion = "what" | "unit" | "guide" | "paper" | "foreign";
 
 export type MapItem = {
   path: string;
@@ -144,6 +144,15 @@ export function mapOf(plan: IngestionPlan, knownUnits: { code: string; title: st
 
     if (document.ignored) return settled("ignored");
     if (document.target === "library") return settled("library");
+    // A matrix or schedule for another programme (D60 stage 2): SP-260508's
+    // folder held "CA LD_Advisor_Alignment_Matrix", which maps 242401002.
+    if (document.foreign && !document.keepForeign) {
+      return decide(
+        "programme",
+        "foreign",
+        `It maps curriculum ${document.foreign}, not this programme's. It may belong to another programme.`,
+      );
+    }
     if (!document.kind || document.kind === "other") return decide("unknown", "what", "The platform could not tell what this file is.");
 
     if (isPaper(document)) {
@@ -197,6 +206,7 @@ function lookReason(document: PlannedDocument, extra: string | null): string | n
   const reasons: string[] = [];
   if (document.source === "content") reasons.push("Placed by what it says, not by its name.");
   if (document.source === "fallback") reasons.push("Placed in the last unit its modules cover.");
+  if (document.conflict) reasons.push(document.conflict);
   if ((document.also ?? []).length > 0) reasons.push(`Also covers ${document.also!.join(", ")}.`);
   if (extra) reasons.push(extra);
   return reasons.length > 0 ? reasons.join(" ") : null;
@@ -207,6 +217,7 @@ function lookReason(document: PlannedDocument, extra: string | null): string | n
 export type MapAnswer =
   | { path: string; field: "kind"; value: string }
   | { path: string; field: "ignore" }
+  | { path: string; field: "keep" }
   | { path: string; field: "unit"; value: string }
   | { path: string; field: "also"; value: string[] }
   | { path: string; field: "guide"; value: string | "none" }
@@ -224,6 +235,9 @@ export function applyAnswer(plan: IngestionPlan, answer: MapAnswer): void {
       break;
     case "ignore":
       document.ignored = true;
+      break;
+    case "keep":
+      document.keepForeign = true;
       break;
     case "unit":
       document.studyUnitCode = answer.value;
