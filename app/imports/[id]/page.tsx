@@ -5,7 +5,9 @@ import { Rich } from "@/components/rich-text";
 import { IngestError, getIngestJob } from "@/lib/folder-import";
 import type { IngestionPlan } from "@/lib/folder-plan";
 import { withTenant } from "@/db/client";
-import { qualifications } from "@/db/schema";
+import { qualifications, studyUnits } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { mapOf } from "@/lib/programme-map";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui";
 import { ZonedTime } from "@/components/zoned-time";
@@ -30,6 +32,16 @@ export default async function ImportJobPage({
   }
 
   const plan = job.proposal as IngestionPlan | null;
+
+  // "Check the map" (D60): the study units the qualification already has,
+  // when the folder adds to one, so a file can be placed in any of them.
+  const targetQualification = job.target?.qualificationId ?? null;
+  const knownUnits = targetQualification
+    ? await withTenant(session.organisationId, (tx) =>
+        tx.select({ code: studyUnits.code, title: studyUnits.title }).from(studyUnits).where(eq(studyUnits.qualificationId, targetQualification)),
+      )
+    : [];
+  const map = plan ? mapOf(plan, knownUnits) : null;
 
   const available = await withTenant(session.organisationId, (tx) =>
     tx
@@ -111,13 +123,14 @@ export default async function ImportJobPage({
         </div>
       ) : null}
 
-      {plan ? (
+      {plan && map ? (
         <div className="mt-6">
           <Card title={t("imports.proposes")} description={t("imports.proposesNote")}>
             <Proposal
               jobId={job.id}
               status={job.status}
               plan={plan}
+              map={map}
               qualifications={available}
               target={job.target}
             />

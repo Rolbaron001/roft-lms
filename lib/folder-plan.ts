@@ -54,6 +54,25 @@ export type PlannedDocument = {
   version: string | null;
   /** Why it was filed the way it was, so a person can check the reasoning. */
   because: string;
+  /*
+   * The programme map (job sheet D60, 24 November 2026): what a person
+   * confirms on "Check the map" before anything is built. All optional, so a
+   * plan saved before the map existed still reads.
+   */
+  /** Earlier study units it also covers; it is filed in `studyUnitCode`, the last. */
+  also?: string[];
+  /** Where its study unit came from: name, alignment, content, fallback, or a person. */
+  source?: "name" | "alignment" | "content" | "fallback" | "person";
+  /** On a workbook or summative: the path of its guide. */
+  guidePath?: string | null;
+  /** How the guide was found: by its name and number, by content, or by a person. */
+  guideSource?: "name" | "content" | "person";
+  /** Chosen on purpose: this paper has no guide. */
+  noGuide?: boolean;
+  /** Left out of the commit altogether. */
+  ignored?: boolean;
+  /** Ticked as right by a person on "Check the map". */
+  confirmed?: boolean;
 };
 
 export type IngestionPlan = {
@@ -282,6 +301,7 @@ export function classifyDocument(
         because: unit
           ? `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}, and the filename names ${unit}.`
           : `Recognised as ${/^[aeiou]/.test(rule.kind) ? "an" : "a"} ${rule.kind.replace(/_/g, " ")}.`,
+        ...(unit ? { source: "name" as const } : {}),
       };
     }
   }

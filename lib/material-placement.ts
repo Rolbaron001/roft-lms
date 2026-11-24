@@ -66,6 +66,8 @@ export type Placement = {
   /** Every study unit the document covers, in order. */
   covers: string[];
   because: string;
+  /** What settled it: the alignment's list of papers, the file's name, or its text. */
+  source?: "alignment" | "name" | "content";
 };
 
 type Reference = { module: string; topic: string | null };
@@ -127,6 +129,7 @@ export function placeMaterial(
     return {
       studyUnitCode: at,
       covers: listed,
+      source: "alignment",
       because:
         listed.length === 1
           ? `The alignment document lists it for ${at}.`
@@ -160,5 +163,5 @@ export function placeMaterial(
     covers.length === 1
       ? `${source} ${named}, which the alignment document places in ${last}.`
       : `${source} ${named}, which the alignment document places in ${covers.join(", ")}. Placed in ${last}, the last of them, so it comes after what it covers. Check this.`;
-  return { studyUnitCode: last, covers, because };
+  return { studyUnitCode: last, covers, because, source: fromName.length > 0 ? "name" : "content" };
 }

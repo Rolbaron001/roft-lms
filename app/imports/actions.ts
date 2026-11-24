@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission, said } from "@/lib/request";
-import { IngestError, discardIngest, ingestUpload } from "@/lib/folder-import";
+import { IngestError, answerMap, discardIngest, ingestUpload } from "@/lib/folder-import";
+import type { MapAnswer } from "@/lib/programme-map";
 import { commitPlan } from "@/lib/folder-commit";
 import { buildQualification, buildSummary } from "@/lib/qualification-build";
 import { PermissionDeniedError } from "@/lib/rbac";
@@ -224,6 +225,22 @@ export async function commitPlanAction(
     committedTo: report.qualificationId || undefined,
     attention: report.refused.length > 0 || /could not be built/.test(afterBuild),
   });
+}
+
+/**
+ * One answer on "Check the map" (D60), saved at once so nothing is lost if
+ * the page is left. The page then shows what is left to do.
+ */
+export async function mapAnswerAction(jobId: string, answer: MapAnswer | "all"): Promise<{ error?: string }> {
+  const session = await requirePermission("qualification:manage");
+  try {
+    await answerMap(session, jobId, answer);
+  } catch (error) {
+    if (error instanceof IngestError) return said({ error: error.message });
+    throw error;
+  }
+  revalidatePath(`/imports/${jobId}`);
+  return {};
 }
 
 export async function discardImportAction(

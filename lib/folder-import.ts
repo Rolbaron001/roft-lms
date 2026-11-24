@@ -6,6 +6,7 @@ import { withTenant } from "@/db/client";
 import { aiImportJobs, curriculumModules, programmeDocuments, studyUnitModules, studyUnits } from "@/db/schema";
 import { bestAlignmentUnits, looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
 import { placeMaterial, type PlacementUnit } from "./material-placement";
+import { GUIDE_KINDS, PAPER_KINDS, applyAnswer, confirmAll, pairPapers, type MapAnswer } from "./programme-map";
 import { kindFromContent } from "./document-linking";
 import { recordAudit } from "./audit";
 import {
@@ -506,16 +507,12 @@ async function placeByContent(
     }
   }
 
-  const waiting = plan.documents.filter((document) => !document.studyUnitCode && document.target !== "library");
-  if (waiting.length === 0) return;
-  const units = await placementUnits(session, qualificationId, files);
-  if (units.length === 0) return;
-
-  const byPath = new Map(files.map((file) => [file.path, file]));
-  let placed = 0;
-  let toCheck = 0;
-  for (const document of waiting) {
-    const file = byPath.get(document.path);
+  // Each file's text, read once and kept for pairing papers with guides.
+  const texts = new Map<string, string | null>();
+  const fileAt2 = new Map(files.map((file) => [file.path, file]));
+  const textOf = async (path: string) => {
+    if (texts.has(path)) return texts.get(path) ?? null;
+    const file = fileAt2.get(path);
     let text: string | null = null;
     if (file?.kind === "convert") {
       try {
@@ -524,11 +521,43 @@ async function placeByContent(
         text = null;
       }
     }
+    texts.set(path, text);
+    return text;
+  };
+
+  const waiting = plan.documents.filter((document) => !document.studyUnitCode && document.target !== "library");
+  const units = waiting.length > 0 ? await placementUnits(session, qualificationId, files) : [];
+  await placeWaiting(waiting, units, plan, textOf);
+
+  /*
+   * Every workbook and summative given its guide now, while the files are in
+   * hand, so "Check the map" can show the pairs and ask about the rest (D60).
+   */
+  const unpaired = plan.documents.filter((document) => PAPER_KINDS.has(document.kind ?? "") || GUIDE_KINDS.has(document.kind ?? ""));
+  for (const document of unpaired) await textOf(document.path);
+  pairPapers(plan, texts);
+}
+
+async function placeWaiting(
+  waiting: IngestionPlan["documents"],
+  units: PlacementUnit[],
+  plan: IngestionPlan,
+  textOf: (path: string) => Promise<string | null>,
+): Promise<void> {
+  if (waiting.length === 0 || units.length === 0) return;
+
+  let placed = 0;
+  let toCheck = 0;
+  for (const document of waiting) {
+    const text = await textOf(document.path);
     const placement = placeMaterial(units, { filename: document.filename, kind: document.kind, text });
     if (!placement) continue;
     document.studyUnitCode = placement.studyUnitCode;
     document.target = "study_unit";
     document.because = `${document.because} ${placement.because}`;
+    // For "Check the map" (D60): what settled it, and the earlier units it also covers.
+    document.source = placement.source ?? "content";
+    document.also = placement.covers.filter((code) => code !== placement.studyUnitCode);
     placed += 1;
     if (placement.covers.length > 1) toCheck += 1;
     if (!plan.studyUnits.some((unit) => unit.code === placement.studyUnitCode)) {
@@ -875,6 +904,25 @@ export async function getIngestJob(
 
   if (!job) throw new IngestError("That import was not found.", "not_found");
   return job;
+}
+
+/**
+ * An answer on "Check the map", saved on the plan waiting to be committed
+ * (D60). "all" ticks everything worth a look. Only while it is waiting: a
+ * committed plan is history.
+ */
+export async function answerMap(
+  session: AuthenticatedSession,
+  jobId: string,
+  answer: MapAnswer | "all",
+): Promise<void> {
+  assertSessionCan(session, "qualification:manage");
+  const job = await getIngestJob(session, jobId);
+  const plan = job.proposal as IngestionPlan | null;
+  if (!plan || job.status !== "proposed") throw new IngestError("That import is no longer waiting to be committed.", "no_plan");
+  if (answer === "all") confirmAll(plan);
+  else applyAnswer(plan, answer);
+  await withTenant(session.organisationId, (tx) => tx.update(aiImportJobs).set({ proposal: plan }).where(eq(aiImportJobs.id, jobId)));
 }
 
 export async function discardIngest(

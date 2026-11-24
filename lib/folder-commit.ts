@@ -6,9 +6,11 @@ import {
   curriculumModules,
   curriculumTopicElements,
   curriculumTopics,
+  programmeDocuments,
   qualifications,
   studyUnits,
 } from "@/db/schema";
+import { mapOf } from "./programme-map";
 import { recordAudit } from "./audit";
 import {
   addAssessmentCriterion,
@@ -103,6 +105,24 @@ export async function commitPlan(
   if (!plan || job.status !== "proposed") {
     throw new IngestError(
       "That import has nothing waiting to be committed.",
+      "no_plan",
+    );
+  }
+
+  /*
+   * Nothing is built on a guess (D60): every question on "Check the map"
+   * answered and every link worth a glance ticked. The screen holds the
+   * button back as well; this is the guarantee behind it.
+   */
+  const targetUnits = input.qualificationId
+    ? await withTenant(session.organisationId, (tx) =>
+        tx.select({ code: studyUnits.code, title: studyUnits.title }).from(studyUnits).where(eq(studyUnits.qualificationId, input.qualificationId!)),
+      )
+    : [];
+  const checked = mapOf(plan, targetUnits);
+  if (!checked.ready) {
+    throw new IngestError(
+      `Check the map first: ${checked.counts.decide} to answer and ${checked.counts.look} to tick.`,
       "no_plan",
     );
   }
@@ -298,8 +318,13 @@ export async function commitPlan(
       : [],
   );
 
+  // Where each file landed, for the guides and shared units recorded below.
+  const filedAs = new Map<string, string>();
+
   for (const document of plan.documents) {
     if (baseDocumentPaths.has(document.path)) continue;
+    // Left out on "Check the map" (D60).
+    if (document.ignored) continue;
     // Read back from where the upload was staged. The bytes are not on any
     // disk path the server could re-walk: they came from a browser.
     const key = (job.stagedFiles ?? {})[document.path];
@@ -355,7 +380,7 @@ export async function commitPlan(
         ? unitIds.get(document.studyUnitCode)
         : undefined;
 
-      await uploadProgrammeDocument(
+      const filed = await uploadProgrammeDocument(
         session,
         {
           // Attached to the study unit where one was identified, and otherwise
@@ -372,12 +397,33 @@ export async function commitPlan(
         } as never,
         { filename: document.filename, bytes },
       );
+      filedAs.set(document.path, filed.id);
 
       report.documents += 1;
     } catch (error) {
       report.refused.push(explain(error, document.path));
     }
   }
+
+  /*
+   * What "Check the map" settled (D60), kept with the documents so the build
+   * follows it: each paper's guide, and the earlier units a document also
+   * covers. Before this the build paired by names and numbers again, so a
+   * pairing a person had made could be undone.
+   */
+  await withTenant(session.organisationId, async (tx) => {
+    for (const document of plan.documents) {
+      const id = filedAs.get(document.path);
+      if (!id) continue;
+      const guideId = document.guidePath ? filedAs.get(document.guidePath) : undefined;
+      const also = (document.also ?? []).filter(Boolean);
+      if (!guideId && also.length === 0) continue;
+      await tx
+        .update(programmeDocuments)
+        .set({ ...(guideId ? { guideDocumentId: guideId } : {}), ...(also.length > 0 ? { alsoStudyUnits: also } : {}) })
+        .where(eq(programmeDocuments.id, id));
+    }
+  });
 
   await withTenant(session.organisationId, async (tx) => {
     await tx

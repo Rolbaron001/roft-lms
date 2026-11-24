@@ -11,6 +11,8 @@ import {
 } from "../actions";
 import { useT } from "@/components/i18n";
 import { maybe } from "@/lib/i18n/maybe";
+import type { ProgrammeMap } from "@/lib/programme-map";
+import { CheckTheMap } from "./check-the-map";
 
 const inputClass =
   "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm";
@@ -82,12 +84,15 @@ export function Proposal({
   jobId,
   status,
   plan,
+  map,
   qualifications,
   target,
 }: {
   jobId: string;
   status: string;
   plan: PlanView;
+  /** "Check the map" (D60): what needs an answer, a tick, or nothing. */
+  map: ProgrammeMap;
   qualifications: { id: string; title: string }[];
   /** Where this is going, decided when the folder was read. */
   target: {
@@ -112,7 +117,9 @@ export function Proposal({
    * so a folder looked filed with "no indication as to whether they are
    * properly linked".
    */
-  const [opened, setOpened] = useState<Set<string>>(() => new Set(["warnings", "documents"]));
+  // The full list of files is folded now: "Check the map" above it is where
+  // each one is placed and paired (D60).
+  const [opened, setOpened] = useState<Set<string>>(() => new Set(["warnings"]));
   const open = { has: (key: string) => opened.has(key) };
   const toggle = (key: string) =>
     setOpened((now) => {
@@ -323,6 +330,13 @@ export function Proposal({
         ) : null}
       </div>
 
+      {/* --- the programme map: placed, paired, checked (D60) --------------- */}
+      {plan.documents.length > 0 ? (
+        <div className="rounded-lg border border-[var(--border)] p-4">
+          <CheckTheMap jobId={jobId} map={map} live={live} />
+        </div>
+      ) : null}
+
       {/* --- documents ---------------------------------------------------- */}
       <div>
         {section("documents", t("proposal.documents"), plan.documents.length)}
@@ -519,12 +533,13 @@ export function Proposal({
           <p className="max-w-2xl text-xs text-[var(--muted)]">{t("proposal.checks")}</p>
 
           <div className="flex flex-wrap gap-2">
+            {/* Not until the map is checked (D60): nothing is built on a guess. */}
             <button
               type="submit"
-              disabled={committing}
+              disabled={committing || !map.ready}
               className="rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {committing ? t("proposal.committing") : t("proposal.commit")}
+              {committing ? t("proposal.committing") : map.ready ? t("proposal.commit") : t("map.finishFirst")}
             </button>
           </div>
         </form>

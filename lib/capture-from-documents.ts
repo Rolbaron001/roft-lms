@@ -195,6 +195,7 @@ export async function capturableDocuments(
         sha256: programmeDocuments.sha256,
         studyUnitId: programmeDocuments.studyUnitId,
         studyUnitCode: studyUnits.code,
+        guideDocumentId: programmeDocuments.guideDocumentId,
       })
       .from(programmeDocuments)
       .leftJoin(studyUnits, eq(studyUnits.id, programmeDocuments.studyUnitId))
@@ -247,11 +248,16 @@ export async function capturableDocuments(
             : one.kind === wanted && !/workbook|\bWB\s?\d/i.test(one.filename);
         const sameUnit = memoranda.filter((one) => forThisKind(one) && one.studyUnitId === paper.studyUnitId);
 
+        // The guide confirmed on "Check the map" (D60) comes before any reading
+        // of names, numbers or content: a person chose it.
+        const confirmed = paper.guideDocumentId ? rows.find((one) => one.id === paper.guideDocumentId) : undefined;
         const guide =
+          confirmed ??
           chooseGuide(
             paper.filename,
             sameUnit.filter((one) => artefactKey(one.filename, convention) === key),
-          ) ?? byNumber(paper.filename, sameUnit);
+          ) ??
+          byNumber(paper.filename, sameUnit);
 
         return {
           documentId: paper.id,

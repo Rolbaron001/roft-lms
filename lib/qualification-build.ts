@@ -141,6 +141,7 @@ export async function sharedLinksOf(session: AuthenticatedSession, qualification
         filename: programmeDocuments.filename,
         text: programmeDocuments.extractedText,
         unit: studyUnits.code,
+        also: programmeDocuments.alsoStudyUnits,
       })
       .from(programmeDocuments)
       .innerJoin(studyUnits, eq(studyUnits.id, programmeDocuments.studyUnitId))
@@ -163,11 +164,19 @@ export async function sharedLinksOf(session: AuthenticatedSession, qualification
   const material: SharedLinks["material"] = new Map();
   for (const doc of documents) {
     if (!LEARNER_MATERIAL.has(doc.kind as DocumentKind) || NOT_A_LEARNER_STEP.has(doc.kind as DocumentKind)) continue;
-    const placed = placeMaterial(units, { filename: doc.filename, kind: doc.kind, text: doc.text });
-    // Only where it sits in the last unit it covers, as the import placed it:
-    // a document somebody moved by hand stays where they put it.
-    if (!placed || placed.covers.length < 2 || placed.studyUnitCode !== doc.unit) continue;
-    for (const code of placed.covers) {
+    // What was confirmed on "Check the map" (D60) first; worked out again only
+    // for a document filed before the map existed.
+    let covers: string[];
+    if (doc.also) {
+      covers = [...doc.also, doc.unit];
+    } else {
+      const placed = placeMaterial(units, { filename: doc.filename, kind: doc.kind, text: doc.text });
+      // Only where it sits in the last unit it covers, as the import placed it:
+      // a document somebody moved by hand stays where they put it.
+      if (!placed || placed.covers.length < 2 || placed.studyUnitCode !== doc.unit) continue;
+      covers = placed.covers;
+    }
+    for (const code of covers) {
       if (code === doc.unit) continue;
       const list = material.get(code) ?? [];
       list.push({ id: doc.id, title: doc.title, kind: doc.kind, filename: doc.filename, from: doc.unit });
@@ -181,6 +190,13 @@ export async function sharedLinksOf(session: AuthenticatedSession, qualification
     const shared = (unit.papers ?? []).filter((key) => key.startsWith("workbook:") && earlier.has(key));
     if (shared.length > 0) sharedWithEarlier.set(unit.code, new Set(shared));
   });
+  // A workbook confirmed on "Check the map" as covering an earlier unit too (D60).
+  for (const doc of documents) {
+    if (doc.kind !== "workbook" || !doc.also?.length) continue;
+    const key = paperKey(doc.filename, "workbook");
+    if (!key) continue;
+    sharedWithEarlier.set(doc.unit, new Set([...(sharedWithEarlier.get(doc.unit) ?? []), key]));
+  }
 
   return { material, sharedWithEarlier };
 }

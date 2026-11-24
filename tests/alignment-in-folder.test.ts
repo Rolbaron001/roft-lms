@@ -31,7 +31,7 @@ import {
   userRoles,
   users,
 } from "@/db/schema";
-import { ingestUpload } from "@/lib/folder-import";
+import { answerMap, ingestUpload } from "@/lib/folder-import";
 import { commitPlan } from "@/lib/folder-commit";
 import {
   createQualificationFromDocuments,
@@ -143,6 +143,10 @@ beforeAll(async () => {
     { qualificationId },
   );
 
+  // The workbook has no guide in this folder, so "Check the map" asks (D60);
+  // answered as a person would before committing.
+  await answerMap(admin, job.id, { path: "Study Unit 1/CA 121151 SU1 WB1.docx", field: "guide", value: "none" });
+  await answerMap(admin, job.id, "all");
   await commitPlan(admin, { jobId: job.id, qualificationId });
 }, 180_000);
 

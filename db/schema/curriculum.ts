@@ -1123,6 +1123,13 @@ export const programmeDocuments = pgTable(
     pdfStorageKey: text("pdf_storage_key"),
     /** What happened when it was converted: a repair made, or why it failed. */
     pdfNote: text("pdf_note"),
+    /**
+     * On a workbook or summative: its guide, as confirmed on "Check the map"
+     * (job sheet D60). The build pairs by this before any name or content.
+     */
+    guideDocumentId: uuid("guide_document_id"),
+    /** Earlier study units it also covers, as confirmed on "Check the map" (D60). */
+    alsoStudyUnits: text("also_study_units").array(),
 
     uploadedById: uuid("uploaded_by_id").references(() => users.id, {
       onDelete: "set null",
@@ -1138,6 +1145,12 @@ export const programmeDocuments = pgTable(
       columns: [t.curriculumModuleId],
       foreignColumns: [curriculumModules.id],
     }).onDelete("cascade"),
+    // A paper's guide (D60): the link goes if the guide is removed.
+    foreignKey({
+      name: "programme_documents_guide_fk",
+      columns: [t.guideDocumentId],
+      foreignColumns: [t.id],
+    }).onDelete("set null"),
     index("programme_documents_org_idx").on(t.organisationId),
     index("programme_documents_qualification_idx").on(t.qualificationId),
     index("programme_documents_study_unit_idx").on(t.studyUnitId),

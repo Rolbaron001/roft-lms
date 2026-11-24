@@ -71,6 +71,19 @@ happens without it**. Where a provider can change a rule, it says where.
   most papers, then the most study units, is used.
 - **FISA instruments** are kept with the qualification and are not captured
   into a study unit; the external integrated assessment is the QCTO's.
+- **Check the map (24 November 2026):** after a folder is read and before
+  anything is built, every file is shown with where it goes and, for each
+  workbook and summative, its guide. Three groups: **Needs you** (a question
+  each, answered with one click: what a file is, which study unit, which
+  guide, which paper), **Worth a glance** (links made by content, or covering
+  more than one unit: tick each, or **Tick all**), and **Settled** (folded by
+  study unit, each with **Change**). Every answer is saved as it is given.
+  The build button stays held back until nothing needs you and everything
+  worth a glance is ticked. A paper can be marked "It has no guide" on
+  purpose; a file can be left out. A course or learning path has no study
+  units, so no file is asked for one. What is confirmed here is what the
+  build follows: a paper's guide and the other units a file covers are kept
+  with the documents.
 - **PowerPoint decks (23 November 2026):** a .pptx is turned into a PDF in
   the background after it is filed, one deck at a time; learners and staff
   read the PDF in the page reader and the deck stays as the download. A deck
