@@ -57,6 +57,8 @@ export async function QualificationNav({
       )}
       <span aria-hidden className="mx-1 text-[var(--muted)]">·</span>
       {link(`${base}#documents`, t("qualNav.documents"), false)}
+      {/* Which unit each document is in and which guide each paper has (D60). */}
+      {link(`${base}/map`, t("qualNav.map"), current === "map")}
       {link(`${base}/verify#assessments`, t("qualNav.assessments"), false)}
       {link(`${base}/learner`, t("qualNav.learner"), current === "preview")}
       {link(`${base}/verify`, t("qualNav.verify"), current === "verify")}

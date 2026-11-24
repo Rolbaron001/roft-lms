@@ -5,6 +5,8 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { aiImportJobs, curriculumModules, programmeDocuments, qualifications, studyUnitModules, studyUnits } from "@/db/schema";
 import { foreignCurriculum } from "./programme-documents";
+import { applyMatrix, readMatrix } from "./programme-matrix";
+import { applyLessons, lessonsOf, rememberKind } from "./filing-lessons";
 import { bestAlignmentUnits, looksLikeAlignmentDocument, readAlignmentDocument } from "./alignment-document";
 import { placeMaterial, type PlacementUnit } from "./material-placement";
 import { GUIDE_KINDS, PAPER_KINDS, applyAnswer, confirmAll, pairPapers, type MapAnswer } from "./programme-map";
@@ -203,6 +205,11 @@ export async function ingestUpload(
     }
 
     const plan = await buildPlan(session, shaped.files, shaped.warnings, mode, folderName);
+    // What this provider has corrected before, applied first (D60 stage 5).
+    const learned = applyLessons(plan, await lessonsOf(session));
+    if (learned > 0) {
+      plan.warnings.push(`${learned} ${learned === 1 ? "file was" : "files were"} filed as you corrected similar files before.`);
+    }
     await placeByContent(session, target.qualificationId ?? null, shaped.files, plan);
     return await finish(session, job.id, { status: "proposed", plan, staged });
   } catch (error) {
@@ -572,6 +579,26 @@ async function placeByContent(
   const unpaired = plan.documents.filter((document) => PAPER_KINDS.has(document.kind ?? "") || GUIDE_KINDS.has(document.kind ?? ""));
   for (const document of unpaired) await textOf(document.path);
   pairPapers(plan, texts);
+
+  /*
+   * A filled-in programme map in the folder (D60 stage 3) is read last, so it
+   * wins over everything the readers worked out. The matrix itself is read,
+   * not filed.
+   */
+  for (const file of files) {
+    if (!/\.xlsx$/i.test(file.filename)) continue;
+    const rows = readMatrix(file.bytes);
+    if (rows === null) continue;
+    const notes = applyMatrix(plan, rows, file.path, units.map((unit) => unit.code));
+    const own = plan.documents.find((document) => document.path === file.path);
+    if (own) {
+      own.ignored = true;
+      own.confirmed = true;
+      own.because = "The programme map: read, not filed.";
+    }
+    plan.warnings.push(`The folder's programme map (${file.filename}) was read: ${rows.length} ${rows.length === 1 ? "file" : "files"} placed by it.`, ...notes);
+    break;
+  }
 }
 
 async function placeWaiting(
@@ -958,6 +985,11 @@ export async function answerMap(
   if (!plan || job.status !== "proposed") throw new IngestError("That import is no longer waiting to be committed.", "no_plan");
   if (answer === "all") confirmAll(plan);
   else applyAnswer(plan, answer);
+  // A correction to what a file is, remembered for this provider (stage 5).
+  if (answer !== "all" && answer.field === "kind") {
+    const document = plan.documents.find((one) => one.path === answer.path);
+    if (document) await rememberKind(session, document.filename, answer.value);
+  }
   await withTenant(session.organisationId, (tx) => tx.update(aiImportJobs).set({ proposal: plan }).where(eq(aiImportJobs.id, jobId)));
 }
 

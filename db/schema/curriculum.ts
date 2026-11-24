@@ -1157,3 +1157,27 @@ export const programmeDocuments = pgTable(
     index("programme_documents_sha256_idx").on(t.sha256),
   ],
 );
+
+/**
+ * What a provider has taught the folder reader (job sheet D60 stage 5, 24
+ * November 2026): a correction made on "Check the map" to what a file is,
+ * kept as the shape of its name ("formative assessor guide part x"), so the
+ * next file of that shape from the same provider is filed the same way. One
+ * provider's lessons never shape another's reading.
+ */
+export const filingLessons = pgTable(
+  "filing_lessons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    /** The shape of the file's name, from lib/filing-lessons.ts namePattern. */
+    pattern: text("pattern").notNull(),
+    kind: programmeDocumentKind("kind").notNull(),
+    /** The file it was learned from, to say so. */
+    learnedFrom: text("learned_from").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("filing_lessons_org_pattern_idx").on(t.organisationId, t.pattern)],
+);

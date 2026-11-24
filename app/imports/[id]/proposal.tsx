@@ -333,7 +333,7 @@ export function Proposal({
       {/* --- the programme map: placed, paired, checked (D60) --------------- */}
       {plan.documents.length > 0 ? (
         <div className="rounded-lg border border-[var(--border)] p-4">
-          <CheckTheMap jobId={jobId} map={map} live={live} />
+          <CheckTheMap jobId={jobId} map={map} live={live} downloadHref={`/imports/${jobId}/programme-map`} />
         </div>
       ) : null}
 

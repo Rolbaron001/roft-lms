@@ -20,13 +20,31 @@ import { mapAnswerAction } from "../actions";
 
 const KIND_CHOICES = ["theory_guide", "workbook", "workbook_memorandum", "summative_assessment", "summative_memorandum", "learner_handbook", "learning_programme_guide"] as const;
 
-export function CheckTheMap({ jobId, map, live }: { jobId: string; map: ProgrammeMap; live: boolean }) {
+export function CheckTheMap({
+  jobId,
+  map,
+  live,
+  onAnswer,
+  afterBuild = false,
+  downloadHref,
+}: {
+  /** A folder waiting to be committed; or, with `onAnswer`, nothing. */
+  jobId?: string;
+  map: ProgrammeMap;
+  live: boolean;
+  /** Where answers go instead: a built qualification's documents (stage 4). */
+  onAnswer?: (answer: MapAnswer | "all") => Promise<{ error?: string }>;
+  /** A built qualification: nothing is left out or committed from here. */
+  afterBuild?: boolean;
+  /** "Download the map" as a spreadsheet (stage 3). */
+  downloadHref?: string;
+}) {
   const t = useT();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const save = (answer: MapAnswer | "all") =>
     start(async () => {
-      const result = await mapAnswerAction(jobId, answer);
+      const result = onAnswer ? await onAnswer(answer) : await mapAnswerAction(jobId!, answer);
       setError(result.error ?? null);
     });
 
@@ -38,9 +56,16 @@ export function CheckTheMap({ jobId, map, live }: { jobId: string; map: Programm
 
   return (
     <section aria-labelledby="map-heading" className={`space-y-4 ${pending ? "opacity-70" : ""}`}>
-      <div>
-        <h3 id="map-heading" className="text-base font-semibold">{t("map.title")}</h3>
-        <p className="text-sm text-[var(--muted)]">{t("map.intro")}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 id="map-heading" className="text-base font-semibold">{t("map.title")}</h3>
+          <p className="text-sm text-[var(--muted)]">{t("map.intro")}</p>
+        </div>
+        {downloadHref ? (
+          <a href={downloadHref} className="shrink-0 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm" title={t("map.downloadNote")}>
+            {t("map.download")}
+          </a>
+        ) : null}
       </div>
 
       {/* Where it stands, in three counts and one bar. */}
@@ -59,7 +84,7 @@ export function CheckTheMap({ jobId, map, live }: { jobId: string; map: Programm
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-[var(--danger)]">{t("map.needYouHeading", { count: decide.length })}</h4>
           {decide.map((item) => (
-            <Question key={item.path} item={item} units={map.units} live={live} save={save} />
+            <Question key={item.path} item={item} units={map.units} live={live} save={save} afterBuild={afterBuild} />
           ))}
         </div>
       ) : null}
@@ -77,7 +102,7 @@ export function CheckTheMap({ jobId, map, live }: { jobId: string; map: Programm
           </div>
           <ul className="divide-y divide-[var(--border)]">
             {look.map((item) => (
-              <Line key={item.path} item={item} units={map.units} live={live} save={save} tickable />
+              <Line key={item.path} item={item} units={map.units} live={live} save={save} tickable afterBuild={afterBuild} />
             ))}
           </ul>
         </div>
@@ -94,7 +119,7 @@ export function CheckTheMap({ jobId, map, live }: { jobId: string; map: Programm
               </summary>
               <ul className="divide-y divide-[var(--border)] px-3 pb-2">
                 {group.items.map((item) => (
-                  <Line key={item.path} item={item} units={map.units} live={live} save={save} />
+                  <Line key={item.path} item={item} units={map.units} live={live} save={save} afterBuild={afterBuild} />
                 ))}
               </ul>
             </details>
@@ -140,9 +165,21 @@ function groups(items: MapItem[], units: ProgrammeMap["units"], t: ReturnType<ty
 }
 
 /** One plain question, its answers as buttons, saved when one is chosen. */
-function Question({ item, units, live, save }: { item: MapItem; units: ProgrammeMap["units"]; live: boolean; save: (answer: MapAnswer) => void }) {
+function Question({
+  item,
+  units,
+  live,
+  save,
+  afterBuild,
+}: {
+  item: MapItem;
+  units: ProgrammeMap["units"];
+  live: boolean;
+  save: (answer: MapAnswer) => void;
+  afterBuild: boolean;
+}) {
   const t = useT();
-  const options: { label: string; answer: MapAnswer }[] =
+  const all: { label: string; answer: MapAnswer }[] =
     item.question === "foreign"
       ? [
           { label: t("map.leaveOut"), answer: { path: item.path, field: "ignore" } },
@@ -164,6 +201,10 @@ function Question({ item, units, live, save }: { item: MapItem; units: Programme
               ...item.choices.map((choice) => ({ label: choice.title, answer: { path: item.path, field: "paper", value: choice.path } as MapAnswer })),
               { label: t("map.leaveOut"), answer: { path: item.path, field: "paper", value: "ignore" } },
             ];
+  // A built qualification: nothing is left out from here, and a paper keeps a guide.
+  const options = afterBuild
+    ? all.filter(({ answer }) => answer.field !== "ignore" && !("value" in answer && (answer.value === "none" || answer.value === "ignore")))
+    : all;
 
   return (
     <div className="rounded-lg border-2 border-[var(--danger)]/40 bg-[var(--surface)] p-3">
@@ -205,12 +246,14 @@ function Line({
   live,
   save,
   tickable = false,
+  afterBuild = false,
 }: {
   item: MapItem;
   units: ProgrammeMap["units"];
   live: boolean;
   save: (answer: MapAnswer) => void;
   tickable?: boolean;
+  afterBuild?: boolean;
 }) {
   const t = useT();
   const [editing, setEditing] = useState(false);
@@ -239,13 +282,23 @@ function Line({
           </button>
         ) : null}
       </div>
-      {editing ? <Editor item={item} units={units} save={save} /> : null}
+      {editing ? <Editor item={item} units={units} save={save} afterBuild={afterBuild} /> : null}
     </li>
   );
 }
 
 /** Changing a settled or glanced line: its unit, the other units it covers, its guide. */
-function Editor({ item, units, save }: { item: MapItem; units: ProgrammeMap["units"]; save: (answer: MapAnswer) => void }) {
+function Editor({
+  item,
+  units,
+  save,
+  afterBuild,
+}: {
+  item: MapItem;
+  units: ProgrammeMap["units"];
+  save: (answer: MapAnswer) => void;
+  afterBuild: boolean;
+}) {
   const t = useT();
   const field = "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm";
   return (
@@ -300,11 +353,11 @@ function Editor({ item, units, save }: { item: MapItem; units: ProgrammeMap["uni
                 {choice.title}
               </option>
             ))}
-            <option value="none">{t("map.noGuide")}</option>
+            {afterBuild ? null : <option value="none">{t("map.noGuide")}</option>}
           </select>
         </label>
       ) : null}
-      {item.role !== "ignored" ? (
+      {item.role !== "ignored" && !afterBuild ? (
         <button type="button" onClick={() => save({ path: item.path, field: "ignore" })} className="text-xs text-[var(--danger)] underline underline-offset-2">
           {t("map.leaveOut")}
         </button>

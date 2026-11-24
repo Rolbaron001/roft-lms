@@ -1226,6 +1226,8 @@ export const CLIENT_KEYS: readonly string[] = [
   "map.alsoLegend",
   "map.change",
   "map.done",
+  "map.download",
+  "map.downloadNote",
   "map.files",
   "map.finishFirst",
   "map.glanceHeading",

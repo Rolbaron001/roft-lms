@@ -95,6 +95,31 @@ happens without it**. Where a provider can change a rule, it says where.
   folder per study unit, one for FISA material.
 - **A matrix for another programme** (one whose curriculum codes are not
   this programme's) is asked about on the map: leave it out, or keep it filed.
+- **The default matrix, "Programme map.xlsx" (24 November 2026):** optional.
+  **Download the map** on "Check the map", or on a qualification's
+  **Programme map** page, gives a spreadsheet already filled in: a **Files**
+  sheet (File name, What it is, Study unit, Also covers, Its guide, Leave
+  out; "What it is" and "Leave out" are drop-down lists), a **Study units**
+  sheet, and an **About** sheet whose first cell, "ROFT programme map", is how
+  the platform knows the spreadsheet is its own. Saved in the programme's
+  folder as Programme map.xlsx, it is read before anything else on the next
+  upload: every file it names is placed as it says, and is settled on the map.
+  A row naming a file that is not in the folder, a unit the programme lacks,
+  or a guide that is not there is reported; files it does not name are
+  placed as read, for the map. The matrix itself is read, not filed.
+- **Programme map of a built qualification:** in the qualification's menu.
+  Change a document's study unit, the other units it covers, what it is, or
+  a paper's guide, without removing the qualification. A paper's new guide
+  takes effect when you build again, for a draft paper nobody has answered;
+  a paper already live or answered stays as it is. A document moved to
+  another unit after building keeps its step in the first unit's course
+  until that step is moved.
+- **Corrections remembered:** when you correct what a file is, the platform
+  remembers the shape of its name for your organisation ("Model_Answers_
+  Part_A" teaches "model answers part x"), and files the next file of that
+  shape the same way, saying so. Only what a file is is learned, never
+  which unit it belongs to. Another provider's corrections never affect
+  yours.
 - **PowerPoint decks (23 November 2026):** a .pptx is turned into a PDF in
   the background after it is filed, one deck at a time; learners and staff
   read the PDF in the page reader and the deck stays as the download. A deck

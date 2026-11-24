@@ -376,6 +376,8 @@ async function rereadable(
         code: assessmentPapers.code,
         status: assessmentPapers.status,
         proposal: captureJobs.proposal,
+        readWithGuide: captureJobs.guideSha256,
+        confirmedGuide: programmeDocuments.guideDocumentId,
       })
       .from(captureJobs)
       .innerJoin(programmeDocuments, eq(programmeDocuments.sha256, captureJobs.paperSha256))
@@ -409,11 +411,20 @@ async function rereadable(
     if (counts.some((count, index) => count !== proposal.sections[index].items.length)) return null;
 
     const unlinked = items.some((item) => item.linked === null);
-    return { job, unlinked };
+    /*
+     * Read with another guide than the one now confirmed on the programme map
+     * (D60 stage 4): read again with the confirmed one, even if nothing fails.
+     */
+    let guideChanged = false;
+    if (job.confirmedGuide) {
+      const [guide] = await tx.select({ sha: programmeDocuments.sha256 }).from(programmeDocuments).where(eq(programmeDocuments.id, job.confirmedGuide));
+      guideChanged = Boolean(guide && guide.sha !== job.readWithGuide);
+    }
+    return { job, unlinked, guideChanged };
   });
   if (!found) return null;
 
-  const failing = (await paperProblems(session, found.job.paperId)).length > 0;
+  const failing = found.guideChanged || (await paperProblems(session, found.job.paperId)).length > 0;
   if (!failing && !found.unlinked) return null;
   return { paperId: found.job.paperId, assessmentId: found.job.assessmentId, code: found.job.code };
 }
