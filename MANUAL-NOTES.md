@@ -95,6 +95,11 @@ happens without it**. Where a provider can change a rule, it says where.
   folder per study unit, one for FISA material.
 - **A matrix for another programme** (one whose curriculum codes are not
   this programme's) is asked about on the map: leave it out, or keep it filed.
+  A matrix that names the programme itself, by its curriculum code written
+  in full or its programme ID (for example "SP-220320"), is taken as this
+  programme's, even where its modules carry a parent qualification's code
+  (a skills programme's modules usually do). Put the programme's curriculum
+  code or ID in the heading of an alignment document.
 - **The default matrix, "Programme map.xlsx" (24 November 2026):** optional.
   **Download the map** on "Check the map", or on a qualification's
   **Programme map** page, gives a spreadsheet already filled in: a **Files**

@@ -25,5 +25,20 @@ describe("a Word alignment matrix", () => {
     expect(foreignCurriculum(text, "900537-000-00-00")).toBe("242401002");
     expect(foreignCurriculum(text, "242401-002-00-00")).toBeNull();
     expect(foreignCurriculum("KM-01 only", "900537-000-00-00")).toBeNull();
+    // Naming its own programme ID does not make it SP-260508's: it does not.
+    expect(foreignCurriculum(text, "900537-000-00-00", ["SP-260508"])).toBe("242401002");
+  });
+
+  it("is a skills programme's own when it names the programme, though its modules carry the parent's code", () => {
+    // SP-220320 (curriculum 900096-000-00-00) is made of 242401001's modules;
+    // its alignment document says so and names the programme (Roland, 25 November 2026).
+    const own = readDocxText(new Uint8Array(readFileSync(join(__dirname, "fixtures", "SP220320-alignment.docx"))));
+    expect(own).toMatch(/242401001-KM-05/);
+    expect(foreignCurriculum(own, "900096-000-00-00", ["SP-220320"])).toBeNull();
+    // By its curriculum code alone, or by its programme ID alone.
+    expect(foreignCurriculum(own, "900096-000-00-00")).toBeNull();
+    expect(foreignCurriculum(own.replace(/900096-000-00-00/g, ""), "900096-000-00-00", ["SP-220320"])).toBeNull();
+    // Another programme's code and ID: still asked about.
+    expect(foreignCurriculum(own, "900537-000-00-00", ["SP-260508"])).toBe("242401001");
   });
 });

@@ -103,7 +103,9 @@ describe("a struck run", () => {
  * times, which is how two of them ended up in the markdown I wrote from it.
  */
 describe("Roland's own edits to the job sheet", () => {
-  const path = join(process.cwd(), "JOB-SHEET-2026-09-21.docx");
+  // The sheet itself is kept in Design/Job Sheets since 25 November 2026;
+  // this copy stays as a test fixture.
+  const path = join(process.cwd(), "tests", "fixtures", "job-sheet-2026-09-21.docx");
 
   it("drops what he struck out", () => {
     const text = readDocxText(new Uint8Array(readFileSync(path)));

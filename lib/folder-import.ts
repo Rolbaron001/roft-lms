@@ -560,16 +560,17 @@ async function placeByContent(
    * A matrix or schedule that maps another programme's curriculum, asked
    * about on the map rather than only refused at the commit (D60 stage 2).
    */
-  const ownCode =
-    plan.qualification.curriculumCode ??
-    (qualificationId
-      ? ((await withTenant(session.organisationId, (tx) =>
-          tx.select({ code: qualifications.curriculumCode }).from(qualifications).where(eq(qualifications.id, qualificationId)),
-        ))[0]?.code ?? null)
-      : null);
+  const filed = qualificationId
+    ? (await withTenant(session.organisationId, (tx) =>
+        tx.select({ code: qualifications.curriculumCode, saqaId: qualifications.saqaId }).from(qualifications).where(eq(qualifications.id, qualificationId)),
+      ))[0]
+    : undefined;
+  const ownCode = plan.qualification.curriculumCode ?? filed?.code ?? null;
+  // Its programme ID as well: a document naming "SP-220320" is that programme's.
+  const ownIds = [plan.qualification.saqaId, filed?.saqaId ?? null];
   for (const document of plan.documents) {
     if (document.kind !== "alignment_matrix" && document.kind !== "rollout_schedule") continue;
-    document.foreign = foreignCurriculum((await textOf(document.path)) ?? "", ownCode);
+    document.foreign = foreignCurriculum((await textOf(document.path)) ?? "", ownCode, ownIds);
   }
 
   /*

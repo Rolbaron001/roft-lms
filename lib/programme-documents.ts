@@ -489,9 +489,9 @@ export async function uploadProgrammeDocument(
          * 242401002, not the RPL Advisor's 900537 (19 November 2026).
          */
         const [own] = await withTenant(session.organisationId, (tx) =>
-          tx.select({ code: qualifications.curriculumCode }).from(qualifications).where(eq(qualifications.id, target)),
+          tx.select({ code: qualifications.curriculumCode, saqaId: qualifications.saqaId }).from(qualifications).where(eq(qualifications.id, target)),
         );
-        const foreign = foreignCurriculum(extractedText ?? "", own?.code ?? null);
+        const foreign = foreignCurriculum(extractedText ?? "", own?.code ?? null, [own?.saqaId ?? null]);
         if (foreign) {
           throw new AlignmentMatrixError(
             `This matrix maps curriculum ${foreign}, not this programme's ${own?.code}. It is filed, and is not used for this programme. Check whether it belongs in this folder.`,
@@ -528,13 +528,38 @@ export async function uploadProgrammeDocument(
  * codes written before module codes ("242401002-KM-01"), compared by their
  * digits with the programme's own ("900537-000-00-00"). Null when the matrix
  * names this programme, names none, or the programme has no code.
+ *
+ * A document that names the programme itself, by its own curriculum code
+ * written out or its programme ID ("SP-220320"), is the programme's whatever
+ * its module codes say. A skills programme or part qualification takes its
+ * modules from a parent qualification and keeps the parent's code in their
+ * names: SP-220320 (curriculum 900096-000-00-00) is made of 242401001-KM-05,
+ * -PM-06 and -WM-06, and its alignment document was wrongly asked about as
+ * another programme's (Roland, 25 November 2026).
  */
-export function foreignCurriculum(text: string, ownCode: string | null): string | null {
+export function foreignCurriculum(text: string, ownCode: string | null, ownIds: (string | null)[] = []): string | null {
   const own = (ownCode ?? "").replace(/\D/g, "").slice(0, 9);
   if (own.length < 6) return null;
   const named = new Set(Array.from(text.matchAll(/\b(\d{6})-?(\d{3})-?(?:KM|PM|WM)\b/g)).map((match) => `${match[1]}${match[2]}`));
   if (named.size === 0 || named.has(own)) return null;
+  if (namesItself(text, ownCode, ownIds)) return null;
   return [...named][0];
+}
+
+/**
+ * Whether the text names the programme: its curriculum code in full
+ * ("900096-000-00-00", hyphens optional), or an identifier with letters in it
+ * ("SP-220320"). A bare number such as a SAQA ID is not looked for, since
+ * a number of that length can appear in a document for other reasons.
+ */
+function namesItself(text: string, ownCode: string | null, ownIds: (string | null)[]): boolean {
+  const flat = text.replace(/[\s\-‐-―]/g, "").toUpperCase();
+  const code = (ownCode ?? "").replace(/[\s\-‐-―]/g, "").toUpperCase();
+  if (code.length >= 12 && flat.includes(code)) return true;
+  return ownIds.some((id) => {
+    const bare = (id ?? "").replace(/[\s\-‐-―]/g, "").toUpperCase();
+    return /[A-Z]/.test(bare) && /\d{4,}/.test(bare) && flat.includes(bare);
+  });
 }
 
 export function maySeeMemoranda(session: AuthenticatedSession): boolean {
