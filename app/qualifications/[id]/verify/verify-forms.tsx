@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useT } from "@/components/i18n";
-import { buildQualificationAction, verifyQualificationAction, type VerifyState } from "./actions";
+import { acceptFindingAction, buildQualificationAction, verifyQualificationAction, withdrawAcceptanceAction, type VerifyState } from "./actions";
 
 /** Builds what the documents settle and is not built yet. Fills gaps only. */
 export function BuildForm({ qualificationId, again }: { qualificationId: string; again: boolean }) {
@@ -23,6 +23,54 @@ export function BuildForm({ qualificationId, again }: { qualificationId: string;
       {pending ? <p className="text-xs text-[var(--muted)]">{t("verify.buildingNote")}</p> : null}
       {state.notice ? <p className="text-sm text-[var(--success)]">{state.notice}</p> : null}
       {state.error ? <p role="alert" className="text-sm text-[var(--danger)]">{state.error}</p> : null}
+    </form>
+  );
+}
+
+/**
+ * Accepting a finding that holds the programme back, with the reason (D62).
+ * Folded until asked for, so passing a problem is a deliberate act.
+ */
+export function AcceptForm({ qualificationId, findingKey }: { qualificationId: string; findingKey: string }) {
+  const t = useT();
+  const [state, action, pending] = useActionState<VerifyState, FormData>(acceptFindingAction, {});
+  return (
+    <details className="mt-1">
+      <summary className="cursor-pointer text-xs text-[var(--muted)] underline underline-offset-2">{t("verify.acceptOpen")}</summary>
+      <form action={action} className="mt-2 space-y-2">
+        <input type="hidden" name="qualificationId" value={qualificationId} />
+        <input type="hidden" name="findingKey" value={findingKey} />
+        <label className="block text-xs">
+          <span className="mb-1 block font-medium text-[var(--foreground)]">{t("verify.acceptReason")}</span>
+          <textarea
+            name="reason"
+            required
+            minLength={15}
+            rows={2}
+            className="w-full max-w-xl rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)]"
+          />
+          <span className="mt-1 block text-[var(--muted)]">{t("verify.acceptHint")}</span>
+        </label>
+        <button type="submit" disabled={pending} className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] disabled:opacity-60">
+          {t("verify.acceptButton")}
+        </button>
+        {state.error ? <p role="alert" className="text-xs text-[var(--danger)]">{state.error}</p> : null}
+      </form>
+    </details>
+  );
+}
+
+/** Withdrawing an acceptance: the finding holds the programme back again. */
+export function WithdrawForm({ qualificationId, findingKey }: { qualificationId: string; findingKey: string }) {
+  const t = useT();
+  const [, action, pending] = useActionState<VerifyState, FormData>(withdrawAcceptanceAction, {});
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="qualificationId" value={qualificationId} />
+      <input type="hidden" name="findingKey" value={findingKey} />
+      <button type="submit" disabled={pending} className="text-xs underline underline-offset-2 disabled:opacity-60">
+        {t("verify.withdraw")}
+      </button>
     </form>
   );
 }

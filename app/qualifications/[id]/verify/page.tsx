@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { withTenant } from "@/db/client";
 import { qualifications } from "@/db/schema";
-import { pageT, requirePermission, requireTenant, said } from "@/lib/request";
+import { pageDates, pageT, requirePermission, requireTenant, said } from "@/lib/request";
 import { verificationOf, type Finding } from "@/lib/qualification-build";
 import { AppShell, Card } from "@/components/app-shell";
 import { QualificationNav } from "@/components/qualification-nav";
-import { BuildForm, VerifyForm } from "./verify-forms";
+import { AcceptForm, BuildForm, VerifyForm, WithdrawForm } from "./verify-forms";
 
 /**
  * Checking a built qualification and making it live. Roland, 2 October 2026:
@@ -33,12 +33,18 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
   if (!qualification) notFound();
 
   const verification = await said(await verificationOf(session, id));
-  const blocking = verification.units.reduce((sum, unit) => sum + unit.blocking.length, 0);
-  const toCheck = verification.units.reduce((sum, unit) => sum + unit.toCheck.length, 0);
+  const blocking = verification.programme.blocking.length + verification.units.reduce((sum, unit) => sum + unit.blocking.length, 0);
+  const toCheck = verification.programme.toCheck.length + verification.units.reduce((sum, unit) => sum + unit.toCheck.length, 0);
   const mayPublish = session.permissions.includes("course:publish");
+  const { day } = await pageDates();
 
+  /*
+   * Each finding says what is wrong, where, and how to put it right (D62,
+   * Roland, 25 November 2026). One that holds the programme back and can be
+   * gone live with is passed only by accepting it with a reason, logged.
+   */
   const finding = (item: Finding, index: number, tone: "danger" | "muted") => (
-    <li key={index} className={tone === "danger" ? "text-[var(--danger)]" : "text-[var(--muted)]"}>
+    <li key={item.key ?? index} className={tone === "danger" ? "text-[var(--danger)]" : "text-[var(--muted)]"}>
       {item.href ? (
         <Link href={item.href} className="underline-offset-2 hover:underline">
           {item.what}
@@ -51,7 +57,21 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
           {t("verify.openGuide")}
         </a>
       ) : null}
+      {item.where ? (
+        <span className="mt-0.5 block text-xs text-[var(--muted)]">
+          {t("verify.where")} {item.where}
+        </span>
+      ) : null}
+      {item.fix ? (
+        <span className="mt-0.5 block text-xs text-[var(--foreground)]">
+          {t("verify.fix")} {item.fix}
+        </span>
+      ) : null}
+      {tone === "danger" && item.acceptable && item.key && mayPublish && !verification.live ? <AcceptForm qualificationId={id} findingKey={item.key} /> : null}
     </li>
+  );
+  const findingList = (items: Finding[], tone: "danger" | "muted") => (
+    <ul className="mt-1 list-disc space-y-2 pl-5 text-sm">{items.map((item, index) => finding(item, index, tone))}</ul>
   );
 
   return (
@@ -88,6 +108,50 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
           </Link>
         </div>
       </Card>
+
+      {/* What concerns the programme as a whole: a document for another programme above all (D62). */}
+      {verification.programme.blocking.length > 0 || verification.programme.toCheck.length > 0 ? (
+        <>
+          <h2 className="mb-3 mt-8 font-semibold">{t("verify.programme")}</h2>
+          <Card>
+            {verification.programme.blocking.length > 0 ? (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--danger)]">{t("verify.blocking")}</p>
+                {findingList(verification.programme.blocking, "danger")}
+              </div>
+            ) : null}
+            {verification.programme.toCheck.length > 0 ? (
+              <div className={verification.programme.blocking.length > 0 ? "mt-3" : ""}>
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">{t("verify.check")}</p>
+                {findingList(verification.programme.toCheck, "muted")}
+              </div>
+            ) : null}
+          </Card>
+        </>
+      ) : null}
+
+      {/* Accepted as they are, each with its reason, by whom and when (D62). */}
+      {verification.accepted.length > 0 ? (
+        <>
+          <h2 className="mb-3 mt-8 font-semibold">{t("verify.acceptedTitle")}</h2>
+          <Card>
+            <ul className="space-y-3 text-sm">
+              {verification.accepted.map((item) => (
+                <li key={item.key}>
+                  <p>
+                    {item.studyUnit ? `${item.studyUnit}: ` : ""}
+                    {item.what}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    {t("verify.acceptedBy", { reason: item.accepted!.reason, by: item.accepted!.by ?? "", date: day(item.accepted!.at) })}{" "}
+                    {mayPublish && !verification.live && item.key ? <WithdrawForm qualificationId={id} findingKey={item.key} /> : null}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </>
+      ) : null}
 
       <h2 id="assessments" className="mb-3 mt-8 scroll-mt-20 font-semibold">
         {t("verify.units")}
@@ -155,17 +219,13 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
             {unit.blocking.length > 0 ? (
               <div className="mt-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-[var(--danger)]">{t("verify.blocking")}</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm">
-                  {unit.blocking.map((item, index) => finding(item, index, "danger"))}
-                </ul>
+                {findingList(unit.blocking, "danger")}
               </div>
             ) : null}
             {unit.toCheck.length > 0 ? (
               <div className="mt-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">{t("verify.check")}</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm">
-                  {unit.toCheck.map((item, index) => finding(item, index, "muted"))}
-                </ul>
+                {findingList(unit.toCheck, "muted")}
               </div>
             ) : null}
           </Card>

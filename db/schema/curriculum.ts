@@ -1181,3 +1181,35 @@ export const filingLessons = pgTable(
   },
   (t) => [uniqueIndex("filing_lessons_org_pattern_idx").on(t.organisationId, t.pattern)],
 );
+
+/**
+ * A finding that holds a programme back, accepted as it is by a person with a
+ * reason (job sheet D62, Roland, 25 November 2026): "the fixes that are
+ * expected [should be] clearer and ... 'enforced' unless over-written by a
+ * user comment that is logged."
+ *
+ * Findings themselves are not stored: they are worked out from the programme
+ * as it stands, so one closes by itself when its cause is put right. This
+ * records only the acceptance, against the finding's stable key. Withdrawing
+ * an acceptance deletes the row; the audit trail keeps both acts.
+ */
+export const findingAcceptances = pgTable(
+  "finding_acceptances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    qualificationId: uuid("qualification_id")
+      .notNull()
+      .references(() => qualifications.id, { onDelete: "cascade" }),
+    /** The finding's key, from lib/qualification-build.ts. */
+    findingKey: text("finding_key").notNull(),
+    /** What the finding said when it was accepted. */
+    what: text("what").notNull(),
+    reason: text("reason").notNull(),
+    acceptedById: uuid("accepted_by_id").references(() => users.id, { onDelete: "set null" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("finding_acceptances_qual_key_idx").on(t.qualificationId, t.findingKey)],
+);

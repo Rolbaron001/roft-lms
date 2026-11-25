@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePermission, said } from "@/lib/request";
 import { PermissionDeniedError } from "@/lib/rbac";
-import { buildQualification, buildSummary, verifyAndPublish } from "@/lib/qualification-build";
+import { acceptFinding, buildQualification, buildSummary, verifyAndPublish, withdrawAcceptance } from "@/lib/qualification-build";
 
 export type VerifyState = { error?: string; notice?: string; problems?: string[] };
 
@@ -26,6 +26,27 @@ export async function buildQualificationAction(_previous: VerifyState, formData:
     console.error("qualification build failed", error);
     return said({ error: "The build stopped part-way. The work done is kept; select Build again to continue." });
   }
+}
+
+/** Accepts a finding as it is, with the reason, logged (D62). */
+export async function acceptFindingAction(_previous: VerifyState, formData: FormData): Promise<VerifyState> {
+  const session = await requirePermission("course:publish");
+  const qualificationId = String(formData.get("qualificationId") ?? "");
+  const result = await acceptFinding(session, qualificationId, String(formData.get("findingKey") ?? ""), String(formData.get("reason") ?? ""));
+  if (!result.ok) return said({ error: result.error });
+  revalidatePath(`/qualifications/${qualificationId}`);
+  revalidatePath(`/qualifications/${qualificationId}/verify`);
+  return said({ notice: "Accepted. The reason is kept with the programme." });
+}
+
+/** Withdraws an acceptance, so the finding holds the programme back again. */
+export async function withdrawAcceptanceAction(_previous: VerifyState, formData: FormData): Promise<VerifyState> {
+  const session = await requirePermission("course:publish");
+  const qualificationId = String(formData.get("qualificationId") ?? "");
+  await withdrawAcceptance(session, qualificationId, String(formData.get("findingKey") ?? ""));
+  revalidatePath(`/qualifications/${qualificationId}`);
+  revalidatePath(`/qualifications/${qualificationId}/verify`);
+  return said({ notice: "Withdrawn." });
 }
 
 /** The one act that makes a built qualification live, or says what holds it back. */

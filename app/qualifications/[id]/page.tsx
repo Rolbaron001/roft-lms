@@ -340,7 +340,7 @@ export default async function QualificationPage({
               : verification.ready
                 ? t("qualPage.step.liveReady")
                 : t("qualPage.step.liveTodo", {
-                    count: verification.units.reduce((sum, unit) => sum + unit.blocking.length, 0),
+                    count: verification.programme.blocking.length + verification.units.reduce((sum, unit) => sum + unit.blocking.length, 0),
                   }),
             href: `/qualifications/${id}/verify`,
             action: t("qualPage.step.liveAction"),

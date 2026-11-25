@@ -13,11 +13,15 @@ import {
   courses,
   curriculumModules,
   curriculumTopics,
+  findingAcceptances,
   programmeDocuments,
+  qualifications,
   stepProgress,
   studyUnitModules,
   studyUnits,
+  users,
 } from "@/db/schema";
+import { foreignCurriculum } from "./programme-documents";
 import { recordAudit } from "./audit";
 import { createAssessment, publishAssessment } from "./assessment";
 import { STEP_ORDER } from "./assessment-order";
@@ -80,6 +84,25 @@ export type Finding = {
    * must reach the guide, not only the question.
    */
   guideHref?: string | null;
+  /**
+   * Job sheet D62 (Roland, 25 November 2026): every finding says what to do
+   * about it and where, and one that holds the programme back can be passed
+   * only by a person accepting it with a logged reason.
+   */
+  /** A stable name for it, so an acceptance stays with the right finding. */
+  key?: string;
+  /** The file or place it is in, in words. */
+  where?: string;
+  /** How to put it right. */
+  fix?: string;
+  /**
+   * Whether going live with it is possible at all. A paper with no marking
+   * guidance cannot be opened to learners however it is signed off, so it is
+   * fixed, not accepted.
+   */
+  acceptable?: boolean;
+  /** Accepted as it is: by whom, when and why. */
+  accepted?: { reason: string; by: string | null; at: Date };
 };
 
 export type BuildReport = {
@@ -926,6 +949,10 @@ export type UnitVerification = {
 
 export type Verification = {
   units: UnitVerification[];
+  /** What concerns the programme as a whole rather than one study unit (D62). */
+  programme: { blocking: Finding[]; toCheck: Finding[] };
+  /** Findings that would hold it back, accepted with a reason (D62). */
+  accepted: Finding[];
   /** Every study unit live. */
   live: boolean;
   /** Nothing holding it back. */
@@ -1049,7 +1076,15 @@ export async function verificationOf(
     }
 
     if (!course) {
-      blocking.push({ studyUnit: unit.code, what: `${unit.code} has not been built yet.`, href: null });
+      blocking.push({
+        studyUnit: unit.code,
+        what: `${unit.code} has not been built yet.`,
+        href: null,
+        key: `unbuilt:${unit.id}`,
+        where: `${unit.code} ${unit.title}`,
+        fix: "Select Build again at the top of this page.",
+        acceptable: false,
+      });
     } else {
       // The alignment matrix can say every criterion is assessed by papers
       // the platform has never been given, and the coverage check takes its
@@ -1061,17 +1096,36 @@ export async function verificationOf(
           studyUnit: unit.code,
           what: `${unit.code} has no workbooks or assessments of its own. Its criteria are assessed in ${assessedIn}'s papers, so a learner is assessed on it there.`,
           href: null,
+          key: `assessed-elsewhere:${unit.id}`,
+          where: `${unit.code} ${unit.title}`,
+          fix: `Nothing, if the alignment document means ${unit.code} to be assessed in ${assessedIn}.`,
         });
       } else if (assessable && byAssessment.size === 0 && course.status !== "published") {
         blocking.push({
           studyUnit: unit.code,
-          what: `${unit.code} has no workbooks or assessments, so a learner could finish it without being assessed. File its papers in the qualification's documents and build again.`,
+          what: `${unit.code} has no workbooks or assessments, so a learner could finish it without being assessed.`,
           href: `/qualifications/${qualificationId}?view=build#material`,
+          key: `no-papers:${unit.id}`,
+          where: `${unit.code} ${unit.title}`,
+          fix: `Add ${unit.code}'s workbooks and assessments, with their assessor guides, to the programme's documents, then select Build again. If ${unit.code} is meant to have none, accept it with the reason.`,
+          acceptable: true,
         });
       }
       if (course.status !== "published") {
         const checks = await coursePublishChecks(session, course.id);
-        if (!checks.ok) for (const reason of checks.reasons) blocking.push({ studyUnit: unit.code, what: reason, href: `/courses/${course.id}` });
+        if (!checks.ok) {
+          for (const [index, reason] of checks.reasons.entries()) {
+            blocking.push({
+              studyUnit: unit.code,
+              what: reason,
+              href: `/courses/${course.id}`,
+              key: `course:${course.id}:${index}`,
+              where: `${unit.code} ${unit.title}`,
+              fix: "Open the study unit (the link) and correct what it names.",
+              acceptable: false,
+            });
+          }
+        }
       }
       for (const assessment of byAssessment.values()) {
         if (assessment.answerable === 0) {
@@ -1080,7 +1134,15 @@ export async function verificationOf(
           // which question and what is missing.
           const draftPapers = papers.filter((row) => row.assessmentId === assessment.id && row.paperId).map((row) => row.paperId!);
           if (draftPapers.length === 0) {
-            blocking.push({ studyUnit: unit.code, what: `"${assessment.title}" has no paper captured yet.`, href: `/courses/${course.id}/assessments` });
+            blocking.push({
+              studyUnit: unit.code,
+              what: `"${assessment.title}" has no paper captured yet.`,
+              href: `/courses/${course.id}/assessments`,
+              key: `no-paper:${assessment.id}`,
+              where: `${unit.code}, "${assessment.title}"`,
+              fix: "Add the paper and its assessor guide to the programme's documents and select Build again, or capture it by hand from the link.",
+              acceptable: false,
+            });
           }
           // One finding a paper, linking to the paper and to the assessor
           // guide it was read with (Heidi, 5 October 2026). A paper that
@@ -1095,6 +1157,12 @@ export async function verificationOf(
               what: `"${assessment.title}" cannot be answered yet: ${reasons.slice(0, 3).join(" ")}${reasons.length > 3 ? ` There are ${reasons.length - 3} more like these.` : ""}`,
               href: `/papers/${paperId}/preview`,
               guideHref: guideId ? `/api/programme-documents/${guideId}` : null,
+              key: `paper:${paperId}`,
+              where: `${unit.code}, "${assessment.title}"${guideId ? " and its assessor guide" : ""}`,
+              fix: guideId
+                ? "Add what is missing to the assessor guide, upload the corrected guide on the Programme map or the documents page, and select Build again. A single answer can also be entered on the paper (the link)."
+                : "This paper has no assessor guide. Add its guide to the programme's documents, or choose it on the Programme map, and select Build again.",
+              acceptable: false,
             });
           }
         }
@@ -1103,7 +1171,15 @@ export async function verificationOf(
       }
     }
     for (const job of waitingJobs) {
-      blocking.push({ studyUnit: unit.code, what: `${job.filename} is waiting for a person to review it in Capture.`, href: `/capture/${job.id}` });
+      blocking.push({
+        studyUnit: unit.code,
+        what: `${job.filename} is waiting for a person to review it in Capture.`,
+        href: `/capture/${job.id}`,
+        key: `capture:${job.sha256}`,
+        where: job.filename,
+        fix: "Open it (the link), answer what it asks, and commit it.",
+        acceptable: false,
+      });
     }
     // A deck that could not be turned into a PDF: learners can still download
     // it, so it holds nothing back, but it is said (D56).
@@ -1114,7 +1190,14 @@ export async function verificationOf(
         .where(and(eq(programmeDocuments.studyUnitId, unit.id), isNull(programmeDocuments.pdfStorageKey), isNotNull(programmeDocuments.pdfNote))),
     );
     for (const deck of unconverted) {
-      toCheck.push({ studyUnit: unit.code, what: `${deck.filename}: ${deck.note}`, href: `/documents/${deck.id}` });
+      toCheck.push({
+        studyUnit: unit.code,
+        what: `${deck.filename}: ${deck.note}`,
+        href: `/documents/${deck.id}`,
+        key: `deck:${deck.id}`,
+        where: deck.filename,
+        fix: "Learners can still download the deck. To have it read on screen, save it as a PDF and upload that in its place.",
+      });
     }
 
     result.push({
@@ -1157,12 +1240,173 @@ export async function verificationOf(
     }
   }
 
+  const programme = await programmeFindings(session, qualificationId);
+
+  // Accepted with a reason: passed, and shown as accepted (D62). An
+  // acceptance whose finding has gone (its cause put right) is left unused.
+  const acceptances = await acceptancesOf(session, qualificationId);
+  const accepted: Finding[] = [];
+  const open = (list: Finding[]) =>
+    list.filter((finding) => {
+      const given = finding.key && finding.acceptable ? acceptances.get(finding.key) : undefined;
+      if (!given) return true;
+      accepted.push({ ...finding, accepted: given });
+      return false;
+    });
+  for (const unit of result) unit.blocking = open(unit.blocking);
+  programme.blocking = open(programme.blocking);
+
   return {
     units: result,
+    programme,
+    accepted,
     live: result.length > 0 && result.every((unit) => unit.live),
-    ready: result.length > 0 && result.every((unit) => unit.blocking.length === 0),
+    ready: result.length > 0 && programme.blocking.length === 0 && result.every((unit) => unit.blocking.length === 0),
     built: result.some((unit) => unit.courseId !== null),
   };
+}
+
+/**
+ * What concerns the programme as a whole (D62, 25 November 2026).
+ *
+ * A filed alignment matrix or schedule that maps another programme holds it
+ * back: it is the wrong document in the programme's record, whether or not
+ * anything reads it (Roland: "It's wrong - surely ... it should be
+ * replaced"). A file the platform could not recognise is worth a look.
+ */
+async function programmeFindings(session: AuthenticatedSession, qualificationId: string): Promise<{ blocking: Finding[]; toCheck: Finding[] }> {
+  const { qualification, documents } = await withTenant(session.organisationId, async (tx) => {
+    const [qualification] = await tx
+      .select({ code: qualifications.curriculumCode, saqaId: qualifications.saqaId, title: qualifications.title })
+      .from(qualifications)
+      .where(eq(qualifications.id, qualificationId));
+    const documents = await tx
+      .select({
+        id: programmeDocuments.id,
+        kind: programmeDocuments.kind,
+        filename: programmeDocuments.filename,
+        text: programmeDocuments.extractedText,
+        supersedesId: programmeDocuments.supersedesId,
+        unit: programmeDocuments.studyUnitId,
+      })
+      .from(programmeDocuments)
+      .where(eq(programmeDocuments.qualificationId, qualificationId));
+    return { qualification, documents };
+  });
+  const replaced = new Set(documents.map((one) => one.supersedesId).filter(Boolean));
+  const current = documents.filter((one) => !replaced.has(one.id));
+  const blocking: Finding[] = [];
+  const toCheck: Finding[] = [];
+
+  for (const document of current) {
+    if (document.kind !== "alignment_matrix" && document.kind !== "rollout_schedule") continue;
+    const foreign = foreignCurriculum(document.text ?? "", qualification?.code ?? null, [qualification?.saqaId ?? null]);
+    if (!foreign) continue;
+    blocking.push({
+      studyUnit: null,
+      what: `${document.filename} maps curriculum ${foreign}, not this programme's (${qualification?.code}). It is the wrong document for this programme.`,
+      href: `/documents/${document.id}`,
+      key: `foreign:${document.id}`,
+      where: `${document.filename}, filed with the whole programme`,
+      fix: "Remove it from this programme's documents, and from the folder it came from, so it is not uploaded again. If this programme needs a matrix, upload its own. If it is kept on purpose, for example as reading, accept it with the reason.",
+      acceptable: true,
+    });
+  }
+
+  // Only a file filed for no study unit and on no learner's path: one filed in
+  // a unit as "other" (SP-260508's practical tools) still reaches learners.
+  const onAPath = new Set(
+    (
+      await withTenant(session.organisationId, (tx) =>
+        tx
+          .select({ id: courseSteps.programmeDocumentId })
+          .from(courseSteps)
+          .innerJoin(programmeDocuments, eq(programmeDocuments.id, courseSteps.programmeDocumentId))
+          .where(eq(programmeDocuments.qualificationId, qualificationId)),
+      )
+    ).map((row) => row.id),
+  );
+  for (const document of current) {
+    if (document.kind !== "other" || document.unit || onAPath.has(document.id)) continue;
+    toCheck.push({
+      studyUnit: null,
+      what: `${document.filename} was not recognised and is filed for no study unit, so nothing uses it.`,
+      href: `/qualifications/${qualificationId}/map`,
+      key: `other:${document.id}`,
+      where: document.filename,
+      fix: "Say what it is on the Programme map, or remove it if it does not belong to this programme.",
+    });
+  }
+
+  return { blocking, toCheck };
+}
+
+/** The acceptances given for a qualification's findings, by finding key. */
+async function acceptancesOf(session: AuthenticatedSession, qualificationId: string): Promise<Map<string, { reason: string; by: string | null; at: Date }>> {
+  const rows = await withTenant(session.organisationId, (tx) =>
+    tx
+      .select({ key: findingAcceptances.findingKey, reason: findingAcceptances.reason, at: findingAcceptances.acceptedAt, first: users.firstName, last: users.lastName })
+      .from(findingAcceptances)
+      .leftJoin(users, eq(users.id, findingAcceptances.acceptedById))
+      .where(eq(findingAcceptances.qualificationId, qualificationId)),
+  );
+  return new Map(rows.map((row) => [row.key, { reason: row.reason, by: row.first ? `${row.first} ${row.last ?? ""}`.trim() : null, at: row.at }]));
+}
+
+/**
+ * Accepts a finding that holds the programme back, with the reason (D62).
+ * Only a finding that can be accepted, and only with a reason a reader can
+ * act on: at least fifteen characters. Recorded in the audit trail.
+ */
+export async function acceptFinding(
+  session: AuthenticatedSession,
+  qualificationId: string,
+  findingKey: string,
+  reason: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  assertSessionCan(session, "course:publish");
+  const why = reason.trim();
+  if (why.length < 15) return { ok: false, error: "Give the reason in a sentence. It is kept with the programme for anyone checking it later." };
+  const verification = await verificationOf(session, qualificationId);
+  const finding = [...verification.programme.blocking, ...verification.units.flatMap((unit) => unit.blocking)].find((one) => one.key === findingKey);
+  if (!finding) return { ok: false, error: "That is no longer holding the programme back." };
+  if (!finding.acceptable) return { ok: false, error: "That cannot be accepted as it is. It has to be put right." };
+  await withTenant(session.organisationId, async (tx) => {
+    await tx
+      .insert(findingAcceptances)
+      .values({ organisationId: session.organisationId, qualificationId, findingKey, what: finding.what, reason: why, acceptedById: session.userId })
+      .onConflictDoUpdate({ target: [findingAcceptances.qualificationId, findingAcceptances.findingKey], set: { reason: why, what: finding.what, acceptedById: session.userId, acceptedAt: new Date() } });
+    await recordAudit(tx, {
+      organisationId: session.organisationId,
+      actorId: session.userId,
+      action: "qualification.finding_accepted",
+      entityType: "qualification",
+      entityId: qualificationId,
+      after: { finding: finding.what, reason: why },
+    });
+  });
+  return { ok: true };
+}
+
+/** Withdraws an acceptance: the finding holds the programme back again. */
+export async function withdrawAcceptance(session: AuthenticatedSession, qualificationId: string, findingKey: string): Promise<void> {
+  assertSessionCan(session, "course:publish");
+  await withTenant(session.organisationId, async (tx) => {
+    const [gone] = await tx
+      .delete(findingAcceptances)
+      .where(and(eq(findingAcceptances.qualificationId, qualificationId), eq(findingAcceptances.findingKey, findingKey)))
+      .returning({ what: findingAcceptances.what, reason: findingAcceptances.reason });
+    if (gone) {
+      await recordAudit(tx, {
+        organisationId: session.organisationId,
+        actorId: session.userId,
+        action: "qualification.finding_acceptance_withdrawn",
+        entityType: "qualification",
+        entityId: qualificationId,
+        before: { finding: gone.what, reason: gone.reason },
+      });
+    }
+  });
 }
 
 /**
@@ -1178,7 +1422,8 @@ export async function verifyAndPublish(
   assertSessionCan(session, "assessment:author");
 
   const verification = await verificationOf(session, qualificationId);
-  const blocking = verification.units.flatMap((unit) => unit.blocking);
+  // Accepted findings are already taken out; what is left holds it back (D62).
+  const blocking = [...verification.programme.blocking, ...verification.units.flatMap((unit) => unit.blocking)];
   if (blocking.length > 0) return { ok: false, blocking };
 
   let published = 0;

@@ -285,6 +285,21 @@ person going through it question by question.
   looks at anything listed to check, and presses **Verified, make it live**
   once. That is refused while any regulatory check fails, and the page says
   what is missing and links to it.
+- **What holds a programme back, and accepting it** (25 November 2026):
+  each finding on "Check and make live" says what is wrong, **Where** it is
+  (the file, the study unit or the paper) and **To fix** (what to do). One
+  that holds the programme back must be put right, or, where going live with
+  it is possible, accepted with **Accept as it is, with a reason**. The
+  reason is required, is kept with the programme with the person's name and
+  the date under "Accepted as they are", and is recorded in the audit trail;
+  it can be withdrawn. A finding closes by itself once its cause is put
+  right. What can be accepted: a document for another programme filed with
+  this one, and a study unit with no workbooks or assessments. What cannot:
+  a unit not yet built, a paper with no marking guidance or no guide, a
+  paper waiting in Capture. Only someone who may make the programme live may
+  accept. "The whole programme" lists findings that belong to no one study
+  unit, such as another programme's matrix, and files filed for no unit that
+  nothing uses.
 - **Build again** is on the qualification page, on each study unit's page
   and on the check page. It fills anything missing, and reads afresh any
   paper that is still a draft, has not been worked on by hand, has not been
