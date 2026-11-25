@@ -6,6 +6,8 @@ import { requireSession, requireTenant } from "@/lib/request";
 import { AppShell } from "@/components/app-shell";
 import { PageReader } from "@/components/page-reader";
 import { BackLink } from "./back-link";
+import { RemoveDocumentForm } from "./remove-form";
+import { LIBRARY_CATEGORIES } from "@/lib/records";
 
 /**
  * A filed document, read in the page as its own pages (Roland, 19 November
@@ -31,20 +33,31 @@ export default async function DocumentReadPage({ params }: { params: Promise<{ i
   const src = `/api/programme-documents/${id}`;
   // A deck converted to a PDF reads as the PDF; the download stays the deck (D56).
   const asPdf = Boolean(document.pdf);
-  if (!asPdf && !READABLE.test(document.mimeType)) redirect(src);
+  const readable = asPdf || READABLE.test(document.mimeType);
+  // Whoever manages the programme can take the document off it (D63); for
+  // everyone else a file the reader cannot draw simply downloads.
+  const mayRemove = session.permissions.includes("qualification:manage");
+  if (!readable && !mayRemove) redirect(src);
 
   return (
     <AppShell tenant={tenant} session={session}>
       <BackLink />
       <h1 className="mb-4 mt-2 text-xl font-semibold">{document.title}</h1>
       {document.note ? <p className="mb-3 text-sm text-[var(--muted)]">{document.note}</p> : null}
-      <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-        <PageReader
-          src={asPdf ? `${src}?as=pdf` : src}
-          downloadHref={src}
-          kind={asPdf || document.mimeType === "application/pdf" ? "pdf" : "word"}
-        />
-      </section>
+      {readable ? (
+        <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          <PageReader
+            src={asPdf ? `${src}?as=pdf` : src}
+            downloadHref={src}
+            kind={asPdf || document.mimeType === "application/pdf" ? "pdf" : "word"}
+          />
+        </section>
+      ) : (
+        <a href={src} className="text-sm underline underline-offset-2">
+          {document.title}
+        </a>
+      )}
+      {mayRemove ? <RemoveDocumentForm documentId={id} categories={LIBRARY_CATEGORIES} /> : null}
     </AppShell>
   );
 }

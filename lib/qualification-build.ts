@@ -1308,7 +1308,7 @@ async function programmeFindings(session: AuthenticatedSession, qualificationId:
       href: `/documents/${document.id}`,
       key: `foreign:${document.id}`,
       where: `${document.filename}, filed with the whole programme`,
-      fix: "Remove it from this programme's documents, and from the folder it came from, so it is not uploaded again. If this programme needs a matrix, upload its own. If it is kept on purpose, for example as reading, accept it with the reason.",
+      fix: "Open it (the link) and select Remove from this programme; take it out of the folder it came from too, so it is not uploaded again. If this programme needs a matrix, upload its own. If it is kept on purpose, for example as reading, accept it with the reason.",
       acceptable: true,
     });
   }
@@ -1331,10 +1331,10 @@ async function programmeFindings(session: AuthenticatedSession, qualificationId:
     toCheck.push({
       studyUnit: null,
       what: `${document.filename} was not recognised and is filed for no study unit, so nothing uses it.`,
-      href: `/qualifications/${qualificationId}/map`,
+      href: `/documents/${document.id}`,
       key: `other:${document.id}`,
       where: document.filename,
-      fix: "Say what it is on the Programme map, or remove it if it does not belong to this programme.",
+      fix: "Say what it is on the Programme map. If it does not belong to this programme, open it (the link) and select Remove from this programme, keeping it in the Library if it is needed elsewhere.",
     });
   }
 

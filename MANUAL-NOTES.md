@@ -285,6 +285,21 @@ person going through it question by question.
   looks at anything listed to check, and presses **Verified, make it live**
   once. That is refused while any regulatory check fails, and the page says
   what is missing and links to it.
+- **Removing one document from a programme** (25 November 2026): open the
+  document from the programme's Documents, or from its finding on "Check and
+  make live", and select **Remove from this programme**. Give the reason; it
+  is kept in the audit trail. To keep the file, choose a Library category
+  under **Keep it in the Library as**: Accreditation for a document kept for
+  QCTO auditors, for example. Learners never see a Library document unless
+  its category is Learner guides. Refused while the document is a step on a
+  learner's path (take the step off first) or a workbook or assessment was
+  captured from it. Take the file out of the source folder as well, so it is
+  not uploaded again. Only someone who manages programmes may remove.
+- **Documents that do not belong in a programme folder:** another
+  programme's matrix, and documents kept for accreditation auditors (a
+  learning material or resource matrix, for example). The first holds the
+  programme back until removed or accepted; the second belongs in the
+  Library under Accreditation.
 - **What holds a programme back, and accepting it** (25 November 2026):
   each finding on "Check and make live" says what is wrong, **Where** it is
   (the file, the study unit or the paper) and **To fix** (what to do). One

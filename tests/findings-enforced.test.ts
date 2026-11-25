@@ -78,7 +78,7 @@ describe("findings that hold a programme back", () => {
     const foreign = verification.programme.blocking.find((one) => one.key === `foreign:${ids["CA LD_Advisor_Alignment_Matrix.docx"]}`);
     expect(foreign?.what).toMatch(/maps curriculum 242401002, not this programme's/);
     expect(foreign?.where).toMatch(/CA LD_Advisor_Alignment_Matrix\.docx/);
-    expect(foreign?.fix).toMatch(/Remove it from this programme's documents/);
+    expect(foreign?.fix).toMatch(/select Remove from this programme/);
     expect(foreign?.acceptable).toBe(true);
     // Its own schedule is not asked about.
     expect(verification.programme.blocking).toHaveLength(1);
